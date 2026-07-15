@@ -317,6 +317,12 @@ func TestDoltServerOfficialCrashCampaigns(t *testing.T) {
 			if test.want == OutcomeInvalidPartial && result.Passed {
 				t.Fatal("campaign with an ambiguous SQL-only commit must fail")
 			}
+			if directory := os.Getenv("STORAGE_SPIKE_RESULTS_DIR"); directory != "" {
+				path := filepath.Join(directory, "dolt-server", "crash", string(test.failpoint)+".json")
+				if err := WriteCrashCampaignArtifact(path, result); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if test.want != OutcomeInvalidPartial && !result.Passed {
 				t.Fatalf("atomic campaign failed: %+v", result.Counts)
 			}

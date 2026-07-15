@@ -1,0 +1,160 @@
+{
+  "trials": [
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "INVALID_PARTIAL"
+    }
+  ],
+  "counts": {
+    "not_applied": 0,
+    "applied": 0,
+    "invalid_partial": 30
+  },
+  "passed": false
+}

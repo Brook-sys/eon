@@ -1,6 +1,7 @@
 package spike
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,5 +40,28 @@ func TestWriteArtifactsRejectsDatasetMismatch(t *testing.T) {
 	err := WriteArtifacts(t.TempDir(), Manifest{SHA256: "one"}, Metrics{DatasetSHA256: "two"})
 	if err == nil {
 		t.Fatal("dataset mismatch was accepted")
+	}
+}
+
+func TestWriteCrashCampaignArtifactPreservesTrials(t *testing.T) {
+	trials := make([]CrashTrialResult, MinCrashCampaignTrials)
+	for index := range trials {
+		trials[index] = CrashTrialResult{WorkerCrashed: true, Outcome: OutcomeApplied, ExitError: "signal: killed"}
+	}
+	result := CrashCampaignResult{Trials: trials, Counts: CrashOutcomeCounts{Applied: MinCrashCampaignTrials}, Passed: true}
+	path := filepath.Join(t.TempDir(), "crash", "after_dolt_commit.json")
+	if err := WriteCrashCampaignArtifact(path, result); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got CrashCampaignResult
+	if err := json.Unmarshal(encoded, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Trials) != MinCrashCampaignTrials || got.Counts.Applied != MinCrashCampaignTrials || !got.Passed {
+		t.Fatalf("unexpected artifact: %+v", got)
 	}
 }

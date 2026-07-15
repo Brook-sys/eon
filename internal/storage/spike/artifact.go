@@ -42,6 +42,28 @@ func WriteArtifacts(directory string, manifest Manifest, metrics Metrics) error 
 	return nil
 }
 
+// WriteCrashCampaignArtifact persists every trial, not only aggregate counts,
+// so a storage decision can be audited against worker exits and classifications.
+func WriteCrashCampaignArtifact(path string, result CrashCampaignResult) error {
+	if strings.TrimSpace(path) == "" {
+		return fmt.Errorf("crash campaign artifact path is required")
+	}
+	if len(result.Trials) < MinCrashCampaignTrials {
+		return fmt.Errorf("crash campaign artifact requires at least %d trials", MinCrashCampaignTrials)
+	}
+	encoded, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode crash campaign artifact: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create crash campaign artifact directory: %w", err)
+	}
+	if err := writeAtomic(path, append(encoded, '\n')); err != nil {
+		return fmt.Errorf("write crash campaign artifact: %w", err)
+	}
+	return nil
+}
+
 func renderReport(metrics Metrics) string {
 	var report strings.Builder
 	fmt.Fprintf(&report, "# Storage spike run: %s\n\n", metrics.Backend)

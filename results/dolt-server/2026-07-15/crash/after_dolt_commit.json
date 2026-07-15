@@ -1,0 +1,160 @@
+{
+  "trials": [
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    },
+    {
+      "exit_error": "signal: killed",
+      "worker_crashed": true,
+      "outcome": "APPLIED"
+    }
+  ],
+  "counts": {
+    "not_applied": 0,
+    "applied": 30,
+    "invalid_partial": 0
+  },
+  "passed": true
+}
