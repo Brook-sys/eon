@@ -4,6 +4,7 @@
 package source
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
@@ -15,6 +16,7 @@ import (
 
 type Clock interface {
 	Now() time.Time
+	WaitUntil(context.Context, time.Time) error
 }
 
 type IDGenerator interface {
@@ -28,6 +30,21 @@ type RandomSource interface {
 type SystemClock struct{}
 
 func (SystemClock) Now() time.Time { return time.Now().UTC() }
+
+func (SystemClock) WaitUntil(ctx context.Context, deadline time.Time) error {
+	delay := time.Until(deadline)
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
 
 type CryptoIDGenerator struct{}
 
@@ -54,12 +71,13 @@ func (CryptoRandomSource) Uint64() (uint64, error) {
 
 // ManualClock is safe for tests that exercise concurrent scheduling code.
 type ManualClock struct {
-	mu  sync.RWMutex
-	now time.Time
+	mu      sync.RWMutex
+	now     time.Time
+	changed chan struct{}
 }
 
 func NewManualClock(now time.Time) *ManualClock {
-	return &ManualClock{now: now.UTC()}
+	return &ManualClock{now: now.UTC(), changed: make(chan struct{})}
 }
 
 func (c *ManualClock) Now() time.Time {
@@ -72,6 +90,7 @@ func (c *ManualClock) Set(now time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.now = now.UTC()
+	c.signalLocked()
 }
 
 func (c *ManualClock) Advance(delta time.Duration) error {
@@ -81,7 +100,29 @@ func (c *ManualClock) Advance(delta time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.now = c.now.Add(delta)
+	c.signalLocked()
 	return nil
+}
+
+func (c *ManualClock) WaitUntil(ctx context.Context, deadline time.Time) error {
+	for {
+		c.mu.RLock()
+		now, changed := c.now, c.changed
+		c.mu.RUnlock()
+		if !now.Before(deadline) {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-changed:
+		}
+	}
+}
+
+func (c *ManualClock) signalLocked() {
+	close(c.changed)
+	c.changed = make(chan struct{})
 }
 
 // SequenceIDGenerator yields reproducible, process-local IDs for tests. The
