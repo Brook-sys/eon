@@ -29,7 +29,7 @@ func main() {
 }
 
 func run() error {
-	backend := flag.String("backend", "", "backend: sqlite or dolt")
+	backend := flag.String("backend", "", "backend: sqlite, dolt, or dolt-server")
 	path := flag.String("path", "", "backend data path")
 	failpoint := flag.String("failpoint", "", "adapter failpoint")
 	intentPath := flag.String("intent", "", "JSON crash intent path")
@@ -85,6 +85,33 @@ func run() error {
 			if got == wanted {
 				crashNow()
 			}
+		}})
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+		if err := apply(ctx, store); err != nil {
+			return err
+		}
+		return fmt.Errorf("configured failpoint %q was not reached", *failpoint)
+	case "dolt-server":
+		if strings.TrimSpace(*doltBinary) == "" {
+			return errors.New("dolt-bin is required for the Dolt server backend")
+		}
+		wanted := dolt.ServerFailpoint(*failpoint)
+		if wanted != dolt.FailpointBeforeSQLCommit && wanted != dolt.FailpointAfterSQLCommit && wanted != dolt.FailpointAfterDoltCommit {
+			return fmt.Errorf("unknown dolt server failpoint %q", *failpoint)
+		}
+		var store *dolt.ServerStore
+		store, err := dolt.OpenServerWithOptions(*doltBinary, *path, dolt.ServerOptions{Failpoint: func(got dolt.ServerFailpoint) {
+			if got != wanted {
+				return
+			}
+			if err := store.CrashProcess(); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(3)
+			}
+			crashNow()
 		}})
 		if err != nil {
 			return err

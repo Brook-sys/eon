@@ -3,6 +3,7 @@ package spike
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -178,6 +179,146 @@ func TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInDolt(t *testing.T)
 			}
 			if string(marker) != string(encoded) {
 				t.Fatalf("marker = %s, want %s", marker, encoded)
+			}
+		})
+	}
+}
+
+func TestStorageSpikeWorkerCrashesOfficialMutationAcrossDoltServerBoundaries(t *testing.T) {
+	doltBinary := requireDoltBinary(t)
+	worker := buildStorageSpikeWorker(t)
+	tests := []struct {
+		failpoint dolt.ServerFailpoint
+		want      CrashOutcome
+	}{
+		{dolt.FailpointBeforeSQLCommit, OutcomeNotApplied},
+		{dolt.FailpointAfterSQLCommit, OutcomeInvalidPartial},
+		{dolt.FailpointAfterDoltCommit, OutcomeApplied},
+	}
+	for index, test := range tests {
+		t.Run(string(test.failpoint), func(t *testing.T) {
+			root := t.TempDir()
+			repositoryPath := filepath.Join(root, "runtime")
+			mutationPath := filepath.Join(root, "official.json")
+			markerPath := filepath.Join(root, "official.started")
+			refs := OfficialMutationRefs{EventID: domain.EventID(fmt.Sprintf("event_official_server_%02d", index)), CommitID: domain.CommitID(fmt.Sprintf("commit_official_server_%02d", index)), ReceiptID: domain.ReceiptID(fmt.Sprintf("receipt_official_server_%02d", index)), MissionRevision: domain.MissionRevisionID(fmt.Sprintf("revision_official_server_%02d", index)), IdempotencyKey: domain.IdempotencyKey(fmt.Sprintf("idem_official_server_%02d", index)), CanonicalType: "observation", CanonicalID: fmt.Sprintf("observation_official_server_%02d", index)}
+			mutation := OfficialMutation{SchemaVersion: 1, Refs: refs, OccurredAt: time.Date(2026, 7, 15, 23, index, 0, 0, time.UTC)}
+			encoded, err := json.Marshal(mutation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutationPath, encoded, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			open := func() (port.Store, func() error, error) {
+				store, err := dolt.OpenServer(doltBinary, repositoryPath)
+				if err != nil {
+					return nil, nil, err
+				}
+				return store, store.Close, nil
+			}
+			result, err := RunCrashTrialWithInspector(context.Background(), CrashCommand{Executable: worker, Args: []string{"-backend", "dolt-server", "-path", repositoryPath, "-failpoint", string(test.failpoint), "-intent", mutationPath, "-marker", markerPath, "-mutation", "official", "-dolt-bin", doltBinary}}, open, func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+				outcome, err := InspectOfficialMutation(ctx, store, refs)
+				if err != nil {
+					return "", err
+				}
+				server := store.(*dolt.ServerStore)
+				clean, err := server.WorkingSetClean(ctx)
+				if err != nil {
+					return "", err
+				}
+				if !clean {
+					return OutcomeInvalidPartial, nil
+				}
+				return outcome, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.WorkerCrashed || result.Outcome != test.want {
+				t.Fatalf("crashed=%v outcome=%s want=%s exit=%q", result.WorkerCrashed, result.Outcome, test.want, result.ExitError)
+			}
+		})
+	}
+}
+
+func TestDoltServerOfficialCrashCampaigns(t *testing.T) {
+	if os.Getenv("STORAGE_SPIKE_FULL") != "1" {
+		t.Skip("set STORAGE_SPIKE_FULL=1 to run 30-trial campaigns at every Dolt server boundary")
+	}
+	doltBinary := requireDoltBinary(t)
+	worker := buildStorageSpikeWorker(t)
+	root := t.TempDir()
+	tests := []struct {
+		failpoint dolt.ServerFailpoint
+		want      CrashOutcome
+	}{
+		{dolt.FailpointBeforeSQLCommit, OutcomeNotApplied},
+		{dolt.FailpointAfterSQLCommit, OutcomeInvalidPartial},
+		{dolt.FailpointAfterDoltCommit, OutcomeApplied},
+	}
+	for _, test := range tests {
+		t.Run(string(test.failpoint), func(t *testing.T) {
+			result, err := RunCrashCampaignWithInspector(context.Background(), MinCrashCampaignTrials, func(index int) (CrashCommand, StoreOpener, VisibilityInspector, error) {
+				trialRoot := filepath.Join(root, fmt.Sprintf("%s-%02d", test.failpoint, index))
+				if err := os.MkdirAll(trialRoot, 0o755); err != nil {
+					return CrashCommand{}, nil, nil, err
+				}
+				repositoryPath := filepath.Join(trialRoot, "runtime")
+				mutationPath := filepath.Join(trialRoot, "official.json")
+				markerPath := filepath.Join(trialRoot, "official.started")
+				refs := OfficialMutationRefs{EventID: domain.EventID(fmt.Sprintf("event_campaign_server_%s_%02d", test.failpoint, index)), CommitID: domain.CommitID(fmt.Sprintf("commit_campaign_server_%s_%02d", test.failpoint, index)), ReceiptID: domain.ReceiptID(fmt.Sprintf("receipt_campaign_server_%s_%02d", test.failpoint, index)), MissionRevision: domain.MissionRevisionID(fmt.Sprintf("revision_campaign_server_%s_%02d", test.failpoint, index)), IdempotencyKey: domain.IdempotencyKey(fmt.Sprintf("idem_campaign_server_%s_%02d", test.failpoint, index)), CanonicalType: "observation", CanonicalID: fmt.Sprintf("observation_campaign_server_%s_%02d", test.failpoint, index)}
+				mutation := OfficialMutation{SchemaVersion: 1, Refs: refs, OccurredAt: time.Date(2026, 7, 16, 0, index, 0, 0, time.UTC)}
+				encoded, err := json.Marshal(mutation)
+				if err != nil {
+					return CrashCommand{}, nil, nil, err
+				}
+				if err := os.WriteFile(mutationPath, encoded, 0o600); err != nil {
+					return CrashCommand{}, nil, nil, err
+				}
+				open := func() (port.Store, func() error, error) {
+					store, err := dolt.OpenServer(doltBinary, repositoryPath)
+					if err != nil {
+						return nil, nil, err
+					}
+					return store, store.Close, nil
+				}
+				inspect := func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+					outcome, err := InspectOfficialMutation(ctx, store, refs)
+					if err != nil {
+						return "", err
+					}
+					clean, err := store.(*dolt.ServerStore).WorkingSetClean(ctx)
+					if err != nil {
+						return "", err
+					}
+					if !clean {
+						return OutcomeInvalidPartial, nil
+					}
+					return outcome, nil
+				}
+				command := CrashCommand{Executable: worker, Args: []string{"-backend", "dolt-server", "-path", repositoryPath, "-failpoint", string(test.failpoint), "-intent", mutationPath, "-marker", markerPath, "-mutation", "official", "-dolt-bin", doltBinary}}
+				return command, open, inspect, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Counts.InvalidPartial > 0 && test.want != OutcomeInvalidPartial {
+				t.Fatalf("unexpected partial outcomes: %+v", result.Counts)
+			}
+			if len(result.Trials) != MinCrashCampaignTrials {
+				t.Fatalf("trials=%d, want %d", len(result.Trials), MinCrashCampaignTrials)
+			}
+			for index, trial := range result.Trials {
+				if !trial.WorkerCrashed || trial.Outcome != test.want {
+					t.Fatalf("trial %d: crashed=%v outcome=%s want=%s exit=%q", index, trial.WorkerCrashed, trial.Outcome, test.want, trial.ExitError)
+				}
+			}
+			if test.want == OutcomeInvalidPartial && result.Passed {
+				t.Fatal("campaign with an ambiguous SQL-only commit must fail")
+			}
+			if test.want != OutcomeInvalidPartial && !result.Passed {
+				t.Fatalf("atomic campaign failed: %+v", result.Counts)
 			}
 		})
 	}

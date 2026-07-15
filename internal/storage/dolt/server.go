@@ -159,18 +159,25 @@ func (s *ServerStore) start(timeout time.Duration) error {
 }
 
 func (s *ServerStore) configureAndLoad() error {
-	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS runtime_checkpoint (
-		id BIGINT PRIMARY KEY,
-		format_version BIGINT NOT NULL,
-		payload LONGBLOB NOT NULL
-	)`); err != nil {
-		return fmt.Errorf("configure dolt server checkpoint: %w", err)
+	var tableCount int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = DATABASE() AND table_name = 'runtime_checkpoint'`).Scan(&tableCount); err != nil {
+		return fmt.Errorf("inspect dolt server checkpoint schema: %w", err)
 	}
-	if _, err := s.db.Exec(`CALL DOLT_ADD('-A')`); err != nil {
-		return fmt.Errorf("stage dolt server schema: %w", err)
-	}
-	if _, err := s.db.Exec(`CALL DOLT_COMMIT('--skip-empty', '-m', 'initialize runtime checkpoint')`); err != nil {
-		return fmt.Errorf("commit dolt server schema: %w", err)
+	if tableCount == 0 {
+		if _, err := s.db.Exec(`CREATE TABLE runtime_checkpoint (
+			id BIGINT PRIMARY KEY,
+			format_version BIGINT NOT NULL,
+			payload LONGBLOB NOT NULL
+		)`); err != nil {
+			return fmt.Errorf("configure dolt server checkpoint: %w", err)
+		}
+		if _, err := s.db.Exec(`CALL DOLT_ADD('-A')`); err != nil {
+			return fmt.Errorf("stage dolt server schema: %w", err)
+		}
+		if _, err := s.db.Exec(`CALL DOLT_COMMIT('--skip-empty', '-m', 'initialize runtime checkpoint')`); err != nil {
+			return fmt.Errorf("commit dolt server schema: %w", err)
+		}
 	}
 	var payload []byte
 	err := s.db.QueryRow(`SELECT payload FROM runtime_checkpoint WHERE id = ?`, checkpointID).Scan(&payload)
@@ -257,6 +264,25 @@ func (s *ServerStore) Update(ctx context.Context, fn func(port.Transaction) erro
 	return nil
 }
 
+// WorkingSetClean reports whether SQL-visible state is fully represented by
+// the current Dolt commit. A false result after recovery is an official
+// INVALID_PARTIAL outcome even when the logical checkpoint itself is intact.
+func (s *ServerStore) WorkingSetClean(ctx context.Context) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return false, errors.New("dolt server store is closed")
+	}
+	var changes int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dolt_status`).Scan(&changes); err != nil {
+		return false, fmt.Errorf("inspect dolt working set: %w", err)
+	}
+	return changes == 0, nil
+}
+
 func (s *ServerStore) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -272,6 +298,28 @@ func (s *ServerStore) Close() error {
 	processErr := s.stopProcess()
 	s.core = nil
 	return errors.Join(dbErr, processErr)
+}
+
+// CrashProcess kills the owned sql-server without a graceful shutdown. It is
+// intentionally separate from Close so the subprocess crash harness can test
+// recovery from loss of both the writer and its database server at an exact
+// durability boundary. Production runtime code must use Close instead.
+func (s *ServerStore) CrashProcess() error {
+	if s.command == nil || s.command.Process == nil || s.processDone == nil {
+		return errors.New("dolt sql-server process is not running")
+	}
+	if err := s.command.Process.Kill(); err != nil {
+		return fmt.Errorf("kill dolt sql-server abruptly: %w", err)
+	}
+	if err := <-s.processDone; err != nil {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			return fmt.Errorf("wait for crashed dolt sql-server: %w", err)
+		}
+	}
+	s.command = nil
+	s.processDone = nil
+	return nil
 }
 
 func (s *ServerStore) stopProcess() error {
