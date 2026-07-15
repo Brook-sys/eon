@@ -127,6 +127,8 @@ Executar um spike comparando pelo menos:
 
 ### Cenário do spike
 
+O protocolo executável, dataset determinístico, crash harness subprocessado, métricas e critérios de decisão estão fixados em `STORAGE_SPIKE.md`. Em resumo:
+
 - ingerir 1.000 fontes sintéticas;
 - criar 10.000 claims e 30.000 relações;
 - aplicar 1.000 changesets;
@@ -134,8 +136,8 @@ Executar um spike comparando pelo menos:
 - introduzir conflitos estruturais e epistemológicos;
 - consultar histórico e impacto;
 - reconstruir índices;
-- simular crash entre validação e commit;
-- medir tamanho, latência, complexidade e clareza operacional.
+- provocar crash real antes/depois do commit durável e classificar estados parciais;
+- medir tamanho, latência, recuperação, complexidade e clareza operacional sob suites comuns.
 
 ### Critérios de escolha
 

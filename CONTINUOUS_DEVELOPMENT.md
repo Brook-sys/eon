@@ -109,11 +109,12 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 ### Fase 4 — persistência real e spike de Dolt
 
-- [ ] `BLOCKED_BY:Fase2` Fixar suite de contract tests de armazenamento.
-- [ ] `BLOCKED_BY:Fase2` Implementar cenário comparável em Dolt.
-- [ ] `BLOCKED_BY:Fase2` Implementar cenário comparável em SQLite + event log.
-- [ ] `BLOCKED_BY:Fase2` Medir footprint, latência, recuperação, diff e complexidade.
-- [ ] `BLOCKED_BY:Fase2` Registrar ADR final do backend.
+- [x] `DONE` Fixar suite de contract tests e protocolo comparável de armazenamento.
+  - Evidência: `contract.TestStore` permanece a suite funcional comum; `contract.TestDurableStore` formaliza reopen, rollback e idempotência entre processos; `STORAGE_SPIKE.md` fixa dataset, crash harness, métricas e critérios de decisão.
+- [ ] `READY` Implementar cenário comparável em SQLite + event log.
+- [ ] `READY` Implementar cenário comparável em Dolt.
+- [ ] `BLOCKED_BY:SQLite,Dolt` Medir footprint, latência, recuperação, diff e complexidade.
+- [ ] `BLOCKED_BY:Medição` Registrar ADR final do backend.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -166,3 +167,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 14:00 — Fase 3/claims e evidência — claims exigem qualificadores explícitos e são persistidos atomicamente com vínculos tipados para observações existentes e evento auditável — verificação: unit/contract tests de isolamento, endpoint órfão e rollback, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: materializar uma visão citada do estado canônico.
 
 2026-07-15 14:20 — Fase 3/visões citadas — visão materializada determinística criada sobre claim/evidência/fonte; patch de evidência gera sucessora e torna a anterior detectavelmente obsoleta em transação única — verificação: contract/unit tests de isolamento e rollback, `go test ./...`, `go vet ./...`, `git diff --check`; stdlib escolhida após preflight, sem dependência de JSON Patch — próximo: fixar suite comparável de storage e iniciar spikes Dolt/SQLite.
+2026-07-15 14:40 — Fase 4/protocolo do spike — suite durável separada formaliza reopen/rollback/idempotência; plano fixa dataset determinístico, crash subprocessado, métricas, bloqueadores e pesos comuns para SQLite/Dolt — verificação: fontes oficiais Dolt/SQLite/modernc, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: adapter SQLite + event log sob ambas as suites.
