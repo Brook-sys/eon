@@ -60,9 +60,9 @@ Uma `InquiryCandidate` autogerada MUST declarar mudança observável esperada no
 
 ### FR-KNOW-001 — Proveniência de observações
 
-Toda `Observation` MUST ser ancorada em `SourceFragment` ou `EvidenceReceipt` recuperável. Identidade da fonte MUST NOT ser interpretada como veracidade.
+Toda `Observation` MUST ser ancorada em `SourceFragment` ou `EvidenceReceipt` recuperável. Quando ancorada em fragmento, MUST preservar uma citação exata que confira byte a byte com o fragmento imutável; a declaração interpretativa permanece separada dessa citação. Identidade da fonte MUST NOT ser interpretada como veracidade.
 
-**Evidência de aceitação:** observação sem âncora é estruturalmente inválida.
+**Evidência de aceitação:** observação sem âncora, com âncora inexistente ou com citação divergente é recusada atomicamente.
 
 ### FR-KNOW-006 — Segmentação verificável
 

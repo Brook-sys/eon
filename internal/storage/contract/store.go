@@ -132,6 +132,54 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+	t.Run("observations require a recoverable anchor and exact fragment quote", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 15, 16, 40, 0, 0, time.UTC)
+		content := []byte("bounded source text")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		source := domain.Source{SchemaVersion: 1, ID: "source_1", Kind: "fixture", Locator: "source.txt", ObservedAt: now}
+		version := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_1", SourceID: source.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: version.ID, MediaType: "text/plain", Content: content}
+		fragment := domain.SourceFragment{SchemaVersion: 1, ID: "fragment_1", SourceVersionID: version.ID, Location: "bytes:0-19", StartOffset: 0, EndOffset: 19, ContentHash: hash, ContentRef: hash}
+		observation := domain.Observation{SchemaVersion: 1, ID: "observation_1", Statement: "the source contains bounded text", ExactQuote: string(content), Anchor: domain.ObservationAnchor{SourceFragmentID: fragment.ID}, Provenance: "extractor:test@1"}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendSource(source, version, snapshot); err != nil {
+				return err
+			}
+			if err := tx.AppendSourceFragments(version.ID, []domain.SourceFragment{fragment}); err != nil {
+				return err
+			}
+			return tx.AppendObservation(observation)
+		}); err != nil {
+			t.Fatalf("append observation: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.Observation(observation.ID)
+			if err != nil {
+				return err
+			}
+			if got != observation {
+				t.Fatalf("observation = %+v, want %+v", got, observation)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		bad := observation
+		bad.ID, bad.ExactQuote = "observation_2", "invented quote"
+		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendObservation(bad) })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("quote mismatch error = %v, want ErrConflict", err)
+		}
+		missing := observation
+		missing.ID, missing.Anchor.SourceFragmentID = "observation_3", "fragment_missing"
+		err = store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendObservation(missing) })
+		if !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("missing anchor error = %v, want ErrNotFound", err)
+		}
+	})
 	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)

@@ -98,8 +98,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/ingest` limita bytes, calcula SHA-256, persiste `Source → SourceVersion → SourceSnapshot` e evento atomicamente; store contracts verificam endereçamento por conteúdo, isolamento de bytes e rollback.
 - [x] `DONE` Segmentar com round-trip verificável.
   - Evidência: `internal/segment` divide texto UTF-8 deterministicamente sem alterar bytes; `SourceFragment` registra offsets/hash, store exige cobertura contígua completa e contract tests comprovam ordem, rollback e round-trip.
-- [ ] `READY` Propor observação ancorada.
-- [ ] `BLOCKED_BY:observação` Propor claim e vínculo de evidência.
+- [x] `DONE` Propor observação ancorada.
+  - Evidência: `internal/observe` persiste proposta e evento atomicamente; store resolve o fragmento e exige citação exata byte a byte antes de aceitar a observação, com contract tests de âncora ausente, quote divergente e rollback.
+- [ ] `READY` Propor claim e vínculo de evidência.
 - [ ] `BLOCKED_BY:claims` Gerar uma visão citada a partir do estado canônico.
 - [ ] `BLOCKED_BY:visão-citada` Atualizar a visão por patch após delta de evidência.
 
@@ -158,3 +159,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 12:40 — Fase 2/repouso determinístico — scheduler mínimo seleciona por ordem estável, retoma `not_before` vencido, limita replenishment e persiste/encerra `Rest`; relógio manual bloqueia por sinal até deadline virtual sem polling — verificação: contract tests, testes de zero ciclo intermediário/despertar único, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: iniciar Fase 3 com ingestão de fonte fixture imutável.
 2026-07-15 13:00 — Fase 3/ingestão fixture — bytes limitados são preservados em snapshot imutável endereçado por SHA-256; fonte, versão, snapshot e evento são gravados atomicamente com validação de linhagem/hash — verificação: unit/contract tests de isolamento, oversize, hash divergente e rollback, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: segmentação determinística com cobertura, offsets e round-trip.
 2026-07-15 13:20 — Fase 3/segmentação — texto UTF-8 segmentado deterministicamente por offsets de bytes; store exige cobertura total ordenada, localização/hash coerentes e grava evento atomicamente — verificação: contract tests de rollback/lacunas e teste Unicode de round-trip, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: propor observações estritamente ancoradas em fragmentos recuperáveis.
+2026-07-15 13:40 — Fase 3/observações ancoradas — propostas preservam declaração, citação exata e proveniência separadas; store resolve âncora e rejeita quote inventada sem evento parcial — verificação: contract/unit tests, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: claims versionados e vínculos de evidência tipados.

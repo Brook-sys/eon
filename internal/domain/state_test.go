@@ -64,6 +64,9 @@ func TestObservationRequiresExactlyOneAnchor(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			observation := base
 			observation.Anchor = test.anchor
+			if test.anchor.SourceFragmentID != "" && test.anchor.ReceiptID == "" {
+				observation.ExactQuote = "source text"
+			}
 			err := observation.Validate()
 			if (err != nil) != test.wantError {
 				t.Fatalf("Validate() error = %v, wantError %v", err, test.wantError)

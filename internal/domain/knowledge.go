@@ -96,15 +96,25 @@ type Observation struct {
 	SchemaVersion int               `json:"schema_version"`
 	ID            ObservationID     `json:"id"`
 	Statement     string            `json:"statement"`
+	ExactQuote    string            `json:"exact_quote,omitempty"`
 	Anchor        ObservationAnchor `json:"anchor"`
 	Provenance    string            `json:"provenance"`
 }
 
 func (o Observation) Validate() error {
-	if o.SchemaVersion != SchemaVersionV1 || o.ID == "" || o.Statement == "" || o.Provenance == "" {
+	if o.SchemaVersion != SchemaVersionV1 || o.ID == "" || strings.TrimSpace(o.Statement) == "" || strings.TrimSpace(o.Provenance) == "" {
 		return errors.New("observation is incomplete or has unsupported schema version")
 	}
-	return o.Anchor.Validate()
+	if err := o.Anchor.Validate(); err != nil {
+		return err
+	}
+	if o.Anchor.SourceFragmentID != "" && o.ExactQuote == "" {
+		return errors.New("source-fragment observation requires an exact quote")
+	}
+	if o.Anchor.ReceiptID != "" && o.ExactQuote != "" {
+		return errors.New("receipt observation must not contain an exact quote")
+	}
+	return nil
 }
 
 type Claim struct {

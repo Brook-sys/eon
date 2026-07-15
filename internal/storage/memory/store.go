@@ -35,6 +35,7 @@ type state struct {
 	sourceVersions   map[domain.SourceVersionID]domain.SourceVersion
 	sourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
 	sourceFragments  map[domain.SourceFragmentID]domain.SourceFragment
+	observations     map[domain.ObservationID]domain.Observation
 	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
 	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
@@ -64,6 +65,7 @@ func newState() state {
 		sourceVersions:   make(map[domain.SourceVersionID]domain.SourceVersion),
 		sourceSnapshots:  make(map[domain.SourceVersionID]domain.SourceSnapshot),
 		sourceFragments:  make(map[domain.SourceFragmentID]domain.SourceFragment),
+		observations:     make(map[domain.ObservationID]domain.Observation),
 		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
 		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
 		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
@@ -189,6 +191,9 @@ func (t transaction) SourceFragment(id domain.SourceFragmentID) (domain.SourceFr
 }
 func (t transaction) SourceFragments(id domain.SourceVersionID) ([]domain.SourceFragment, error) {
 	return reader(t).SourceFragments(id)
+}
+func (t transaction) Observation(id domain.ObservationID) (domain.Observation, error) {
+	return reader(t).Observation(id)
 }
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
@@ -327,6 +332,13 @@ func (r reader) SourceFragments(id domain.SourceVersionID) ([]domain.SourceFragm
 		return fragments[i].StartOffset < fragments[j].StartOffset
 	})
 	return fragments, nil
+}
+func (r reader) Observation(id domain.ObservationID) (domain.Observation, error) {
+	v, ok := r.state.observations[id]
+	if !ok {
+		return domain.Observation{}, notFound("observation", id)
+	}
+	return v, nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]
@@ -661,6 +673,31 @@ func (t transaction) AppendSourceFragments(versionID domain.SourceVersionID, fra
 	return nil
 }
 
+func (t transaction) AppendObservation(v domain.Observation) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate observation: %w", err)
+	}
+	if _, exists := t.state.observations[v.ID]; exists {
+		return conflict("observation", v.ID)
+	}
+	if v.Anchor.SourceFragmentID != "" {
+		fragment, ok := t.state.sourceFragments[v.Anchor.SourceFragmentID]
+		if !ok {
+			return notFound("source fragment", v.Anchor.SourceFragmentID)
+		}
+		snapshot := t.state.sourceSnapshots[fragment.SourceVersionID]
+		if v.ExactQuote != string(snapshot.Content[fragment.StartOffset:fragment.EndOffset]) {
+			return fmt.Errorf("%w: observation exact quote differs from anchored fragment", port.ErrConflict)
+		}
+	} else {
+		if _, ok := t.state.receipts[v.Anchor.ReceiptID]; !ok {
+			return notFound("evidence receipt", v.Anchor.ReceiptID)
+		}
+	}
+	t.state.observations[v.ID] = v
+	return nil
+}
+
 func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate raw model output: %w", err)
@@ -866,6 +903,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.sourceFragments {
 		dst.sourceFragments[k] = v
+	}
+	for k, v := range src.observations {
+		dst.observations[k] = v
 	}
 	for k, v := range src.rawModelOutputs {
 		dst.rawModelOutputs[k] = v

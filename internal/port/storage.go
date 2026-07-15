@@ -77,6 +77,7 @@ type KnowledgeReader interface {
 	SourceSnapshot(domain.SourceVersionID) (domain.SourceSnapshot, error)
 	SourceFragment(domain.SourceFragmentID) (domain.SourceFragment, error)
 	SourceFragments(domain.SourceVersionID) ([]domain.SourceFragment, error)
+	Observation(domain.ObservationID) (domain.Observation, error)
 	RawModelOutput(domain.ArtifactID) (domain.RawModelOutput, error)
 	ProposedChangeSet(domain.ChangeSetID) (domain.ProposedChangeSet, error)
 	AcceptedChangeSet(domain.ChangeSetID) (domain.AcceptedChangeSet, error)
@@ -91,6 +92,7 @@ type KnowledgeReader interface {
 type KnowledgeWriter interface {
 	AppendSource(domain.Source, domain.SourceVersion, domain.SourceSnapshot) error
 	AppendSourceFragments(domain.SourceVersionID, []domain.SourceFragment) error
+	AppendObservation(domain.Observation) error
 	AppendRawModelOutput(domain.RawModelOutput) error
 	AppendProposedChangeSet(domain.ProposedChangeSet) error
 	AppendAcceptedChangeSet(domain.AcceptedChangeSet) error
