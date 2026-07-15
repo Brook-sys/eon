@@ -79,8 +79,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/mission` faz decode JSON estrito e limitado, valida schema/conteúdo/status ativo, deriva IDs/tempo por fontes injetadas e instala revisão, ponteiro ativo e evento de auditoria atomicamente; testes cobrem entrada válida, campos desconhecidos, trailing data, oversize, status inativo, duplicatas e rollback sem mutação.
 - [x] `DONE` Persistir pergunta, operação e condição de retomada.
   - Evidência: catálogo imutável de `OperationSpec`, integridade referencial da agenda e `agenda.Bootstrapper` persistem `Question → InquiryCandidate → Inquiry → Operation`, condições `READY` e evento correlacionado em uma transação; contract tests impedem linhagem órfã e mutação de campos estruturais.
-- [ ] `READY` Implementar servidor OpenAI-compatible falso para testes.
-- [ ] `BLOCKED_BY:FakeServer` Implementar provider mínimo Chat Completions texto→texto.
+- [x] `DONE` Implementar servidor OpenAI-compatible falso para testes.
+  - Evidência: `internal/provider/openai/fakeserver` oferece servidor HTTP roteado, script determinístico, captura de requests e registro de mismatches para testes offline.
+- [x] `DONE` Implementar provider mínimo Chat Completions texto→texto.
+  - Evidência: porta neutra `ModelProvider` e adapter `internal/provider/openai` fazem POST limitado a `/v1/chat/completions`, extraem texto/usage, classificam HTTP/transporte/resposta inválida e não expõem corpo de erro.
 - [ ] `READY` Compilar um `OperationSpec` sob budget.
 - [ ] `BLOCKED_BY:OperationSpec` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
 - [ ] `BLOCKED_BY:Provider,ChangeSet` Simular crash e comprovar retomada sem efeito duplicado.
@@ -142,3 +144,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 10:20 — Fase 1/eventos e idempotência — event log transacional com sequência monotônica e lookup/paginação implementado; reserva/conclusão idempotente rejeita reutilização divergente; contract tests cobrem replay, conflito e rollback — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: iniciar vertical slice carregando `MissionSpec` versionada.
 2026-07-15 10:40 — Fase 2/MissionSpec — loader estrito e limitado implementado; revisão, ativação e evento auditável instalados em transação única com tempo/IDs injetáveis; dependências da fase 2 reclassificadas — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: persistir o primeiro conjunto pergunta/operação/retomada e definir catálogo de `OperationSpec`.
 2026-07-15 11:00 — Fase 2/agenda recuperável — catálogo versionado de `OperationSpec` persistido; referências de missão/spec/linhagem validadas no store; bootstrap atômico cria pergunta, candidata, inquiry, operação, wake conditions e evento auditável — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: servidor OpenAI-compatible falso e provider texto→texto.
+
+2026-07-15 11:20 — Fase 2/provider simulado — servidor OpenAI-compatible falso roteado e provider Chat Completions texto→texto implementados; limites de resposta, erros tipados, retryability e não vazamento de corpo cobertos — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: compilar `OperationSpec` sob budget e preservar resposta bruta antes da validação.
