@@ -4,13 +4,15 @@ Status: rascunho v0.1
 
 ## Objetivo científico e de engenharia
 
-Projetar e avaliar um runtime autônomo contínuo, orientado por missão, capaz de produzir progresso verificável usando modelos de linguagem fracos, antigos, pequenos, rate-limited e sem tool calling confiável.
+Projetar e avaliar um runtime epistemológico autônomo contínuo, orientado por missão, capaz de produzir progresso verificável na construção e revisão de conhecimento usando modelos de linguagem fracos, antigos, pequenos, rate-limited e sem tool calling confiável.
 
 Não assumimos que a solução é inédita. A contribuição potencial só poderá ser formulada depois de uma revisão de literatura e comparação sistemática com planejamento clássico, arquiteturas de agentes, workflows duráveis e harnesses LLM existentes.
 
 ## Pergunta central
 
-Até que ponto organização determinística, decomposição persistente, contexto compilado, interfaces restritas e verificação externa compensam limitações de capacidade, contexto e tool use de modelos fracos em tarefas contínuas de longo horizonte?
+Até que ponto organização determinística, investigação persistente, contexto compilado, interfaces restritas, proveniência e verificação externa compensam limitações de capacidade, contexto e tool use de modelos fracos na manutenção contínua de uma base de conhecimento orientada por missão?
+
+O domínio inicial está detalhado em `KNOWLEDGE_RUNTIME.md`. Automação geral, manipulação arbitrária de arquivos, execução de código e depuração ficam fora do MVP.
 
 ## Subperguntas
 
@@ -24,6 +26,9 @@ Até que ponto organização determinística, decomposição persistente, contex
 8. Como verificar resultados quando não existe ground truth imediato?
 9. Como aprender com episódios sem corromper contratos, memória ou políticas?
 10. Qual degradação ocorre em horizontes longos e como isolá-la por componente?
+11. Como distinguir crescimento textual de ganho epistemológico real?
+12. Como revisar conclusões e artefatos quando fontes, claims ou a própria missão mudam?
+13. Como evitar falsa corroboração, viés de confirmação e circularidade entre conteúdos gerados pelo sistema?
 
 ## Hipóteses iniciais — ainda não confirmadas
 
