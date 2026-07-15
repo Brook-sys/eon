@@ -482,3 +482,5 @@ uma pergunta
 → atualização de uma síntese
 → próxima lacuna ou repouso
 ```
+
+As transformações sobre a base estão detalhadas em `KNOWLEDGE_OPERATIONS.md`. A investigação de Dolt e alternativas está em `STORAGE_VERSIONING.md`.
