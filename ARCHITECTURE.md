@@ -1,15 +1,15 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.2
+Status: rascunho v0.3
 
 ## Tese
 
 A inteligência principal deve estar no sistema, não depender exclusivamente do modelo.
 O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com janelas de contexto reduzidas.
 
-Seu propósito principal é **continuidade operacional**: permanecer vivo, preservar estado e voltar a avançar assim que houver trabalho, capacidade e permissão. O motor é contínuo; objetivos e operações podem ser finitos.
+Seu propósito principal é **continuidade progressiva**: permanecer vivo, preservar estado e produzir a próxima frente útil de trabalho sempre que houver capacidade e permissão. O motor é contínuo; objetivos e operações individuais podem ser finitos.
 
-Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que espera, rate limit, callback pendente, reinício, indisponibilidade e ausência de trabalho são estados normais e duráveis do runtime.
+Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime não depende de comandos ou eventos externos para continuar avançando: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas tarefas derivadas e executa a melhor ação permitida. Eventos externos são sinais opcionais de mudança, interrupção ou repriorização.
 
 ## Princípios
 
@@ -21,11 +21,14 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 6. Reinício e retomada sem perda do progresso.
 7. Falha fechada para ações sem permissão ou sem validação.
 8. Um modelo fraco pode exigir mais passos, mas não deve romper o protocolo.
-9. Esperar é trabalho válido: o motor deve dormir sem perder estado e acordar por evento ou prazo.
+9. Esperar é trabalho válido: o motor deve dormir sem perder estado e acordar por prazo, disponibilidade ou evento.
 10. Limites são entradas do scheduler, não exceções improvisadas.
 11. Toda operação com efeito colateral deve ser idempotente ou possuir chave de deduplicação.
 12. Nenhuma dependência externa, incluindo o modelo, controla a continuidade do kernel.
 13. Conversas entre agentes não fazem parte do núcleo; coordenação ocorre por estado, eventos e contratos.
+14. A agenda é renovável: concluir uma tarefa deve revelar, validar ou gerar próximas tarefas alinhadas à missão.
+15. Eventos externos influenciam o rumo, mas não são requisito para progresso.
+16. A geração autônoma de tarefas permanece limitada pela missão, políticas e orçamento definidos pelo operador.
 
 ## Visão em camadas
 
@@ -77,11 +80,20 @@ Cada transição deve ser registrada em um log append-only.
 O runtime global possui um ciclo diferente:
 
 ```text
-recover → ingest events → release due waits → schedule → dispatch
-        → persist → calculate next wake-up → sleep → recover
+recover → observe state/capacity/time → ingest optional events
+        → replenish agenda → prioritize → dispatch → verify
+        → learn/expand frontier → persist → calculate next cycle → sleep
 ```
 
-Se não houver trabalho executável, o kernel calcula o próximo prazo e dorme. Ele deve poder ser acordado antecipadamente por callback ou evento. Portanto, seu comportamento contínuo é **event-driven**, não polling agressivo.
+O ciclo possui três fontes de ativação:
+
+1. **tempo**: chegou o próximo ciclo periódico ou prazo interno;
+2. **disponibilidade**: um recurso, cota ou capacidade voltou a estar livre;
+3. **evento externo opcional**: chegou informação que pode alterar estado, prioridade ou direção.
+
+Se a fila executável estiver vazia, o motor não conclui que terminou. Primeiro executa `replenish agenda`: examina missão, lacunas, resultados recentes, riscos, oportunidades e tarefas recorrentes para produzir candidatos. Se ainda não houver ação útil e permitida, calcula o próximo ciclo e dorme. Ele pode ser acordado antecipadamente por disponibilidade ou evento.
+
+Seu comportamento contínuo é, portanto, **time-and-availability-driven**, com eventos externos como modificadores opcionais.
 
 ## Invariante de continuidade
 
@@ -92,13 +104,119 @@ Enquanto não houver uma ordem explícita de desligamento ou falha fatal do arma
 3. após reinício, o runtime reconstrói filas, esperas, leases e callbacks pendentes;
 4. nenhuma resposta de modelo é necessária para o motor saber como retomar;
 5. rate limits e dependências indisponíveis adiam trabalho, mas não apagam intenção;
-6. o motor pode permanecer indefinidamente em repouso com consumo mínimo.
+6. o motor pode permanecer em repouso com consumo mínimo sem interpretar repouso como conclusão definitiva;
+7. uma agenda vazia dispara geração controlada de candidatos antes do repouso;
+8. cada nova tarefa possui proveniência que demonstra de qual missão, objetivo, evidência ou obrigação recorrente ela foi derivada.
 
 Isso diferencia:
 
 - **continuidade do motor**: potencialmente indefinida;
 - **continuidade de um objetivo**: até conclusão, cancelamento ou intervenção;
 - **continuidade de uma tentativa**: curta, limitada por timeout e lease.
+
+## Missão, agenda e fronteira de trabalho
+
+Para continuar sem depender de eventos externos, o runtime precisa de algo mais durável que uma fila: uma **missão operacional**.
+
+### Mission
+
+Define o espaço legítimo de progresso:
+
+```json
+{
+  "id": "mission_...",
+  "purpose": "resultado contínuo desejado pelo operador",
+  "domains": ["escopos permitidos"],
+  "policies": ["restrições obrigatórias"],
+  "standing_objectives": ["objetivos permanentes"],
+  "cadence": {"review_every_seconds": 900},
+  "resource_budget": {"requests_per_day": 100},
+  "status": "ACTIVE"
+}
+```
+
+O motor não cria uma missão independente. Ele deriva trabalho apenas de missões configuradas, resultados observados e obrigações autorizadas.
+
+### Agenda
+
+Conjunto priorizado de tarefas conhecidas. Pode esvaziar temporariamente.
+
+### Work Frontier
+
+Conjunto de lacunas, hipóteses, riscos, oportunidades e próximos passos ainda não transformados em tarefas executáveis.
+
+### AgendaReplenisher
+
+Quando necessário, transforma a fronteira em novos `WorkItem`s. Fontes possíveis:
+
+- decomposição progressiva da missão;
+- próximos passos revelados por uma tarefa concluída;
+- critérios ainda não satisfeitos;
+- falhas e evidências inconclusivas;
+- manutenção recorrente por tempo;
+- recursos que voltaram a ficar disponíveis;
+- revisão periódica de backlog e prioridades;
+- eventos externos que mudaram o estado observado.
+
+Pipeline:
+
+```text
+mission + current state + evidence + frontier + capacity
+    → generate candidates
+    → reject duplicates/out-of-scope/low-value items
+    → estimate cost, risk and expected progress
+    → admit bounded set into agenda
+```
+
+Isso deve ser incremental. O motor não gera um plano gigantesco; mantém apenas um horizonte curto de tarefas prontas e uma fronteira resumida.
+
+## Progresso contínuo
+
+Cada tarefa concluída deve passar por uma etapa de expansão:
+
+```text
+resultado
+  → o que mudou?
+  → quais critérios foram satisfeitos?
+  → quais lacunas apareceram?
+  → qual é o próximo incremento útil?
+  → criar, atualizar, adiar ou eliminar candidatos
+```
+
+O conceito central é uma **esteira de incrementos**:
+
+```text
+missão → incremento → evidência → estado atualizado → próximo incremento
+```
+
+O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial. A continuidade termina apenas quando a missão é pausada/cancelada ou uma política determina que não existe ação segura e útil dentro do horizonte atual.
+
+Para evitar atividade vazia, toda tarefa autogerada deve declarar:
+
+- `derived_from`: origem na missão, evidência ou recorrência;
+- `expected_progress`: mudança observável esperada;
+- `novelty`: por que não duplica trabalho anterior;
+- `cost_estimate`;
+- `stop_condition`;
+- `review_after`: quando reavaliar caso seja adiada.
+
+Sem progresso esperado demonstrável, o candidato não entra na agenda.
+
+## Eventos externos como mudanças de rumo
+
+Eventos não mantêm o motor vivo; eles atualizam sua percepção.
+
+Um evento pode:
+
+- acrescentar ou corrigir fatos;
+- elevar ou reduzir prioridades;
+- invalidar tarefas planejadas;
+- introduzir nova restrição;
+- pausar ou cancelar uma missão;
+- desbloquear uma capacidade;
+- exigir replanejamento imediato.
+
+Após incorporar o evento, o motor recalcula apenas a parte afetada da agenda. Na ausência de eventos, o ciclo temporal e a expansão da fronteira continuam normalmente.
 
 ## Supervisor e scheduler durável
 
