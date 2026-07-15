@@ -4,6 +4,7 @@ package contract
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -306,6 +307,116 @@ func TestStore(t *testing.T, factory Factory) {
 				t.Fatalf("completed record = %#v", got)
 			}
 			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("knowledge commit is atomic, versioned, and replay safe", func(t *testing.T) {
+		store := factory()
+		q, candidate, inquiry, operation := agendaRecords()
+		now := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+		proposal := domain.ProposedChangeSet{SchemaVersion: 1, ID: "changeset_1", MissionRevision: "revision_1", OperationID: operation.ID, BaseCommitID: domain.GenesisCommitID, ReadSet: []string{"fragment_1"}, Preconditions: []string{}, Changes: []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "observation_1", PayloadRef: "payload_1"}}, ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"}, Provenance: "model:fake", IdempotencyKey: operation.IdempotencyKey}
+		raw := domain.RawModelOutput{SchemaVersion: 1, ID: "artifact_raw_1", OperationID: operation.ID, Model: "fake", Content: "{}", ContentHash: "hash", CreatedAt: now}
+		validation := domain.ValidationReceipt{SchemaVersion: 1, ID: "validation_1", OperationID: operation.ID, ChangeSetID: proposal.ID, ValidatorID: "schema", Passed: true, ArtifactRef: raw.ID, ProducedAt: now}
+		accepted := domain.AcceptedChangeSet{SchemaVersion: 1, ID: "accepted_1", ProposedChangeSetID: proposal.ID, ValidationReceiptIDs: []domain.ReceiptID{validation.ID}, AcceptedAt: now, PolicyVersion: "policy@1"}
+		commit := domain.Commit{SchemaVersion: 1, ID: "commit_1", AcceptedChangeSetID: accepted.ID, MissionRevision: proposal.MissionRevision, BaseCommitID: proposal.BaseCommitID, Version: 1, CommittedAt: now, ReceiptID: "commit_receipt_1", IdempotencyKey: proposal.IdempotencyKey}
+		commitReceipt := domain.CommitReceipt{SchemaVersion: 1, ID: commit.ReceiptID, CommitID: commit.ID, ChangeSetID: accepted.ID, OperationID: operation.ID, Version: commit.Version, ProducedAt: now}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(missionRevision()); err != nil {
+				return err
+			}
+			if err := tx.AppendOperationSpec(operationSpec()); err != nil {
+				return err
+			}
+			if err := tx.CreateQuestion(q); err != nil {
+				return err
+			}
+			if err := tx.CreateInquiryCandidate(candidate); err != nil {
+				return err
+			}
+			if err := tx.CreateInquiry(inquiry); err != nil {
+				return err
+			}
+			if err := tx.CreateOperation(operation); err != nil {
+				return err
+			}
+			if err := tx.AppendRawModelOutput(raw); err != nil {
+				return err
+			}
+			if err := tx.AppendProposedChangeSet(proposal); err != nil {
+				return err
+			}
+			if err := tx.AppendValidationReceipt(validation); err != nil {
+				return err
+			}
+			if err := tx.AppendAcceptedChangeSet(accepted); err != nil {
+				return err
+			}
+			return tx.ApplyCommit(commit, commitReceipt, proposal.Changes)
+		}); err != nil {
+			t.Fatalf("apply commit: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.ApplyCommit(commit, commitReceipt, proposal.Changes) }); err != nil {
+			t.Fatalf("replay identical commit: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			entity, err := r.CanonicalEntity("observation", "observation_1")
+			if err != nil {
+				return err
+			}
+			if entity.CommitID != commit.ID || entity.Version != 1 {
+				t.Fatalf("entity = %#v", entity)
+			}
+			receipt, err := r.CommitReceipt(commit.ReceiptID)
+			if err == nil && receipt.CommitID != commit.ID {
+				t.Fatalf("receipt = %#v", receipt)
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		staleProposal := proposal
+		staleProposal.ID = "changeset_2"
+		staleProposal.Changes = []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "observation_2", PayloadRef: "payload_2"}}
+		staleValidation := validation
+		staleValidation.ID, staleValidation.ChangeSetID = "validation_2", staleProposal.ID
+		staleAccepted := accepted
+		staleAccepted.ID, staleAccepted.ProposedChangeSetID, staleAccepted.ValidationReceiptIDs = "accepted_2", staleProposal.ID, []domain.ReceiptID{staleValidation.ID}
+		staleCommit := commit
+		staleCommit.ID, staleCommit.AcceptedChangeSetID, staleCommit.ReceiptID, staleCommit.IdempotencyKey = "commit_2", staleAccepted.ID, "commit_receipt_2", staleProposal.IdempotencyKey
+		staleCommit.Version = 2
+		staleReceipt := domain.CommitReceipt{SchemaVersion: 1, ID: staleCommit.ReceiptID, CommitID: staleCommit.ID, ChangeSetID: staleAccepted.ID, OperationID: operation.ID, Version: 2, ProducedAt: now}
+		sentinel := errors.New("abort after staged stale records")
+		err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendProposedChangeSet(staleProposal); err != nil {
+				return err
+			}
+			if err := tx.AppendValidationReceipt(staleValidation); err != nil {
+				return err
+			}
+			if err := tx.AppendAcceptedChangeSet(staleAccepted); err != nil {
+				return err
+			}
+			if err := tx.ApplyCommit(staleCommit, staleReceipt, staleProposal.Changes); !errors.Is(err, port.ErrConflict) {
+				return fmt.Errorf("stale commit error = %v", err)
+			}
+			return sentinel
+		})
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("rollback error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.ProposedChangeSet(staleProposal.ID)
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("staged proposal survived rollback: %v", err)
+			}
+			_, err = r.CanonicalEntity("observation", "observation_2")
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("stale entity exists: %v", err)
+			}
+			return nil
 		}); err != nil {
 			t.Fatal(err)
 		}

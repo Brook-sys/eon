@@ -27,6 +27,15 @@ type state struct {
 	events           []domain.Event
 	eventIDs         map[domain.EventID]uint64
 	idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
+	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
+	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
+	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
+	receipts         map[domain.ReceiptID]domain.ValidationReceipt
+	commitReceipts   map[domain.ReceiptID]domain.CommitReceipt
+	commits          map[domain.CommitID]domain.Commit
+	commitByIntent   map[domain.IdempotencyKey]domain.CommitID
+	headCommits      map[domain.MissionRevisionID]domain.CommitID
+	canonical        map[string]domain.CanonicalEntity
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -42,6 +51,15 @@ func newState() state {
 		operations:       make(map[domain.OperationID]domain.Operation),
 		eventIDs:         make(map[domain.EventID]uint64),
 		idempotency:      make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
+		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
+		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
+		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
+		receipts:         make(map[domain.ReceiptID]domain.ValidationReceipt),
+		commitReceipts:   make(map[domain.ReceiptID]domain.CommitReceipt),
+		commits:          make(map[domain.CommitID]domain.Commit),
+		commitByIntent:   make(map[domain.IdempotencyKey]domain.CommitID),
+		headCommits:      make(map[domain.MissionRevisionID]domain.CommitID),
+		canonical:        make(map[string]domain.CanonicalEntity),
 	}
 }
 
@@ -110,6 +128,33 @@ func (t transaction) EventByID(id domain.EventID) (domain.Event, error) {
 }
 func (t transaction) IdempotencyRecord(key domain.IdempotencyKey) (domain.IdempotencyRecord, error) {
 	return reader(t).IdempotencyRecord(key)
+}
+func (t transaction) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
+	return reader(t).RawModelOutput(id)
+}
+func (t transaction) ProposedChangeSet(id domain.ChangeSetID) (domain.ProposedChangeSet, error) {
+	return reader(t).ProposedChangeSet(id)
+}
+func (t transaction) AcceptedChangeSet(id domain.ChangeSetID) (domain.AcceptedChangeSet, error) {
+	return reader(t).AcceptedChangeSet(id)
+}
+func (t transaction) ValidationReceipt(id domain.ReceiptID) (domain.ValidationReceipt, error) {
+	return reader(t).ValidationReceipt(id)
+}
+func (t transaction) CommitReceipt(id domain.ReceiptID) (domain.CommitReceipt, error) {
+	return reader(t).CommitReceipt(id)
+}
+func (t transaction) Commit(id domain.CommitID) (domain.Commit, error) {
+	return reader(t).Commit(id)
+}
+func (t transaction) CommitByIdempotencyKey(key domain.IdempotencyKey) (domain.Commit, error) {
+	return reader(t).CommitByIdempotencyKey(key)
+}
+func (t transaction) HeadCommit(id domain.MissionRevisionID) (domain.Commit, error) {
+	return reader(t).HeadCommit(id)
+}
+func (t transaction) CanonicalEntity(entityType, entityID string) (domain.CanonicalEntity, error) {
+	return reader(t).CanonicalEntity(entityType, entityID)
 }
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
@@ -183,6 +228,69 @@ func (r reader) IdempotencyRecord(key domain.IdempotencyKey) (domain.Idempotency
 	v, ok := r.state.idempotency[key]
 	if !ok {
 		return domain.IdempotencyRecord{}, notFound("idempotency key", key)
+	}
+	return v, nil
+}
+func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
+	v, ok := r.state.rawModelOutputs[id]
+	if !ok {
+		return domain.RawModelOutput{}, notFound("raw model output", id)
+	}
+	return v, nil
+}
+func (r reader) ProposedChangeSet(id domain.ChangeSetID) (domain.ProposedChangeSet, error) {
+	v, ok := r.state.proposedChanges[id]
+	if !ok {
+		return domain.ProposedChangeSet{}, notFound("proposed changeset", id)
+	}
+	return cloneProposedChangeSet(v), nil
+}
+func (r reader) AcceptedChangeSet(id domain.ChangeSetID) (domain.AcceptedChangeSet, error) {
+	v, ok := r.state.acceptedChanges[id]
+	if !ok {
+		return domain.AcceptedChangeSet{}, notFound("accepted changeset", id)
+	}
+	return cloneAcceptedChangeSet(v), nil
+}
+func (r reader) ValidationReceipt(id domain.ReceiptID) (domain.ValidationReceipt, error) {
+	v, ok := r.state.receipts[id]
+	if !ok {
+		return domain.ValidationReceipt{}, notFound("validation receipt", id)
+	}
+	return v, nil
+}
+func (r reader) CommitReceipt(id domain.ReceiptID) (domain.CommitReceipt, error) {
+	v, ok := r.state.commitReceipts[id]
+	if !ok {
+		return domain.CommitReceipt{}, notFound("commit receipt", id)
+	}
+	return v, nil
+}
+func (r reader) Commit(id domain.CommitID) (domain.Commit, error) {
+	v, ok := r.state.commits[id]
+	if !ok {
+		return domain.Commit{}, notFound("commit", id)
+	}
+	return v, nil
+}
+func (r reader) CommitByIdempotencyKey(key domain.IdempotencyKey) (domain.Commit, error) {
+	id, ok := r.state.commitByIntent[key]
+	if !ok {
+		return domain.Commit{}, notFound("commit idempotency key", key)
+	}
+	return r.Commit(id)
+}
+func (r reader) HeadCommit(id domain.MissionRevisionID) (domain.Commit, error) {
+	commitID, ok := r.state.headCommits[id]
+	if !ok {
+		return domain.Commit{}, notFound("head commit", id)
+	}
+	return r.Commit(commitID)
+}
+func (r reader) CanonicalEntity(entityType, entityID string) (domain.CanonicalEntity, error) {
+	v, ok := r.state.canonical[canonicalKey(entityType, entityID)]
+	if !ok {
+		return domain.CanonicalEntity{}, notFound("canonical entity", entityType+"/"+entityID)
 	}
 	return v, nil
 }
@@ -368,6 +476,162 @@ func (t transaction) CompleteIdempotency(key domain.IdempotencyKey, receiptID do
 	return v, nil
 }
 
+func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate raw model output: %w", err)
+	}
+	if _, ok := t.state.operations[v.OperationID]; !ok {
+		return notFound("operation", v.OperationID)
+	}
+	if _, ok := t.state.rawModelOutputs[v.ID]; ok {
+		return conflict("raw model output", v.ID)
+	}
+	t.state.rawModelOutputs[v.ID] = v
+	return nil
+}
+
+func (t transaction) AppendProposedChangeSet(v domain.ProposedChangeSet) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate proposed changeset: %w", err)
+	}
+	operation, ok := t.state.operations[v.OperationID]
+	if !ok {
+		return notFound("operation", v.OperationID)
+	}
+	if operation.MissionRevision != v.MissionRevision || operation.IdempotencyKey != v.IdempotencyKey {
+		return fmt.Errorf("%w: proposed changeset differs from operation lineage", port.ErrConflict)
+	}
+	if _, ok := t.state.proposedChanges[v.ID]; ok {
+		return conflict("proposed changeset", v.ID)
+	}
+	t.state.proposedChanges[v.ID] = cloneProposedChangeSet(v)
+	return nil
+}
+
+func (t transaction) AppendValidationReceipt(v domain.ValidationReceipt) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate validation receipt: %w", err)
+	}
+	proposal, ok := t.state.proposedChanges[v.ChangeSetID]
+	if !ok {
+		return notFound("proposed changeset", v.ChangeSetID)
+	}
+	if proposal.OperationID != v.OperationID {
+		return fmt.Errorf("%w: validation receipt differs from changeset operation", port.ErrConflict)
+	}
+	if _, ok := t.state.rawModelOutputs[v.ArtifactRef]; !ok {
+		return notFound("raw model output", v.ArtifactRef)
+	}
+	if _, ok := t.state.receipts[v.ID]; ok {
+		return conflict("validation receipt", v.ID)
+	}
+	t.state.receipts[v.ID] = v
+	return nil
+}
+
+func (t transaction) AppendAcceptedChangeSet(v domain.AcceptedChangeSet) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate accepted changeset: %w", err)
+	}
+	proposal, ok := t.state.proposedChanges[v.ProposedChangeSetID]
+	if !ok {
+		return notFound("proposed changeset", v.ProposedChangeSetID)
+	}
+	seenValidators := make(map[string]struct{}, len(v.ValidationReceiptIDs))
+	for _, receiptID := range v.ValidationReceiptIDs {
+		receipt, ok := t.state.receipts[receiptID]
+		if !ok {
+			return notFound("validation receipt", receiptID)
+		}
+		if receipt.ChangeSetID != proposal.ID || receipt.OperationID != proposal.OperationID || !receipt.Passed {
+			return fmt.Errorf("%w: invalid validation receipt lineage", port.ErrConflict)
+		}
+		seenValidators[receipt.ValidatorID] = struct{}{}
+	}
+	for _, validatorID := range proposal.ValidatorIDs {
+		if _, ok := seenValidators[validatorID]; !ok {
+			return fmt.Errorf("%w: required validator %s has no receipt", port.ErrConflict, validatorID)
+		}
+	}
+	if _, ok := t.state.acceptedChanges[v.ID]; ok {
+		return conflict("accepted changeset", v.ID)
+	}
+	t.state.acceptedChanges[v.ID] = cloneAcceptedChangeSet(v)
+	return nil
+}
+
+func (t transaction) ApplyCommit(v domain.Commit, receipt domain.CommitReceipt, changes []domain.Change) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate commit: %w", err)
+	}
+	if err := receipt.Validate(); err != nil {
+		return fmt.Errorf("validate commit receipt: %w", err)
+	}
+	if receipt.ID != v.ReceiptID || receipt.CommitID != v.ID || receipt.ChangeSetID != v.AcceptedChangeSetID || receipt.Version != v.Version {
+		return fmt.Errorf("%w: commit receipt differs from commit", port.ErrConflict)
+	}
+	accepted, ok := t.state.acceptedChanges[v.AcceptedChangeSetID]
+	if !ok {
+		return notFound("accepted changeset", v.AcceptedChangeSetID)
+	}
+	proposal := t.state.proposedChanges[accepted.ProposedChangeSetID]
+	if proposal.MissionRevision != v.MissionRevision || proposal.BaseCommitID != v.BaseCommitID || proposal.IdempotencyKey != v.IdempotencyKey || !equalChanges(proposal.Changes, changes) {
+		return fmt.Errorf("%w: commit differs from accepted proposal", port.ErrConflict)
+	}
+	if existingID, ok := t.state.commitByIntent[v.IdempotencyKey]; ok {
+		existing := t.state.commits[existingID]
+		if existing == v {
+			return nil
+		}
+		return conflict("commit idempotency key", v.IdempotencyKey)
+	}
+	headID := domain.GenesisCommitID
+	headVersion := uint64(0)
+	if existingHead, ok := t.state.headCommits[v.MissionRevision]; ok {
+		headID = existingHead
+		headVersion = t.state.commits[existingHead].Version
+	}
+	if v.BaseCommitID != headID || v.Version != headVersion+1 {
+		return fmt.Errorf("%w: stale base commit or non-sequential version", port.ErrConflict)
+	}
+	if _, ok := t.state.commits[v.ID]; ok {
+		return conflict("commit", v.ID)
+	}
+	if _, ok := t.state.commitReceipts[receipt.ID]; ok {
+		return conflict("commit receipt", receipt.ID)
+	}
+	for _, change := range changes {
+		key := canonicalKey(change.EntityType, change.EntityID)
+		current, exists := t.state.canonical[key]
+		switch change.Kind {
+		case domain.ChangeAdd:
+			if exists {
+				return fmt.Errorf("%w: add target %s already exists", port.ErrConflict, key)
+			}
+			t.state.canonical[key] = domain.CanonicalEntity{EntityType: change.EntityType, EntityID: change.EntityID, PayloadRef: change.PayloadRef, Version: v.Version, CommitID: v.ID}
+		case domain.ChangeReplace:
+			if !exists || current.Deprecated {
+				return fmt.Errorf("%w: replace target %s is missing or deprecated", port.ErrConflict, key)
+			}
+			current.PayloadRef, current.Version, current.CommitID = change.PayloadRef, v.Version, v.ID
+			t.state.canonical[key] = current
+		case domain.ChangeDeprecate:
+			if !exists || current.Deprecated {
+				return fmt.Errorf("%w: deprecate target %s is missing or deprecated", port.ErrConflict, key)
+			}
+			current.Deprecated, current.Version, current.CommitID = true, v.Version, v.ID
+			t.state.canonical[key] = current
+		default:
+			return fmt.Errorf("unsupported change kind %q", change.Kind)
+		}
+	}
+	t.state.commits[v.ID] = v
+	t.state.commitReceipts[receipt.ID] = receipt
+	t.state.commitByIntent[v.IdempotencyKey] = v.ID
+	t.state.headCommits[v.MissionRevision] = v.ID
+	return nil
+}
+
 func notFound(kind string, id any) error { return fmt.Errorf("%w: %s %v", port.ErrNotFound, kind, id) }
 func conflict(kind string, id any) error {
 	return fmt.Errorf("%w: %s %v already exists", port.ErrConflict, kind, id)
@@ -403,6 +667,33 @@ func cloneState(src state) state {
 	for k, v := range src.idempotency {
 		dst.idempotency[k] = v
 	}
+	for k, v := range src.rawModelOutputs {
+		dst.rawModelOutputs[k] = v
+	}
+	for k, v := range src.proposedChanges {
+		dst.proposedChanges[k] = cloneProposedChangeSet(v)
+	}
+	for k, v := range src.acceptedChanges {
+		dst.acceptedChanges[k] = cloneAcceptedChangeSet(v)
+	}
+	for k, v := range src.receipts {
+		dst.receipts[k] = v
+	}
+	for k, v := range src.commitReceipts {
+		dst.commitReceipts[k] = v
+	}
+	for k, v := range src.commits {
+		dst.commits[k] = v
+	}
+	for k, v := range src.commitByIntent {
+		dst.commitByIntent[k] = v
+	}
+	for k, v := range src.headCommits {
+		dst.headCommits[k] = v
+	}
+	for k, v := range src.canonical {
+		dst.canonical[k] = v
+	}
 	return dst
 }
 func cloneMission(v domain.MissionRevision) domain.MissionRevision {
@@ -419,6 +710,33 @@ func cloneOperation(v domain.Operation) domain.Operation {
 	v.ReadSet = append([]string(nil), v.ReadSet...)
 	v.InputRefs = append([]string(nil), v.InputRefs...)
 	return v
+}
+
+func cloneProposedChangeSet(v domain.ProposedChangeSet) domain.ProposedChangeSet {
+	v.ReadSet = append([]string(nil), v.ReadSet...)
+	v.Preconditions = append([]string(nil), v.Preconditions...)
+	v.Changes = append([]domain.Change(nil), v.Changes...)
+	v.ValidatorIDs = append([]string(nil), v.ValidatorIDs...)
+	return v
+}
+
+func cloneAcceptedChangeSet(v domain.AcceptedChangeSet) domain.AcceptedChangeSet {
+	v.ValidationReceiptIDs = append([]domain.ReceiptID(nil), v.ValidationReceiptIDs...)
+	return v
+}
+
+func canonicalKey(entityType, entityID string) string { return entityType + "\x00" + entityID }
+
+func equalChanges(a, b []domain.Change) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 func cloneOperationSpec(v domain.OperationSpec) domain.OperationSpec {
 	v.Validators = append([]string(nil), v.Validators...)

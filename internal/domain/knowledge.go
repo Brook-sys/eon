@@ -3,8 +3,11 @@ package domain
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
+
+const GenesisCommitID CommitID = "commit_genesis"
 
 type Source struct {
 	SchemaVersion int       `json:"schema_version"`
@@ -140,6 +143,27 @@ type Change struct {
 	PayloadRef string     `json:"payload_ref"`
 }
 
+func (c Change) Validate() error {
+	if strings.TrimSpace(c.EntityType) == "" || strings.TrimSpace(c.EntityID) == "" {
+		return errors.New("change is missing entity type or entity ID")
+	}
+	switch c.Kind {
+	case ChangeAdd, ChangeReplace:
+		if strings.TrimSpace(c.PayloadRef) == "" {
+			return errors.New("add and replace changes require a payload reference")
+		}
+	case ChangeDeprecate:
+		if c.PayloadRef != "" {
+			return errors.New("deprecate changes must not contain a payload reference")
+		}
+	case ChangeLink, ChangeUnlink:
+		return fmt.Errorf("change kind %q is not supported by the first vertical slice", c.Kind)
+	default:
+		return fmt.Errorf("unknown change kind %q", c.Kind)
+	}
+	return nil
+}
+
 type ProposedChangeSet struct {
 	SchemaVersion   int               `json:"schema_version"`
 	ID              ChangeSetID       `json:"id"`
@@ -159,6 +183,20 @@ func (p ProposedChangeSet) Validate() error {
 	if p.SchemaVersion != SchemaVersionV1 || p.ID == "" || p.MissionRevision == "" || p.OperationID == "" || p.BaseCommitID == "" || len(p.Changes) == 0 || p.ExpectedDelta == "" || len(p.ValidatorIDs) == 0 || p.Provenance == "" || p.IdempotencyKey == "" {
 		return errors.New("proposed changeset is incomplete or has unsupported schema version")
 	}
+	targets := make(map[string]struct{}, len(p.Changes))
+	for _, change := range p.Changes {
+		if err := change.Validate(); err != nil {
+			return err
+		}
+		key := change.EntityType + "\x00" + change.EntityID
+		if _, duplicate := targets[key]; duplicate {
+			return fmt.Errorf("changeset contains duplicate target %s/%s", change.EntityType, change.EntityID)
+		}
+		targets[key] = struct{}{}
+	}
+	if hasBlankOrDuplicate(p.ReadSet) || hasBlankOrDuplicate(p.Preconditions) || hasBlankOrDuplicate(p.ValidatorIDs) {
+		return errors.New("changeset lists must not contain blank or duplicate values")
+	}
 	return nil
 }
 
@@ -171,6 +209,16 @@ type AcceptedChangeSet struct {
 	PolicyVersion        string      `json:"policy_version"`
 }
 
+func (a AcceptedChangeSet) Validate() error {
+	if a.SchemaVersion != SchemaVersionV1 || a.ID == "" || a.ProposedChangeSetID == "" || len(a.ValidationReceiptIDs) == 0 || a.AcceptedAt.IsZero() || strings.TrimSpace(a.PolicyVersion) == "" {
+		return errors.New("accepted changeset is incomplete or has unsupported schema version")
+	}
+	if hasBlankOrDuplicateReceipts(a.ValidationReceiptIDs) {
+		return errors.New("accepted changeset receipt IDs must not be blank or duplicated")
+	}
+	return nil
+}
+
 type Commit struct {
 	SchemaVersion       int               `json:"schema_version"`
 	ID                  CommitID          `json:"id"`
@@ -181,4 +229,104 @@ type Commit struct {
 	CommittedAt         time.Time         `json:"committed_at"`
 	ReceiptID           ReceiptID         `json:"receipt_id"`
 	IdempotencyKey      IdempotencyKey    `json:"idempotency_key"`
+}
+
+func (c Commit) Validate() error {
+	if c.SchemaVersion != SchemaVersionV1 || c.ID == "" || c.AcceptedChangeSetID == "" || c.MissionRevision == "" || c.BaseCommitID == "" || c.Version == 0 || c.CommittedAt.IsZero() || c.ReceiptID == "" || c.IdempotencyKey == "" {
+		return errors.New("commit is incomplete or has unsupported schema version")
+	}
+	return nil
+}
+
+type CommitReceipt struct {
+	SchemaVersion int         `json:"schema_version"`
+	ID            ReceiptID   `json:"id"`
+	CommitID      CommitID    `json:"commit_id"`
+	ChangeSetID   ChangeSetID `json:"change_set_id"`
+	OperationID   OperationID `json:"operation_id"`
+	Version       uint64      `json:"version"`
+	ProducedAt    time.Time   `json:"produced_at"`
+}
+
+func (r CommitReceipt) Validate() error {
+	if r.SchemaVersion != SchemaVersionV1 || r.ID == "" || r.CommitID == "" || r.ChangeSetID == "" || r.OperationID == "" || r.Version == 0 || r.ProducedAt.IsZero() {
+		return errors.New("commit receipt is incomplete or has unsupported schema version")
+	}
+	return nil
+}
+
+// RawModelOutput preserves the exact bounded provider text before parsing or
+// validation. It is evidence, never canonical knowledge by itself.
+type RawModelOutput struct {
+	SchemaVersion int         `json:"schema_version"`
+	ID            ArtifactID  `json:"id"`
+	OperationID   OperationID `json:"operation_id"`
+	Model         string      `json:"model"`
+	Content       string      `json:"content"`
+	ContentHash   string      `json:"content_hash"`
+	CreatedAt     time.Time   `json:"created_at"`
+}
+
+func (o RawModelOutput) Validate() error {
+	if o.SchemaVersion != SchemaVersionV1 || o.ID == "" || o.OperationID == "" || strings.TrimSpace(o.Model) == "" || o.Content == "" || o.ContentHash == "" || o.CreatedAt.IsZero() {
+		return errors.New("raw model output is incomplete or has unsupported schema version")
+	}
+	return nil
+}
+
+type ValidationReceipt struct {
+	SchemaVersion int         `json:"schema_version"`
+	ID            ReceiptID   `json:"id"`
+	OperationID   OperationID `json:"operation_id"`
+	ChangeSetID   ChangeSetID `json:"change_set_id"`
+	ValidatorID   string      `json:"validator_id"`
+	Passed        bool        `json:"passed"`
+	ArtifactRef   ArtifactID  `json:"artifact_ref"`
+	ProducedAt    time.Time   `json:"produced_at"`
+}
+
+func (r ValidationReceipt) Validate() error {
+	if r.SchemaVersion != SchemaVersionV1 || r.ID == "" || r.OperationID == "" || r.ChangeSetID == "" || strings.TrimSpace(r.ValidatorID) == "" || !r.Passed || r.ArtifactRef == "" || r.ProducedAt.IsZero() {
+		return errors.New("validation receipt is incomplete, failed, or has unsupported schema version")
+	}
+	return nil
+}
+
+// CanonicalEntity is the backend-independent materialized head for one
+// changeset target. PayloadRef addresses immutable content outside this map.
+type CanonicalEntity struct {
+	EntityType string   `json:"entity_type"`
+	EntityID   string   `json:"entity_id"`
+	PayloadRef string   `json:"payload_ref,omitempty"`
+	Deprecated bool     `json:"deprecated"`
+	Version    uint64   `json:"version"`
+	CommitID   CommitID `json:"commit_id"`
+}
+
+func hasBlankOrDuplicate(values []string) bool {
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" {
+			return true
+		}
+		if _, ok := seen[value]; ok {
+			return true
+		}
+		seen[value] = struct{}{}
+	}
+	return false
+}
+
+func hasBlankOrDuplicateReceipts(values []ReceiptID) bool {
+	seen := make(map[ReceiptID]struct{}, len(values))
+	for _, value := range values {
+		if value == "" {
+			return true
+		}
+		if _, ok := seen[value]; ok {
+			return true
+		}
+		seen[value] = struct{}{}
+	}
+	return false
 }

@@ -68,11 +68,32 @@ type IdempotencyWriter interface {
 	CompleteIdempotency(domain.IdempotencyKey, domain.ReceiptID, string, time.Time) (domain.IdempotencyRecord, error)
 }
 
+type KnowledgeReader interface {
+	RawModelOutput(domain.ArtifactID) (domain.RawModelOutput, error)
+	ProposedChangeSet(domain.ChangeSetID) (domain.ProposedChangeSet, error)
+	AcceptedChangeSet(domain.ChangeSetID) (domain.AcceptedChangeSet, error)
+	ValidationReceipt(domain.ReceiptID) (domain.ValidationReceipt, error)
+	CommitReceipt(domain.ReceiptID) (domain.CommitReceipt, error)
+	Commit(domain.CommitID) (domain.Commit, error)
+	CommitByIdempotencyKey(domain.IdempotencyKey) (domain.Commit, error)
+	HeadCommit(domain.MissionRevisionID) (domain.Commit, error)
+	CanonicalEntity(entityType, entityID string) (domain.CanonicalEntity, error)
+}
+
+type KnowledgeWriter interface {
+	AppendRawModelOutput(domain.RawModelOutput) error
+	AppendProposedChangeSet(domain.ProposedChangeSet) error
+	AppendAcceptedChangeSet(domain.AcceptedChangeSet) error
+	AppendValidationReceipt(domain.ValidationReceipt) error
+	ApplyCommit(domain.Commit, domain.CommitReceipt, []domain.Change) error
+}
+
 type Reader interface {
 	MissionReader
 	AgendaReader
 	EventReader
 	IdempotencyReader
+	KnowledgeReader
 }
 
 type Transaction interface {
@@ -81,6 +102,7 @@ type Transaction interface {
 	AgendaWriter
 	EventWriter
 	IdempotencyWriter
+	KnowledgeWriter
 }
 
 // Store provides serializable, rollback-capable local transactions. Callbacks
