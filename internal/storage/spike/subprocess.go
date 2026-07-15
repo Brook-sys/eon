@@ -3,6 +3,7 @@ package spike
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"motor-autonomo/internal/port"
@@ -28,7 +29,7 @@ func RunCrashTrial(ctx context.Context, command CrashCommand, open StoreOpener, 
 		return CrashTrialResult{}, fmt.Errorf("crash command and store opener are required")
 	}
 	cmd := exec.CommandContext(ctx, command.Executable, command.Args...)
-	cmd.Env = command.Env
+	cmd.Env = append(os.Environ(), command.Env...)
 	err := cmd.Run()
 	result := CrashTrialResult{}
 	if err != nil {
