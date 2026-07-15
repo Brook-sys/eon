@@ -49,8 +49,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `ARCHITECTURE.md` v0.6 remove shell/código do catálogo do MVP, substitui Goal/WorkItem/MemoryStore e alinha agenda a Inquiry/Operation.
 - [x] `DONE` Criar glossário normativo para Mission, Inquiry, Operation, ChangeSet, Claim, Evidence, Commit e Artifact.
   - Evidência: `GLOSSARY.md` baseline v0.1, com convenção BCP 14 e termos substituídos.
-- [ ] `READY` Auditar `WEAK_MODEL_PROTOCOL.md` e `RESEARCH_PLAN.md` para aplicar o glossário sem apagar terminologia útil da literatura.
-- [ ] `READY` Consolidar requisitos funcionais e não funcionais com IDs rastreáveis.
+- [x] `DONE` Auditar `WEAK_MODEL_PROTOCOL.md` e `RESEARCH_PLAN.md` para aplicar o glossário sem apagar terminologia útil da literatura.
+  - Evidência: protocolo alinhado a `MissionRevision → Question → InquiryCandidate → Inquiry → Operation`; HTN mantido apenas como termo da literatura.
+- [x] `DONE` Consolidar requisitos funcionais e não funcionais com IDs rastreáveis.
+  - Evidência: `REQUIREMENTS.md` baseline v0.1 define FR/NFR, critérios de aceitação e matriz inicial de verificação.
 - [ ] `READY` Criar taxonomia inicial de falhas específica do runtime epistemológico.
 - [ ] `READY` Formalizar invariantes de autoridade, continuidade, segurança e progresso.
 
@@ -121,3 +123,4 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
 
 2026-07-15 08:26 — Fase 0/coerência — glossário normativo criado; arquitetura alinhada ao domínio epistemológico; interfaces de persistência separadas — verificação: RFC 2119/8174, grep de resíduos e `git diff --check` — próximo: requisitos rastreáveis e auditoria dos protocolos auxiliares.
+2026-07-15 08:34 — Fase 0/contratos — protocolo de modelo fraco e plano de pesquisa alinhados ao glossário; requisitos FR/NFR rastreáveis consolidados — verificação: grep de termos substituídos e `git diff --check` — próximo: taxonomia de falhas e invariantes formais.

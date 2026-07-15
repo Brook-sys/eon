@@ -18,10 +18,10 @@ O domínio inicial está detalhado em `KNOWLEDGE_RUNTIME.md`. Automação geral,
 
 ## Subperguntas
 
-1. Qual representação de missão, objetivos, etapas e operações preserva rastreabilidade sem impor rigidez excessiva?
-2. Quando uma decisão deve ser regra, busca, solver, modelo ou intervenção humana?
-3. Como decompor incrementalmente sem explosão da árvore, perda semântica ou erro acumulado?
-4. Como gerar novas tarefas úteis sem produzir atividade circular, deriva de missão ou expansão ilimitada?
+1. Qual representação de `MissionSpec`, perguntas, `Inquiry`s e `Operation`s preserva rastreabilidade sem impor rigidez excessiva?
+2. Quando uma proposta ou escolha deve ser produzida por regra, busca, solver, modelo ou intervenção humana?
+3. Como expandir investigações incrementalmente sem explosão do grafo, perda semântica ou erro acumulado?
+4. Como gerar `InquiryCandidate`s úteis sem produzir atividade circular, deriva de missão ou expansão ilimitada?
 5. Qual interface de saída é mais robusta por tipo e perfil de modelo: escolha fechada, slots, DSL, gramática, JSON ou texto interpretado?
 6. Como compilar o menor contexto suficiente e detectar quando informação essencial foi omitida?
 7. Como medir progresso em missões contínuas que não possuem um único estado terminal?
@@ -145,7 +145,7 @@ Uma decisão importante não deve ser apresentada como cientificamente estabelec
 - `FAILURE_TAXONOMY.md`: taxonomia de falhas e controles.
 - `FORMAL_MODEL.md`: estados, transições, invariantes e propriedades.
 - `DECISION_PROTOCOL.md`: quando e como consultar modelos.
-- `TASK_MODEL.md`: missão, objetivos, etapas, tarefas e operações.
+- `INQUIRY_MODEL.md`: missão, perguntas, candidatos, investigações e operações.
 - `EVALUATION.md`: benchmarks, ablações e métricas.
 - `ADRS/`: registros de decisões arquiteturais e evidências.
 
@@ -153,8 +153,8 @@ Uma decisão importante não deve ser apresentada como cientificamente estabelec
 
 ### Fase 0 — Terminologia e escopo
 
-- definir “contínuo”, “autônomo”, “progresso”, “tarefa”, “etapa” e “melhoria”;
-- distinguir runtime contínuo, missão contínua e tarefa finita;
+- definir “contínuo”, “autônomo”, “progresso”, `Question`, `Inquiry` e `Operation`;
+- distinguir runtime contínuo, missão ativa, investigação finita e operação finita;
 - delimitar autonomia e autoridade concedida.
 
 ### Fase 1 — Revisão e taxonomia
@@ -255,7 +255,7 @@ Métricas devem incluir não apenas sucesso final:
 
 - progresso útil por chamada/token/tempo;
 - validade e segurança das transições;
-- taxa de tarefas autogeradas aceitas/rejeitadas;
+- taxa de `InquiryCandidate`s autogerados admitidos/rejeitados;
 - duplicação, ciclos e deriva de missão;
 - profundidade até erro e distância de recuperação;
 - erro acumulado por horizonte;

@@ -37,8 +37,9 @@ Recursos modernos são acelerações opcionais, nunca requisitos estruturais.
 Somente o kernel pode:
 
 - alterar estado oficial;
-- admitir novas tarefas;
-- executar capacidades;
+- admitir `InquiryCandidate`s como `Inquiry`s;
+- criar ou despachar `Operation`s;
+- executar capabilities autorizadas;
 - consumir orçamento;
 - declarar critérios satisfeitos;
 - encerrar, pausar ou redirecionar uma missão.
@@ -227,9 +228,9 @@ Uma operação comum deve usar muito menos que o máximo. Meta inicial:
 
 ## Contexto em camadas
 
-O modelo recebe somente uma visão compilada:
+O modelo recebe somente uma visão compilada. Os rótulos abaixo nomeiam seções do envelope de prompt, não novas entidades persistidas do domínio:
 
-1. `Task Card`: o que precisa decidir agora;
+1. `Operation Card`: o que a `Operation` precisa propor agora;
 2. `Local Facts`: fatos diretamente relevantes;
 3. `Constraints`: proibições e limites desta operação;
 4. `Allowed Outputs`: respostas válidas;
@@ -246,18 +247,17 @@ Não recebe por padrão:
 
 ## Decomposição em microturnos
 
-Uma tarefa complexa é uma árvore persistida, não um prompt grande.
+Uma investigação complexa é um grafo persistido de perguntas e operações, não um prompt grande.
 
 ```text
-Mission
-  └─ Goal
-      └─ Milestone
-          └─ Task
-              └─ Step
-                  └─ Operation
+MissionRevision
+  └─ Question
+      └─ InquiryCandidate
+          └─ Inquiry
+              └─ Operation
 ```
 
-Cada nível possui critérios e estado próprios. O modelo vê normalmente apenas `Operation`, com um resumo mínimo do `Task` e do `Goal`.
+`Question`, `InquiryCandidate`, `Inquiry` e `Operation` possuem contratos e estados próprios conforme aplicável. O modelo vê normalmente apenas a `Operation`, com um resumo mínimo da `Inquiry`, da `Question` e das restrições da `MissionRevision`.
 
 Exemplo de decomposição:
 
@@ -289,9 +289,9 @@ Verificador determinístico executa testes.
 
 Cada turno pode usar um modelo diferente ou ser repetido sem reconstruir toda a conversa.
 
-## Decompositor hierárquico controlado
+## Expansão hierárquica controlada
 
-O modelo nunca recebe simplesmente “faça um plano completo”. O runtime pede no máximo poucos filhos imediatos:
+O modelo nunca recebe simplesmente “faça um plano completo”. Quando regras não bastam, o runtime solicita no máximo poucas propostas imediatas de `Operation` ou `InquiryCandidate`:
 
 ```text
 Produza de 1 a 3 próximos passos.
@@ -304,15 +304,15 @@ Cada passo deve:
 
 Depois, validadores determinísticos verificam:
 
-- quantidade de filhos;
+- quantidade de propostas;
 - ausência de ciclos e duplicações;
-- rastreabilidade ao pai;
-- critério de conclusão;
+- rastreabilidade à pergunta, investigação e revisão da missão;
+- condição de resposta ou conclusão;
 - capability existente;
 - custo e risco permitidos;
 - profundidade máxima.
 
-A árvore é expandida sob demanda, não antecipadamente.
+O grafo é expandido sob demanda, não antecipadamente. A saída do modelo permanece proposta: admissão e criação oficial são decisões determinísticas.
 
 ## Tool calling sem tool calling
 

@@ -316,7 +316,7 @@ Uma nova evidência não sobrescreve a anterior. Ela adiciona uma relação e di
 Toda síntese ou decisão deve possuir dependências rastreáveis:
 
 ```text
-SourceFragment → Observation → Claim → Inference → Artifact/Decision
+SourceFragment → Observation → Claim → Inference → KnowledgeArtifact/ADR
 ```
 
 Quando um nó muda:

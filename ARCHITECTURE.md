@@ -11,7 +11,7 @@ O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com jane
 
 Seu propósito principal é **continuidade progressiva**: permanecer vivo, preservar estado e produzir a próxima frente útil de trabalho sempre que houver capacidade e permissão. O motor é contínuo; objetivos e operações individuais podem ser finitos.
 
-Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime não depende de comandos ou eventos externos para continuar avançando: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas tarefas derivadas e executa a melhor ação permitida. Eventos externos são sinais opcionais de mudança, interrupção ou repriorização.
+Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime não depende de comandos ou eventos externos para continuar avançando: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas `Inquiry`s derivadas e executa a melhor `Operation` permitida. Eventos externos são sinais opcionais de mudança, interrupção ou repriorização.
 
 ## Princípios
 
