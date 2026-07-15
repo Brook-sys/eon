@@ -87,8 +87,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/prompt` compila envelope texto→texto versionado, usa o menor limite entre spec/provider, reserva saída e margem, seleciona fatos opcionais por prioridade sem truncamento e falha quando conteúdo obrigatório não cabe; testes de fronteira e fuzz verificam o limite.
 - [x] `DONE` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
   - Evidência: `internal/changeset` preserva texto bruto antes do parse, rejeita JSON não canônico/duplicado/desconhecido, confere linhagem e validadores do kernel e confirma proposta, recibos, commit, estado canônico e evento em uma transação; store contracts cobrem base obsoleta, rollback e replay idempotente.
-- [ ] `READY` Simular crash e comprovar retomada sem efeito duplicado.
-- [ ] `BLOCKED_BY:Retomada` Comprovar repouso sem busy loop usando relógio virtual.
+- [x] `DONE` Simular crash e comprovar retomada sem efeito duplicado.
+  - Evidência: checkpoints injetáveis cobrem persistência do output bruto, cada fronteira transacional e confirmação pós-commit; teste reinicia o processor em todas as fronteiras e comprova um único commit, evento e efeito canônico.
+- [ ] `READY` Comprovar repouso sem busy loop usando relógio virtual.
 
 ### Fase 3 — operações epistemológicas mínimas
 
@@ -150,3 +151,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 11:20 — Fase 2/provider simulado — servidor OpenAI-compatible falso roteado e provider Chat Completions texto→texto implementados; limites de resposta, erros tipados, retryability e não vazamento de corpo cobertos — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: compilar `OperationSpec` sob budget e preservar resposta bruta antes da validação.
 2026-07-15 11:40 — Fase 2/compilação sob budget — contrato de `OperationSpec` passou a versionar template e reservar saída/margem; compilador determinístico seleciona contexto opcional por prioridade e rejeita conteúdo obrigatório excessivo — verificação: testes de fronteira/fuzz, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: preservar resposta bruta e implementar changeset validado/atômico.
 2026-07-15 12:00 — Fase 2/changeset atômico — resposta texto preservada antes da validação; decoder estrito rejeita campos desconhecidos/não canônicos/duplicados; cadeia `Proposed → Accepted → Commit → evento/recibo/estado canônico` implementada com base versionada e replay idempotente — verificação: contract tests de rollback/base obsoleta, testes adversariais, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: injetar crashes nas fronteiras do processamento e comprovar retomada sem duplicação.
+2026-07-15 12:20 — Fase 2/crash-replay — failpoints determinísticos adicionados nas sete fronteiras de durabilidade do processamento; retomada com processor novo converge para um único commit/evento/entidade inclusive quando o crash ocorre após commit durável — verificação: teste de crash em tabela, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: scheduler mínimo em repouso dirigido por relógio virtual.

@@ -208,6 +208,86 @@ func TestProcessorRollsBackStaleCommitChain(t *testing.T) {
 	}
 }
 
+func TestProcessorResumesAfterCrashAtEveryDurabilityBoundary(t *testing.T) {
+	boundaries := []Boundary{
+		BoundaryRawPersisted,
+		BoundaryProposalStaged,
+		BoundaryValidationStaged,
+		BoundaryAcceptanceStaged,
+		BoundaryCommitStaged,
+		BoundaryEventStaged,
+		BoundaryCommitDurable,
+	}
+	for index, boundary := range boundaries {
+		t.Run(string(boundary), func(t *testing.T) {
+			store := memory.New()
+			seed(t, store)
+			now := time.Date(2026, 7, 15, 12, 20, 0, 0, time.UTC)
+			crash := errors.New("simulated crash")
+			processor, err := New(Config{
+				Store: store, Clock: source.NewManualClock(now), IDs: source.NewSequenceIDGenerator(uint64(index*100 + 1)), PolicyVersion: "policy@1",
+				Checkpoint: func(reached Boundary) error {
+					if reached == boundary {
+						return crash
+					}
+					return nil
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := proposalText(t, proposal("operation_1", "idem_1", domain.GenesisCommitID, "entity_1"))
+			result := port.CompletionResult{Text: text, Model: "fake-model"}
+			if _, err := processor.Process(context.Background(), "operation_1", result); !errors.Is(err, crash) {
+				t.Fatalf("crash error = %v", err)
+			}
+
+			resumed, err := New(Config{Store: store, Clock: source.NewManualClock(now), IDs: source.NewSequenceIDGenerator(uint64(index*100 + 51)), PolicyVersion: "policy@1"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			commit, err := resumed.Process(context.Background(), "operation_1", result)
+			if err != nil {
+				t.Fatalf("resume: %v", err)
+			}
+			if commit.Version != 1 || commit.IdempotencyKey != "idem_1" {
+				t.Fatalf("commit = %#v", commit)
+			}
+			assertSingleLogicalEffect(t, store, commit)
+		})
+	}
+}
+
+func assertSingleLogicalEffect(t *testing.T, store port.Store, commit domain.Commit) {
+	t.Helper()
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		head, err := r.HeadCommit("revision_1")
+		if err != nil {
+			return err
+		}
+		if head != commit {
+			t.Fatalf("head = %#v, want %#v", head, commit)
+		}
+		entity, err := r.CanonicalEntity("observation", "entity_1")
+		if err != nil {
+			return err
+		}
+		if entity.Version != 1 || entity.CommitID != commit.ID {
+			t.Fatalf("entity = %#v", entity)
+		}
+		events, err := r.Events(0, 10)
+		if err != nil {
+			return err
+		}
+		if len(events) != 1 || events[0].CommitID != commit.ID {
+			t.Fatalf("events = %#v", events)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func proposal(operationID domain.OperationID, key domain.IdempotencyKey, base domain.CommitID, entityID string) domain.ProposedChangeSet {
 	return domain.ProposedChangeSet{SchemaVersion: 1, ID: "changeset_1", MissionRevision: "revision_1", OperationID: operationID, BaseCommitID: base, ReadSet: []string{"fragment_1"}, Preconditions: []string{}, Changes: []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: entityID, PayloadRef: "payload_1"}}, ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"}, Provenance: "model:fake-model", IdempotencyKey: key}
 }

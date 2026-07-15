@@ -27,7 +27,25 @@ type Processor struct {
 	ids            source.IDGenerator
 	policyVersion  string
 	maxOutputBytes int64
+	checkpoint     Checkpoint
 }
+
+// Boundary names durable processing frontiers used by crash/restart tests.
+// A checkpoint error models abrupt worker loss: callers must assume that
+// writes before the boundary may already be durable and recover from storage.
+type Boundary string
+
+const (
+	BoundaryRawPersisted     Boundary = "RAW_PERSISTED"
+	BoundaryProposalStaged   Boundary = "PROPOSAL_STAGED"
+	BoundaryValidationStaged Boundary = "VALIDATION_STAGED"
+	BoundaryAcceptanceStaged Boundary = "ACCEPTANCE_STAGED"
+	BoundaryCommitStaged     Boundary = "COMMIT_STAGED"
+	BoundaryEventStaged      Boundary = "EVENT_STAGED"
+	BoundaryCommitDurable    Boundary = "COMMIT_DURABLE"
+)
+
+type Checkpoint func(Boundary) error
 
 type Config struct {
 	Store          port.Store
@@ -35,6 +53,7 @@ type Config struct {
 	IDs            source.IDGenerator
 	PolicyVersion  string
 	MaxOutputBytes int64
+	Checkpoint     Checkpoint
 }
 
 func New(config Config) (*Processor, error) {
@@ -48,7 +67,7 @@ func New(config Config) (*Processor, error) {
 	if limit < 1 {
 		return nil, errors.New("max output bytes must be positive")
 	}
-	return &Processor{store: config.Store, clock: config.Clock, ids: config.IDs, policyVersion: config.PolicyVersion, maxOutputBytes: limit}, nil
+	return &Processor{store: config.Store, clock: config.Clock, ids: config.IDs, policyVersion: config.PolicyVersion, maxOutputBytes: limit, checkpoint: config.Checkpoint}, nil
 }
 
 // DecodeStrict accepts exactly one JSON object. Markdown fences, unknown
@@ -100,6 +119,9 @@ func (p *Processor) Process(ctx context.Context, operationID domain.OperationID,
 	}
 	if err := p.store.Update(ctx, func(tx port.Transaction) error { return tx.AppendRawModelOutput(raw) }); err != nil {
 		return domain.Commit{}, fmt.Errorf("preserve raw model output: %w", err)
+	}
+	if err := p.reach(BoundaryRawPersisted); err != nil {
+		return domain.Commit{}, err
 	}
 
 	proposal, err := DecodeStrict(result.Text, p.maxOutputBytes)
@@ -166,6 +188,9 @@ func (p *Processor) Process(ctx context.Context, operationID domain.OperationID,
 		if err := tx.AppendProposedChangeSet(proposal); err != nil {
 			return err
 		}
+		if err := p.reach(BoundaryProposalStaged); err != nil {
+			return err
+		}
 
 		receiptIDs := make([]domain.ReceiptID, 0, len(proposal.ValidatorIDs))
 		for _, validatorID := range proposal.ValidatorIDs {
@@ -182,8 +207,14 @@ func (p *Processor) Process(ctx context.Context, operationID domain.OperationID,
 			}
 			receiptIDs = append(receiptIDs, receipt.ID)
 		}
+		if err := p.reach(BoundaryValidationStaged); err != nil {
+			return err
+		}
 		accepted := domain.AcceptedChangeSet{SchemaVersion: 1, ID: domain.ChangeSetID(acceptedID), ProposedChangeSetID: proposal.ID, ValidationReceiptIDs: receiptIDs, AcceptedAt: now, PolicyVersion: p.policyVersion}
 		if err := tx.AppendAcceptedChangeSet(accepted); err != nil {
+			return err
+		}
+		if err := p.reach(BoundaryAcceptanceStaged); err != nil {
 			return err
 		}
 
@@ -198,13 +229,32 @@ func (p *Processor) Process(ctx context.Context, operationID domain.OperationID,
 		if err := tx.ApplyCommit(committed, commitReceipt, proposal.Changes); err != nil {
 			return err
 		}
+		if err := p.reach(BoundaryCommitStaged); err != nil {
+			return err
+		}
 		_, err = tx.AppendEvent(domain.Event{SchemaVersion: 1, ID: domain.EventID(eventID), Kind: "knowledge.commit.applied", OccurredAt: now, MissionRevision: proposal.MissionRevision, OperationID: proposal.OperationID, CommitID: committed.ID, PayloadRef: string(proposal.ID)})
-		return err
+		if err != nil {
+			return err
+		}
+		return p.reach(BoundaryEventStaged)
 	})
 	if err != nil {
 		return domain.Commit{}, fmt.Errorf("apply proposed changeset: %w", err)
 	}
+	if err := p.reach(BoundaryCommitDurable); err != nil {
+		return domain.Commit{}, err
+	}
 	return committed, nil
+}
+
+func (p *Processor) reach(boundary Boundary) error {
+	if p.checkpoint == nil {
+		return nil
+	}
+	if err := p.checkpoint(boundary); err != nil {
+		return fmt.Errorf("processing interrupted at %s: %w", boundary, err)
+	}
+	return nil
 }
 
 func (p *Processor) rawOutput(operationID domain.OperationID, result port.CompletionResult) (domain.RawModelOutput, error) {
