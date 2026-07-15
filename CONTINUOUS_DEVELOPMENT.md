@@ -68,8 +68,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/domain/transition.go` define eventos tipados e transição pura; testes cobrem caminhos legais, terminais, payloads inválidos, pureza e a obrigação de reconciliar efeitos `UNKNOWN`/`PARTIAL` antes de retry.
 - [x] `DONE` Implementar `Clock`, `IDGenerator` e `RandomSource` injetáveis.
   - Evidência: portas e implementações de sistema/teste em `internal/runtime/source`, com relógio manual e sequências determinísticas thread-safe.
-- [ ] `BLOCKED_BY:ports` Implementar store em memória com contract tests.
-- [ ] `BLOCKED_BY:tipos,store` Implementar event log em memória e idempotência básica.
+- [x] `DONE` Implementar store em memória com contract tests.
+  - Evidência: portas estreitas de missão/agenda em `internal/port`; transações copy-on-write com rollback, validação, isolamento de slices e erros tipados em `internal/storage/memory`; suite reutilizável em `internal/storage/contract`.
+- [ ] `READY` Implementar event log em memória e idempotência básica.
 
 ### Fase 2 — primeiro vertical slice simulado
 
@@ -133,3 +134,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 08:54 — Fase 0/falhas e invariantes — `FailureRecord`, política de retry/reconciliação, invariantes safety/liveness e requisito FR-DUR-006 formalizados — verificação: fontes primárias Temporal/OpenTelemetry/RFC 9457, inspeção de rastreabilidade e `git diff --check` — próximo: módulo Go, tipos de domínio e fontes determinísticas.
 2026-07-15 09:20 — Fase 1/bootstrap Go — módulo/entrypoint criados; tipos persistíveis e validadores iniciais implementados; fontes de tempo, ID e aleatoriedade injetadas com fakes determinísticos — verificação: Go 1.26.5 oficial temporário, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque a imagem não possui toolchain C — próximo: máquina de estados pura e ports/store em memória.
 2026-07-15 09:40 — Fase 1/máquina de estados — transição operacional pura implementada; referências de lease/bloqueio tornadas obrigatórias; retry ambíguo bloqueado em favor de reconciliação — verificação: testes de tabela/pureza, `go test ./...`, `go vet ./...`, `git diff --check`; race segue indisponível sem C toolchain — próximo: definir ports e contract tests do store em memória.
+
+2026-07-15 10:00 — Fase 1/store transacional — portas de missão/agenda definidas; store em memória copy-on-write implementado; contract tests reutilizáveis cobrem imutabilidade, round-trip, rollback, validação e cancelamento — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: event log append-only e idempotência básica.
