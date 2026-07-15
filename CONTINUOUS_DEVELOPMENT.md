@@ -75,14 +75,15 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 ### Fase 2 — primeiro vertical slice simulado
 
-- [ ] `BLOCKED_BY:Fase1` Carregar e validar `MissionSpec` versionada.
-- [ ] `BLOCKED_BY:Fase1` Persistir pergunta, operação e condição de retomada.
-- [ ] `BLOCKED_BY:Fase1` Implementar servidor OpenAI-compatible falso para testes.
-- [ ] `BLOCKED_BY:Fase1` Implementar provider mínimo Chat Completions texto→texto.
-- [ ] `BLOCKED_BY:Fase1` Compilar um `OperationSpec` sob budget.
-- [ ] `BLOCKED_BY:Fase1` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
-- [ ] `BLOCKED_BY:Fase1` Simular crash e comprovar retomada sem efeito duplicado.
-- [ ] `BLOCKED_BY:Fase1` Comprovar repouso sem busy loop usando relógio virtual.
+- [x] `DONE` Carregar e validar `MissionSpec` versionada.
+  - Evidência: `internal/mission` faz decode JSON estrito e limitado, valida schema/conteúdo/status ativo, deriva IDs/tempo por fontes injetadas e instala revisão, ponteiro ativo e evento de auditoria atomicamente; testes cobrem entrada válida, campos desconhecidos, trailing data, oversize, status inativo, duplicatas e rollback sem mutação.
+- [ ] `READY` Persistir pergunta, operação e condição de retomada.
+- [ ] `READY` Implementar servidor OpenAI-compatible falso para testes.
+- [ ] `BLOCKED_BY:FakeServer` Implementar provider mínimo Chat Completions texto→texto.
+- [ ] `READY` Compilar um `OperationSpec` sob budget.
+- [ ] `BLOCKED_BY:OperationSpec` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
+- [ ] `BLOCKED_BY:Provider,ChangeSet` Simular crash e comprovar retomada sem efeito duplicado.
+- [ ] `BLOCKED_BY:Retomada` Comprovar repouso sem busy loop usando relógio virtual.
 
 ### Fase 3 — operações epistemológicas mínimas
 
@@ -138,3 +139,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-15 10:00 — Fase 1/store transacional — portas de missão/agenda definidas; store em memória copy-on-write implementado; contract tests reutilizáveis cobrem imutabilidade, round-trip, rollback, validação e cancelamento — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: event log append-only e idempotência básica.
 2026-07-15 10:20 — Fase 1/eventos e idempotência — event log transacional com sequência monotônica e lookup/paginação implementado; reserva/conclusão idempotente rejeita reutilização divergente; contract tests cobrem replay, conflito e rollback — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: iniciar vertical slice carregando `MissionSpec` versionada.
+2026-07-15 10:40 — Fase 2/MissionSpec — loader estrito e limitado implementado; revisão, ativação e evento auditável instalados em transação única com tempo/IDs injetáveis; dependências da fase 2 reclassificadas — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: persistir o primeiro conjunto pergunta/operação/retomada e definir catálogo de `OperationSpec`.
