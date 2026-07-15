@@ -87,6 +87,55 @@ func TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries(t *testing.T) {
 	}
 }
 
+func TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite(t *testing.T) {
+	worker := filepath.Join(t.TempDir(), "storage-spike-worker")
+	build := exec.Command("go", "build", "-o", worker, "./cmd/storage-spike-worker")
+	build.Dir = projectRoot(t)
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build worker: %v\n%s", err, output)
+	}
+	tests := []struct {
+		failpoint sqlite.Failpoint
+		want      CrashOutcome
+	}{
+		{sqlite.FailpointBeforeDurableCommit, OutcomeNotApplied},
+		{sqlite.FailpointAfterDurableCommit, OutcomeApplied},
+	}
+	for index, test := range tests {
+		t.Run(string(test.failpoint), func(t *testing.T) {
+			root := t.TempDir()
+			databasePath := filepath.Join(root, "runtime.sqlite")
+			mutationPath := filepath.Join(root, "official.json")
+			markerPath := filepath.Join(root, "official.started")
+			refs := OfficialMutationRefs{EventID: domain.EventID("event_official_worker_" + string(rune('a'+index))), CommitID: "commit_official_worker", ReceiptID: "receipt_official_worker", MissionRevision: "revision_official_worker", IdempotencyKey: "idem_official_worker", CanonicalType: "observation", CanonicalID: "observation_official_worker"}
+			mutation := OfficialMutation{SchemaVersion: 1, Refs: refs, OccurredAt: time.Date(2026, 7, 15, 21, index, 0, 0, time.UTC)}
+			encoded, err := json.Marshal(mutation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutationPath, encoded, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			open := func() (port.Store, func() error, error) {
+				store, err := sqlite.Open(databasePath)
+				if err != nil {
+					return nil, nil, err
+				}
+				return store, store.Close, nil
+			}
+			result, err := RunCrashTrialWithInspector(context.Background(), CrashCommand{Executable: worker, Args: []string{"-backend", "sqlite", "-path", databasePath, "-failpoint", string(test.failpoint), "-intent", mutationPath, "-marker", markerPath, "-mutation", "official"}}, open, func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+				return InspectOfficialMutation(ctx, store, refs)
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.WorkerCrashed || result.Outcome != test.want {
+				t.Fatalf("crashed=%v outcome=%s want=%s exit=%q", result.WorkerCrashed, result.Outcome, test.want, result.ExitError)
+			}
+		})
+	}
+}
+
 func TestStorageSpikeWorkerCrashesAtDoltCLIBoundaries(t *testing.T) {
 	doltBinary := os.Getenv("DOLT_BIN")
 	if doltBinary == "" {

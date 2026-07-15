@@ -58,6 +58,19 @@ func TestInspectOfficialMutationRejectsCrossLinkedRecords(t *testing.T) {
 	}
 }
 
+func TestApplyOfficialMutationProducesCompleteVisibleSet(t *testing.T) {
+	store := memory.New()
+	refs := OfficialMutationRefs{EventID: "event_apply_1", CommitID: "commit_apply_1", ReceiptID: "receipt_apply_1", MissionRevision: "revision_apply_1", IdempotencyKey: "idem_apply_1", CanonicalType: "observation", CanonicalID: "observation_apply_1"}
+	mutation := OfficialMutation{SchemaVersion: 1, Refs: refs, OccurredAt: fixedOfficialTime()}
+	if err := ApplyOfficialMutation(context.Background(), store, mutation); err != nil {
+		t.Fatal(err)
+	}
+	outcome, err := InspectOfficialMutation(context.Background(), store, refs)
+	if err != nil || outcome != OutcomeApplied {
+		t.Fatalf("outcome=%s err=%v", outcome, err)
+	}
+}
+
 func seedOfficialMutation(t *testing.T, store port.Store, refs OfficialMutationRefs) {
 	t.Helper()
 	now := fixedOfficialTime()

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/storage/spike"
 	"motor-autonomo/internal/storage/sqlite"
@@ -32,6 +33,7 @@ func run() error {
 	path := flag.String("path", "", "backend data path")
 	failpoint := flag.String("failpoint", "", "adapter failpoint")
 	intentPath := flag.String("intent", "", "JSON crash intent path")
+	mutationKind := flag.String("mutation", "event", "mutation fixture: event or official")
 	markerPath := flag.String("marker", "", "durable worker-intention marker path")
 	doltBinary := flag.String("dolt-bin", "", "explicit Dolt executable path")
 	flag.Parse()
@@ -43,12 +45,9 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("read crash intent: %w", err)
 	}
-	var intent spike.CrashIntent
-	if err := json.Unmarshal(intentBytes, &intent); err != nil {
-		return fmt.Errorf("decode crash intent: %w", err)
-	}
-	if err := intent.Event.ValidateForAppend(); err != nil {
-		return fmt.Errorf("validate crash intent: %w", err)
+	apply, err := decodeMutation(*mutationKind, intentBytes)
+	if err != nil {
+		return err
 	}
 	if err := writeMarker(*markerPath, intentBytes); err != nil {
 		return err
@@ -70,7 +69,7 @@ func run() error {
 			return err
 		}
 		defer store.Close()
-		if err := spike.ApplyCrashIntent(ctx, store, intent); err != nil {
+		if err := apply(ctx, store); err != nil {
 			return err
 		}
 		return fmt.Errorf("configured failpoint %q was not reached", *failpoint)
@@ -91,12 +90,36 @@ func run() error {
 			return err
 		}
 		defer store.Close()
-		if err := spike.ApplyCrashIntent(ctx, store, intent); err != nil {
+		if err := apply(ctx, store); err != nil {
 			return err
 		}
 		return fmt.Errorf("configured failpoint %q was not reached", *failpoint)
 	default:
 		return fmt.Errorf("unknown backend %q", *backend)
+	}
+}
+
+func decodeMutation(kind string, encoded []byte) (func(context.Context, port.Store) error, error) {
+	switch kind {
+	case "event":
+		var intent spike.CrashIntent
+		if err := json.Unmarshal(encoded, &intent); err != nil {
+			return nil, fmt.Errorf("decode crash intent: %w", err)
+		}
+		if err := intent.Event.ValidateForAppend(); err != nil {
+			return nil, fmt.Errorf("validate crash intent: %w", err)
+		}
+		return func(ctx context.Context, store port.Store) error { return spike.ApplyCrashIntent(ctx, store, intent) }, nil
+	case "official":
+		var mutation spike.OfficialMutation
+		if err := json.Unmarshal(encoded, &mutation); err != nil {
+			return nil, fmt.Errorf("decode official mutation: %w", err)
+		}
+		return func(ctx context.Context, store port.Store) error {
+			return spike.ApplyOfficialMutation(ctx, store, mutation)
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown mutation fixture %q", kind)
 	}
 }
 
