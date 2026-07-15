@@ -38,6 +38,7 @@ type state struct {
 	observations     map[domain.ObservationID]domain.Observation
 	claims           map[domain.ClaimID]domain.Claim
 	evidenceLinks    map[domain.EvidenceLinkID]domain.EvidenceLink
+	artifacts        map[domain.ArtifactID]domain.KnowledgeArtifact
 	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
 	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
@@ -70,6 +71,7 @@ func newState() state {
 		observations:     make(map[domain.ObservationID]domain.Observation),
 		claims:           make(map[domain.ClaimID]domain.Claim),
 		evidenceLinks:    make(map[domain.EvidenceLinkID]domain.EvidenceLink),
+		artifacts:        make(map[domain.ArtifactID]domain.KnowledgeArtifact),
 		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
 		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
 		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
@@ -207,6 +209,9 @@ func (t transaction) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink
 }
 func (t transaction) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink, error) {
 	return reader(t).EvidenceLinksForClaim(id)
+}
+func (t transaction) KnowledgeArtifact(id domain.ArtifactID) (domain.KnowledgeArtifact, error) {
+	return reader(t).KnowledgeArtifact(id)
 }
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
@@ -379,6 +384,13 @@ func (r reader) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink,
 	}
 	sort.Slice(links, func(i, j int) bool { return links[i].ID < links[j].ID })
 	return links, nil
+}
+func (r reader) KnowledgeArtifact(id domain.ArtifactID) (domain.KnowledgeArtifact, error) {
+	v, ok := r.state.artifacts[id]
+	if !ok {
+		return domain.KnowledgeArtifact{}, notFound("knowledge artifact", id)
+	}
+	return cloneKnowledgeArtifact(v), nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]
@@ -774,6 +786,64 @@ func (t transaction) AppendClaimWithEvidence(claim domain.Claim, links []domain.
 	return nil
 }
 
+func (t transaction) AppendEvidenceLinks(claimID domain.ClaimID, links []domain.EvidenceLink) error {
+	if _, ok := t.state.claims[claimID]; !ok {
+		return notFound("claim", claimID)
+	}
+	if len(links) == 0 {
+		return fmt.Errorf("evidence delta must contain at least one link")
+	}
+	seen := make(map[domain.EvidenceLinkID]struct{}, len(links))
+	for _, link := range links {
+		if err := link.Validate(); err != nil {
+			return fmt.Errorf("validate evidence link: %w", err)
+		}
+		if link.ClaimID != claimID {
+			return fmt.Errorf("%w: evidence link targets another claim", port.ErrConflict)
+		}
+		if _, ok := t.state.observations[link.ObservationID]; !ok {
+			return notFound("observation", link.ObservationID)
+		}
+		if _, duplicate := seen[link.ID]; duplicate {
+			return conflict("evidence link", link.ID)
+		}
+		if _, exists := t.state.evidenceLinks[link.ID]; exists {
+			return conflict("evidence link", link.ID)
+		}
+		seen[link.ID] = struct{}{}
+	}
+	for _, link := range links {
+		t.state.evidenceLinks[link.ID] = link
+	}
+	return nil
+}
+
+func (t transaction) AppendKnowledgeArtifact(v domain.KnowledgeArtifact) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate knowledge artifact: %w", err)
+	}
+	if _, exists := t.state.artifacts[v.ID]; exists {
+		return conflict("knowledge artifact", v.ID)
+	}
+	t.state.artifacts[v.ID] = cloneKnowledgeArtifact(v)
+	return nil
+}
+
+func (t transaction) SaveKnowledgeArtifact(v domain.KnowledgeArtifact) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate knowledge artifact: %w", err)
+	}
+	previous, exists := t.state.artifacts[v.ID]
+	if !exists {
+		return notFound("knowledge artifact", v.ID)
+	}
+	if previous.SchemaVersion != v.SchemaVersion || previous.ID != v.ID || previous.Kind != v.Kind || previous.BaseCommitID != v.BaseCommitID || previous.ContentRef != v.ContentRef || previous.Content != v.Content || !equalStrings(previous.Dependencies, v.Dependencies) || previous.Stale || !v.Stale {
+		return fmt.Errorf("%w: knowledge artifact is immutable except for false-to-true stale transition", port.ErrConflict)
+	}
+	t.state.artifacts[v.ID] = cloneKnowledgeArtifact(v)
+	return nil
+}
+
 func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate raw model output: %w", err)
@@ -989,6 +1059,9 @@ func cloneState(src state) state {
 	for k, v := range src.evidenceLinks {
 		dst.evidenceLinks[k] = v
 	}
+	for k, v := range src.artifacts {
+		dst.artifacts[k] = cloneKnowledgeArtifact(v)
+	}
 	for k, v := range src.rawModelOutputs {
 		dst.rawModelOutputs[k] = v
 	}
@@ -1017,6 +1090,10 @@ func cloneState(src state) state {
 		dst.canonical[k] = v
 	}
 	return dst
+}
+func cloneKnowledgeArtifact(v domain.KnowledgeArtifact) domain.KnowledgeArtifact {
+	v.Dependencies = append([]string(nil), v.Dependencies...)
+	return v
 }
 func cloneMission(v domain.MissionRevision) domain.MissionRevision {
 	v.Domains = append([]string(nil), v.Domains...)

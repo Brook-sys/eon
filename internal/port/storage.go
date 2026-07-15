@@ -81,6 +81,7 @@ type KnowledgeReader interface {
 	Claim(domain.ClaimID) (domain.Claim, error)
 	EvidenceLink(domain.EvidenceLinkID) (domain.EvidenceLink, error)
 	EvidenceLinksForClaim(domain.ClaimID) ([]domain.EvidenceLink, error)
+	KnowledgeArtifact(domain.ArtifactID) (domain.KnowledgeArtifact, error)
 	RawModelOutput(domain.ArtifactID) (domain.RawModelOutput, error)
 	ProposedChangeSet(domain.ChangeSetID) (domain.ProposedChangeSet, error)
 	AcceptedChangeSet(domain.ChangeSetID) (domain.AcceptedChangeSet, error)
@@ -97,6 +98,9 @@ type KnowledgeWriter interface {
 	AppendSourceFragments(domain.SourceVersionID, []domain.SourceFragment) error
 	AppendObservation(domain.Observation) error
 	AppendClaimWithEvidence(domain.Claim, []domain.EvidenceLink) error
+	AppendEvidenceLinks(domain.ClaimID, []domain.EvidenceLink) error
+	AppendKnowledgeArtifact(domain.KnowledgeArtifact) error
+	SaveKnowledgeArtifact(domain.KnowledgeArtifact) error
 	AppendRawModelOutput(domain.RawModelOutput) error
 	AppendProposedChangeSet(domain.ProposedChangeSet) error
 	AppendAcceptedChangeSet(domain.AcceptedChangeSet) error

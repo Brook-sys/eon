@@ -182,7 +182,18 @@ type KnowledgeArtifact struct {
 	BaseCommitID  CommitID   `json:"base_commit_id"`
 	Dependencies  []string   `json:"dependencies"`
 	ContentRef    string     `json:"content_ref"`
+	Content       string     `json:"content"`
 	Stale         bool       `json:"stale"`
+}
+
+func (a KnowledgeArtifact) Validate() error {
+	if a.SchemaVersion != SchemaVersionV1 || a.ID == "" || strings.TrimSpace(a.Kind) == "" || a.BaseCommitID == "" || len(a.Dependencies) == 0 || strings.TrimSpace(a.ContentRef) == "" || strings.TrimSpace(a.Content) == "" {
+		return errors.New("knowledge artifact is incomplete or has unsupported schema version")
+	}
+	if hasBlankOrDuplicate(a.Dependencies) {
+		return errors.New("knowledge artifact dependencies must not contain blank or duplicate values")
+	}
+	return nil
 }
 
 type ChangeKind string

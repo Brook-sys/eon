@@ -246,6 +246,73 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+	t.Run("evidence deltas and knowledge artifacts are append-only and isolated", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 15, 17, 20, 0, 0, time.UTC)
+		content := []byte("artifact evidence")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		source := domain.Source{SchemaVersion: 1, ID: "source_1", Kind: "fixture", Locator: "source.txt", ObservedAt: now}
+		version := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_1", SourceID: source.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: version.ID, MediaType: "text/plain", Content: content}
+		fragment := domain.SourceFragment{SchemaVersion: 1, ID: "fragment_1", SourceVersionID: version.ID, Location: "bytes:0-17", StartOffset: 0, EndOffset: 17, ContentHash: hash, ContentRef: hash}
+		observation := domain.Observation{SchemaVersion: 1, ID: "observation_1", Statement: "artifact evidence exists", ExactQuote: string(content), Anchor: domain.ObservationAnchor{SourceFragmentID: fragment.ID}, Provenance: "extractor:test@1"}
+		claim := domain.Claim{SchemaVersion: 1, ID: "claim_1", Proposition: "An artifact can cite evidence.", Qualifiers: map[string]string{"scope": "test"}, Version: 1}
+		initial := domain.EvidenceLink{SchemaVersion: 1, ID: "evidence_1", ObservationID: observation.ID, ClaimID: claim.ID, Relation: domain.EvidenceSupports}
+		delta := domain.EvidenceLink{SchemaVersion: 1, ID: "evidence_2", ObservationID: observation.ID, ClaimID: claim.ID, Relation: domain.EvidenceReplicates}
+		artifact := domain.KnowledgeArtifact{SchemaVersion: 1, ID: "artifact_1", Kind: "cited_claim_view", BaseCommitID: domain.GenesisCommitID, Dependencies: []string{"claim:claim_1@1", "evidence_link:evidence_1"}, ContentRef: hash, Content: "# cited view", Stale: false}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendSource(source, version, snapshot); err != nil {
+				return err
+			}
+			if err := tx.AppendSourceFragments(version.ID, []domain.SourceFragment{fragment}); err != nil {
+				return err
+			}
+			if err := tx.AppendObservation(observation); err != nil {
+				return err
+			}
+			if err := tx.AppendClaimWithEvidence(claim, []domain.EvidenceLink{initial}); err != nil {
+				return err
+			}
+			if err := tx.AppendEvidenceLinks(claim.ID, []domain.EvidenceLink{delta}); err != nil {
+				return err
+			}
+			return tx.AppendKnowledgeArtifact(artifact)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		artifact.Dependencies[0] = "caller mutation"
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			links, err := r.EvidenceLinksForClaim(claim.ID)
+			if err != nil {
+				return err
+			}
+			if len(links) != 2 || links[0].ID != initial.ID || links[1].ID != delta.ID {
+				t.Fatalf("evidence links = %+v", links)
+			}
+			got, err := r.KnowledgeArtifact("artifact_1")
+			if err != nil {
+				return err
+			}
+			if got.Dependencies[0] == "caller mutation" {
+				t.Fatal("stored artifact aliased caller dependencies")
+			}
+			got.Dependencies[0] = "reader mutation"
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		artifact.Dependencies = []string{"claim:claim_1@1", "evidence_link:evidence_1"}
+		artifact.Stale = true
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(artifact) }); err != nil {
+			t.Fatalf("mark artifact stale: %v", err)
+		}
+		artifact.Content = "mutated"
+		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(artifact) })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("artifact mutation error = %v, want ErrConflict", err)
+		}
+	})
 	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)
