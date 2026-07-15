@@ -34,6 +34,7 @@ type state struct {
 	sources          map[domain.SourceID]domain.Source
 	sourceVersions   map[domain.SourceVersionID]domain.SourceVersion
 	sourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
+	sourceFragments  map[domain.SourceFragmentID]domain.SourceFragment
 	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
 	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
@@ -62,6 +63,7 @@ func newState() state {
 		sources:          make(map[domain.SourceID]domain.Source),
 		sourceVersions:   make(map[domain.SourceVersionID]domain.SourceVersion),
 		sourceSnapshots:  make(map[domain.SourceVersionID]domain.SourceSnapshot),
+		sourceFragments:  make(map[domain.SourceFragmentID]domain.SourceFragment),
 		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
 		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
 		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
@@ -182,6 +184,12 @@ func (t transaction) SourceVersion(id domain.SourceVersionID) (domain.SourceVers
 func (t transaction) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot, error) {
 	return reader(t).SourceSnapshot(id)
 }
+func (t transaction) SourceFragment(id domain.SourceFragmentID) (domain.SourceFragment, error) {
+	return reader(t).SourceFragment(id)
+}
+func (t transaction) SourceFragments(id domain.SourceVersionID) ([]domain.SourceFragment, error) {
+	return reader(t).SourceFragments(id)
+}
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
 	v, ok := r.state.missionRevisions[id]
@@ -294,6 +302,31 @@ func (r reader) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot
 		return domain.SourceSnapshot{}, notFound("source snapshot", id)
 	}
 	return cloneSourceSnapshot(v), nil
+}
+func (r reader) SourceFragment(id domain.SourceFragmentID) (domain.SourceFragment, error) {
+	v, ok := r.state.sourceFragments[id]
+	if !ok {
+		return domain.SourceFragment{}, notFound("source fragment", id)
+	}
+	return v, nil
+}
+func (r reader) SourceFragments(id domain.SourceVersionID) ([]domain.SourceFragment, error) {
+	if _, ok := r.state.sourceVersions[id]; !ok {
+		return nil, notFound("source version", id)
+	}
+	fragments := make([]domain.SourceFragment, 0)
+	for _, fragment := range r.state.sourceFragments {
+		if fragment.SourceVersionID == id {
+			fragments = append(fragments, fragment)
+		}
+	}
+	sort.Slice(fragments, func(i, j int) bool {
+		if fragments[i].StartOffset == fragments[j].StartOffset {
+			return fragments[i].ID < fragments[j].ID
+		}
+		return fragments[i].StartOffset < fragments[j].StartOffset
+	})
+	return fragments, nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]
@@ -586,6 +619,48 @@ func (t transaction) AppendSource(v domain.Source, version domain.SourceVersion,
 	return nil
 }
 
+func (t transaction) AppendSourceFragments(versionID domain.SourceVersionID, fragments []domain.SourceFragment) error {
+	snapshot, ok := t.state.sourceSnapshots[versionID]
+	if !ok {
+		return notFound("source snapshot", versionID)
+	}
+	if len(fragments) == 0 {
+		return fmt.Errorf("source fragmentation requires at least one fragment")
+	}
+	if existing, _ := reader(t).SourceFragments(versionID); len(existing) != 0 {
+		return conflict("source fragments", versionID)
+	}
+	next := uint64(0)
+	for _, fragment := range fragments {
+		if err := fragment.Validate(); err != nil {
+			return fmt.Errorf("validate source fragment: %w", err)
+		}
+		if fragment.SourceVersionID != versionID || fragment.StartOffset != next || fragment.EndOffset > uint64(len(snapshot.Content)) {
+			return fmt.Errorf("%w: source fragment coverage or lineage differs", port.ErrConflict)
+		}
+		if fragment.Location != fmt.Sprintf("bytes:%d-%d", fragment.StartOffset, fragment.EndOffset) {
+			return fmt.Errorf("%w: source fragment location differs from offsets", port.ErrConflict)
+		}
+		content := snapshot.Content[fragment.StartOffset:fragment.EndOffset]
+		digest := sha256.Sum256(content)
+		wantHash := "sha256:" + hex.EncodeToString(digest[:])
+		if fragment.ContentHash != wantHash || fragment.ContentRef != wantHash {
+			return fmt.Errorf("%w: source fragment hash or content reference differs", port.ErrConflict)
+		}
+		if _, exists := t.state.sourceFragments[fragment.ID]; exists {
+			return conflict("source fragment", fragment.ID)
+		}
+		next = fragment.EndOffset
+	}
+	if next != uint64(len(snapshot.Content)) {
+		return fmt.Errorf("%w: source fragments do not cover snapshot", port.ErrConflict)
+	}
+	for _, fragment := range fragments {
+		t.state.sourceFragments[fragment.ID] = fragment
+	}
+	return nil
+}
+
 func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate raw model output: %w", err)
@@ -788,6 +863,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.sourceSnapshots {
 		dst.sourceSnapshots[k] = cloneSourceSnapshot(v)
+	}
+	for k, v := range src.sourceFragments {
+		dst.sourceFragments[k] = v
 	}
 	for k, v := range src.rawModelOutputs {
 		dst.rawModelOutputs[k] = v

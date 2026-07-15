@@ -63,8 +63,17 @@ type SourceFragment struct {
 	ID              SourceFragmentID `json:"id"`
 	SourceVersionID SourceVersionID  `json:"source_version_id"`
 	Location        string           `json:"location"`
+	StartOffset     uint64           `json:"start_offset"`
+	EndOffset       uint64           `json:"end_offset"`
 	ContentHash     string           `json:"content_hash"`
 	ContentRef      string           `json:"content_ref"`
+}
+
+func (f SourceFragment) Validate() error {
+	if f.SchemaVersion != SchemaVersionV1 || f.ID == "" || f.SourceVersionID == "" || strings.TrimSpace(f.Location) == "" || f.EndOffset <= f.StartOffset || strings.TrimSpace(f.ContentHash) == "" || strings.TrimSpace(f.ContentRef) == "" {
+		return errors.New("source fragment is incomplete or has unsupported schema version")
+	}
+	return nil
 }
 
 // ObservationAnchor distinguishes epistemic source material from operational

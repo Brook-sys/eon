@@ -64,6 +64,12 @@ Toda `Observation` MUST ser ancorada em `SourceFragment` ou `EvidenceReceipt` re
 
 **Evidência de aceitação:** observação sem âncora é estruturalmente inválida.
 
+### FR-KNOW-006 — Segmentação verificável
+
+Todo `SourceFragment` MUST referenciar uma `SourceVersion`, registrar offsets de bytes e hash do conteúdo exato. A segmentação completa de uma versão MUST ser ordenada, sem lacunas ou sobreposições, preservar fronteiras UTF-8 para texto e permitir round-trip byte a byte do snapshot original.
+
+**Evidência de aceitação:** contract tests rejeitam lacunas, sobreposições, hash divergente e linhagem incorreta; teste com Unicode recompõe exatamente o snapshot.
+
 ### FR-KNOW-002 — Claims e evidências separados
 
 `Claim` MUST preservar qualificadores relevantes e MUST NOT incorporar citações como parte da proposição. Apoio, oposição e qualificação MUST ser representados por `EvidenceLink` tipado.

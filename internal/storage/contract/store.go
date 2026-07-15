@@ -69,6 +69,69 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+	t.Run("source fragments require exact ordered coverage and round trip", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 15, 16, 20, 0, 0, time.UTC)
+		content := []byte("abcdef")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		source := domain.Source{SchemaVersion: 1, ID: "source_1", Kind: "fixture", Locator: "source.txt", ObservedAt: now}
+		version := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_1", SourceID: source.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: version.ID, MediaType: "text/plain", Content: content}
+		fragment := func(id domain.SourceFragmentID, start, end uint64) domain.SourceFragment {
+			digest := sha256.Sum256(content[start:end])
+			hash := "sha256:" + hex.EncodeToString(digest[:])
+			return domain.SourceFragment{SchemaVersion: 1, ID: id, SourceVersionID: version.ID, Location: fmt.Sprintf("bytes:%d-%d", start, end), StartOffset: start, EndOffset: end, ContentHash: hash, ContentRef: hash}
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendSource(source, version, snapshot); err != nil {
+				return err
+			}
+			return tx.AppendSourceFragments(version.ID, []domain.SourceFragment{fragment("fragment_1", 0, 3), fragment("fragment_2", 3, 6)})
+		}); err != nil {
+			t.Fatalf("append fragments: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			fragments, err := r.SourceFragments(version.ID)
+			if err != nil {
+				return err
+			}
+			var roundTrip []byte
+			for _, got := range fragments {
+				roundTrip = append(roundTrip, content[got.StartOffset:got.EndOffset]...)
+			}
+			if string(roundTrip) != string(content) {
+				t.Fatalf("fragment round trip = %q", roundTrip)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		other := domain.Source{SchemaVersion: 1, ID: "source_2", Kind: "fixture", Locator: "other.txt", ObservedAt: now}
+		otherVersion := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_2", SourceID: other.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		otherSnapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: otherVersion.ID, MediaType: "text/plain", Content: content}
+		gap := fragment("fragment_gap", 1, 6)
+		gap.SourceVersionID = otherVersion.ID
+		err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendSource(other, otherVersion, otherSnapshot); err != nil {
+				return err
+			}
+			return tx.AppendSourceFragments(otherVersion.ID, []domain.SourceFragment{gap})
+		})
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("gap error = %v, want ErrConflict", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.Source(other.ID)
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("failed fragment transaction partially committed: %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)
