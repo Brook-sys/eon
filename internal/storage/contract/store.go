@@ -60,6 +60,12 @@ func TestStore(t *testing.T, factory Factory) {
 		store := factory()
 		q, candidate, inquiry, operation := agendaRecords()
 		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(missionRevision()); err != nil {
+				return err
+			}
+			if err := tx.AppendOperationSpec(operationSpec()); err != nil {
+				return err
+			}
 			if err := tx.CreateQuestion(q); err != nil {
 				return err
 			}
@@ -76,6 +82,18 @@ func TestStore(t *testing.T, factory Factory) {
 
 		operation.ReadSet[0] = "caller mutation"
 		if err := store.View(context.Background(), func(r port.Reader) error {
+			spec, err := r.OperationSpec("extract@1")
+			if err != nil {
+				return err
+			}
+			spec.Validators[0] = "caller mutation"
+			again, err := r.OperationSpec("extract@1")
+			if err != nil {
+				return err
+			}
+			if again.Validators[0] != "schema" {
+				t.Fatalf("operation spec slice aliased store: %q", again.Validators[0])
+			}
 			got, err := r.Operation("operation_1")
 			if err == nil && got.ReadSet[0] != "fragment_1" {
 				t.Fatalf("operation slice aliased caller: %q", got.ReadSet[0])
@@ -90,6 +108,59 @@ func TestStore(t *testing.T, factory Factory) {
 		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveOperation(missing) })
 		if !errors.Is(err, port.ErrNotFound) {
 			t.Fatalf("save missing error = %v, want ErrNotFound", err)
+		}
+
+		changed := operation
+		changed.SpecID = "other@1"
+		err = store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveOperation(changed) })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("mutate immutable operation error = %v, want ErrConflict", err)
+		}
+		changedInquiry := inquiry
+		changedInquiry.QuestionID = "other_question"
+		err = store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveInquiry(changedInquiry) })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("mutate immutable inquiry error = %v, want ErrConflict", err)
+		}
+	})
+
+	t.Run("agenda lineage and operation spec references fail closed", func(t *testing.T) {
+		store := factory()
+		q, candidate, inquiry, operation := agendaRecords()
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(missionRevision()); err != nil {
+				return err
+			}
+			return tx.CreateQuestion(q)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		orphan := candidate
+		orphan.QuestionID = "question_missing"
+		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.CreateInquiryCandidate(orphan) })
+		if !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("orphan candidate error = %v, want ErrNotFound", err)
+		}
+		err = store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.CreateInquiryCandidate(candidate); err != nil {
+				return err
+			}
+			if err := tx.CreateInquiry(inquiry); err != nil {
+				return err
+			}
+			return tx.CreateOperation(operation)
+		})
+		if !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("missing spec error = %v, want ErrNotFound", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.Inquiry(inquiry.ID)
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("failed lineage transaction partially committed: %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
 		}
 	})
 
@@ -271,4 +342,8 @@ func agendaRecords() (domain.Question, domain.InquiryCandidate, domain.Inquiry, 
 	inquiry := domain.Inquiry{SchemaVersion: 1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: "revision_1", QuestionID: q.ID, AdmissionReason: "priority", StopCondition: "answered", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
 	operation := domain.Operation{SchemaVersion: 1, ID: "operation_1", InquiryID: inquiry.ID, MissionRevision: "revision_1", SpecID: "extract@1", ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"}, ExpectedOutput: "proposed_change_set", IdempotencyKey: "idem_1", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
 	return q, candidate, inquiry, operation
+}
+
+func operationSpec() domain.OperationSpec {
+	return domain.OperationSpec{SchemaVersion: 1, ID: "extract@1", ContractVersion: 1, InputSchema: "fragment refs", OutputSchema: "proposed change set", Budget: domain.Budget{ModelCalls: 1, Tokens: 1000, Attempts: 1}, Validators: []string{"schema"}, RetryPolicy: "no retry", FallbackPolicy: "fail", MaximumAuthority: domain.AuthorityProposeOnly}
 }

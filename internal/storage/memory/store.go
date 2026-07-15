@@ -19,6 +19,7 @@ type Store struct {
 type state struct {
 	missionRevisions map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions   map[domain.MissionID]domain.MissionRevisionID
+	operationSpecs   map[domain.OperationSpecID]domain.OperationSpec
 	questions        map[domain.QuestionID]domain.Question
 	candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
 	inquiries        map[domain.InquiryID]domain.Inquiry
@@ -34,6 +35,7 @@ func newState() state {
 	return state{
 		missionRevisions: make(map[domain.MissionRevisionID]domain.MissionRevision),
 		activeMissions:   make(map[domain.MissionID]domain.MissionRevisionID),
+		operationSpecs:   make(map[domain.OperationSpecID]domain.OperationSpec),
 		questions:        make(map[domain.QuestionID]domain.Question),
 		candidates:       make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
 		inquiries:        make(map[domain.InquiryID]domain.Inquiry),
@@ -88,6 +90,9 @@ func (t transaction) ActiveMissionRevision(id domain.MissionID) (domain.MissionR
 func (t transaction) Question(id domain.QuestionID) (domain.Question, error) {
 	return reader(t).Question(id)
 }
+func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
+	return reader(t).OperationSpec(id)
+}
 func (t transaction) InquiryCandidate(id domain.InquiryCandidateID) (domain.InquiryCandidate, error) {
 	return reader(t).InquiryCandidate(id)
 }
@@ -127,6 +132,13 @@ func (r reader) Question(id domain.QuestionID) (domain.Question, error) {
 		return domain.Question{}, notFound("question", id)
 	}
 	return v, nil
+}
+func (r reader) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
+	v, ok := r.state.operationSpecs[id]
+	if !ok {
+		return domain.OperationSpec{}, notFound("operation spec", id)
+	}
+	return cloneOperationSpec(v), nil
 }
 func (r reader) InquiryCandidate(id domain.InquiryCandidateID) (domain.InquiryCandidate, error) {
 	v, ok := r.state.candidates[id]
@@ -208,7 +220,20 @@ func (t transaction) CreateQuestion(v domain.Question) error {
 	if _, ok := t.state.questions[v.ID]; ok {
 		return conflict("question", v.ID)
 	}
+	if _, ok := t.state.missionRevisions[v.MissionRevision]; !ok {
+		return notFound("mission revision", v.MissionRevision)
+	}
 	t.state.questions[v.ID] = v
+	return nil
+}
+func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate operation spec: %w", err)
+	}
+	if _, ok := t.state.operationSpecs[v.ID]; ok {
+		return conflict("operation spec", v.ID)
+	}
+	t.state.operationSpecs[v.ID] = cloneOperationSpec(v)
 	return nil
 }
 func (t transaction) CreateInquiryCandidate(v domain.InquiryCandidate) error {
@@ -217,6 +242,13 @@ func (t transaction) CreateInquiryCandidate(v domain.InquiryCandidate) error {
 	}
 	if _, ok := t.state.candidates[v.ID]; ok {
 		return conflict("inquiry candidate", v.ID)
+	}
+	question, ok := t.state.questions[v.QuestionID]
+	if !ok {
+		return notFound("question", v.QuestionID)
+	}
+	if question.MissionRevision != v.MissionRevision {
+		return fmt.Errorf("%w: candidate and question mission revisions differ", port.ErrConflict)
 	}
 	t.state.candidates[v.ID] = cloneCandidate(v)
 	return nil
@@ -228,6 +260,13 @@ func (t transaction) CreateInquiry(v domain.Inquiry) error {
 	if _, ok := t.state.inquiries[v.ID]; ok {
 		return conflict("inquiry", v.ID)
 	}
+	candidate, ok := t.state.candidates[v.CandidateID]
+	if !ok {
+		return notFound("inquiry candidate", v.CandidateID)
+	}
+	if candidate.QuestionID != v.QuestionID || candidate.MissionRevision != v.MissionRevision {
+		return fmt.Errorf("%w: inquiry lineage differs from candidate", port.ErrConflict)
+	}
 	t.state.inquiries[v.ID] = v
 	return nil
 }
@@ -238,6 +277,16 @@ func (t transaction) CreateOperation(v domain.Operation) error {
 	if _, ok := t.state.operations[v.ID]; ok {
 		return conflict("operation", v.ID)
 	}
+	inquiry, ok := t.state.inquiries[v.InquiryID]
+	if !ok {
+		return notFound("inquiry", v.InquiryID)
+	}
+	if inquiry.MissionRevision != v.MissionRevision {
+		return fmt.Errorf("%w: operation and inquiry mission revisions differ", port.ErrConflict)
+	}
+	if _, ok := t.state.operationSpecs[v.SpecID]; !ok {
+		return notFound("operation spec", v.SpecID)
+	}
 	t.state.operations[v.ID] = cloneOperation(v)
 	return nil
 }
@@ -245,8 +294,12 @@ func (t transaction) SaveInquiry(v domain.Inquiry) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate inquiry: %w", err)
 	}
-	if _, ok := t.state.inquiries[v.ID]; !ok {
+	existing, ok := t.state.inquiries[v.ID]
+	if !ok {
 		return notFound("inquiry", v.ID)
+	}
+	if existing.SchemaVersion != v.SchemaVersion || existing.CandidateID != v.CandidateID || existing.MissionRevision != v.MissionRevision || existing.QuestionID != v.QuestionID || existing.AdmissionReason != v.AdmissionReason || existing.Budget != v.Budget || existing.StopCondition != v.StopCondition {
+		return fmt.Errorf("%w: immutable inquiry fields changed", port.ErrConflict)
 	}
 	t.state.inquiries[v.ID] = v
 	return nil
@@ -255,8 +308,12 @@ func (t transaction) SaveOperation(v domain.Operation) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate operation: %w", err)
 	}
-	if _, ok := t.state.operations[v.ID]; !ok {
+	existing, ok := t.state.operations[v.ID]
+	if !ok {
 		return notFound("operation", v.ID)
+	}
+	if existing.SchemaVersion != v.SchemaVersion || existing.InquiryID != v.InquiryID || existing.MissionRevision != v.MissionRevision || existing.SpecID != v.SpecID || !equalStrings(existing.ReadSet, v.ReadSet) || !equalStrings(existing.InputRefs, v.InputRefs) || existing.ExpectedOutput != v.ExpectedOutput || existing.IdempotencyKey != v.IdempotencyKey {
+		return fmt.Errorf("%w: immutable operation fields changed", port.ErrConflict)
 	}
 	t.state.operations[v.ID] = cloneOperation(v)
 	return nil
@@ -324,6 +381,9 @@ func cloneState(src state) state {
 	for k, v := range src.activeMissions {
 		dst.activeMissions[k] = v
 	}
+	for k, v := range src.operationSpecs {
+		dst.operationSpecs[k] = cloneOperationSpec(v)
+	}
 	for k, v := range src.questions {
 		dst.questions[k] = v
 	}
@@ -359,6 +419,22 @@ func cloneOperation(v domain.Operation) domain.Operation {
 	v.ReadSet = append([]string(nil), v.ReadSet...)
 	v.InputRefs = append([]string(nil), v.InputRefs...)
 	return v
+}
+func cloneOperationSpec(v domain.OperationSpec) domain.OperationSpec {
+	v.Validators = append([]string(nil), v.Validators...)
+	return v
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 var _ port.Store = (*Store)(nil)

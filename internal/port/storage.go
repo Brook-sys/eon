@@ -28,6 +28,7 @@ type MissionWriter interface {
 
 // AgendaReader exposes persisted planning and execution units.
 type AgendaReader interface {
+	OperationSpec(domain.OperationSpecID) (domain.OperationSpec, error)
 	Question(domain.QuestionID) (domain.Question, error)
 	InquiryCandidate(domain.InquiryCandidateID) (domain.InquiryCandidate, error)
 	Inquiry(domain.InquiryID) (domain.Inquiry, error)
@@ -37,6 +38,7 @@ type AgendaReader interface {
 // AgendaWriter creates immutable agenda records and saves mutable execution
 // records. A duplicate create is a conflict rather than an implicit overwrite.
 type AgendaWriter interface {
+	AppendOperationSpec(domain.OperationSpec) error
 	CreateQuestion(domain.Question) error
 	CreateInquiryCandidate(domain.InquiryCandidate) error
 	CreateInquiry(domain.Inquiry) error
