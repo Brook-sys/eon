@@ -141,8 +141,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: porta `WebFetcher` e adapter HTTP(S) impõem esquema, redirects limitados e revalidados, bloqueio de destinos IP especiais por padrão, allowlist MIME e limite prévio/streaming de bytes; bytes adquiridos entram na linhagem imutável via `IngestFetched`.
 - [x] `DONE` Matriz de compatibilidade OpenAI-compatible.
   - Evidência: `OPENAI_COMPATIBILITY.md` delimita o subconjunto portátil, perfis e contract test por implantação; adapter seleciona explicitamente `max_tokens` ou `max_completion_tokens`, com fake/testes cobrindo ambos sem fallback duplicador.
-- [ ] `READY` Benchmark 2k/4k/8k para operações selecionadas.
+- [x] `DONE` Benchmark 2k/4k/8k para operações selecionadas.
+  - Evidência: `internal/evaluation` carrega fixtures estritas, compila a matriz contexto × formato pelo mesmo budget do runtime, mede validade/acerto/tokens/latência e gera artefatos atômicos; `cmd/model-benchmark-runner` executa providers OpenAI-compatible reais sem registrar credenciais.
 - [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
+  - Preparado: corpus inicial `cognitive-v1` cobre as quatro operações em escolha, campos delimitados e JSON; falta executar contra pelo menos um modelo pequeno/local e um baseline superior e interpretar os resultados.
 
 ## Política de seleção
 
@@ -205,3 +207,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 19:40 — Fase 4/decisão de storage — spike encerrado; complexidade e limites de diff sintetizados; ADR-0003 aceita SQLite + event log e rejeita Dolt 2.2.0 na configuração medida por 30/30 estados parciais na janela SQL-only — verificação: rastreabilidade documental, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: iniciar fontes reais com aquisição segura e replay.
 2026-07-15 20:00 — Fase 5/busca e aquisição web — portas neutras, adapter SearXNG, replay determinístico e fetch HTTP(S) hostil por padrão implementados; snapshots web reutilizam ingestão content-addressed — verificação: testes offline de limites/tipos/redirects/replay, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: matriz OpenAI-compatible e benchmark de contexto.
 2026-07-15 20:20 — Fase 5/compatibilidade de modelos — matriz portátil e protocolo de qualificação por deploy definidos; adapter passou a versionar o dialeto de limite de saída (`max_tokens`/`max_completion_tokens`) sem fallback arriscado — verificação: fontes primárias OpenAI/Ollama/vLLM/llama.cpp, testes dos dois dialetos, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: harness benchmark 2k/4k/8k e fixtures cognitivas.
+
+2026-07-15 20:43 — Fase 5/harness cognitivo — benchmark reproduzível 2k/4k/8k implementado com fixtures de extração, síntese, conflito e reparo; formatos estritos, métricas e artefatos atômicos integrados a provider OpenAI-compatible — verificação: testes de corpus/parser/matriz/artefatos e CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: executar modelos pequeno/local e baseline superior, comparar formato/operação e registrar avaliação.

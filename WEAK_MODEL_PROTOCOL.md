@@ -426,6 +426,27 @@ Métricas:
 - progresso final da tarefa;
 - taxa de execução segura sem tool calling nativo.
 
+## Harness executável inicial
+
+O baseline do benchmark está implementado em `internal/evaluation` e é
+executável por `cmd/model-benchmark-runner`. O corpus versionado
+`cognitive-v1` cobre extração, síntese, detecção de conflito e reparo ancorado.
+Cada caso declara fatos, formatos permitidos e resposta de referência; o runner
+cruza os casos com 2k/4k/8k, reutiliza o compilador sob budget e registra:
+
+- falha de compilação antes de consultar o modelo;
+- validade sintática por formato estrito;
+- acerto semântico por referência exata;
+- fatos opcionais omitidos, tokens estimados/reais e latência;
+- relatório JSON completo e resumo Markdown publicados atomicamente.
+
+A fixture não é evidência de qualidade de nenhum modelo. Ela fixa o protocolo
+para que execuções posteriores contra um modelo pequeno/local e um baseline
+superior sejam comparáveis. Ferramentas existentes como LM Evaluation Harness
+foram consideradas no preflight; o harness local permanece estreito porque
+precisa exercitar diretamente `OperationSpec`, o compilador e a porta
+`ModelProvider`, sem introduzir um runtime Python paralelo no primeiro slice.
+
 ## Critério arquitetural de sucesso
 
 O harness está cumprindo sua proposta quando:

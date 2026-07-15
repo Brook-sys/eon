@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "name": "cognitive-v1",
+  "cases": [
+    {
+      "id": "extract-date",
+      "operation": "EXTRACT",
+      "task": "Extract the publication date and source identifier.",
+      "required_facts": [
+        {"id": "fragment-1", "text": "Source S-17 was published on 2025-11-03. The later review did not change the original publication date.", "priority": 10}
+      ],
+      "optional_facts": [
+        {"id": "noise-1", "text": "A separate source S-18 was published on 2025-11-04.", "priority": 1}
+      ],
+      "constraints": ["Return the original publication date."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"date": "2025-11-03", "source": "S-17"}
+    },
+    {
+      "id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "task": "Determine whether the evidence supports the claim and identify the decisive observation.",
+      "required_facts": [
+        {"id": "claim", "text": "Claim C-4: all measured retries completed without duplicate effects.", "priority": 10},
+        {"id": "observation", "text": "Observation O-9: 30 of 30 measured retries completed with exactly one effect.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["SUPPORT is either YES or NO."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"observation": "O-9", "support": "YES"}
+    },
+    {
+      "id": "detect-conflict",
+      "operation": "CONFLICT",
+      "task": "Classify whether the two observations conflict about the same measured property.",
+      "required_facts": [
+        {"id": "o1", "text": "O-1 measured the service at 10:00 and found latency p95=120ms.", "priority": 10},
+        {"id": "o2", "text": "O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["CONFLICT is YES only when the same property, subject, configuration, and time disagree."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"conflict": "YES", "pair": "O-1/O-2"}
+    },
+    {
+      "id": "repair-anchor",
+      "operation": "REPAIR",
+      "task": "Repair the proposed quote so it exactly matches the source fragment.",
+      "required_facts": [
+        {"id": "fragment", "text": "F-2 exact text: The kernel rejected the stale base revision.", "priority": 10},
+        {"id": "proposal", "text": "Proposed quote: The kernel accepted the stale base revision.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["STATUS is REPAIRED when an exact quote is recoverable from the fragment."],
+      "formats": ["DELIMITED", "JSON"],
+      "expected": {"quote": "The kernel rejected the stale base revision.", "status": "REPAIRED"}
+    }
+  ]
+}
