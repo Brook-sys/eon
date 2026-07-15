@@ -6,6 +6,8 @@ Status: rascunho v0.1
 
 Projetar e avaliar um runtime epistemológico autônomo contínuo, orientado por missão, capaz de produzir progresso verificável na construção e revisão de conhecimento usando modelos de linguagem fracos, antigos, pequenos, rate-limited e sem tool calling confiável.
 
+Restrições de implementação já aceitas: núcleo em Go e integração principal de modelos por APIs OpenAI-compatible, preservando contrato mínimo texto-para-texto. A escolha de Dolt continua como hipótese de engenharia a ser avaliada.
+
 Não assumimos que a solução é inédita. A contribuição potencial só poderá ser formulada depois de uma revisão de literatura e comparação sistemática com planejamento clássico, arquiteturas de agentes, workflows duráveis e harnesses LLM existentes.
 
 ## Pergunta central

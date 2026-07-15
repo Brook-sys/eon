@@ -147,7 +147,7 @@ Executar um spike comparando pelo menos:
 - portabilidade e exportação;
 - manutenção do projeto e comunidade;
 - facilidade de backup;
-- integração com Python;
+- integração estável com Go;
 - possibilidade de migrar sem reescrever o modelo epistemológico.
 
 ## Política preliminar de commits
@@ -189,6 +189,8 @@ O desenho deve avaliar ainda:
 ## Estado da decisão
 
 `OPEN — DOLT IS A LEADING CANDIDATE, NOT YET SELECTED.`
+
+A decisão está registrada como ADR proposto em `ADRS/0003-versioned-storage.md`.
 
 Fonte inicial oficial sobre Dolt:
 

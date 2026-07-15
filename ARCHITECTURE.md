@@ -1,6 +1,8 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.4
+Status: rascunho v0.5
+
+Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS.md`. ADRs aceitos fixam Go como linguagem do núcleo e OpenAI-compatible como adapter principal de modelos. Dolt permanece uma decisão proposta condicionada a spike.
 
 ## Tese
 
@@ -33,6 +35,9 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 18. Tool calling nativo é uma otimização opcional; o protocolo básico funciona com texto simples.
 19. Problemas complexos são atravessados por microturnos persistentes, não entregues inteiros ao modelo.
 20. Prompts são compilados por operação, curtos, versionados, testáveis e sem histórico conversacional desnecessário.
+21. O núcleo é implementado em Go e distribuído como binário portátil sempre que a plataforma permitir.
+22. Integração com modelos ocorre por contrato interno e adapter OpenAI-compatible com capacidades graduais.
+23. Modularidade, continuidade, tolerância a falhas e testabilidade são propriedades verificadas por suites e cenários, não apenas objetivos declarados.
 
 ## Visão em camadas
 
@@ -542,48 +547,59 @@ Isso permite trocar o modelo, executor ou verificador sem reescrever o fluxo int
 
 ## MVP recomendado
 
-Escopo: tarefas locais de programação em um repositório controlado.
+Escopo: construção e manutenção contínua de uma base de conhecimento orientada por missão.
 
 Inclui:
 
-- kernel serial e persistente;
-- SQLite;
-- um adaptador de modelo compatível com OpenAI;
-- `HybridPlanner` simples;
-- compilador de contexto por regras;
-- capabilities de leitura, escrita, patch e testes;
-- política de diretório permitido;
-- verificação por testes e inspeção de arquivos;
-- CLI para iniciar, inspecionar, pausar e retomar trabalhos;
-- log estruturado em JSONL.
+- núcleo Go serial no primeiro slice, com concorrência limitada posteriormente;
+- armazenamento por interface, começando por fake/in-memory e selecionando backend após spike;
+- adapter de modelo OpenAI-compatible;
+- contrato cognitivo mínimo texto-para-texto;
+- compilador de contexto por regras e `OperationSpec`;
+- ingestão de fontes web e arquivos autorizados;
+- operações sobre observações, claims, evidências, perguntas e sínteses;
+- `ProposedChangeSet` validado antes de alteração oficial;
+- CLI para iniciar, inspecionar, pausar e retomar missões;
+- event log e observabilidade estruturada.
 
 Não inclui inicialmente:
 
+- automação geral de computador;
+- shell ou execução arbitrária de código;
 - múltiplos agentes conversando livremente;
-- banco vetorial obrigatório;
+- banco vetorial como fonte canônica;
 - execução distribuída;
 - interface visual complexa;
 - geração dinâmica irrestrita de ferramentas;
-- autonomia sem orçamento ou limites.
+- autonomia sem missão, orçamento ou limites.
 
 ## Métrica central
 
-Comparar o mesmo modelo com e sem o harness:
+Comparar o mesmo modelo e a mesma missão com variantes do harness:
 
-- taxa de conclusão;
-- passos e tokens por tarefa;
+- ganho epistemológico por custo;
+- cobertura de perguntas relevantes;
+- precisão e cobertura de citações;
+- claims sem evidência e conflitos não examinados;
 - erros não detectados;
 - recuperação após interrupção;
-- repetição/loops;
-- qualidade da evidência final;
+- repetição e atividade sem progresso;
+- fidelidade de sínteses aos claims e fontes;
 - desempenho ao reduzir artificialmente a janela de contexto.
 
-A promessa será demonstrada se o sistema mantiver boa taxa de conclusão mesmo com contexto e modelo reduzidos.
+A promessa será demonstrada se o sistema mantiver progresso epistemológico rastreável e baixa corrupção da base mesmo com contexto e modelo reduzidos.
+
+## Decisões técnicas aceitas
+
+1. Linguagem do núcleo: Go.
+2. Primeiro caso de uso: runtime epistemológico contínuo.
+3. Integração principal de modelos: APIs OpenAI-compatible por adapter desacoplado.
+4. Contrato universal do modelo: texto para texto; recursos modernos são opcionais.
 
 ## Decisões ainda abertas
 
-1. Linguagem do núcleo: Python, TypeScript ou outra.
-2. Primeiro caso de uso: programação, pesquisa, automação pessoal ou generalista.
-3. Execução local: processo direto, contêiner ou sandbox.
-4. Grau de portabilidade entre Linux, Windows e macOS.
-5. Limite de contexto alvo para o primeiro benchmark.
+1. Backend canônico: Dolt, SQLite + event log ou outra opção após spike.
+2. Execução local: processo direto, contêiner opcional ou ambos.
+3. Plataformas oficialmente suportadas e matriz de builds/testes.
+4. Limite de contexto alvo para o primeiro benchmark.
+5. Estratégia de indexação textual e semântica derivada.
