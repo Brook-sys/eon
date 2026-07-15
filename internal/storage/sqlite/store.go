@@ -18,13 +18,27 @@ import (
 
 const checkpointID = 1
 
-type Store struct {
-	mu   sync.RWMutex
-	db   *sql.DB
-	core *memory.Store
+type Failpoint string
+
+const (
+	FailpointBeforeDurableCommit Failpoint = "before_durable_commit"
+	FailpointAfterDurableCommit  Failpoint = "after_durable_commit"
+)
+
+type Options struct {
+	Failpoint func(Failpoint)
 }
 
-func Open(path string) (*Store, error) {
+type Store struct {
+	mu        sync.RWMutex
+	db        *sql.DB
+	core      *memory.Store
+	failpoint func(Failpoint)
+}
+
+func Open(path string) (*Store, error) { return OpenWithOptions(path, Options{}) }
+
+func OpenWithOptions(path string, options Options) (*Store, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
@@ -39,7 +53,7 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Store{db: db, core: core}, nil
+	return &Store{db: db, core: core, failpoint: options.Failpoint}, nil
 }
 
 func configure(db *sql.DB) error {
@@ -114,8 +128,14 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload`, checkpointID, payload); err != nil {
 		return fmt.Errorf("write sqlite checkpoint: %w", err)
 	}
+	if s.failpoint != nil {
+		s.failpoint(FailpointBeforeDurableCommit)
+	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit sqlite checkpoint: %w", err)
+	}
+	if s.failpoint != nil {
+		s.failpoint(FailpointAfterDurableCommit)
 	}
 	s.core = working
 	return nil

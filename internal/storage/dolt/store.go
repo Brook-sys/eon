@@ -21,18 +21,32 @@ import (
 
 const checkpointID = 1
 
+type Failpoint string
+
+const (
+	FailpointBeforeSQLAndDoltCommit Failpoint = "before_sql_and_dolt_commit"
+	FailpointAfterSQLAndDoltCommit  Failpoint = "after_sql_and_dolt_commit"
+)
+
+type Options struct {
+	Failpoint func(Failpoint)
+}
+
 type Store struct {
-	mu     sync.RWMutex
-	binary string
-	path   string
-	core   *memory.Store
-	closed bool
+	mu        sync.RWMutex
+	binary    string
+	path      string
+	core      *memory.Store
+	closed    bool
+	failpoint func(Failpoint)
 }
 
 // Open initializes or reopens an isolated Dolt repository. binary must name a
 // Dolt executable; keeping discovery outside the adapter makes backend version
 // selection explicit in tests and benchmark manifests.
-func Open(binary, path string) (*Store, error) {
+func Open(binary, path string) (*Store, error) { return OpenWithOptions(binary, path, Options{}) }
+
+func OpenWithOptions(binary, path string, options Options) (*Store, error) {
 	if strings.TrimSpace(binary) == "" {
 		return nil, errors.New("dolt binary path is required")
 	}
@@ -42,7 +56,7 @@ func Open(binary, path string) (*Store, error) {
 	if err := os.MkdirAll(path, 0o755); err != nil {
 		return nil, fmt.Errorf("create dolt repository directory: %w", err)
 	}
-	store := &Store{binary: binary, path: path}
+	store := &Store{binary: binary, path: path, failpoint: options.Failpoint}
 	if _, err := os.Stat(filepath.Join(path, ".dolt")); errors.Is(err, os.ErrNotExist) {
 		if _, err := store.run(context.Background(), "init", "--name", "Motor Autonomo Runtime", "--email", "runtime@localhost.invalid"); err != nil {
 			return nil, fmt.Errorf("initialize dolt repository: %w", err)
@@ -149,8 +163,14 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 		ON DUPLICATE KEY UPDATE format_version=VALUES(format_version), payload=VALUES(payload);
 		CALL DOLT_ADD('-A');
 		CALL DOLT_COMMIT('--skip-empty', '-m', 'runtime checkpoint');`, checkpointID, encoded)
+	if s.failpoint != nil {
+		s.failpoint(FailpointBeforeSQLAndDoltCommit)
+	}
 	if _, err := s.run(ctx, "sql", "-q", query); err != nil {
 		return fmt.Errorf("commit dolt checkpoint: %w", err)
+	}
+	if s.failpoint != nil {
+		s.failpoint(FailpointAfterSQLAndDoltCommit)
 	}
 	s.core = working
 	return nil

@@ -117,6 +117,10 @@ Diferenças menores que 10% em latência ou footprint são tratadas como inconcl
 5. executar carga completa em ambiente controlado;
 6. registrar ADR final com dados brutos referenciados.
 
-O adapter contratual Dolt já existe e usa o mesmo checkpoint binário integral do cenário SQLite, permitindo comparação sem antecipar um schema relacional específico. Seus testes exigem `DOLT_BIN` explícito e exercitam um repositório real, inclusive close/reopen. Isso ainda não mede operação representativa: o próximo passo é criar o runner backend-neutral e o harness `dolt sql-server` subprocessado.
+O adapter contratual Dolt já existe e usa o mesmo checkpoint binário integral do cenário SQLite, permitindo comparação sem antecipar um schema relacional específico. Seus testes exigem `DOLT_BIN` explícito e exercitam um repositório real, inclusive close/reopen.
+
+O baseline do harness agora existe em `internal/storage/spike`: gera dataset e manifesto canônicos por seed, executa ingestão/claims/consultas somente pela `port.Store`, mede duração/throughput e reabre SQLite em processo novo para classificar uma intenção como `NOT_APPLIED` ou `APPLIED`. Hooks privados nos adapters marcam fronteiras de commit sem ampliar a porta de domínio. Esse baseline ainda não equivale ao crash harness final: falta um worker CLI que termine abruptamente no hook, classificação composta de commit/recibo/evento/head/idempotência, batching e amostras percentuais, footprint e o lifecycle persistente de `dolt sql-server`. O adapter Dolt por CLI não será usado como número principal porque inclui startup por atualização e une SQL write a `DOLT_COMMIT` numa única invocação.
+
+Limite explícito do contrato atual: branch/diff/merge e impacto reverso genérico não são observáveis pela `port.Store`; serão medidos por extensão backend-neutral futura ou seção backend-native claramente separada, sem fingir equivalência no runner comum.
 
 Dolt permanece candidato, não decisão aceita.
