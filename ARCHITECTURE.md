@@ -1,8 +1,8 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.6
+Status: rascunho v0.7
 
-Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS.md`. O vocabulário normativo está em `GLOSSARY.md`. ADRs aceitos fixam Go como linguagem do núcleo e OpenAI-compatible como adapter principal de modelos. Dolt permanece uma decisão proposta condicionada a spike.
+Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS.md`. O vocabulário normativo está em `GLOSSARY.md`. ADRs aceitos fixam Go como linguagem do núcleo, OpenAI-compatible como adapter principal de modelos e SQLite + event log como backend canônico do MVP.
 
 ## Tese
 
@@ -484,7 +484,7 @@ Evitar um `MemoryStore` genérico. Separar responsabilidades em interfaces estre
 - `Outbox`: entregas transacionais pendentes;
 - `ArtifactStore`: snapshots e materializações grandes.
 
-A primeira implementação é fake/in-memory para contract tests. Dolt, SQLite + event log e outras opções devem implementar os mesmos contratos antes da seleção final.
+A implementação fake/in-memory sustenta contract tests. SQLite + event log é o backend canônico do MVP após o spike comparativo; Dolt permanece adapter experimental e qualquer alternativa futura deve implementar os mesmos contratos antes de novo ADR.
 
 ### 9. PolicyEngine
 
@@ -570,7 +570,7 @@ Escopo: construção e manutenção contínua de uma base de conhecimento orient
 Inclui:
 
 - núcleo Go serial no primeiro slice, com concorrência limitada posteriormente;
-- armazenamento por interface, começando por fake/in-memory e selecionando backend após spike;
+- armazenamento por interface, com fake/in-memory para testes e SQLite + event log como backend canônico do MVP;
 - adapter de modelo OpenAI-compatible;
 - contrato cognitivo mínimo texto-para-texto;
 - compilador de contexto por regras e `OperationSpec`;
@@ -616,8 +616,7 @@ A promessa será demonstrada se o sistema mantiver progresso epistemológico ras
 
 ## Decisões ainda abertas
 
-1. Backend canônico: Dolt, SQLite + event log ou outra opção após spike.
-2. Execução local: processo direto, contêiner opcional ou ambos.
-3. Plataformas oficialmente suportadas e matriz de builds/testes.
-4. Limite de contexto alvo para o primeiro benchmark.
-5. Estratégia de indexação textual e semântica derivada.
+1. Execução local: processo direto, contêiner opcional ou ambos.
+2. Plataformas oficialmente suportadas e matriz de builds/testes.
+3. Limite de contexto alvo para o primeiro benchmark.
+4. Estratégia de indexação textual e semântica derivada.

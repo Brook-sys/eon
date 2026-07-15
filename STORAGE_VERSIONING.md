@@ -115,15 +115,15 @@ Git
 
 Índices são projeções descartáveis e reconstruíveis. Não devem ser a fonte canônica.
 
-## Recomendação provisória
+## Decisão após o spike
 
-Não fixar ainda a tecnologia. Adotar desde já uma interface de armazenamento e modelar `ChangeSet`, `Commit`, proveniência e tempos independentemente do backend.
+Adotar SQLite + event log como backend canônico do MVP, preservando a interface de armazenamento e os modelos de `ChangeSet`, `Commit`, proveniência e tempos independentes do backend. A decisão e sua evidência estão em `ADRS/0003-versioned-storage.md` e `STORAGE_SPIKE.md`.
 
-Executar um spike comparando pelo menos:
+O spike comparou:
 
 1. Dolt;
 2. SQLite com tabelas temporais/event log;
-3. PostgreSQL, se o caso multiusuário entrar no horizonte próximo.
+PostgreSQL não foi incluído porque o MVP permanece local e serial; deverá ser avaliado por novo ADR se concorrência multiusuária entrar no horizonte.
 
 ### Cenário do spike
 
@@ -190,9 +190,9 @@ O desenho deve avaliar ainda:
 
 ## Estado da decisão
 
-`OPEN — DOLT IS A LEADING CANDIDATE, NOT YET SELECTED.`
+`ACCEPTED — SQLITE + EVENT LOG IS THE MVP CANONICAL BACKEND.`
 
-A decisão está registrada como ADR proposto em `ADRS/0003-versioned-storage.md`.
+Dolt 2.2.0 foi rejeitado na configuração `sql-server` medida porque 30/30 crashes entre `SQL COMMIT` e `DOLT_COMMIT` produziram `INVALID_PARTIAL`, violando `FR-KNOW-004`. Sua reconsideração exige eliminar ou reconciliar essa janela e repetir o protocolo. A decisão está registrada em `ADRS/0003-versioned-storage.md`.
 
 Fonte inicial oficial sobre Dolt:
 

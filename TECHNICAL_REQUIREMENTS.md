@@ -47,7 +47,7 @@ Recursos como mensagens com papéis, streaming, JSON mode, JSON Schema, tool cal
 
 ### TR-004 — Backend de versionamento desacoplado
 
-Dolt é o candidato líder para o estado epistemológico versionado, mas a seleção depende de spike e benchmark. O domínio dependerá de interfaces próprias, não de chamadas Dolt distribuídas pelo código.
+SQLite + event log é o backend canônico do MVP conforme ADR-0003. O domínio depende de interfaces próprias e commits lógicos, não de SQL SQLite distribuído pelo código. Dolt permanece somente como adapter experimental do spike.
 
 ### TR-005 — Testabilidade como requisito arquitetural
 
@@ -183,7 +183,8 @@ internal/prompt/             compilação de OperationSpec
 internal/validation/         schemas, invariantes e verificadores
 internal/storage/            interfaces, transações e migrations
 internal/storage/memory/     fake determinístico para testes
-internal/storage/dolt/       candidato, condicionado ao spike
+internal/storage/sqlite/     backend canônico do MVP
+internal/storage/dolt/       adapter experimental do spike
 internal/events/             event log e outbox
 internal/resources/          rate limits, budgets e circuit breakers
 internal/clock/              relógio real e virtual

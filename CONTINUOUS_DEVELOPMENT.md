@@ -128,17 +128,18 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência parcial adicional: worker `dolt-server` mata abruptamente o processo servidor e o writer nas três fronteiras; reopen classifica antes de SQL como `NOT_APPLIED`, após `DOLT_COMMIT` como `APPLIED` e detecta a janela SQL-only como `INVALID_PARTIAL` pelo working set divergente. Campanhas oficiais de 30 trials por fronteira estão codificadas sob `STORAGE_SPIKE_FULL=1`.
   - Evidência parcial adicional: as 90 execuções oficiais foram concluídas e persistidas em `results/dolt-server/2026-07-15/crash`: 30/30 `NOT_APPLIED` antes de `SQL COMMIT`, 30/30 `INVALID_PARTIAL` após `SQL COMMIT` e 30/30 `APPLIED` após `DOLT_COMMIT`. O writer preserva cada trial e os agregados em JSON auditável.
   - Evidência final: `cmd/storage-spike-runner` executa o dataset completo comum e registra ambiente reproduzível; artefatos em `results/{sqlite,dolt-server}/2026-07-15/workload` usam o mesmo SHA-256 e mostram footprint Dolt 3,90× maior, latências direcionais e alta variância entre rodadas.
-- [ ] `IN_PROGRESS` Medir footprint, latência, recuperação, diff e complexidade.
-  - Evidência parcial: footprint, latência comum e recuperação por crash estão persistidos. Dolt falhou o bloqueador absoluto com 30/30 estados parciais na janela SQL-only; diff/branch/merge e contagem operacional precisam apenas de síntese backend-native, pois não podem reverter o bloqueador.
-- [ ] `BLOCKED_BY:SínteseFinal` Registrar ADR final do backend.
+- [x] `DONE` Medir footprint, latência, recuperação, diff e complexidade.
+  - Evidência: workload comum e 90 crashes Dolt persistidos; footprint Dolt 3,90× maior; latências de rodada única tratadas como direcionais; complexidade operacional e LOC sintetizadas; diff/branch/merge não foram pontuados após o bloqueador absoluto porque não são observáveis pela porta comum nem podem reverter `INVALID_PARTIAL`.
+- [x] `DONE` Registrar ADR final do backend.
+  - Evidência: ADR-0003 aceita SQLite + event log para o MVP, rejeita Dolt `sql-server` 2.2.0 na configuração medida e fixa critérios explícitos para reconsideração.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
-- [ ] `BLOCKED_BY:Fase3,Fase4` Adapter de busca web com fixtures e replay.
-- [ ] `BLOCKED_BY:Fase3,Fase4` Aquisição segura com limites de bytes e tipos.
-- [ ] `BLOCKED_BY:Fase3,Fase4` Matriz de compatibilidade OpenAI-compatible.
-- [ ] `BLOCKED_BY:Fase3,Fase4` Benchmark 2k/4k/8k para operações selecionadas.
-- [ ] `BLOCKED_BY:Fase3,Fase4` Avaliar extração, síntese, conflito e reparo por modelo/formato.
+- [ ] `READY` Adapter de busca web com fixtures e replay.
+- [ ] `READY` Aquisição segura com limites de bytes e tipos.
+- [ ] `READY` Matriz de compatibilidade OpenAI-compatible.
+- [ ] `READY` Benchmark 2k/4k/8k para operações selecionadas.
+- [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
 
 ## Política de seleção
 
@@ -198,3 +199,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 18:40 — Fase 4/crash do servidor Dolt — worker agora mata writer + `sql-server` nas três fronteiras; reopen verifica também limpeza do working set e expõe como `INVALID_PARTIAL` a janela após SQL commit/antes do commit Dolt; campanhas oficiais completas codificadas com opt-in — verificação: testes subprocessados reais em Dolt 2.2.0, packages `storage/spike` e `storage/dolt` — próximo: executar 90 trials completos e persistir métricas/artefatos.
 2026-07-15 19:00 — Fase 4/campanha completa Dolt — 90 crashes reais executados; resultados por trial persistidos: 30/30 não aplicados antes do SQL commit, 30/30 parciais inválidos na janela SQL-only e 30/30 aplicados após commit Dolt — verificação: `TestDoltServerOfficialCrashCampaigns` com Dolt 2.2.0, writer/round-trip JSON e `go vet` — próximo: workload medido comum e relatório comparativo; a janela SQL-only é bloqueador arquitetural a resolver ou aceitar contra Dolt.
 2026-07-15 19:20 — Fase 4/workload completo — runner CLI reproduzível criado e dataset comum executado em SQLite 3.50.4 e Dolt 2.2.0; footprint Dolt foi 3,90× maior e latências de execução única mostraram variância, enquanto o bloqueador de crash permanece decisivo — verificação: `go test ./...`, `go vet ./...`, `git diff --check`, artefatos JSON/Markdown com SHA-256 idêntico — próximo: síntese curta de diff/complexidade e ADR, ou tentativa explicitamente delimitada de reconciliação Dolt.
+2026-07-15 19:40 — Fase 4/decisão de storage — spike encerrado; complexidade e limites de diff sintetizados; ADR-0003 aceita SQLite + event log e rejeita Dolt 2.2.0 na configuração medida por 30/30 estados parciais na janela SQL-only — verificação: rastreabilidade documental, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: iniciar fontes reais com aquisição segura e replay.
