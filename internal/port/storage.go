@@ -4,6 +4,7 @@ package port
 import (
 	"context"
 	"errors"
+	"time"
 
 	"motor-autonomo/internal/domain"
 )
@@ -44,15 +45,40 @@ type AgendaWriter interface {
 	SaveOperation(domain.Operation) error
 }
 
+// EventReader returns immutable events in ascending storage sequence. A zero
+// afterSequence starts at the beginning; limit must be positive.
+type EventReader interface {
+	Events(afterSequence uint64, limit int) ([]domain.Event, error)
+	EventByID(domain.EventID) (domain.Event, error)
+}
+
+type EventWriter interface {
+	AppendEvent(domain.Event) (domain.Event, error)
+}
+
+// IdempotencyReader exposes the durable result of a logical intent.
+type IdempotencyReader interface {
+	IdempotencyRecord(domain.IdempotencyKey) (domain.IdempotencyRecord, error)
+}
+
+type IdempotencyWriter interface {
+	ReserveIdempotency(domain.IdempotencyRecord) (domain.IdempotencyRecord, error)
+	CompleteIdempotency(domain.IdempotencyKey, domain.ReceiptID, string, time.Time) (domain.IdempotencyRecord, error)
+}
+
 type Reader interface {
 	MissionReader
 	AgendaReader
+	EventReader
+	IdempotencyReader
 }
 
 type Transaction interface {
 	Reader
 	MissionWriter
 	AgendaWriter
+	EventWriter
+	IdempotencyWriter
 }
 
 // Store provides serializable, rollback-capable local transactions. Callbacks

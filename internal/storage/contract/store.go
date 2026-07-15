@@ -120,6 +120,126 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("event log is ordered append-only and transactional", func(t *testing.T) {
+		store := factory()
+		first := event("event_1", "operation.ready")
+		second := event("event_2", "operation.started")
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			appended, err := tx.AppendEvent(first)
+			if err != nil {
+				return err
+			}
+			if appended.Sequence != 1 {
+				t.Fatalf("first sequence = %d, want 1", appended.Sequence)
+			}
+			_, err = tx.AppendEvent(second)
+			return err
+		}); err != nil {
+			t.Fatalf("append events: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			events, err := r.Events(0, 1)
+			if err != nil {
+				return err
+			}
+			if len(events) != 1 || events[0].ID != first.ID || events[0].Sequence != 1 {
+				t.Fatalf("first page = %#v", events)
+			}
+			events, err = r.Events(1, 10)
+			if err != nil {
+				return err
+			}
+			if len(events) != 1 || events[0].ID != second.ID || events[0].Sequence != 2 {
+				t.Fatalf("second page = %#v", events)
+			}
+			byID, err := r.EventByID(second.ID)
+			if err == nil && byID.Sequence != 2 {
+				t.Fatalf("event by id sequence = %d", byID.Sequence)
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		err := store.Update(context.Background(), func(tx port.Transaction) error { _, err := tx.AppendEvent(first); return err })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("duplicate event error = %v, want ErrConflict", err)
+		}
+		sentinel := errors.New("rollback event")
+		err = store.Update(context.Background(), func(tx port.Transaction) error {
+			if _, err := tx.AppendEvent(event("event_3", "operation.failed")); err != nil {
+				return err
+			}
+			return sentinel
+		})
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("rollback error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.EventByID("event_3")
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("rolled-back event error = %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("idempotency reservation and completion are replay safe", func(t *testing.T) {
+		store := factory()
+		reservedAt := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+		record := domain.IdempotencyRecord{SchemaVersion: 1, Key: "idem_1", OperationID: "operation_1", Intent: "fetch source_1", Status: domain.IdempotencyReserved, ReservedAt: reservedAt}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			first, err := tx.ReserveIdempotency(record)
+			if err != nil {
+				return err
+			}
+			replay, err := tx.ReserveIdempotency(record)
+			if err == nil && replay != first {
+				t.Fatalf("reservation replay changed record: %#v != %#v", replay, first)
+			}
+			return err
+		}); err != nil {
+			t.Fatalf("reserve idempotency: %v", err)
+		}
+		conflicting := record
+		conflicting.OperationID = "operation_2"
+		err := store.Update(context.Background(), func(tx port.Transaction) error { _, err := tx.ReserveIdempotency(conflicting); return err })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("conflicting reservation error = %v, want ErrConflict", err)
+		}
+		completedAt := reservedAt.Add(time.Minute)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			first, err := tx.CompleteIdempotency(record.Key, "receipt_1", "artifact_1", completedAt)
+			if err != nil {
+				return err
+			}
+			replay, err := tx.CompleteIdempotency(record.Key, "receipt_1", "artifact_1", completedAt)
+			if err == nil && replay != first {
+				t.Fatalf("completion replay changed record: %#v != %#v", replay, first)
+			}
+			return err
+		}); err != nil {
+			t.Fatalf("complete idempotency: %v", err)
+		}
+		err = store.Update(context.Background(), func(tx port.Transaction) error {
+			_, err := tx.CompleteIdempotency(record.Key, "receipt_2", "artifact_2", completedAt)
+			return err
+		})
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("conflicting completion error = %v, want ErrConflict", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.IdempotencyRecord(record.Key)
+			if err == nil && (got.Status != domain.IdempotencyCompleted || got.ReceiptID != "receipt_1") {
+				t.Fatalf("completed record = %#v", got)
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("invalid data and cancelled contexts do not commit", func(t *testing.T) {
 		store := factory()
 		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.CreateQuestion(domain.Question{}) })
@@ -133,6 +253,10 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatalf("cancelled update error = %v", err)
 		}
 	})
+}
+
+func event(id domain.EventID, kind string) domain.Event {
+	return domain.Event{SchemaVersion: 1, ID: id, Kind: kind, OccurredAt: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC), OperationID: "operation_1"}
 }
 
 func missionRevision() domain.MissionRevision {

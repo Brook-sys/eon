@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -22,6 +23,9 @@ type state struct {
 	candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
 	inquiries        map[domain.InquiryID]domain.Inquiry
 	operations       map[domain.OperationID]domain.Operation
+	events           []domain.Event
+	eventIDs         map[domain.EventID]uint64
+	idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -34,6 +38,8 @@ func newState() state {
 		candidates:       make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
 		inquiries:        make(map[domain.InquiryID]domain.Inquiry),
 		operations:       make(map[domain.OperationID]domain.Operation),
+		eventIDs:         make(map[domain.EventID]uint64),
+		idempotency:      make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
 	}
 }
 
@@ -91,6 +97,15 @@ func (t transaction) Inquiry(id domain.InquiryID) (domain.Inquiry, error) {
 func (t transaction) Operation(id domain.OperationID) (domain.Operation, error) {
 	return reader(t).Operation(id)
 }
+func (t transaction) Events(afterSequence uint64, limit int) ([]domain.Event, error) {
+	return reader(t).Events(afterSequence, limit)
+}
+func (t transaction) EventByID(id domain.EventID) (domain.Event, error) {
+	return reader(t).EventByID(id)
+}
+func (t transaction) IdempotencyRecord(key domain.IdempotencyKey) (domain.IdempotencyRecord, error) {
+	return reader(t).IdempotencyRecord(key)
+}
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
 	v, ok := r.state.missionRevisions[id]
@@ -133,6 +148,31 @@ func (r reader) Operation(id domain.OperationID) (domain.Operation, error) {
 		return domain.Operation{}, notFound("operation", id)
 	}
 	return cloneOperation(v), nil
+}
+func (r reader) Events(afterSequence uint64, limit int) ([]domain.Event, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("event limit must be positive")
+	}
+	if afterSequence >= uint64(len(r.state.events)) {
+		return []domain.Event{}, nil
+	}
+	start := int(afterSequence)
+	end := min(start+limit, len(r.state.events))
+	return append([]domain.Event(nil), r.state.events[start:end]...), nil
+}
+func (r reader) EventByID(id domain.EventID) (domain.Event, error) {
+	sequence, ok := r.state.eventIDs[id]
+	if !ok {
+		return domain.Event{}, notFound("event", id)
+	}
+	return r.state.events[sequence-1], nil
+}
+func (r reader) IdempotencyRecord(key domain.IdempotencyKey) (domain.IdempotencyRecord, error) {
+	v, ok := r.state.idempotency[key]
+	if !ok {
+		return domain.IdempotencyRecord{}, notFound("idempotency key", key)
+	}
+	return v, nil
 }
 
 func (t transaction) AppendMissionRevision(v domain.MissionRevision) error {
@@ -221,6 +261,55 @@ func (t transaction) SaveOperation(v domain.Operation) error {
 	t.state.operations[v.ID] = cloneOperation(v)
 	return nil
 }
+func (t transaction) AppendEvent(v domain.Event) (domain.Event, error) {
+	if err := v.ValidateForAppend(); err != nil {
+		return domain.Event{}, fmt.Errorf("validate event: %w", err)
+	}
+	if _, exists := t.state.eventIDs[v.ID]; exists {
+		return domain.Event{}, conflict("event", v.ID)
+	}
+	v.Sequence = uint64(len(t.state.events) + 1)
+	t.state.events = append(t.state.events, v)
+	t.state.eventIDs[v.ID] = v.Sequence
+	return v, nil
+}
+func (t transaction) ReserveIdempotency(v domain.IdempotencyRecord) (domain.IdempotencyRecord, error) {
+	if err := v.Validate(); err != nil {
+		return domain.IdempotencyRecord{}, fmt.Errorf("validate idempotency reservation: %w", err)
+	}
+	if v.Status != domain.IdempotencyReserved {
+		return domain.IdempotencyRecord{}, fmt.Errorf("idempotency reservation must have status %s", domain.IdempotencyReserved)
+	}
+	if existing, ok := t.state.idempotency[v.Key]; ok {
+		if existing.OperationID == v.OperationID && existing.Intent == v.Intent {
+			return existing, nil
+		}
+		return domain.IdempotencyRecord{}, conflict("idempotency key", v.Key)
+	}
+	t.state.idempotency[v.Key] = v
+	return v, nil
+}
+func (t transaction) CompleteIdempotency(key domain.IdempotencyKey, receiptID domain.ReceiptID, resultRef string, completedAt time.Time) (domain.IdempotencyRecord, error) {
+	v, ok := t.state.idempotency[key]
+	if !ok {
+		return domain.IdempotencyRecord{}, notFound("idempotency key", key)
+	}
+	if v.Status == domain.IdempotencyCompleted {
+		if v.ReceiptID == receiptID && v.ResultRef == resultRef && v.CompletedAt.Equal(completedAt) {
+			return v, nil
+		}
+		return domain.IdempotencyRecord{}, conflict("idempotency completion", key)
+	}
+	v.Status = domain.IdempotencyCompleted
+	v.ReceiptID = receiptID
+	v.ResultRef = resultRef
+	v.CompletedAt = completedAt
+	if err := v.Validate(); err != nil {
+		return domain.IdempotencyRecord{}, fmt.Errorf("validate idempotency completion: %w", err)
+	}
+	t.state.idempotency[key] = v
+	return v, nil
+}
 
 func notFound(kind string, id any) error { return fmt.Errorf("%w: %s %v", port.ErrNotFound, kind, id) }
 func conflict(kind string, id any) error {
@@ -246,6 +335,13 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.operations {
 		dst.operations[k] = cloneOperation(v)
+	}
+	dst.events = append([]domain.Event(nil), src.events...)
+	for k, v := range src.eventIDs {
+		dst.eventIDs[k] = v
+	}
+	for k, v := range src.idempotency {
+		dst.idempotency[k] = v
 	}
 	return dst
 }

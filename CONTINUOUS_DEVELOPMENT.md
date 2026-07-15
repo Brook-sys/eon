@@ -70,7 +70,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: portas e implementações de sistema/teste em `internal/runtime/source`, com relógio manual e sequências determinísticas thread-safe.
 - [x] `DONE` Implementar store em memória com contract tests.
   - Evidência: portas estreitas de missão/agenda em `internal/port`; transações copy-on-write com rollback, validação, isolamento de slices e erros tipados em `internal/storage/memory`; suite reutilizável em `internal/storage/contract`.
-- [ ] `READY` Implementar event log em memória e idempotência básica.
+- [x] `DONE` Implementar event log em memória e idempotência básica.
+  - Evidência: `domain.Event` recebe sequência monotônica do store; portas e backend em memória oferecem append/listagem/lookup transacionais; `IdempotencyRecord` implementa reserva e conclusão monotônicas com replay idêntico e conflito de intenção/resultado divergente; contract tests cobrem ordem, paginação, rollback e deduplicação.
 
 ### Fase 2 — primeiro vertical slice simulado
 
@@ -136,3 +137,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 09:40 — Fase 1/máquina de estados — transição operacional pura implementada; referências de lease/bloqueio tornadas obrigatórias; retry ambíguo bloqueado em favor de reconciliação — verificação: testes de tabela/pureza, `go test ./...`, `go vet ./...`, `git diff --check`; race segue indisponível sem C toolchain — próximo: definir ports e contract tests do store em memória.
 
 2026-07-15 10:00 — Fase 1/store transacional — portas de missão/agenda definidas; store em memória copy-on-write implementado; contract tests reutilizáveis cobrem imutabilidade, round-trip, rollback, validação e cancelamento — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: event log append-only e idempotência básica.
+2026-07-15 10:20 — Fase 1/eventos e idempotência — event log transacional com sequência monotônica e lookup/paginação implementado; reserva/conclusão idempotente rejeita reutilização divergente; contract tests cobrem replay, conflito e rollback — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem C toolchain — próximo: iniciar vertical slice carregando `MissionSpec` versionada.
