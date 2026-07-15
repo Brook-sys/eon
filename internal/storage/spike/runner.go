@@ -22,19 +22,27 @@ type PhaseMetric struct {
 }
 
 type Metrics struct {
-	SchemaVersion int           `json:"schema_version"`
-	Backend       string        `json:"backend"`
-	DatasetSHA256 string        `json:"dataset_sha256"`
-	StartedAt     time.Time     `json:"started_at"`
-	FinishedAt    time.Time     `json:"finished_at"`
-	Phases        []PhaseMetric `json:"phases"`
+	SchemaVersion int              `json:"schema_version"`
+	Backend       string           `json:"backend"`
+	DatasetSHA256 string           `json:"dataset_sha256"`
+	StartedAt     time.Time        `json:"started_at"`
+	FinishedAt    time.Time        `json:"finished_at"`
+	Footprint     *FootprintMetric `json:"footprint,omitempty"`
+	Phases        []PhaseMetric    `json:"phases"`
+}
+
+type FootprintMetric struct {
+	BeforeBytes int64 `json:"before_bytes"`
+	AfterBytes  int64 `json:"after_bytes"`
+	DeltaBytes  int64 `json:"delta_bytes"`
 }
 
 type Clock func() time.Time
 
 type Runner struct {
-	Now       Clock
-	BatchSize int
+	Now           Clock
+	BatchSize     int
+	FootprintRoot string
 }
 
 func (r Runner) Run(ctx context.Context, backend string, store port.Store, dataset Dataset, manifest Manifest) (Metrics, error) {
@@ -49,7 +57,14 @@ func (r Runner) Run(ctx context.Context, backend string, store port.Store, datas
 	if batchSize <= 0 {
 		batchSize = 1
 	}
-	metrics := Metrics{SchemaVersion: 1, Backend: backend, DatasetSHA256: manifest.SHA256, StartedAt: now()}
+	metrics := Metrics{SchemaVersion: 2, Backend: backend, DatasetSHA256: manifest.SHA256, StartedAt: now()}
+	if r.FootprintRoot != "" {
+		before, err := DiskFootprint(r.FootprintRoot)
+		if err != nil {
+			return Metrics{}, fmt.Errorf("measure initial footprint: %w", err)
+		}
+		metrics.Footprint = &FootprintMetric{BeforeBytes: before}
+	}
 	measure := func(name string, operations, batches int, fn func(record func(time.Duration)) error) error {
 		var samples []time.Duration
 		started := now()
@@ -132,6 +147,14 @@ func (r Runner) Run(ctx context.Context, backend string, store port.Store, datas
 		return Metrics{}, err
 	}
 	metrics.FinishedAt = now()
+	if metrics.Footprint != nil {
+		after, err := DiskFootprint(r.FootprintRoot)
+		if err != nil {
+			return Metrics{}, fmt.Errorf("measure final footprint: %w", err)
+		}
+		metrics.Footprint.AfterBytes = after
+		metrics.Footprint.DeltaBytes = after - metrics.Footprint.BeforeBytes
+	}
 	return metrics, nil
 }
 

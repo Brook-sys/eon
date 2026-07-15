@@ -118,7 +118,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [ ] `IN_PROGRESS` Implementar gerador, runner medido e crash harness subprocessado para ambos os backends.
   - Evidência parcial: `internal/storage/spike` gera dataset/manifesto determinísticos, executa fases backend-neutral com métricas, classifica intenção durável e comprova reopen por subprocesso em SQLite; adapters expõem hooks de fronteira sem contaminar `port.Store`.
   - Evidência parcial adicional: runner aceita batching configurável e registra p50/p95/p99 por batch/consulta; medidor de footprint lógico percorre somente arquivos regulares sem seguir symlinks.
-  - Restante: integrar footprint aos artefatos; worker CLI que encerra abruptamente nos hooks; Dolt medido via `sql-server`, distinguindo working set SQL de commit Dolt.
+  - Evidência parcial adicional: métricas v2 registram footprint antes/depois/delta e o writer atômico gera `manifest.json`, `metrics.json` e resumo `report.md`, rejeitando mistura de datasets.
+  - Restante: worker CLI que encerra abruptamente nos hooks; Dolt medido via `sql-server`, distinguindo working set SQL de commit Dolt.
 - [ ] `BLOCKED_BY:Runner` Medir footprint, latência, recuperação, diff e complexidade.
 - [ ] `BLOCKED_BY:Medição` Registrar ADR final do backend.
 
@@ -178,3 +179,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 15:20 — Fase 4/Dolt contratual — adapter por processo externo persiste o mesmo checkpoint integral, cria commit Dolt e reabre repositório real; modo medido separado como `sql-server` para evitar viés de startup — verificação: Dolt 2.2.0 oficial com SHA-256 validado, suites funcional/durável, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: gerador/runner comum e crash subprocessado.
 2026-07-15 15:40 — Fase 4/harness baseline — dataset/manifesto determinísticos, runner comum, classificação de intenção e reopen por subprocesso implementados; hooks de durabilidade adicionados sem ampliar a porta de domínio — verificação: subprocess test SQLite, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: batching/percentis/footprint e worker de crash real, depois Dolt `sql-server`.
 2026-07-15 16:00 — Fase 4/métricas do runner — transações em lotes configuráveis, p50/p95/p99 por batch/consulta e medição confinada de footprint implementados — verificação: testes de batching/nearest-rank/symlink, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: worker CLI de crash abrupto e integração do footprint aos artefatos.
+2026-07-15 16:20 — Fase 4/artefatos medidos — runner passou a registrar footprint inicial/final/delta; writer atômico emite manifesto, métricas e relatório Markdown com vínculo obrigatório ao SHA-256 do dataset — verificação: testes de footprint/artefatos, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: worker CLI de crash abrupto nos hooks SQLite/Dolt.

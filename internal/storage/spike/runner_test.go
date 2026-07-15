@@ -2,6 +2,8 @@ package spike
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -39,6 +41,27 @@ func TestRunnerAppliesAndQueriesDataset(t *testing.T) {
 		if phase.Batches != wantBatches[phase.Name] || phase.P50 <= 0 || phase.P95 <= 0 || phase.P99 <= 0 {
 			t.Fatalf("phase %s has invalid samples: %#v", phase.Name, phase)
 		}
+	}
+}
+
+func TestRunnerRecordsDiskFootprintBeforeAndAfter(t *testing.T) {
+	dataset, manifest, err := Generate(DatasetConfig{Seed: 1, Sources: 1, Claims: 1, EvidenceLinks: 1, SnapshotMin: 16, SnapshotMax: 16})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "before"), []byte("1234"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	metrics, err := (Runner{FootprintRoot: root}).Run(context.Background(), "memory", memory.New(), dataset, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metrics.SchemaVersion != 2 || metrics.Footprint == nil {
+		t.Fatalf("missing versioned footprint: %#v", metrics)
+	}
+	if metrics.Footprint.BeforeBytes != 4 || metrics.Footprint.AfterBytes != 4 || metrics.Footprint.DeltaBytes != 0 {
+		t.Fatalf("footprint = %#v", metrics.Footprint)
 	}
 }
 
