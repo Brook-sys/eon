@@ -20,6 +20,9 @@ func TestReevaluationConditionValidateFor(t *testing.T) {
 		{name: "terminal rejects wakeup", state: StateFailed, condition: ReevaluationCondition{Kind: ReevaluateReady}, wantError: true},
 		{name: "time missing", state: StateWaitingTime, condition: ReevaluationCondition{Kind: ReevaluateNotBefore}, wantError: true},
 		{name: "wrong kind", state: StateThrottled, condition: ReevaluationCondition{Kind: ReevaluateReady}, wantError: true},
+		{name: "lease reference required", state: StateRunning, condition: ReevaluationCondition{Kind: ReevaluateLease}, wantError: true},
+		{name: "lease reference present", state: StateRunning, condition: ReevaluationCondition{Kind: ReevaluateLease, Reference: "lease_1"}},
+		{name: "dependency reference required", state: StateBlockedDependency, condition: ReevaluationCondition{Kind: ReevaluateDependency}, wantError: true},
 		{name: "unknown state", state: OperationalState("UNKNOWN"), wantError: true},
 	}
 

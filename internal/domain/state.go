@@ -107,5 +107,15 @@ func (c ReevaluationCondition) ValidateFor(state OperationalState) error {
 	if c.Kind == ReevaluateEvent && c.EventType == "" {
 		return errors.New("EVENT condition requires an event type")
 	}
+	requiresReference := map[ReevaluationKind]bool{
+		ReevaluateLease:      true,
+		ReevaluateApproval:   true,
+		ReevaluateCapacity:   true,
+		ReevaluateDependency: true,
+		ReevaluateReplanning: true,
+	}
+	if requiresReference[c.Kind] && c.Reference == "" {
+		return fmt.Errorf("%s condition requires a reference", c.Kind)
+	}
 	return nil
 }
