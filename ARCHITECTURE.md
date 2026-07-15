@@ -1,8 +1,8 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.5
+Status: rascunho v0.6
 
-Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS.md`. ADRs aceitos fixam Go como linguagem do núcleo e OpenAI-compatible como adapter principal de modelos. Dolt permanece uma decisão proposta condicionada a spike.
+Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS.md`. O vocabulário normativo está em `GLOSSARY.md`. ADRs aceitos fixam Go como linguagem do núcleo e OpenAI-compatible como adapter principal de modelos. Dolt permanece uma decisão proposta condicionada a spike.
 
 ## Tese
 
@@ -42,29 +42,33 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 ## Visão em camadas
 
 ```text
-┌──────────────────────────────────────────────────────────┐
-│ Interfaces: CLI, API, UI, eventos                        │
-├──────────────────────────────────────────────────────────┤
-│ Control Plane: objetivos, políticas, orçamento, aprovação│
-├──────────────────────────────────────────────────────────┤
-│ Kernel: supervisor, scheduler, eventos, espera, retomada │
-├──────────────────────────────────────────────────────────┤
-│ Cognição: planner, selector, critic, context compiler    │
-├──────────────────────────────────────────────────────────┤
-│ Capacidades: tools, skills, workers, modelos             │
-├──────────────────────────────────────────────────────────┤
-│ Persistência: estado, artefatos, memória, logs, métricas │
-└──────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ Interfaces: CLI, API de inspeção, eventos autorizados          │
+├────────────────────────────────────────────────────────────────┤
+│ Control Plane: MissionSpec, políticas, budgets e aprovação     │
+├────────────────────────────────────────────────────────────────┤
+│ Kernel: supervisor, scheduler, eventos, espera e retomada      │
+├────────────────────────────────────────────────────────────────┤
+│ Inquiry: agenda, frontier, admissão e prioridade               │
+├────────────────────────────────────────────────────────────────┤
+│ Epistemic: fontes, observações, claims, evidências e artefatos │
+├────────────────────────────────────────────────────────────────┤
+│ Cognition: OperationSpec, prompt compiler, modelo e verifier   │
+├────────────────────────────────────────────────────────────────┤
+│ Ports: web/file read, model, store, clock e observabilidade    │
+├────────────────────────────────────────────────────────────────┤
+│ Persistência: estado canônico, event log, outbox e artefatos   │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ## Kernel mínimo
 
 O kernel não interpreta linguagem natural. Ele somente opera estados e comandos válidos.
 
-Estados iniciais de uma unidade de trabalho:
+Estados iniciais de uma `Inquiry` ou `Operation`:
 
-- `NEW`: objetivo recebido, ainda não normalizado.
-- `READY`: há uma próxima unidade de trabalho executável.
+- `NEW`: unidade criada, ainda não normalizada ou admitida.
+- `READY`: precondições satisfeitas e próxima execução permitida.
 - `RUNNING`: uma ação está em execução.
 - `VERIFYING`: o resultado está sendo comparado aos critérios.
 - `WAITING_TIME`: aguarda um instante ou intervalo calculado.
@@ -127,9 +131,9 @@ Isso diferencia:
 
 Para continuar sem depender de eventos externos, o runtime precisa de algo mais durável que uma fila: uma **missão operacional**.
 
-### Mission
+### MissionSpec
 
-Define o espaço legítimo de progresso:
+Define, de forma versionada, o espaço legítimo de progresso:
 
 ```json
 {
@@ -148,23 +152,23 @@ O motor não cria uma missão independente. Ele deriva trabalho apenas de missõ
 
 ### Agenda
 
-Conjunto priorizado de tarefas conhecidas. Pode esvaziar temporariamente.
+Conjunto priorizado de `Inquiry`s e obrigações operacionais admitidas. Pode esvaziar temporariamente.
 
 ### Work Frontier
 
-Conjunto de lacunas, hipóteses, riscos, oportunidades e próximos passos ainda não transformados em tarefas executáveis.
+Conjunto de lacunas, hipóteses, riscos, oportunidades e próximos passos ainda não transformados em investigações admitidas.
 
 ### AgendaReplenisher
 
-Quando necessário, transforma a fronteira em novos `WorkItem`s. Fontes possíveis:
+Quando necessário, transforma a fronteira em novos `InquiryCandidate`s e admite um conjunto limitado como `Inquiry`s. Fontes possíveis:
 
-- decomposição progressiva da missão;
-- próximos passos revelados por uma tarefa concluída;
-- critérios ainda não satisfeitos;
-- falhas e evidências inconclusivas;
-- manutenção recorrente por tempo;
+- perguntas explícitas ainda sem resposta;
+- lacunas ou conflitos revelados por uma investigação concluída;
+- claims relevantes sem evidência suficiente;
+- evidências inconclusivas ou potencialmente desatualizadas;
+- revisão epistemológica recorrente por tempo;
 - recursos que voltaram a ficar disponíveis;
-- revisão periódica de backlog e prioridades;
+- revisão periódica da frontier e prioridades;
 - eventos externos que mudaram o estado observado.
 
 Pipeline:
@@ -181,7 +185,7 @@ Isso deve ser incremental. O motor não gera um plano gigantesco; mantém apenas
 
 ## Progresso contínuo
 
-Cada tarefa concluída deve passar por uma etapa de expansão:
+Cada investigação ou operação concluída deve passar por uma etapa de expansão:
 
 ```text
 resultado
@@ -192,15 +196,15 @@ resultado
   → criar, atualizar, adiar ou eliminar candidatos
 ```
 
-O conceito central é uma **esteira de incrementos**:
+O conceito central é uma **esteira de incrementos epistemológicos**:
 
 ```text
-missão → incremento → evidência → estado atualizado → próximo incremento
+missão → inquiry → operação → evidência/changeset → estado atualizado → próxima inquiry
 ```
 
 O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial. A continuidade termina apenas quando a missão é pausada/cancelada ou uma política determina que não existe ação segura e útil dentro do horizonte atual.
 
-Para evitar atividade vazia, toda tarefa autogerada deve declarar:
+Para evitar atividade vazia, todo `InquiryCandidate` autogerado deve declarar:
 
 - `derived_from`: origem na missão, evidência ou recorrência;
 - `expected_progress`: mudança observável esperada;
@@ -262,7 +266,7 @@ Cada recurso limitado deve possuir um `ResourceGate`, por exemplo:
 model:ollama/local
 model:provider/free-tier
 web:searxng
-tool:shell
+file:authorized-root
 domain:api.example.com
 ```
 
@@ -315,7 +319,7 @@ Requisitos:
 - definir timeout e política de callback tardio;
 - reaplicar eventos após crash sem repetir efeitos colaterais.
 
-O mesmo modelo atende mensagens, webhooks, timers, conclusão de subprocessos, alterações de arquivos e respostas humanas.
+O mesmo envelope pode representar timers, conclusão de aquisição web, mudança em arquivo autorizado, disponibilidade de recurso e resposta humana. Mensagens, webhooks e subprocessos só entram quando adapters específicos forem explicitamente autorizados; não fazem parte do MVP básico.
 
 ## Entrega e efeitos colaterais
 
@@ -331,56 +335,68 @@ Para emissão confiável de eventos, usar o padrão transactional outbox: a muda
 
 ## Contratos fundamentais
 
-### Goal
+O vocabulário completo está em `GLOSSARY.md`. Os contratos centrais do domínio são:
+
+### InquiryCandidate
 
 ```json
 {
-  "id": "goal_...",
-  "objective": "resultado desejado",
-  "success_criteria": ["critério observável"],
-  "constraints": ["limite ou proibição"],
-  "budget": {"steps": 50, "tokens": 20000, "time_seconds": 1800},
-  "status": "READY"
+  "id": "inquiry_candidate_...",
+  "mission_revision": 7,
+  "question_id": "question_...",
+  "derived_from": ["gap_..."],
+  "expected_epistemic_gain": {"coverage": 0.3, "uncertainty_reduction": 0.5},
+  "novelty": "não duplica investigação existente",
+  "estimated_cost": {"model_calls": 3, "searches": 2},
+  "risk": "low",
+  "answer_condition": "duas fontes primárias analisadas",
+  "stop_condition": "budget ou suficiência atingida",
+  "review_after": "2026-07-16T00:00:00Z"
 }
 ```
 
-### WorkItem
+### Operation
 
 ```json
 {
-  "id": "work_...",
-  "goal_id": "goal_...",
-  "intent": "uma ação pequena",
-  "required_context": ["fact_...", "artifact_..."],
-  "expected_evidence": ["arquivo existe", "teste passa"],
+  "id": "operation_...",
+  "inquiry_id": "inquiry_...",
+  "spec_id": "extract_observations@1",
+  "read_set": ["fragment_..."],
+  "expected_output": "proposed_change_set",
   "attempt": 1,
+  "lease_until": null,
   "status": "READY"
 }
 ```
 
-### Decision
+### ModelDecision
 
 ```json
 {
-  "type": "invoke_capability",
-  "capability": "filesystem.read",
-  "arguments": {"path": "README.md"},
-  "reason_code": "NEED_CURRENT_STATE",
-  "confidence": 0.72
+  "operation_id": "operation_...",
+  "proposal_type": "observation_candidates",
+  "payload_ref": "artifact_...",
+  "reason_code": "EXTRACTION_PROPOSAL",
+  "model_confidence": 0.72
 }
 ```
 
-### Evidence
+`ModelDecision` é somente proposta. Não autoriza capability nem commit.
+
+### EvidenceReceipt
 
 ```json
 {
-  "work_id": "work_...",
-  "kind": "test_result",
-  "source": "pytest",
+  "operation_id": "operation_...",
+  "kind": "schema_validation",
+  "producer": "validator:observations@1",
   "passed": true,
   "artifact_ref": "artifact_..."
 }
 ```
+
+`EvidenceReceipt` registra verificação operacional; relações epistemológicas usam `EvidenceLink`.
 
 ## Módulos e portas
 
@@ -397,15 +413,15 @@ Adaptadores possíveis: Ollama, llama.cpp, APIs compatíveis com OpenAI e proved
 
 O contrato mínimo exige somente `text -> text`. JSON mode, function calling, streaming e system prompt são capacidades opcionais detectadas pelo adaptador. O kernel nunca depende delas para funcionar.
 
-### 2. Planner
+### 2. InquiryPlanner
 
-Converte um objetivo ou falha em pequenos `WorkItem`s. Pode haver implementações:
+Converte perguntas, lacunas, conflitos ou falhas em `InquiryCandidate`s e expansões limitadas de `Operation`s. Pode haver implementações:
 
-- `RulePlanner`: regras determinísticas para fluxos conhecidos.
-- `LLMPlanner`: decomposição via modelo.
-- `HybridPlanner`: templates primeiro, modelo apenas para lacunas.
+- `RuleInquiryPlanner`: regras determinísticas para fluxos conhecidos;
+- `LLMInquiryPlanner`: formulação limitada de candidatos;
+- `HybridInquiryPlanner`: regras e templates primeiro, modelo apenas para ambiguidades.
 
-O planner não envia um objetivo complexo para o modelo e aceita um plano completo. Ele usa decomposição hierárquica, validadores e um horizonte curto. Cada expansão produz poucos filhos e pode ser revisada antes de continuar.
+O planner não envia a missão inteira ao modelo e aceita um plano completo. Ele usa decomposição hierárquica, validadores e horizonte curto. Cada expansão produz poucos candidatos e nenhuma admissão ocorre sem política determinística.
 
 ### 3. Selector
 
@@ -416,7 +432,7 @@ Escolhe o próximo item pronto com base em dependências, prioridade, custo e ri
 Monta um pacote mínimo para uma chamada. Pipeline sugerido:
 
 ```text
-necessidades do WorkItem
+necessidades da Operation
   → busca de fatos/artefatos
   → ranking por relevância
   → deduplicação
@@ -425,7 +441,7 @@ necessidades do WorkItem
   → envelope final
 ```
 
-O contexto deve conter identidade da tarefa, critérios, fatos confirmados e formato de saída; não a conversa inteira.
+O contexto deve conter identidade da operação, critérios, objetos canônicos necessários e formato de saída; não a conversa inteira.
 
 O `ContextCompiler` também atua como `PromptCompiler`: seleciona um template específico à operação, substitui referências por fatos compactos, enumera opções válidas e reserva espaço de saída. O prompt resultante deve poder ser reproduzido por ID e versão.
 
@@ -441,7 +457,7 @@ Registro de capacidades instaláveis. Cada capability declara:
 - timeout e política de repetição;
 - função opcional de verificação.
 
-Exemplos: `filesystem.read`, `shell.run`, `web.search`, `http.fetch`, `code.test`.
+Exemplos do MVP: `file.discover`, `file.read`, `web.search`, `web.fetch`, `source.snapshot`, `model.complete` e `artifact.render`. Shell e execução arbitrária de código permanecem fora do produto MVP.
 
 ### 6. Executor
 
@@ -457,16 +473,18 @@ Não pergunta apenas ao modelo se algo funcionou. Ordem de preferência:
 4. verificação por modelo independente;
 5. revisão humana.
 
-### 8. MemoryStore
+### 8. Persistência por portas explícitas
 
-Separar quatro tipos:
+Evitar um `MemoryStore` genérico. Separar responsabilidades em interfaces estreitas:
 
-- `WorkingState`: estado exato do trabalho em curso;
-- `Facts`: fatos confirmados com origem e confiança;
-- `Episodes`: histórico resumido de tentativas e resultados;
-- `Artifacts`: arquivos e saídas grandes referenciados por ID.
+- `MissionRepository`: revisões e missão ativa;
+- `AgendaRepository`: frontier, candidates, inquiries, operações e leases;
+- `KnowledgeRepository`: fontes, observações, claims, evidências e dependências;
+- `EventLog`: eventos append-only;
+- `Outbox`: entregas transacionais pendentes;
+- `ArtifactStore`: snapshots e materializações grandes.
 
-A primeira versão pode usar SQLite + diretório de artefatos, sem banco vetorial obrigatório.
+A primeira implementação é fake/in-memory para contract tests. Dolt, SQLite + event log e outras opções devem implementar os mesmos contratos antes da seleção final.
 
 ### 9. PolicyEngine
 
@@ -490,11 +508,11 @@ Pode ordenar replanejamento, fallback de modelo, redução de escopo ou interven
 Tipos de plugin iniciais:
 
 - `model_provider`
-- `planner`
+- `inquiry_planner`
 - `context_source`
-- `capability`
+- `capability` — somente portas autorizadas do escopo epistemológico
 - `verifier`
-- `memory_backend`
+- `storage_backend`
 - `policy`
 - `interface`
 - `observer`
