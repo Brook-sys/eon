@@ -37,6 +37,32 @@ func TestRunCrashCampaignRepeatsAndAggregates(t *testing.T) {
 	}
 }
 
+func TestRunCrashCampaignWithInspectorClassifiesCompoundMutation(t *testing.T) {
+	result, err := RunCrashCampaignWithInspector(context.Background(), MinCrashCampaignTrials, func(index int) (CrashCommand, StoreOpener, VisibilityInspector, error) {
+		store := memory.New()
+		refs := OfficialMutationRefs{
+			EventID:         domain.EventID(fmt.Sprintf("event_official_campaign_%02d", index)),
+			CommitID:        domain.CommitID(fmt.Sprintf("commit_official_campaign_%02d", index)),
+			ReceiptID:       domain.ReceiptID(fmt.Sprintf("receipt_official_campaign_%02d", index)),
+			MissionRevision: domain.MissionRevisionID(fmt.Sprintf("revision_official_campaign_%02d", index)),
+			IdempotencyKey:  domain.IdempotencyKey(fmt.Sprintf("idem_official_campaign_%02d", index)),
+			CanonicalType:   "observation",
+			CanonicalID:     fmt.Sprintf("observation_official_campaign_%02d", index),
+		}
+		open := func() (port.Store, func() error, error) { return store, nil, nil }
+		inspect := func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+			return InspectOfficialMutation(ctx, store, refs)
+		}
+		return CrashCommand{Executable: "/bin/sh", Args: []string{"-c", "exit 17"}}, open, inspect, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Passed || result.Counts.NotApplied != MinCrashCampaignTrials {
+		t.Fatalf("unexpected compound campaign: passed=%v counts=%+v", result.Passed, result.Counts)
+	}
+}
+
 func TestRunCrashCampaignRejectsInsufficientRepetition(t *testing.T) {
 	_, err := RunCrashCampaign(context.Background(), MinCrashCampaignTrials-1, func(int) (CrashCommand, StoreOpener, CrashIntent, error) {
 		return CrashCommand{}, nil, CrashIntent{}, nil

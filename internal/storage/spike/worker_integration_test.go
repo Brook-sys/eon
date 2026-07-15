@@ -88,12 +88,7 @@ func TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries(t *testing.T) {
 }
 
 func TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite(t *testing.T) {
-	worker := filepath.Join(t.TempDir(), "storage-spike-worker")
-	build := exec.Command("go", "build", "-o", worker, "./cmd/storage-spike-worker")
-	build.Dir = projectRoot(t)
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build worker: %v\n%s", err, output)
-	}
+	worker := buildStorageSpikeWorker(t)
 	tests := []struct {
 		failpoint sqlite.Failpoint
 		want      CrashOutcome
@@ -136,17 +131,61 @@ func TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite(t *testing.
 	}
 }
 
+func TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInDolt(t *testing.T) {
+	doltBinary := requireDoltBinary(t)
+	worker := buildStorageSpikeWorker(t)
+	tests := []struct {
+		failpoint dolt.Failpoint
+		want      CrashOutcome
+	}{
+		{dolt.FailpointBeforeSQLAndDoltCommit, OutcomeNotApplied},
+		{dolt.FailpointAfterSQLAndDoltCommit, OutcomeApplied},
+	}
+	for index, test := range tests {
+		t.Run(string(test.failpoint), func(t *testing.T) {
+			root := t.TempDir()
+			repositoryPath := filepath.Join(root, "runtime")
+			mutationPath := filepath.Join(root, "official.json")
+			markerPath := filepath.Join(root, "official.started")
+			refs := OfficialMutationRefs{EventID: domain.EventID("event_official_dolt_" + string(rune('a'+index))), CommitID: "commit_official_dolt", ReceiptID: "receipt_official_dolt", MissionRevision: "revision_official_dolt", IdempotencyKey: "idem_official_dolt", CanonicalType: "observation", CanonicalID: "observation_official_dolt"}
+			mutation := OfficialMutation{SchemaVersion: 1, Refs: refs, OccurredAt: time.Date(2026, 7, 15, 22, index, 0, 0, time.UTC)}
+			encoded, err := json.Marshal(mutation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutationPath, encoded, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			open := func() (port.Store, func() error, error) {
+				store, err := dolt.Open(doltBinary, repositoryPath)
+				if err != nil {
+					return nil, nil, err
+				}
+				return store, store.Close, nil
+			}
+			result, err := RunCrashTrialWithInspector(context.Background(), CrashCommand{Executable: worker, Args: []string{"-backend", "dolt", "-path", repositoryPath, "-failpoint", string(test.failpoint), "-intent", mutationPath, "-marker", markerPath, "-mutation", "official", "-dolt-bin", doltBinary}}, open, func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+				return InspectOfficialMutation(ctx, store, refs)
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.WorkerCrashed || result.Outcome != test.want {
+				t.Fatalf("crashed=%v outcome=%s want=%s exit=%q", result.WorkerCrashed, result.Outcome, test.want, result.ExitError)
+			}
+			marker, err := os.ReadFile(markerPath)
+			if err != nil {
+				t.Fatalf("read durable intention marker: %v", err)
+			}
+			if string(marker) != string(encoded) {
+				t.Fatalf("marker = %s, want %s", marker, encoded)
+			}
+		})
+	}
+}
+
 func TestStorageSpikeWorkerCrashesAtDoltCLIBoundaries(t *testing.T) {
-	doltBinary := os.Getenv("DOLT_BIN")
-	if doltBinary == "" {
-		t.Skip("DOLT_BIN is not set; Dolt crash trials require an explicit binary")
-	}
-	worker := filepath.Join(t.TempDir(), "storage-spike-worker")
-	build := exec.Command("go", "build", "-o", worker, "./cmd/storage-spike-worker")
-	build.Dir = projectRoot(t)
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build worker: %v\n%s", err, output)
-	}
+	doltBinary := requireDoltBinary(t)
+	worker := buildStorageSpikeWorker(t)
 
 	tests := []struct {
 		name      string
@@ -207,6 +246,26 @@ func TestStorageSpikeWorkerCrashesAtDoltCLIBoundaries(t *testing.T) {
 			}
 		})
 	}
+}
+
+func buildStorageSpikeWorker(t *testing.T) string {
+	t.Helper()
+	worker := filepath.Join(t.TempDir(), "storage-spike-worker")
+	build := exec.Command("go", "build", "-o", worker, "./cmd/storage-spike-worker")
+	build.Dir = projectRoot(t)
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build worker: %v\n%s", err, output)
+	}
+	return worker
+}
+
+func requireDoltBinary(t *testing.T) string {
+	t.Helper()
+	binary := os.Getenv("DOLT_BIN")
+	if binary == "" {
+		t.Skip("DOLT_BIN is not set; Dolt crash trials require an explicit binary")
+	}
+	return binary
 }
 
 func projectRoot(t *testing.T) string {

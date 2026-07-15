@@ -29,6 +29,8 @@ const MinCrashCampaignTrials = 30
 
 type CrashTrialPlan func(index int) (CrashCommand, StoreOpener, CrashIntent, error)
 
+type CrashInspectorPlan func(index int) (CrashCommand, StoreOpener, VisibilityInspector, error)
+
 type CrashOutcomeCounts struct {
 	NotApplied     int `json:"not_applied"`
 	Applied        int `json:"applied"`
@@ -83,19 +85,36 @@ func RunCrashTrialWithInspector(ctx context.Context, command CrashCommand, open 
 // classification of later trials, so the plan must provide each trial's
 // command, opener and unique intent.
 func RunCrashCampaign(ctx context.Context, trials int, plan CrashTrialPlan) (CrashCampaignResult, error) {
+	if plan == nil {
+		return CrashCampaignResult{}, fmt.Errorf("crash trial plan is required")
+	}
+	return RunCrashCampaignWithInspector(ctx, trials, func(index int) (CrashCommand, StoreOpener, VisibilityInspector, error) {
+		command, open, intent, err := plan(index)
+		if err != nil {
+			return CrashCommand{}, nil, nil, err
+		}
+		return command, open, func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+			return InspectCrashIntent(ctx, store, intent)
+		}, nil
+	})
+}
+
+// RunCrashCampaignWithInspector repeats compound official mutations without
+// reducing their atomicity invariant to a sentinel event.
+func RunCrashCampaignWithInspector(ctx context.Context, trials int, plan CrashInspectorPlan) (CrashCampaignResult, error) {
 	if trials < MinCrashCampaignTrials {
 		return CrashCampaignResult{}, fmt.Errorf("crash campaign requires at least %d trials, got %d", MinCrashCampaignTrials, trials)
 	}
 	if plan == nil {
-		return CrashCampaignResult{}, fmt.Errorf("crash trial plan is required")
+		return CrashCampaignResult{}, fmt.Errorf("crash inspector plan is required")
 	}
 	result := CrashCampaignResult{Trials: make([]CrashTrialResult, 0, trials), Passed: true}
 	for index := 0; index < trials; index++ {
-		command, open, intent, err := plan(index)
+		command, open, inspect, err := plan(index)
 		if err != nil {
 			return result, fmt.Errorf("prepare crash trial %d: %w", index, err)
 		}
-		trial, err := RunCrashTrial(ctx, command, open, intent)
+		trial, err := RunCrashTrialWithInspector(ctx, command, open, inspect)
 		if err != nil {
 			return result, fmt.Errorf("run crash trial %d: %w", index, err)
 		}
