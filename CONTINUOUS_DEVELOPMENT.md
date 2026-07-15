@@ -60,10 +60,14 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 ### Fase 1 — esqueleto Go determinístico
 
-- [ ] `READY` Inicializar módulo Go sem framework e definir layout mínimo.
-- [ ] `READY` Implementar tipos de domínio sem dependências externas.
-- [ ] `BLOCKED_BY:tipos` Implementar máquina de estados pura e testes de tabela.
-- [ ] `READY` Implementar `Clock`, `IDGenerator` e `RandomSource` injetáveis.
+- [x] `DONE` Inicializar módulo Go sem framework e definir layout mínimo.
+  - Evidência: `go.mod`, entrypoint inerte `cmd/runtime` e pacotes internos sem dependências externas.
+- [x] `DONE` Implementar tipos de domínio sem dependências externas.
+  - Evidência: `internal/domain` cobre missão, pergunta, inquiry, operação, conhecimento, changesets, commit e falha com IDs distintos, schemas versionados e validação estrutural inicial.
+- [ ] `READY` Implementar máquina de estados pura e testes de tabela.
+  - Evidência parcial: enums operacionais e validação estado→condição de reavaliação já rejeitam unidades órfãs; falta contrato explícito de transições/eventos.
+- [x] `DONE` Implementar `Clock`, `IDGenerator` e `RandomSource` injetáveis.
+  - Evidência: portas e implementações de sistema/teste em `internal/runtime/source`, com relógio manual e sequências determinísticas thread-safe.
 - [ ] `BLOCKED_BY:ports` Implementar store em memória com contract tests.
 - [ ] `BLOCKED_BY:tipos,store` Implementar event log em memória e idempotência básica.
 
@@ -127,3 +131,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 08:26 — Fase 0/coerência — glossário normativo criado; arquitetura alinhada ao domínio epistemológico; interfaces de persistência separadas — verificação: RFC 2119/8174, grep de resíduos e `git diff --check` — próximo: requisitos rastreáveis e auditoria dos protocolos auxiliares.
 2026-07-15 08:34 — Fase 0/contratos — protocolo de modelo fraco e plano de pesquisa alinhados ao glossário; requisitos FR/NFR rastreáveis consolidados — verificação: grep de termos substituídos e `git diff --check` — próximo: taxonomia de falhas e invariantes formais.
 2026-07-15 08:54 — Fase 0/falhas e invariantes — `FailureRecord`, política de retry/reconciliação, invariantes safety/liveness e requisito FR-DUR-006 formalizados — verificação: fontes primárias Temporal/OpenTelemetry/RFC 9457, inspeção de rastreabilidade e `git diff --check` — próximo: módulo Go, tipos de domínio e fontes determinísticas.
+2026-07-15 09:20 — Fase 1/bootstrap Go — módulo/entrypoint criados; tipos persistíveis e validadores iniciais implementados; fontes de tempo, ID e aleatoriedade injetadas com fakes determinísticos — verificação: Go 1.26.5 oficial temporário, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque a imagem não possui toolchain C — próximo: máquina de estados pura e ports/store em memória.
