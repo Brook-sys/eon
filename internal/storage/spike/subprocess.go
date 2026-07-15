@@ -17,6 +17,8 @@ type CrashCommand struct {
 
 type StoreOpener func() (port.Store, func() error, error)
 
+type VisibilityInspector func(context.Context, port.Store) (CrashOutcome, error)
+
 type CrashTrialResult struct {
 	ExitError     string       `json:"exit_error,omitempty"`
 	WorkerCrashed bool         `json:"worker_crashed"`
@@ -42,8 +44,16 @@ type CrashCampaignResult struct {
 // RunCrashTrial executes the mutating worker in a distinct process, then opens
 // the durable backend again through a fresh adapter and classifies visibility.
 func RunCrashTrial(ctx context.Context, command CrashCommand, open StoreOpener, intent CrashIntent) (CrashTrialResult, error) {
-	if command.Executable == "" || open == nil {
-		return CrashTrialResult{}, fmt.Errorf("crash command and store opener are required")
+	return RunCrashTrialWithInspector(ctx, command, open, func(ctx context.Context, store port.Store) (CrashOutcome, error) {
+		return InspectCrashIntent(ctx, store, intent)
+	})
+}
+
+// RunCrashTrialWithInspector lets the harness classify a compound official
+// mutation rather than reducing atomicity to one sentinel record.
+func RunCrashTrialWithInspector(ctx context.Context, command CrashCommand, open StoreOpener, inspect VisibilityInspector) (CrashTrialResult, error) {
+	if command.Executable == "" || open == nil || inspect == nil {
+		return CrashTrialResult{}, fmt.Errorf("crash command, store opener, and visibility inspector are required")
 	}
 	cmd := exec.CommandContext(ctx, command.Executable, command.Args...)
 	cmd.Env = append(os.Environ(), command.Env...)
@@ -60,7 +70,7 @@ func RunCrashTrial(ctx context.Context, command CrashCommand, open StoreOpener, 
 	if closeStore != nil {
 		defer closeStore()
 	}
-	outcome, inspectErr := InspectCrashIntent(ctx, store, intent)
+	outcome, inspectErr := inspect(ctx, store)
 	if inspectErr != nil {
 		return result, inspectErr
 	}

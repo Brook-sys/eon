@@ -6,8 +6,26 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
 )
+
+func TestRunCrashTrialWithInspectorUsesCompoundClassifier(t *testing.T) {
+	store := memory.New()
+	called := false
+	result, err := RunCrashTrialWithInspector(context.Background(), CrashCommand{Executable: "/bin/sh", Args: []string{"-c", "exit 17"}}, func() (port.Store, func() error, error) {
+		return store, nil, nil
+	}, func(context.Context, port.Store) (CrashOutcome, error) {
+		called = true
+		return OutcomeInvalidPartial, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !called || !result.WorkerCrashed || result.Outcome != OutcomeInvalidPartial {
+		t.Fatalf("unexpected compound classification result: %+v called=%t", result, called)
+	}
+}
 
 func TestCrashIntentClassification(t *testing.T) {
 	store := memory.New()

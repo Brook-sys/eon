@@ -121,7 +121,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência parcial adicional: métricas v2 registram footprint antes/depois/delta e o writer atômico gera `manifest.json`, `metrics.json` e resumo `report.md`, rejeitando mistura de datasets.
   - Evidência parcial adicional: `cmd/storage-spike-worker` publica intenção sincronizada, encerra abruptamente nos hooks e é exercitado por subprocesso em SQLite e Dolt CLI com reopen fresco.
   - Evidência parcial adicional: campanhas configuráveis exigem ao menos 30 trials isolados, agregam os três outcomes e reprovam worker sem crash ou qualquer estado parcial.
-  - Restante: classificação composta de entidades oficiais; Dolt medido via `sql-server`, distinguindo working set SQL de commit Dolt.
+  - Evidência parcial adicional: inspector composto classifica evento, commit, recibo, head, idempotência e entidade canônica como conjunto indivisível e detecta vínculos cruzados; runner aceita classificadores compostos.
+  - Restante: executar a mutação oficial composta no worker; Dolt medido via `sql-server`, distinguindo working set SQL de commit Dolt.
 - [ ] `BLOCKED_BY:Runner` Medir footprint, latência, recuperação, diff e complexidade.
 - [ ] `BLOCKED_BY:Medição` Registrar ADR final do backend.
 
@@ -184,3 +185,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 16:20 — Fase 4/artefatos medidos — runner passou a registrar footprint inicial/final/delta; writer atômico emite manifesto, métricas e relatório Markdown com vínculo obrigatório ao SHA-256 do dataset — verificação: testes de footprint/artefatos, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: worker CLI de crash abrupto nos hooks SQLite/Dolt.
 2026-07-15 16:40 — Fase 4/crash worker — CLI subprocessada grava marcador de intenção sincronizado e morre nos hooks reais; reopen classifica `NOT_APPLIED` antes e `APPLIED` depois do commit em SQLite e Dolt CLI — verificação: testes de integração com ambos os binários, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: classificação composta/repetição e lifecycle Dolt `sql-server`.
 2026-07-15 17:00 — Fase 4/campanhas de crash — runner repete no mínimo 30 trials independentes, preserva resultados individuais, agrega outcomes e exige morte real do worker — verificação: testes de repetição/agregação/saída normal, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: intenção composta e lifecycle Dolt `sql-server`.
+2026-07-15 17:20 — Fase 4/classificação oficial composta — atomicidade de crash passou a exigir evento, commit, recibo, head, idempotência concluída e entidade canônica completos e coerentes; runner aceita inspector composto — verificação: testes de ausente/parcial/completo/vínculo cruzado, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: worker aplicar essa mutação composta e lifecycle Dolt `sql-server`.
