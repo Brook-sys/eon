@@ -11,7 +11,7 @@ Comparar Dolt e SQLite + event log sob o mesmo contrato observável, sem selecio
 - Dolt já oferece SQL compatível com MySQL e primitivas nativas de branch, commit, diff e merge, acessíveis por procedures e system tables. O spike deve usar essas primitivas, não reimplementá-las.
 - SQLite já fornece transações atômicas; em WAL, commits são registros anexados ao log, leitores mantêm snapshots e há somente um writer por vez. O spike deve usar transações e WAL nativos, acrescentando somente o event log epistemológico exigido pelo domínio.
 - Para Go sem CGO, `modernc.org/sqlite` é um driver `database/sql` disponível, mas sua própria documentação alerta para o acoplamento exato de versão com `modernc.org/libc`; isso entra no custo de dependências e manutenção.
-- Dolt deve ser exercitado como processo/servidor compatível com MySQL. Não presumir embedding no processo Go.
+- Dolt deve ser exercitado como processo externo. O contract adapter inicial usa `dolt sql` por invocação para evitar embedding e manter a mesma representação de checkpoint do SQLite; o runner medido deve usar `dolt sql-server` + driver MySQL para não contar startup de processo em cada operação e para testar sessões, branches e crash do servidor real.
 
 Fontes primárias:
 
@@ -117,4 +117,6 @@ Diferenças menores que 10% em latência ou footprint são tratadas como inconcl
 5. executar carga completa em ambiente controlado;
 6. registrar ADR final com dados brutos referenciados.
 
-A implementação dos adapters continua `READY`; Dolt permanece candidato, não decisão aceita.
+O adapter contratual Dolt já existe e usa o mesmo checkpoint binário integral do cenário SQLite, permitindo comparação sem antecipar um schema relacional específico. Seus testes exigem `DOLT_BIN` explícito e exercitam um repositório real, inclusive close/reopen. Isso ainda não mede operação representativa: o próximo passo é criar o runner backend-neutral e o harness `dolt sql-server` subprocessado.
+
+Dolt permanece candidato, não decisão aceita.

@@ -113,8 +113,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `contract.TestStore` permanece a suite funcional comum; `contract.TestDurableStore` formaliza reopen, rollback e idempotência entre processos; `STORAGE_SPIKE.md` fixa dataset, crash harness, métricas e critérios de decisão.
 - [x] `DONE` Implementar cenário comparável em SQLite + event log.
   - Evidência: adapter `internal/storage/sqlite` usa SQLite WAL/synchronous FULL para checkpoint atômico do modelo de referência completo; passa `contract.TestStore` e `contract.TestDurableStore`, incluindo rollback, reopen e idempotência persistente.
-- [ ] `READY` Implementar cenário comparável em Dolt.
-- [ ] `BLOCKED_BY:SQLite,Dolt` Medir footprint, latência, recuperação, diff e complexidade.
+- [x] `DONE` Implementar cenário comparável em Dolt.
+  - Evidência: adapter `internal/storage/dolt` preserva o mesmo checkpoint binário do cenário SQLite em repositório Dolt real, cria commit Dolt por atualização e passa `contract.TestStore` e `contract.TestDurableStore` com close/reopen; `DOLT_BIN` fixa explicitamente a versão exercitada.
+- [ ] `READY` Implementar gerador, runner medido e crash harness subprocessado para ambos os backends.
+- [ ] `BLOCKED_BY:Runner` Medir footprint, latência, recuperação, diff e complexidade.
 - [ ] `BLOCKED_BY:Medição` Registrar ADR final do backend.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
@@ -170,3 +172,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 14:20 — Fase 3/visões citadas — visão materializada determinística criada sobre claim/evidência/fonte; patch de evidência gera sucessora e torna a anterior detectavelmente obsoleta em transação única — verificação: contract/unit tests de isolamento e rollback, `go test ./...`, `go vet ./...`, `git diff --check`; stdlib escolhida após preflight, sem dependência de JSON Patch — próximo: fixar suite comparável de storage e iniciar spikes Dolt/SQLite.
 2026-07-15 14:40 — Fase 4/protocolo do spike — suite durável separada formaliza reopen/rollback/idempotência; plano fixa dataset determinístico, crash subprocessado, métricas, bloqueadores e pesos comuns para SQLite/Dolt — verificação: fontes oficiais Dolt/SQLite/modernc, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: adapter SQLite + event log sob ambas as suites.
 2026-07-15 15:00 — Fase 4/SQLite durável — checkpoint completo e isolado do modelo de referência persistido atomicamente em SQLite WAL/FULL; adapter passa suites funcional e durável com reopen, rollback e idempotência — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: adapter Dolt sob as mesmas suites e depois crash harness subprocessado.
+2026-07-15 15:20 — Fase 4/Dolt contratual — adapter por processo externo persiste o mesmo checkpoint integral, cria commit Dolt e reabre repositório real; modo medido separado como `sql-server` para evitar viés de startup — verificação: Dolt 2.2.0 oficial com SHA-256 validado, suites funcional/durável, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: gerador/runner comum e crash subprocessado.
