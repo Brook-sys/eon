@@ -3,6 +3,8 @@ package contract
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
@@ -16,6 +18,57 @@ type Factory func() port.Store
 
 func TestStore(t *testing.T, factory Factory) {
 	t.Helper()
+	t.Run("source ingestion is immutable, content addressed and atomic", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 15, 16, 0, 0, 0, time.UTC)
+		content := []byte("fixture evidence")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		source := domain.Source{SchemaVersion: 1, ID: "source_1", Kind: "fixture", Locator: "testdata/source.txt", ObservedAt: now}
+		version := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_1", SourceID: source.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: version.ID, MediaType: "text/plain", Content: content}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendSource(source, version, snapshot) }); err != nil {
+			t.Fatalf("append source: %v", err)
+		}
+		content[0] = 'X'
+		snapshot.Content[1] = 'X'
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.SourceSnapshot(version.ID)
+			if err != nil {
+				return err
+			}
+			if string(got.Content) != "fixture evidence" {
+				t.Fatalf("stored snapshot aliased caller: %q", got.Content)
+			}
+			got.Content[0] = 'X'
+			again, err := r.SourceSnapshot(version.ID)
+			if err == nil && string(again.Content) != "fixture evidence" {
+				t.Fatalf("read snapshot aliased store: %q", again.Content)
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		badSource := source
+		badSource.ID = "source_2"
+		badVersion := version
+		badVersion.ID, badVersion.SourceID, badVersion.ContentHash, badVersion.ContentRef = "source_version_2", badSource.ID, "sha256:wrong", "sha256:wrong"
+		badSnapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: badVersion.ID, MediaType: "text/plain", Content: []byte("other")}
+		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendSource(badSource, badVersion, badSnapshot) })
+		if !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("hash mismatch error = %v, want ErrConflict", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.Source(badSource.ID)
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("invalid source survived rollback: %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)

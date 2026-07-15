@@ -17,13 +17,45 @@ type Source struct {
 	ObservedAt    time.Time `json:"observed_at"`
 }
 
+func (s Source) Validate() error {
+	if s.SchemaVersion != SchemaVersionV1 || s.ID == "" || strings.TrimSpace(s.Kind) == "" || strings.TrimSpace(s.Locator) == "" || s.ObservedAt.IsZero() {
+		return errors.New("source is incomplete or has unsupported schema version")
+	}
+	return nil
+}
+
 type SourceVersion struct {
 	SchemaVersion   int             `json:"schema_version"`
 	ID              SourceVersionID `json:"id"`
 	SourceID        SourceID        `json:"source_id"`
 	ContentHash     string          `json:"content_hash"`
+	ContentRef      string          `json:"content_ref"`
 	ExternalVersion string          `json:"external_version,omitempty"`
 	ObservedAt      time.Time       `json:"observed_at"`
+}
+
+func (v SourceVersion) Validate() error {
+	if v.SchemaVersion != SchemaVersionV1 || v.ID == "" || v.SourceID == "" || strings.TrimSpace(v.ContentHash) == "" || strings.TrimSpace(v.ContentRef) == "" || v.ObservedAt.IsZero() {
+		return errors.New("source version is incomplete or has unsupported schema version")
+	}
+	return nil
+}
+
+// SourceSnapshot preserves the exact immutable bytes used to derive a source
+// version. Large backends may place Content in an artifact store while keeping
+// the same content-addressed reference and hash contract.
+type SourceSnapshot struct {
+	SchemaVersion   int             `json:"schema_version"`
+	SourceVersionID SourceVersionID `json:"source_version_id"`
+	MediaType       string          `json:"media_type"`
+	Content         []byte          `json:"content"`
+}
+
+func (s SourceSnapshot) Validate() error {
+	if s.SchemaVersion != SchemaVersionV1 || s.SourceVersionID == "" || strings.TrimSpace(s.MediaType) == "" || len(s.Content) == 0 {
+		return errors.New("source snapshot is incomplete or has unsupported schema version")
+	}
+	return nil
 }
 
 type SourceFragment struct {

@@ -3,6 +3,8 @@ package memory
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
@@ -29,6 +31,9 @@ type state struct {
 	events           []domain.Event
 	eventIDs         map[domain.EventID]uint64
 	idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
+	sources          map[domain.SourceID]domain.Source
+	sourceVersions   map[domain.SourceVersionID]domain.SourceVersion
+	sourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
 	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
 	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
@@ -54,6 +59,9 @@ func newState() state {
 		rests:            make(map[domain.MissionRevisionID]domain.Rest),
 		eventIDs:         make(map[domain.EventID]uint64),
 		idempotency:      make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
+		sources:          make(map[domain.SourceID]domain.Source),
+		sourceVersions:   make(map[domain.SourceVersionID]domain.SourceVersion),
+		sourceSnapshots:  make(map[domain.SourceVersionID]domain.SourceSnapshot),
 		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
 		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
 		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
@@ -165,6 +173,15 @@ func (t transaction) HeadCommit(id domain.MissionRevisionID) (domain.Commit, err
 func (t transaction) CanonicalEntity(entityType, entityID string) (domain.CanonicalEntity, error) {
 	return reader(t).CanonicalEntity(entityType, entityID)
 }
+func (t transaction) Source(id domain.SourceID) (domain.Source, error) {
+	return reader(t).Source(id)
+}
+func (t transaction) SourceVersion(id domain.SourceVersionID) (domain.SourceVersion, error) {
+	return reader(t).SourceVersion(id)
+}
+func (t transaction) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot, error) {
+	return reader(t).SourceSnapshot(id)
+}
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
 	v, ok := r.state.missionRevisions[id]
@@ -256,6 +273,27 @@ func (r reader) IdempotencyRecord(key domain.IdempotencyKey) (domain.Idempotency
 		return domain.IdempotencyRecord{}, notFound("idempotency key", key)
 	}
 	return v, nil
+}
+func (r reader) Source(id domain.SourceID) (domain.Source, error) {
+	v, ok := r.state.sources[id]
+	if !ok {
+		return domain.Source{}, notFound("source", id)
+	}
+	return v, nil
+}
+func (r reader) SourceVersion(id domain.SourceVersionID) (domain.SourceVersion, error) {
+	v, ok := r.state.sourceVersions[id]
+	if !ok {
+		return domain.SourceVersion{}, notFound("source version", id)
+	}
+	return v, nil
+}
+func (r reader) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot, error) {
+	v, ok := r.state.sourceSnapshots[id]
+	if !ok {
+		return domain.SourceSnapshot{}, notFound("source snapshot", id)
+	}
+	return cloneSourceSnapshot(v), nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]
@@ -515,6 +553,39 @@ func (t transaction) CompleteIdempotency(key domain.IdempotencyKey, receiptID do
 	return v, nil
 }
 
+func (t transaction) AppendSource(v domain.Source, version domain.SourceVersion, snapshot domain.SourceSnapshot) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate source: %w", err)
+	}
+	if err := version.Validate(); err != nil {
+		return fmt.Errorf("validate source version: %w", err)
+	}
+	if err := snapshot.Validate(); err != nil {
+		return fmt.Errorf("validate source snapshot: %w", err)
+	}
+	if version.SourceID != v.ID || snapshot.SourceVersionID != version.ID {
+		return fmt.Errorf("%w: source ingestion lineage differs", port.ErrConflict)
+	}
+	digest := sha256.Sum256(snapshot.Content)
+	wantHash := "sha256:" + hex.EncodeToString(digest[:])
+	if version.ContentHash != wantHash || version.ContentRef != wantHash {
+		return fmt.Errorf("%w: source snapshot hash or content reference differs", port.ErrConflict)
+	}
+	if _, ok := t.state.sources[v.ID]; ok {
+		return conflict("source", v.ID)
+	}
+	if _, ok := t.state.sourceVersions[version.ID]; ok {
+		return conflict("source version", version.ID)
+	}
+	if _, ok := t.state.sourceSnapshots[version.ID]; ok {
+		return conflict("source snapshot", version.ID)
+	}
+	t.state.sources[v.ID] = v
+	t.state.sourceVersions[version.ID] = version
+	t.state.sourceSnapshots[version.ID] = cloneSourceSnapshot(snapshot)
+	return nil
+}
+
 func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate raw model output: %w", err)
@@ -709,6 +780,15 @@ func cloneState(src state) state {
 	for k, v := range src.idempotency {
 		dst.idempotency[k] = v
 	}
+	for k, v := range src.sources {
+		dst.sources[k] = v
+	}
+	for k, v := range src.sourceVersions {
+		dst.sourceVersions[k] = v
+	}
+	for k, v := range src.sourceSnapshots {
+		dst.sourceSnapshots[k] = cloneSourceSnapshot(v)
+	}
 	for k, v := range src.rawModelOutputs {
 		dst.rawModelOutputs[k] = v
 	}
@@ -762,6 +842,11 @@ func cloneRest(v domain.Rest) domain.Rest {
 		instant := *v.WokenAt
 		v.WokenAt = &instant
 	}
+	return v
+}
+
+func cloneSourceSnapshot(v domain.SourceSnapshot) domain.SourceSnapshot {
+	v.Content = append([]byte(nil), v.Content...)
 	return v
 }
 

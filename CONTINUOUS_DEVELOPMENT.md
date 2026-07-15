@@ -94,12 +94,13 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 ### Fase 3 — operações epistemológicas mínimas
 
-- [ ] `READY` Ingerir uma fonte fixture imutável.
-- [ ] `BLOCKED_BY:Fase2` Segmentar com round-trip verificável.
-- [ ] `BLOCKED_BY:Fase2` Propor observação ancorada.
-- [ ] `BLOCKED_BY:Fase2` Propor claim e vínculo de evidência.
-- [ ] `BLOCKED_BY:Fase2` Gerar uma visão citada a partir do estado canônico.
-- [ ] `BLOCKED_BY:Fase2` Atualizar a visão por patch após delta de evidência.
+- [x] `DONE` Ingerir uma fonte fixture imutável.
+  - Evidência: `internal/ingest` limita bytes, calcula SHA-256, persiste `Source → SourceVersion → SourceSnapshot` e evento atomicamente; store contracts verificam endereçamento por conteúdo, isolamento de bytes e rollback.
+- [ ] `READY` Segmentar com round-trip verificável.
+- [ ] `BLOCKED_BY:segmentação` Propor observação ancorada.
+- [ ] `BLOCKED_BY:observação` Propor claim e vínculo de evidência.
+- [ ] `BLOCKED_BY:claims` Gerar uma visão citada a partir do estado canônico.
+- [ ] `BLOCKED_BY:visão-citada` Atualizar a visão por patch após delta de evidência.
 
 ### Fase 4 — persistência real e spike de Dolt
 
@@ -154,3 +155,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 12:00 — Fase 2/changeset atômico — resposta texto preservada antes da validação; decoder estrito rejeita campos desconhecidos/não canônicos/duplicados; cadeia `Proposed → Accepted → Commit → evento/recibo/estado canônico` implementada com base versionada e replay idempotente — verificação: contract tests de rollback/base obsoleta, testes adversariais, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: injetar crashes nas fronteiras do processamento e comprovar retomada sem duplicação.
 2026-07-15 12:20 — Fase 2/crash-replay — failpoints determinísticos adicionados nas sete fronteiras de durabilidade do processamento; retomada com processor novo converge para um único commit/evento/entidade inclusive quando o crash ocorre após commit durável — verificação: teste de crash em tabela, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: scheduler mínimo em repouso dirigido por relógio virtual.
 2026-07-15 12:40 — Fase 2/repouso determinístico — scheduler mínimo seleciona por ordem estável, retoma `not_before` vencido, limita replenishment e persiste/encerra `Rest`; relógio manual bloqueia por sinal até deadline virtual sem polling — verificação: contract tests, testes de zero ciclo intermediário/despertar único, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: iniciar Fase 3 com ingestão de fonte fixture imutável.
+2026-07-15 13:00 — Fase 3/ingestão fixture — bytes limitados são preservados em snapshot imutável endereçado por SHA-256; fonte, versão, snapshot e evento são gravados atomicamente com validação de linhagem/hash — verificação: unit/contract tests de isolamento, oversize, hash divergente e rollback, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: segmentação determinística com cobertura, offsets e round-trip.
