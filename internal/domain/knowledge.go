@@ -126,8 +126,16 @@ type Claim struct {
 }
 
 func (c Claim) Validate() error {
-	if c.SchemaVersion != SchemaVersionV1 || c.ID == "" || c.Proposition == "" || c.Version == 0 {
+	if c.SchemaVersion != SchemaVersionV1 || c.ID == "" || strings.TrimSpace(c.Proposition) == "" || c.Version == 0 {
 		return errors.New("claim is incomplete or has unsupported schema version")
+	}
+	if len(c.Qualifiers) == 0 {
+		return errors.New("claim requires at least one explicit qualifier")
+	}
+	for key, value := range c.Qualifiers {
+		if strings.TrimSpace(key) == "" || strings.TrimSpace(value) == "" {
+			return errors.New("claim qualifiers must not contain blank keys or values")
+		}
 	}
 	return nil
 }

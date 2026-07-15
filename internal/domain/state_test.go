@@ -85,3 +85,18 @@ func TestEvidenceLinkRejectsUnknownRelation(t *testing.T) {
 		t.Fatal("Validate() accepted an unknown evidence relation")
 	}
 }
+
+func TestClaimRequiresExplicitNonBlankQualifiers(t *testing.T) {
+	claim := Claim{SchemaVersion: SchemaVersionV1, ID: "claim_1", Proposition: "X occurs", Version: 1}
+	if err := claim.Validate(); err == nil {
+		t.Fatal("Validate() accepted a claim without qualifiers")
+	}
+	claim.Qualifiers = map[string]string{"scope": " "}
+	if err := claim.Validate(); err == nil {
+		t.Fatal("Validate() accepted a blank qualifier")
+	}
+	claim.Qualifiers["scope"] = "experiment X"
+	if err := claim.Validate(); err != nil {
+		t.Fatalf("Validate() rejected explicit qualifier: %v", err)
+	}
+}

@@ -36,6 +36,8 @@ type state struct {
 	sourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
 	sourceFragments  map[domain.SourceFragmentID]domain.SourceFragment
 	observations     map[domain.ObservationID]domain.Observation
+	claims           map[domain.ClaimID]domain.Claim
+	evidenceLinks    map[domain.EvidenceLinkID]domain.EvidenceLink
 	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
 	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
@@ -66,6 +68,8 @@ func newState() state {
 		sourceSnapshots:  make(map[domain.SourceVersionID]domain.SourceSnapshot),
 		sourceFragments:  make(map[domain.SourceFragmentID]domain.SourceFragment),
 		observations:     make(map[domain.ObservationID]domain.Observation),
+		claims:           make(map[domain.ClaimID]domain.Claim),
+		evidenceLinks:    make(map[domain.EvidenceLinkID]domain.EvidenceLink),
 		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
 		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
 		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
@@ -194,6 +198,15 @@ func (t transaction) SourceFragments(id domain.SourceVersionID) ([]domain.Source
 }
 func (t transaction) Observation(id domain.ObservationID) (domain.Observation, error) {
 	return reader(t).Observation(id)
+}
+func (t transaction) Claim(id domain.ClaimID) (domain.Claim, error) {
+	return reader(t).Claim(id)
+}
+func (t transaction) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink, error) {
+	return reader(t).EvidenceLink(id)
+}
+func (t transaction) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink, error) {
+	return reader(t).EvidenceLinksForClaim(id)
 }
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
@@ -339,6 +352,33 @@ func (r reader) Observation(id domain.ObservationID) (domain.Observation, error)
 		return domain.Observation{}, notFound("observation", id)
 	}
 	return v, nil
+}
+func (r reader) Claim(id domain.ClaimID) (domain.Claim, error) {
+	v, ok := r.state.claims[id]
+	if !ok {
+		return domain.Claim{}, notFound("claim", id)
+	}
+	return cloneClaim(v), nil
+}
+func (r reader) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink, error) {
+	v, ok := r.state.evidenceLinks[id]
+	if !ok {
+		return domain.EvidenceLink{}, notFound("evidence link", id)
+	}
+	return v, nil
+}
+func (r reader) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink, error) {
+	if _, ok := r.state.claims[id]; !ok {
+		return nil, notFound("claim", id)
+	}
+	links := make([]domain.EvidenceLink, 0)
+	for _, link := range r.state.evidenceLinks {
+		if link.ClaimID == id {
+			links = append(links, link)
+		}
+	}
+	sort.Slice(links, func(i, j int) bool { return links[i].ID < links[j].ID })
+	return links, nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]
@@ -698,6 +738,42 @@ func (t transaction) AppendObservation(v domain.Observation) error {
 	return nil
 }
 
+func (t transaction) AppendClaimWithEvidence(claim domain.Claim, links []domain.EvidenceLink) error {
+	if err := claim.Validate(); err != nil {
+		return fmt.Errorf("validate claim: %w", err)
+	}
+	if _, exists := t.state.claims[claim.ID]; exists {
+		return conflict("claim", claim.ID)
+	}
+	if len(links) == 0 {
+		return fmt.Errorf("claim proposal requires at least one evidence link")
+	}
+	seen := make(map[domain.EvidenceLinkID]struct{}, len(links))
+	for _, link := range links {
+		if err := link.Validate(); err != nil {
+			return fmt.Errorf("validate evidence link: %w", err)
+		}
+		if link.ClaimID != claim.ID {
+			return fmt.Errorf("%w: evidence link targets another claim", port.ErrConflict)
+		}
+		if _, ok := t.state.observations[link.ObservationID]; !ok {
+			return notFound("observation", link.ObservationID)
+		}
+		if _, duplicate := seen[link.ID]; duplicate {
+			return conflict("evidence link", link.ID)
+		}
+		if _, exists := t.state.evidenceLinks[link.ID]; exists {
+			return conflict("evidence link", link.ID)
+		}
+		seen[link.ID] = struct{}{}
+	}
+	t.state.claims[claim.ID] = cloneClaim(claim)
+	for _, link := range links {
+		t.state.evidenceLinks[link.ID] = link
+	}
+	return nil
+}
+
 func (t transaction) AppendRawModelOutput(v domain.RawModelOutput) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate raw model output: %w", err)
@@ -907,6 +983,12 @@ func cloneState(src state) state {
 	for k, v := range src.observations {
 		dst.observations[k] = v
 	}
+	for k, v := range src.claims {
+		dst.claims[k] = cloneClaim(v)
+	}
+	for k, v := range src.evidenceLinks {
+		dst.evidenceLinks[k] = v
+	}
 	for k, v := range src.rawModelOutputs {
 		dst.rawModelOutputs[k] = v
 	}
@@ -965,6 +1047,15 @@ func cloneRest(v domain.Rest) domain.Rest {
 
 func cloneSourceSnapshot(v domain.SourceSnapshot) domain.SourceSnapshot {
 	v.Content = append([]byte(nil), v.Content...)
+	return v
+}
+
+func cloneClaim(v domain.Claim) domain.Claim {
+	qualifiers := make(map[string]string, len(v.Qualifiers))
+	for key, value := range v.Qualifiers {
+		qualifiers[key] = value
+	}
+	v.Qualifiers = qualifiers
 	return v
 }
 

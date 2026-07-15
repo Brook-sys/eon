@@ -100,8 +100,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/segment` divide texto UTF-8 deterministicamente sem alterar bytes; `SourceFragment` registra offsets/hash, store exige cobertura contígua completa e contract tests comprovam ordem, rollback e round-trip.
 - [x] `DONE` Propor observação ancorada.
   - Evidência: `internal/observe` persiste proposta e evento atomicamente; store resolve o fragmento e exige citação exata byte a byte antes de aceitar a observação, com contract tests de âncora ausente, quote divergente e rollback.
-- [ ] `READY` Propor claim e vínculo de evidência.
-- [ ] `BLOCKED_BY:claims` Gerar uma visão citada a partir do estado canônico.
+- [x] `DONE` Propor claim e vínculo de evidência.
+  - Evidência: `internal/claim` persiste claim atômico com qualificadores explícitos, um ou mais `EvidenceLink`s tipados, endpoints resolvidos e evento na mesma transação; contract tests cobrem isolamento e rollback de vínculos órfãos.
+- [ ] `READY` Gerar uma visão citada a partir do estado canônico.
 - [ ] `BLOCKED_BY:visão-citada` Atualizar a visão por patch após delta de evidência.
 
 ### Fase 4 — persistência real e spike de Dolt
@@ -160,3 +161,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 13:00 — Fase 3/ingestão fixture — bytes limitados são preservados em snapshot imutável endereçado por SHA-256; fonte, versão, snapshot e evento são gravados atomicamente com validação de linhagem/hash — verificação: unit/contract tests de isolamento, oversize, hash divergente e rollback, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: segmentação determinística com cobertura, offsets e round-trip.
 2026-07-15 13:20 — Fase 3/segmentação — texto UTF-8 segmentado deterministicamente por offsets de bytes; store exige cobertura total ordenada, localização/hash coerentes e grava evento atomicamente — verificação: contract tests de rollback/lacunas e teste Unicode de round-trip, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: propor observações estritamente ancoradas em fragmentos recuperáveis.
 2026-07-15 13:40 — Fase 3/observações ancoradas — propostas preservam declaração, citação exata e proveniência separadas; store resolve âncora e rejeita quote inventada sem evento parcial — verificação: contract/unit tests, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: claims versionados e vínculos de evidência tipados.
+2026-07-15 14:00 — Fase 3/claims e evidência — claims exigem qualificadores explícitos e são persistidos atomicamente com vínculos tipados para observações existentes e evento auditável — verificação: unit/contract tests de isolamento, endpoint órfão e rollback, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: materializar uma visão citada do estado canônico.

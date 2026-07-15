@@ -180,6 +180,72 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatalf("missing anchor error = %v, want ErrNotFound", err)
 		}
 	})
+	t.Run("claims require qualifiers and evidence links resolve both endpoints", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 15, 17, 0, 0, 0, time.UTC)
+		content := []byte("bounded claim evidence")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		source := domain.Source{SchemaVersion: 1, ID: "source_1", Kind: "fixture", Locator: "source.txt", ObservedAt: now}
+		version := domain.SourceVersion{SchemaVersion: 1, ID: "source_version_1", SourceID: source.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snapshot := domain.SourceSnapshot{SchemaVersion: 1, SourceVersionID: version.ID, MediaType: "text/plain", Content: content}
+		fragment := domain.SourceFragment{SchemaVersion: 1, ID: "fragment_1", SourceVersionID: version.ID, Location: "bytes:0-22", StartOffset: 0, EndOffset: 22, ContentHash: hash, ContentRef: hash}
+		observation := domain.Observation{SchemaVersion: 1, ID: "observation_1", Statement: "the source provides claim evidence", ExactQuote: string(content), Anchor: domain.ObservationAnchor{SourceFragmentID: fragment.ID}, Provenance: "extractor:test@1"}
+		claim := domain.Claim{SchemaVersion: 1, ID: "claim_1", Proposition: "The fixture provides bounded evidence.", Qualifiers: map[string]string{"scope": "fixture"}, Version: 1}
+		link := domain.EvidenceLink{SchemaVersion: 1, ID: "evidence_1", ObservationID: observation.ID, ClaimID: claim.ID, Relation: domain.EvidenceSupports, Rationale: "exact source anchor"}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendSource(source, version, snapshot); err != nil {
+				return err
+			}
+			if err := tx.AppendSourceFragments(version.ID, []domain.SourceFragment{fragment}); err != nil {
+				return err
+			}
+			if err := tx.AppendObservation(observation); err != nil {
+				return err
+			}
+			return tx.AppendClaimWithEvidence(claim, []domain.EvidenceLink{link})
+		}); err != nil {
+			t.Fatalf("append claim and evidence: %v", err)
+		}
+		claim.Qualifiers["scope"] = "caller mutation"
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.Claim("claim_1")
+			if err != nil {
+				return err
+			}
+			if got.Qualifiers["scope"] != "fixture" {
+				t.Fatalf("stored claim aliased caller: %+v", got.Qualifiers)
+			}
+			links, err := r.EvidenceLinksForClaim(got.ID)
+			if err != nil {
+				return err
+			}
+			if len(links) != 1 || links[0] != link {
+				t.Fatalf("evidence links = %+v, want %+v", links, link)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		orphan := domain.Claim{SchemaVersion: 1, ID: "claim_2", Proposition: "orphan", Qualifiers: map[string]string{"scope": "test"}, Version: 1}
+		orphanLink := domain.EvidenceLink{SchemaVersion: 1, ID: "evidence_2", ObservationID: "observation_missing", ClaimID: orphan.ID, Relation: domain.EvidenceSupports}
+		err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.AppendClaimWithEvidence(orphan, []domain.EvidenceLink{orphanLink})
+		})
+		if !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("orphan evidence error = %v, want ErrNotFound", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			_, err := r.Claim(orphan.ID)
+			if !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("orphan claim survived rollback: %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)
