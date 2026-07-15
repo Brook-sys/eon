@@ -39,6 +39,21 @@ type Ingester struct {
 }
 
 func (i Ingester) IngestFixture(ctx context.Context, missionRevision domain.MissionRevisionID, fixture Fixture) (Result, error) {
+	return i.ingest(ctx, missionRevision, fixture)
+}
+
+// IngestFetched converts the exact bytes returned by a bounded web adapter into
+// the same immutable source lineage used by fixtures. HTTP metadata is kept as
+// an external version hint; it never changes the content-addressed identity.
+func (i Ingester) IngestFetched(ctx context.Context, missionRevision domain.MissionRevisionID, fetched port.FetchResult) (Result, error) {
+	externalVersion := strings.TrimSpace(fetched.ETag)
+	if externalVersion == "" {
+		externalVersion = strings.TrimSpace(fetched.LastModified)
+	}
+	return i.ingest(ctx, missionRevision, Fixture{Kind: "web", Locator: fetched.FinalURL, ExternalVersion: externalVersion, MediaType: fetched.MediaType, Content: fetched.Content})
+}
+
+func (i Ingester) ingest(ctx context.Context, missionRevision domain.MissionRevisionID, fixture Fixture) (Result, error) {
 	if i.Store == nil || i.Clock == nil || i.IDs == nil {
 		return Result{}, errors.New("fixture ingester requires store, clock and ID generator")
 	}

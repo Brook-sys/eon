@@ -135,8 +135,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
-- [ ] `READY` Adapter de busca web com fixtures e replay.
-- [ ] `READY` Aquisição segura com limites de bytes e tipos.
+- [x] `DONE` Adapter de busca web com fixtures e replay.
+  - Evidência: porta neutra `WebSearcher`, adapter SearXNG JSON com resposta limitada/erros não vazáveis e adapter de replay determinístico com captura de requests; testes rodam integralmente offline.
+- [x] `DONE` Aquisição segura com limites de bytes e tipos.
+  - Evidência: porta `WebFetcher` e adapter HTTP(S) impõem esquema, redirects limitados e revalidados, bloqueio de destinos IP especiais por padrão, allowlist MIME e limite prévio/streaming de bytes; bytes adquiridos entram na linhagem imutável via `IngestFetched`.
 - [ ] `READY` Matriz de compatibilidade OpenAI-compatible.
 - [ ] `READY` Benchmark 2k/4k/8k para operações selecionadas.
 - [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
@@ -200,3 +202,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 19:00 — Fase 4/campanha completa Dolt — 90 crashes reais executados; resultados por trial persistidos: 30/30 não aplicados antes do SQL commit, 30/30 parciais inválidos na janela SQL-only e 30/30 aplicados após commit Dolt — verificação: `TestDoltServerOfficialCrashCampaigns` com Dolt 2.2.0, writer/round-trip JSON e `go vet` — próximo: workload medido comum e relatório comparativo; a janela SQL-only é bloqueador arquitetural a resolver ou aceitar contra Dolt.
 2026-07-15 19:20 — Fase 4/workload completo — runner CLI reproduzível criado e dataset comum executado em SQLite 3.50.4 e Dolt 2.2.0; footprint Dolt foi 3,90× maior e latências de execução única mostraram variância, enquanto o bloqueador de crash permanece decisivo — verificação: `go test ./...`, `go vet ./...`, `git diff --check`, artefatos JSON/Markdown com SHA-256 idêntico — próximo: síntese curta de diff/complexidade e ADR, ou tentativa explicitamente delimitada de reconciliação Dolt.
 2026-07-15 19:40 — Fase 4/decisão de storage — spike encerrado; complexidade e limites de diff sintetizados; ADR-0003 aceita SQLite + event log e rejeita Dolt 2.2.0 na configuração medida por 30/30 estados parciais na janela SQL-only — verificação: rastreabilidade documental, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: iniciar fontes reais com aquisição segura e replay.
+2026-07-15 20:00 — Fase 5/busca e aquisição web — portas neutras, adapter SearXNG, replay determinístico e fetch HTTP(S) hostil por padrão implementados; snapshots web reutilizam ingestão content-addressed — verificação: testes offline de limites/tipos/redirects/replay, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: matriz OpenAI-compatible e benchmark de contexto.

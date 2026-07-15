@@ -55,6 +55,24 @@ func TestIngestFixturePersistsExactImmutableSnapshotAtomically(t *testing.T) {
 	}
 }
 
+func TestIngestFetchedPreservesAcquiredBytesAndHTTPVersionHint(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 15, 20, 0, 0, 0, time.UTC)
+	ingester := ingest.Ingester{Store: store, Clock: runtimesource.NewManualClock(now), IDs: runtimesource.NewSequenceIDGenerator(1), MaxBytes: 64}
+	fetched := port.FetchResult{FinalURL: "https://example.test/paper", MediaType: "text/plain", ETag: `"revision-2"`, Content: []byte("hostile prompt text remains source data")}
+	result, err := ingester.IngestFetched(context.Background(), "", fetched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Source.Kind != "web" || result.Source.Locator != fetched.FinalURL || result.Version.ExternalVersion != fetched.ETag || string(result.Snapshot.Content) != string(fetched.Content) {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+	fetched.Content[0] = 'X'
+	if string(result.Snapshot.Content) != "hostile prompt text remains source data" {
+		t.Fatalf("result aliased fetch bytes: %q", result.Snapshot.Content)
+	}
+}
+
 func TestIngestFixtureRejectsOversizeAndRollsBackMissingMission(t *testing.T) {
 	store := memory.New()
 	now := time.Date(2026, 7, 15, 16, 0, 0, 0, time.UTC)
