@@ -6,7 +6,7 @@ Status: ativo
 
 Transformar incrementalmente os documentos de pesquisa em um runtime epistemológico executável, testável e recuperável em Go, sem antecipar decisões ainda não validadas.
 
-Cada heartbeat executa no máximo um incremento pequeno. O estado deste arquivo é a coordenação persistente entre ciclos.
+Cada heartbeat executa normalmente um lote de 2 a 4 melhorias relacionadas. Um único item pode ocupar o ciclo apenas quando for substancial — por exemplo, implementação acompanhada de testes, investigação comparativa ou correção estrutural ampla. O estado deste arquivo é a coordenação persistente entre ciclos.
 
 ## Restrições aceitas
 
@@ -21,15 +21,25 @@ Cada heartbeat executa no máximo um incremento pequeno. O estado deste arquivo 
 - Dolt condicionado a spike comparativo;
 - automação geral fora do MVP.
 
-## Definição de incremento concluído
+## Definição de lote concluído
 
-Um incremento é concluído somente quando possui:
+Um lote é concluído somente quando possui:
 
-1. objetivo delimitado;
-2. alteração observável;
-3. verificação executada;
-4. documentação da decisão ou contrato afetado;
-5. commit isolado, salvo se o resultado for apenas investigação inconclusiva registrada.
+1. objetivo comum delimitado;
+2. normalmente 2 a 4 melhorias observáveis e relacionadas;
+3. integração coerente entre documentos, contratos, código e testes afetados;
+4. verificação executada para o conjunto;
+5. documentação das decisões ou contratos afetados;
+6. um ou mais commits atômicos, salvo se o resultado for apenas investigação inconclusiva registrada.
+
+Exemplos de lotes adequados:
+
+- corrigir duas contradições, adicionar o requisito normativo correspondente e atualizar rastreabilidade;
+- definir uma interface Go, implementar o fake e criar contract tests;
+- pesquisar duas alternativas, registrar evidências e atualizar um ADR sem ainda aceitá-lo;
+- implementar uma transição de estado, testes de tabela, fuzz test e documentação da invariante.
+
+Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões artificiais do mesmo parágrafo ou arquivos sem conteúdo verificável.
 
 ## Ordem de desenvolvimento
 
