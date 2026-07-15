@@ -111,7 +111,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 
 - [x] `DONE` Fixar suite de contract tests e protocolo comparável de armazenamento.
   - Evidência: `contract.TestStore` permanece a suite funcional comum; `contract.TestDurableStore` formaliza reopen, rollback e idempotência entre processos; `STORAGE_SPIKE.md` fixa dataset, crash harness, métricas e critérios de decisão.
-- [ ] `READY` Implementar cenário comparável em SQLite + event log.
+- [x] `DONE` Implementar cenário comparável em SQLite + event log.
+  - Evidência: adapter `internal/storage/sqlite` usa SQLite WAL/synchronous FULL para checkpoint atômico do modelo de referência completo; passa `contract.TestStore` e `contract.TestDurableStore`, incluindo rollback, reopen e idempotência persistente.
 - [ ] `READY` Implementar cenário comparável em Dolt.
 - [ ] `BLOCKED_BY:SQLite,Dolt` Medir footprint, latência, recuperação, diff e complexidade.
 - [ ] `BLOCKED_BY:Medição` Registrar ADR final do backend.
@@ -168,3 +169,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-15 14:20 — Fase 3/visões citadas — visão materializada determinística criada sobre claim/evidência/fonte; patch de evidência gera sucessora e torna a anterior detectavelmente obsoleta em transação única — verificação: contract/unit tests de isolamento e rollback, `go test ./...`, `go vet ./...`, `git diff --check`; stdlib escolhida após preflight, sem dependência de JSON Patch — próximo: fixar suite comparável de storage e iniciar spikes Dolt/SQLite.
 2026-07-15 14:40 — Fase 4/protocolo do spike — suite durável separada formaliza reopen/rollback/idempotência; plano fixa dataset determinístico, crash subprocessado, métricas, bloqueadores e pesos comuns para SQLite/Dolt — verificação: fontes oficiais Dolt/SQLite/modernc, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: adapter SQLite + event log sob ambas as suites.
+2026-07-15 15:00 — Fase 4/SQLite durável — checkpoint completo e isolado do modelo de referência persistido atomicamente em SQLite WAL/FULL; adapter passa suites funcional e durável com reopen, rollback e idempotência — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível sem toolchain C — próximo: adapter Dolt sob as mesmas suites e depois crash harness subprocessado.
