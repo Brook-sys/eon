@@ -155,9 +155,12 @@ type OperationSpec struct {
 	SchemaVersion    int             `json:"schema_version"`
 	ID               OperationSpecID `json:"id"`
 	ContractVersion  uint64          `json:"contract_version"`
+	TemplateVersion  uint64          `json:"template_version"`
 	InputSchema      string          `json:"input_schema"`
 	OutputSchema     string          `json:"output_schema"`
 	Budget           Budget          `json:"budget"`
+	MaxOutputTokens  int             `json:"max_output_tokens"`
+	SafetyMargin     int             `json:"safety_margin_tokens"`
 	Validators       []string        `json:"validators"`
 	RetryPolicy      string          `json:"retry_policy"`
 	FallbackPolicy   string          `json:"fallback_policy"`
@@ -165,8 +168,11 @@ type OperationSpec struct {
 }
 
 func (s OperationSpec) Validate() error {
-	if s.SchemaVersion != SchemaVersionV1 || s.ID == "" || s.ContractVersion == 0 || s.InputSchema == "" || s.OutputSchema == "" || len(s.Validators) == 0 || s.RetryPolicy == "" || s.FallbackPolicy == "" {
+	if s.SchemaVersion != SchemaVersionV1 || s.ID == "" || s.ContractVersion == 0 || s.TemplateVersion == 0 || s.InputSchema == "" || s.OutputSchema == "" || s.Budget.Tokens == 0 || s.MaxOutputTokens <= 0 || s.SafetyMargin < 0 || len(s.Validators) == 0 || s.RetryPolicy == "" || s.FallbackPolicy == "" {
 		return errors.New("operation spec is incomplete or has unsupported schema version")
+	}
+	if s.MaxOutputTokens+s.SafetyMargin >= s.Budget.Tokens {
+		return errors.New("operation spec output reservation and safety margin must leave input capacity")
 	}
 	switch s.MaximumAuthority {
 	case AuthorityProposeOnly, AuthorityReadOnly, AuthorityKernelWrite:

@@ -345,5 +345,5 @@ func agendaRecords() (domain.Question, domain.InquiryCandidate, domain.Inquiry, 
 }
 
 func operationSpec() domain.OperationSpec {
-	return domain.OperationSpec{SchemaVersion: 1, ID: "extract@1", ContractVersion: 1, InputSchema: "fragment refs", OutputSchema: "proposed change set", Budget: domain.Budget{ModelCalls: 1, Tokens: 1000, Attempts: 1}, Validators: []string{"schema"}, RetryPolicy: "no retry", FallbackPolicy: "fail", MaximumAuthority: domain.AuthorityProposeOnly}
+	return domain.OperationSpec{SchemaVersion: 1, ID: "extract@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "fragment refs", OutputSchema: "proposed change set", Budget: domain.Budget{ModelCalls: 1, Tokens: 1000, Attempts: 1}, MaxOutputTokens: 100, SafetyMargin: 50, Validators: []string{"schema"}, RetryPolicy: "no retry", FallbackPolicy: "fail", MaximumAuthority: domain.AuthorityProposeOnly}
 }

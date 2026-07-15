@@ -83,8 +83,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/provider/openai/fakeserver` oferece servidor HTTP roteado, script determinístico, captura de requests e registro de mismatches para testes offline.
 - [x] `DONE` Implementar provider mínimo Chat Completions texto→texto.
   - Evidência: porta neutra `ModelProvider` e adapter `internal/provider/openai` fazem POST limitado a `/v1/chat/completions`, extraem texto/usage, classificam HTTP/transporte/resposta inválida e não expõem corpo de erro.
-- [ ] `READY` Compilar um `OperationSpec` sob budget.
-- [ ] `BLOCKED_BY:OperationSpec` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
+- [x] `DONE` Compilar um `OperationSpec` sob budget.
+  - Evidência: `internal/prompt` compila envelope texto→texto versionado, usa o menor limite entre spec/provider, reserva saída e margem, seleciona fatos opcionais por prioridade sem truncamento e falha quando conteúdo obrigatório não cabe; testes de fronteira e fuzz verificam o limite.
+- [ ] `READY` Produzir, validar e aplicar `ProposedChangeSet` atomicamente.
 - [ ] `BLOCKED_BY:Provider,ChangeSet` Simular crash e comprovar retomada sem efeito duplicado.
 - [ ] `BLOCKED_BY:Retomada` Comprovar repouso sem busy loop usando relógio virtual.
 
@@ -146,3 +147,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 11:00 — Fase 2/agenda recuperável — catálogo versionado de `OperationSpec` persistido; referências de missão/spec/linhagem validadas no store; bootstrap atômico cria pergunta, candidata, inquiry, operação, wake conditions e evento auditável — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: servidor OpenAI-compatible falso e provider texto→texto.
 
 2026-07-15 11:20 — Fase 2/provider simulado — servidor OpenAI-compatible falso roteado e provider Chat Completions texto→texto implementados; limites de resposta, erros tipados, retryability e não vazamento de corpo cobertos — verificação: `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: compilar `OperationSpec` sob budget e preservar resposta bruta antes da validação.
+2026-07-15 11:40 — Fase 2/compilação sob budget — contrato de `OperationSpec` passou a versionar template e reservar saída/margem; compilador determinístico seleciona contexto opcional por prioridade e rejeita conteúdo obrigatório excessivo — verificação: testes de fronteira/fuzz, `go test ./...`, `go vet ./...`, `git diff --check`; race indisponível porque requer cgo/toolchain C — próximo: preservar resposta bruta e implementar changeset validado/atômico.
