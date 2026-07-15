@@ -1,6 +1,6 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.3
+Status: rascunho v0.4
 
 ## Tese
 
@@ -29,6 +29,10 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 14. A agenda é renovável: concluir uma tarefa deve revelar, validar ou gerar próximas tarefas alinhadas à missão.
 15. Eventos externos influenciam o rumo, mas não são requisito para progresso.
 16. A geração autônoma de tarefas permanece limitada pela missão, políticas e orçamento definidos pelo operador.
+17. O modelo é um resolvedor textual limitado, não um agente, scheduler ou executor.
+18. Tool calling nativo é uma otimização opcional; o protocolo básico funciona com texto simples.
+19. Problemas complexos são atravessados por microturnos persistentes, não entregues inteiros ao modelo.
+20. Prompts são compilados por operação, curtos, versionados, testáveis e sem histórico conversacional desnecessário.
 
 ## Visão em camadas
 
@@ -386,6 +390,8 @@ capabilities() -> {json_mode, tool_calls, context_limit, ...}
 
 Adaptadores possíveis: Ollama, llama.cpp, APIs compatíveis com OpenAI e provedores gratuitos.
 
+O contrato mínimo exige somente `text -> text`. JSON mode, function calling, streaming e system prompt são capacidades opcionais detectadas pelo adaptador. O kernel nunca depende delas para funcionar.
+
 ### 2. Planner
 
 Converte um objetivo ou falha em pequenos `WorkItem`s. Pode haver implementações:
@@ -393,6 +399,8 @@ Converte um objetivo ou falha em pequenos `WorkItem`s. Pode haver implementaçõ
 - `RulePlanner`: regras determinísticas para fluxos conhecidos.
 - `LLMPlanner`: decomposição via modelo.
 - `HybridPlanner`: templates primeiro, modelo apenas para lacunas.
+
+O planner não envia um objetivo complexo para o modelo e aceita um plano completo. Ele usa decomposição hierárquica, validadores e um horizonte curto. Cada expansão produz poucos filhos e pode ser revisada antes de continuar.
 
 ### 3. Selector
 
@@ -413,6 +421,8 @@ necessidades do WorkItem
 ```
 
 O contexto deve conter identidade da tarefa, critérios, fatos confirmados e formato de saída; não a conversa inteira.
+
+O `ContextCompiler` também atua como `PromptCompiler`: seleciona um template específico à operação, substitui referências por fatos compactos, enumera opções válidas e reserva espaço de saída. O prompt resultante deve poder ser reproduzido por ID e versão.
 
 ### 5. CapabilityRegistry
 
@@ -501,16 +511,24 @@ Plugins não acessam o kernel diretamente. Recebem interfaces estreitas e retorn
 
 ## Estratégias específicas para modelos fracos
 
+O modelo deve ser tratado como um componente potencialmente inconsistente, com baixa capacidade de abstração, instrução e formatação. A arquitetura assume que ele pode ignorar schemas, inventar ferramentas, perder restrições e produzir texto extra.
+
 1. Saídas pequenas, tipadas e validadas.
 2. Uma decisão cognitiva por chamada.
 3. Vocabulário de ações limitado por estado.
-4. Reparo automático de JSON antes de repetir toda a chamada.
-5. Exemplos curtos específicos para a operação atual.
-6. Contexto de fatos em vez de transcrições.
-7. Planejamento progressivo: detalhar somente os próximos passos.
-8. Verificadores externos ao modelo.
-9. Fallback entre modelos por competência, não apenas por disponibilidade.
-10. Possibilidade de votação ou crítica somente em decisões de alto impacto.
+4. Protocolo textual básico sem dependência de tool calling.
+5. Reparo determinístico antes de qualquer nova chamada.
+6. Exemplos curtos específicos para a operação atual.
+7. Contexto de fatos em vez de transcrições.
+8. Planejamento progressivo: detalhar somente os próximos passos.
+9. Verificadores externos ao modelo.
+10. Fallback entre modelos por competência, não apenas por disponibilidade.
+11. Escolha fechada sempre que possível; geração aberta somente quando necessária.
+12. Separar interpretar, decidir, produzir e revisar em microturnos diferentes.
+13. Nunca permitir que texto do modelo execute uma ferramenta diretamente.
+14. Avaliar cada template com os modelos-alvo mais fracos.
+
+O protocolo detalhado está em `WEAK_MODEL_PROTOCOL.md`.
 
 ## Unidade de modularidade
 
