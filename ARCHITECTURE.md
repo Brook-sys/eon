@@ -1,11 +1,15 @@
 # Motor Autônomo — Arquitetura inicial
 
-Status: rascunho v0.1
+Status: rascunho v0.2
 
 ## Tese
 
 A inteligência principal deve estar no sistema, não depender exclusivamente do modelo.
 O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com janelas de contexto reduzidas.
+
+Seu propósito principal é **continuidade operacional**: permanecer vivo, preservar estado e voltar a avançar assim que houver trabalho, capacidade e permissão. O motor é contínuo; objetivos e operações podem ser finitos.
+
+Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que espera, rate limit, callback pendente, reinício, indisponibilidade e ausência de trabalho são estados normais e duráveis do runtime.
 
 ## Princípios
 
@@ -17,6 +21,11 @@ O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com jane
 6. Reinício e retomada sem perda do progresso.
 7. Falha fechada para ações sem permissão ou sem validação.
 8. Um modelo fraco pode exigir mais passos, mas não deve romper o protocolo.
+9. Esperar é trabalho válido: o motor deve dormir sem perder estado e acordar por evento ou prazo.
+10. Limites são entradas do scheduler, não exceções improvisadas.
+11. Toda operação com efeito colateral deve ser idempotente ou possuir chave de deduplicação.
+12. Nenhuma dependência externa, incluindo o modelo, controla a continuidade do kernel.
+13. Conversas entre agentes não fazem parte do núcleo; coordenação ocorre por estado, eventos e contratos.
 
 ## Visão em camadas
 
@@ -26,7 +35,7 @@ O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com jane
 ├──────────────────────────────────────────────────────────┤
 │ Control Plane: objetivos, políticas, orçamento, aprovação│
 ├──────────────────────────────────────────────────────────┤
-│ Kernel: máquina de estados, scheduler, eventos, retomada │
+│ Kernel: supervisor, scheduler, eventos, espera, retomada │
 ├──────────────────────────────────────────────────────────┤
 │ Cognição: planner, selector, critic, context compiler    │
 ├──────────────────────────────────────────────────────────┤
@@ -40,16 +49,21 @@ O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com jane
 
 O kernel não interpreta linguagem natural. Ele somente opera estados e comandos válidos.
 
-Estados iniciais:
+Estados iniciais de uma unidade de trabalho:
 
 - `NEW`: objetivo recebido, ainda não normalizado.
 - `READY`: há uma próxima unidade de trabalho executável.
 - `RUNNING`: uma ação está em execução.
 - `VERIFYING`: o resultado está sendo comparado aos critérios.
-- `WAITING`: depende de tempo, evento ou aprovação humana.
+- `WAITING_TIME`: aguarda um instante ou intervalo calculado.
+- `WAITING_EVENT`: aguarda callback, mensagem, arquivo ou outro evento.
+- `WAITING_APPROVAL`: aguarda autorização humana.
+- `THROTTLED`: aguarda capacidade de um rate limiter.
+- `BLOCKED_DEPENDENCY`: uma dependência externa está indisponível.
 - `REPLANNING`: estratégia falhou ou estagnou.
 - `SUCCEEDED`: critérios de conclusão satisfeitos.
-- `FAILED`: orçamento ou política impediu continuação segura.
+- `EXHAUSTED`: orçamento próprio da tarefa terminou e exige nova decisão ou intervenção.
+- `FAILED`: erro terminal explicitamente classificado como não recuperável.
 - `CANCELLED`: interrompido externamente.
 
 Loop:
@@ -59,6 +73,134 @@ observe → select → prepare → act → verify → commit → repeat
 ```
 
 Cada transição deve ser registrada em um log append-only.
+
+O runtime global possui um ciclo diferente:
+
+```text
+recover → ingest events → release due waits → schedule → dispatch
+        → persist → calculate next wake-up → sleep → recover
+```
+
+Se não houver trabalho executável, o kernel calcula o próximo prazo e dorme. Ele deve poder ser acordado antecipadamente por callback ou evento. Portanto, seu comportamento contínuo é **event-driven**, não polling agressivo.
+
+## Invariante de continuidade
+
+Enquanto não houver uma ordem explícita de desligamento ou falha fatal do armazenamento:
+
+1. todo trabalho aceito permanece representado no estado persistente;
+2. todo trabalho não terminal possui uma condição explícita para voltar a ser avaliado;
+3. após reinício, o runtime reconstrói filas, esperas, leases e callbacks pendentes;
+4. nenhuma resposta de modelo é necessária para o motor saber como retomar;
+5. rate limits e dependências indisponíveis adiam trabalho, mas não apagam intenção;
+6. o motor pode permanecer indefinidamente em repouso com consumo mínimo.
+
+Isso diferencia:
+
+- **continuidade do motor**: potencialmente indefinida;
+- **continuidade de um objetivo**: até conclusão, cancelamento ou intervenção;
+- **continuidade de uma tentativa**: curta, limitada por timeout e lease.
+
+## Supervisor e scheduler durável
+
+O kernel deve conter dois componentes centrais.
+
+### Supervisor
+
+- inicializa e recupera o estado;
+- monitora workers e renova leases;
+- converte processos interrompidos em trabalho recuperável;
+- mantém health checks de dependências;
+- executa shutdown gracioso;
+- garante que falhas locais não encerrem o runtime inteiro.
+
+### Scheduler
+
+Escolhe apenas trabalhos que estejam simultaneamente:
+
+- prontos por dependência;
+- dentro do orçamento;
+- permitidos pela política;
+- autorizados pelo rate limiter;
+- fora de cooldown ou backoff;
+- sem lease ativo em outro worker;
+- com recursos disponíveis.
+
+O scheduler não pergunta ao modelo se pode executar. Essa decisão é estrutural e determinística.
+
+## Tempo, rate limits e backpressure
+
+Cada recurso limitado deve possuir um `ResourceGate`, por exemplo:
+
+```text
+model:ollama/local
+model:provider/free-tier
+web:searxng
+tool:shell
+domain:api.example.com
+```
+
+Contrato conceitual:
+
+```text
+acquire(resource, cost, priority) -> Permit | WaitUntil
+report(result, headers, latency)
+```
+
+O gate deve entender:
+
+- limites conhecidos por minuto/dia;
+- `Retry-After` e cabeçalhos do provedor;
+- concorrência máxima;
+- custo estimado em tokens;
+- cooldown por erro;
+- exponential backoff com jitter;
+- circuit breaker para dependências instáveis;
+- cotas reservadas para operações críticas.
+
+Quando não recebe uma permissão, a operação entra em `THROTTLED` com `not_before`. Nenhum worker fica bloqueado esperando e nenhuma chamada é desperdiçada.
+
+Backpressure deve propagar para cima: se o modelo está saturado, o planner deixa de produzir trabalho cognitivo ilimitado; tarefas determinísticas ainda podem avançar.
+
+## Callbacks e eventos
+
+Callbacks devem entrar pelo mesmo barramento durável de eventos usado internamente.
+
+Envelope mínimo:
+
+```json
+{
+  "event_id": "evt_...",
+  "type": "external.callback.received",
+  "correlation_id": "op_...",
+  "deduplication_key": "provider:event-id",
+  "occurred_at": "...",
+  "payload_ref": "artifact_..."
+}
+```
+
+Requisitos:
+
+- persistir antes de confirmar recebimento;
+- deduplicar callbacks repetidos;
+- correlacionar com a operação em espera;
+- validar autenticidade quando aplicável;
+- aceitar callback que chegue antes de o waiter ser registrado;
+- definir timeout e política de callback tardio;
+- reaplicar eventos após crash sem repetir efeitos colaterais.
+
+O mesmo modelo atende mensagens, webhooks, timers, conclusão de subprocessos, alterações de arquivos e respostas humanas.
+
+## Entrega e efeitos colaterais
+
+Não é realista prometer execução exatamente uma vez em todos os sistemas externos. O alvo deve ser:
+
+```text
+at-least-once delivery + idempotência + deduplicação
+```
+
+Antes de executar um efeito externo, o motor cria um registro de intenção com uma `idempotency_key`. Depois registra recibo e evidência. Em reinícios, consulta esse registro antes de repetir a ação.
+
+Para emissão confiável de eventos, usar o padrão transactional outbox: a mudança de estado e o evento a publicar são confirmados na mesma transação local.
 
 ## Contratos fundamentais
 
