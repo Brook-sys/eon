@@ -11,20 +11,22 @@ import (
 )
 
 type Exchange struct {
-	ExpectedPrompt string
-	ExpectedModel  string
-	ResponseText   string
-	ResponseModel  string
-	InputTokens    int
-	OutputTokens   int
-	StatusCode     int
-	RawBody        string
+	ExpectedPrompt         string
+	ExpectedModel          string
+	ExpectedMaxOutputField string
+	ResponseText           string
+	ResponseModel          string
+	InputTokens            int
+	OutputTokens           int
+	StatusCode             int
+	RawBody                string
 }
 
 type Request struct {
 	Prompt          string
 	Model           string
 	MaxOutputTokens int
+	MaxOutputField  string
 	Temperature     float64
 	Authorization   string
 }
@@ -68,10 +70,11 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Model       string                           `json:"model"`
-		Messages    []struct{ Role, Content string } `json:"messages"`
-		MaxTokens   int                              `json:"max_tokens"`
-		Temperature float64                          `json:"temperature"`
+		Model               string                           `json:"model"`
+		Messages            []struct{ Role, Content string } `json:"messages"`
+		MaxTokens           int                              `json:"max_tokens"`
+		MaxCompletionTokens int                              `json:"max_completion_tokens"`
+		Temperature         float64                          `json:"temperature"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -80,7 +83,18 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	req := Request{Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: body.MaxTokens, Temperature: body.Temperature, Authorization: r.Header.Get("Authorization")}
+	maxOutputField := ""
+	maxOutputTokens := 0
+	if body.MaxTokens != 0 {
+		maxOutputField, maxOutputTokens = "max_tokens", body.MaxTokens
+	}
+	if body.MaxCompletionTokens != 0 {
+		if maxOutputField != "" {
+			s.failures = append(s.failures, "both max output fields were sent")
+		}
+		maxOutputField, maxOutputTokens = "max_completion_tokens", body.MaxCompletionTokens
+	}
+	req := Request{Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens, MaxOutputField: maxOutputField, Temperature: body.Temperature, Authorization: r.Header.Get("Authorization")}
 	s.requests = append(s.requests, req)
 	if len(s.script) == 0 {
 		s.failures = append(s.failures, "unexpected extra request")
@@ -94,6 +108,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if exchange.ExpectedModel != "" && exchange.ExpectedModel != req.Model {
 		s.failures = append(s.failures, fmt.Sprintf("model mismatch: got %q", req.Model))
+	}
+	if exchange.ExpectedMaxOutputField != "" && exchange.ExpectedMaxOutputField != req.MaxOutputField {
+		s.failures = append(s.failures, fmt.Sprintf("max output field mismatch: got %q", req.MaxOutputField))
 	}
 	status := exchange.StatusCode
 	if status == 0 {

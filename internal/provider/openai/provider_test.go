@@ -13,7 +13,7 @@ import (
 )
 
 func TestProviderCompletesPlainTextAgainstFakeServer(t *testing.T) {
-	server := fakeserver.New(fakeserver.Exchange{ExpectedPrompt: "choose A or B", ExpectedModel: "fixture-model", ResponseText: "B", ResponseModel: "fixture-model-v1", InputTokens: 5, OutputTokens: 1})
+	server := fakeserver.New(fakeserver.Exchange{ExpectedPrompt: "choose A or B", ExpectedModel: "fixture-model", ExpectedMaxOutputField: "max_tokens", ResponseText: "B", ResponseModel: "fixture-model-v1", InputTokens: 5, OutputTokens: 1})
 	defer server.Close()
 	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "fixture-model", Client: server.Client()})
 	if err != nil {
@@ -28,6 +28,25 @@ func TestProviderCompletesPlainTextAgainstFakeServer(t *testing.T) {
 	}
 	requests := server.Requests()
 	if len(requests) != 1 || requests[0].Authorization != "Bearer secret" || requests[0].MaxOutputTokens != 4 {
+		t.Fatalf("unexpected request: %+v", requests)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}
+
+func TestProviderSupportsConfiguredMaxCompletionTokensDialect(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{ExpectedMaxOutputField: "max_completion_tokens", ResponseText: "ok"})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", MaxOutputField: openai.MaxOutputTokensCompletion, Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Complete(context.Background(), port.CompletionRequest{Prompt: "test", MaxOutputTokens: 7}); err != nil {
+		t.Fatal(err)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 || requests[0].MaxOutputField != "max_completion_tokens" || requests[0].MaxOutputTokens != 7 {
 		t.Fatalf("unexpected request: %+v", requests)
 	}
 	if failures := server.Failures(); len(failures) != 0 {
@@ -70,6 +89,9 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 func TestProviderRejectsInvalidConfigurationAndRequest(t *testing.T) {
 	if _, err := openai.New(openai.Config{BaseURL: "file:///tmp/model", Model: "fixture"}); err == nil {
 		t.Fatal("expected invalid URL error")
+	}
+	if _, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture", MaxOutputField: "unknown"}); err == nil {
+		t.Fatal("expected invalid max output field error")
 	}
 	provider, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture"})
 	if err != nil {

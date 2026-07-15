@@ -19,3 +19,10 @@ O contrato mínimo continua sendo texto para texto. Chat Completions, Responses,
 - capabilities são configuráveis e sondáveis;
 - degradação para protocolo textual permanece obrigatória;
 - compatibilidade será declarada por matriz de recursos, não por um booleano.
+
+## Perfil mínimo materializado
+
+`OPENAI_COMPATIBILITY.md` fixa a matriz inicial e o contract test de
+implantação. O adapter exige seleção explícita entre `max_tokens` e
+`max_completion_tokens`; não tenta fallback automático após uma chamada, pois
+uma resposta ambígua pode representar custo ou efeito já iniciado no provedor.

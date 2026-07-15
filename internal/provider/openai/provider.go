@@ -22,6 +22,7 @@ type Config struct {
 	BaseURL          string
 	APIKey           string
 	Model            string
+	MaxOutputField   MaxOutputField
 	MaxResponseBytes int64
 	Client           *http.Client
 }
@@ -30,9 +31,21 @@ type Provider struct {
 	endpoint         string
 	apiKey           string
 	model            string
+	maxOutputField   MaxOutputField
 	maxResponseBytes int64
 	client           *http.Client
 }
+
+// MaxOutputField identifies the incompatible request field used to bound a
+// Chat Completions response. OpenAI-compatible servers do not agree on one
+// spelling, so the adapter requires an explicit profile when the portable
+// legacy field is not suitable.
+type MaxOutputField string
+
+const (
+	MaxOutputTokensLegacy     MaxOutputField = "max_tokens"
+	MaxOutputTokensCompletion MaxOutputField = "max_completion_tokens"
+)
 
 type ErrorKind string
 
@@ -82,14 +95,22 @@ func New(config Config) (*Provider, error) {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return &Provider{endpoint: base.String(), apiKey: config.APIKey, model: config.Model, maxResponseBytes: limit, client: client}, nil
+	maxOutputField := config.MaxOutputField
+	if maxOutputField == "" {
+		maxOutputField = MaxOutputTokensLegacy
+	}
+	if maxOutputField != MaxOutputTokensLegacy && maxOutputField != MaxOutputTokensCompletion {
+		return nil, errors.New("unsupported max output field")
+	}
+	return &Provider{endpoint: base.String(), apiKey: config.APIKey, model: config.Model, maxOutputField: maxOutputField, maxResponseBytes: limit, client: client}, nil
 }
 
 type chatRequest struct {
-	Model       string        `json:"model"`
-	Messages    []chatMessage `json:"messages"`
-	MaxTokens   int           `json:"max_tokens,omitempty"`
-	Temperature float64       `json:"temperature"`
+	Model               string        `json:"model"`
+	Messages            []chatMessage `json:"messages"`
+	MaxTokens           int           `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int           `json:"max_completion_tokens,omitempty"`
+	Temperature         float64       `json:"temperature"`
 }
 
 type chatMessage struct {
@@ -112,7 +133,13 @@ func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest)
 	if strings.TrimSpace(request.Prompt) == "" || request.MaxOutputTokens < 0 || request.Temperature < 0 || request.Temperature > 2 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
-	payload, err := json.Marshal(chatRequest{Model: p.model, Messages: []chatMessage{{Role: "user", Content: request.Prompt}}, MaxTokens: request.MaxOutputTokens, Temperature: request.Temperature})
+	chatReq := chatRequest{Model: p.model, Messages: []chatMessage{{Role: "user", Content: request.Prompt}}, Temperature: request.Temperature}
+	if p.maxOutputField == MaxOutputTokensCompletion {
+		chatReq.MaxCompletionTokens = request.MaxOutputTokens
+	} else {
+		chatReq.MaxTokens = request.MaxOutputTokens
+	}
+	payload, err := json.Marshal(chatReq)
 	if err != nil {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
