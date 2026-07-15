@@ -53,17 +53,19 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: protocolo alinhado a `MissionRevision → Question → InquiryCandidate → Inquiry → Operation`; HTN mantido apenas como termo da literatura.
 - [x] `DONE` Consolidar requisitos funcionais e não funcionais com IDs rastreáveis.
   - Evidência: `REQUIREMENTS.md` baseline v0.1 define FR/NFR, critérios de aceitação e matriz inicial de verificação.
-- [ ] `READY` Criar taxonomia inicial de falhas específica do runtime epistemológico.
-- [ ] `READY` Formalizar invariantes de autoridade, continuidade, segurança e progresso.
+- [x] `DONE` Criar taxonomia inicial de falhas específica do runtime epistemológico.
+  - Evidência: `FAILURE_TAXONOMY.md` baseline v0.1 define `FailureRecord`, eixos ortogonais, códigos mínimos, certeza de efeito e disposições seguras.
+- [x] `DONE` Formalizar invariantes de autoridade, continuidade, segurança e progresso.
+  - Evidência: `INVARIANTS.md` baseline v0.1 fixa 21 invariantes, quatro propriedades condicionais de liveness e estratégia de verificação.
 
 ### Fase 1 — esqueleto Go determinístico
 
-- [ ] `BLOCKED_BY:Fase0` Inicializar módulo Go sem framework e definir layout mínimo.
-- [ ] `BLOCKED_BY:Fase0` Implementar tipos de domínio sem dependências externas.
-- [ ] `BLOCKED_BY:Fase0` Implementar máquina de estados pura e testes de tabela.
-- [ ] `BLOCKED_BY:Fase0` Implementar `Clock`, `IDGenerator` e `RandomSource` injetáveis.
-- [ ] `BLOCKED_BY:Fase0` Implementar store em memória com contract tests.
-- [ ] `BLOCKED_BY:Fase0` Implementar event log em memória e idempotência básica.
+- [ ] `READY` Inicializar módulo Go sem framework e definir layout mínimo.
+- [ ] `READY` Implementar tipos de domínio sem dependências externas.
+- [ ] `BLOCKED_BY:tipos` Implementar máquina de estados pura e testes de tabela.
+- [ ] `READY` Implementar `Clock`, `IDGenerator` e `RandomSource` injetáveis.
+- [ ] `BLOCKED_BY:ports` Implementar store em memória com contract tests.
+- [ ] `BLOCKED_BY:tipos,store` Implementar event log em memória e idempotência básica.
 
 ### Fase 2 — primeiro vertical slice simulado
 
@@ -124,3 +126,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-15 08:26 — Fase 0/coerência — glossário normativo criado; arquitetura alinhada ao domínio epistemológico; interfaces de persistência separadas — verificação: RFC 2119/8174, grep de resíduos e `git diff --check` — próximo: requisitos rastreáveis e auditoria dos protocolos auxiliares.
 2026-07-15 08:34 — Fase 0/contratos — protocolo de modelo fraco e plano de pesquisa alinhados ao glossário; requisitos FR/NFR rastreáveis consolidados — verificação: grep de termos substituídos e `git diff --check` — próximo: taxonomia de falhas e invariantes formais.
+2026-07-15 08:54 — Fase 0/falhas e invariantes — `FailureRecord`, política de retry/reconciliação, invariantes safety/liveness e requisito FR-DUR-006 formalizados — verificação: fontes primárias Temporal/OpenTelemetry/RFC 9457, inspeção de rastreabilidade e `git diff --check` — próximo: módulo Go, tipos de domínio e fontes determinísticas.

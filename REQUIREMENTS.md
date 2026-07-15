@@ -1,8 +1,8 @@
 # Requisitos do Runtime Epistemológico
 
-Status: baseline v0.1
+Status: baseline v0.2
 
-Os termos normativos em maiúsculas seguem BCP 14, conforme `GLOSSARY.md`. Cada requisito possui um identificador estável. Documentos, código e testes SHOULD referenciar estes IDs em vez de copiar o texto normativo.
+Os termos normativos em maiúsculas seguem BCP 14, conforme `GLOSSARY.md`. Cada requisito possui um identificador estável. Documentos, código e testes SHOULD referenciar estes IDs em vez de copiar o texto normativo. `INVARIANTS.md` formaliza as propriedades transversais e `FAILURE_TAXONOMY.md` normaliza falhas e recuperação.
 
 ## 1. Escopo e autoridade
 
@@ -146,6 +146,12 @@ Deadlines, retries, backoff, leases, cadência e repouso MUST depender de `Clock
 
 **Evidência de aceitação:** testes não aguardam relógio real e reproduzem a mesma sequência com fontes controladas.
 
+### FR-DUR-006 — Falha normalizada e recuperação segura
+
+Toda tentativa malsucedida MUST produzir `FailureRecord` tipado com código, classe, locus, disposição de recuperação, certeza do efeito, escopo, correlação e política aplicada. Efeito `UNKNOWN` ou `PARTIAL` MUST ser reconciliado antes de retry, salvo garantia documentada de idempotência no destino.
+
+**Evidência de aceitação:** contract tests mapeiam falhas de adapters, distinguem timeout antes/depois do envio e impedem segundo efeito sob resposta ambígua.
+
 ## 6. Recursos, segurança e observabilidade
 
 ### FR-RES-001 — Budgets e backpressure
@@ -206,6 +212,6 @@ Schemas persistidos, `OperationSpec`s, templates, eventos e interfaces públicas
 | Agenda e progresso | FR-AGENDA-001..004 | testes de admissão e relógio virtual |
 | Conhecimento | FR-KNOW-001..005 | schemas, invariantes e commit tests |
 | Modelo fraco | FR-MODEL-001..004 | servidor falso, corpus e fuzz |
-| Continuidade | FR-DUR-001..005 | crash/replay e relógio virtual |
-| Recursos e segurança | FR-RES-001..002, FR-OBS-001..002 | falhas injetadas e redaction |
+| Continuidade | FR-DUR-001..006 | crash/replay, reconciliação e relógio virtual |
+| Recursos e segurança | FR-RES-001..002, FR-OBS-001..002 | falhas injetadas, taxonomia e redaction |
 | Arquitetura | NFR-* | import checks, contract tests, CI e builds |

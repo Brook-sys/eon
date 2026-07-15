@@ -1,6 +1,6 @@
 # Requisitos Técnicos do Runtime Epistemológico
 
-Status: baseline v0.1
+Status: baseline v0.2
 
 ## 1. Decisões firmes
 
@@ -222,7 +222,9 @@ O runtime satisfaz continuidade quando:
 
 ## 10. Tolerância a falhas verificável
 
-Classes mínimas:
+A classificação normativa e as disposições de recuperação estão em `FAILURE_TAXONOMY.md`; as propriedades que não podem ser violadas estão em `INVARIANTS.md`.
+
+Classes mínimas de cenário:
 
 - timeout e cancelamento;
 - 429 com ou sem `Retry-After`;
@@ -249,7 +251,9 @@ Controles:
 - transactional outbox;
 - checksums e invariantes;
 - recuperação determinística;
-- dead-letter/quarantine para itens não reconciliáveis.
+- dead-letter/quarantine para itens não reconciliáveis;
+- `FailureRecord` tipado e persistido, sem política baseada em mensagens;
+- reconciliação obrigatória quando o efeito é desconhecido ou parcial.
 
 ## 11. Estratégia de testes
 

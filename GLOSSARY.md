@@ -1,6 +1,6 @@
 # Glossário Normativo
 
-Status: baseline v0.1
+Status: baseline v0.2
 
 Este documento fixa o vocabulário do runtime. Os termos normativos `MUST`, `MUST NOT`, `SHOULD`, `SHOULD NOT` e `MAY` são interpretados conforme BCP 14 (RFC 2119 e RFC 8174) somente quando aparecem em maiúsculas.
 
@@ -171,6 +171,14 @@ Intenção durável de publicar ou entregar um evento após commit local. É con
 
 Evidência operacional de uma ação determinística: resposta HTTP, hash, resultado de validação, transição persistida ou outro recibo auditável. Não é sinônimo de `EvidenceLink`, embora possa originar observações.
 
+### FailureRecord
+
+Registro imutável e tipado de uma tentativa malsucedida. Separa código estável, classe, locus, disposição de recuperação, certeza do efeito, escopo, detalhe seguro e recibos. Mensagem de erro ou status de provider MUST NOT controlar retry diretamente. A taxonomia normativa está em `FAILURE_TAXONOMY.md`.
+
+### Quarantine
+
+Isolamento persistido de entrada, artifact ou estado que não pode ser aceito com segurança. Um objeto em quarentena preserva proveniência e diagnóstico, mas MUST NOT integrar o `KnowledgeState` nem satisfazer precondições até liberação explícita e revalidação.
+
 ### Rest
 
 Estado global sem trabalho admissível no momento, com próxima condição de reavaliação persistida. Rest não é conclusão da missão nem busy loop.
@@ -226,5 +234,6 @@ ProposedChangeSet → AcceptedChangeSet → Commit → KnowledgeState(version n+
 - Tipos persistidos usam nomes completos (`ProposedChangeSet`, não `Patch`).
 - IDs usam prefixo por entidade apenas para legibilidade; identidade não depende do prefixo.
 - Status operacionais e epistemológicos são enums distintos.
+- Falhas usam `FailureRecord` e códigos da taxonomia; não criar política baseada em comparação de mensagens.
 - `Evidence` sem qualificador não deve ser usado em APIs: preferir `EvidenceLink`, `EvidenceReceipt` ou `SourceFragment` conforme o caso.
 - `CommitID` representa a versão lógica do domínio; adapters podem associá-lo a commit Dolt, sequência SQLite ou outra implementação.
