@@ -3,6 +3,7 @@ package spike
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"time"
 
@@ -22,13 +23,19 @@ type PhaseMetric struct {
 }
 
 type Metrics struct {
-	SchemaVersion int              `json:"schema_version"`
-	Backend       string           `json:"backend"`
-	DatasetSHA256 string           `json:"dataset_sha256"`
-	StartedAt     time.Time        `json:"started_at"`
-	FinishedAt    time.Time        `json:"finished_at"`
-	Footprint     *FootprintMetric `json:"footprint,omitempty"`
-	Phases        []PhaseMetric    `json:"phases"`
+	SchemaVersion  int              `json:"schema_version"`
+	Backend        string           `json:"backend"`
+	BackendVersion string           `json:"backend_version,omitempty"`
+	DriverVersion  string           `json:"driver_version,omitempty"`
+	GoVersion      string           `json:"go_version"`
+	GOOS           string           `json:"goos"`
+	GOARCH         string           `json:"goarch"`
+	BatchSize      int              `json:"batch_size"`
+	DatasetSHA256  string           `json:"dataset_sha256"`
+	StartedAt      time.Time        `json:"started_at"`
+	FinishedAt     time.Time        `json:"finished_at"`
+	Footprint      *FootprintMetric `json:"footprint,omitempty"`
+	Phases         []PhaseMetric    `json:"phases"`
 }
 
 type FootprintMetric struct {
@@ -40,9 +47,11 @@ type FootprintMetric struct {
 type Clock func() time.Time
 
 type Runner struct {
-	Now           Clock
-	BatchSize     int
-	FootprintRoot string
+	Now            Clock
+	BatchSize      int
+	FootprintRoot  string
+	BackendVersion string
+	DriverVersion  string
 }
 
 func (r Runner) Run(ctx context.Context, backend string, store port.Store, dataset Dataset, manifest Manifest) (Metrics, error) {
@@ -57,7 +66,12 @@ func (r Runner) Run(ctx context.Context, backend string, store port.Store, datas
 	if batchSize <= 0 {
 		batchSize = 1
 	}
-	metrics := Metrics{SchemaVersion: 2, Backend: backend, DatasetSHA256: manifest.SHA256, StartedAt: now()}
+	metrics := Metrics{
+		SchemaVersion: 3, Backend: backend, BackendVersion: r.BackendVersion,
+		DriverVersion: r.DriverVersion, GoVersion: runtime.Version(), GOOS: runtime.GOOS,
+		GOARCH: runtime.GOARCH, BatchSize: batchSize, DatasetSHA256: manifest.SHA256,
+		StartedAt: now(),
+	}
 	if r.FootprintRoot != "" {
 		before, err := DiskFootprint(r.FootprintRoot)
 		if err != nil {

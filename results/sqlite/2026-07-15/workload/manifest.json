@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "config": {
+    "seed": 20260715,
+    "sources": 1000,
+    "claims": 10000,
+    "evidence_links": 30000,
+    "snapshot_min_bytes": 1024,
+    "snapshot_max_bytes": 8192
+  },
+  "fragments": 1000,
+  "observations": 1000,
+  "sha256": "89e2e35498bfa091feab5004e6bf4a5fb0b984b6f241260836cf26498f4eaa04"
+}

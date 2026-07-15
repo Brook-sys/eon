@@ -1,0 +1,50 @@
+{
+  "schema_version": 3,
+  "backend": "sqlite",
+  "backend_version": "SQLite 3.50.4",
+  "driver_version": "modernc.org/sqlite v1.39.1",
+  "go_version": "go1.26.5",
+  "goos": "linux",
+  "goarch": "amd64",
+  "batch_size": 100,
+  "dataset_sha256": "89e2e35498bfa091feab5004e6bf4a5fb0b984b6f241260836cf26498f4eaa04",
+  "started_at": "2026-07-15T22:26:15.604685767Z",
+  "finished_at": "2026-07-15T22:27:31.659607553Z",
+  "footprint": {
+    "before_bytes": 45136,
+    "after_bytes": 43666696,
+    "delta_bytes": 43621560
+  },
+  "phases": [
+    {
+      "name": "load_sources",
+      "operations": 1000,
+      "batches": 10,
+      "duration_ns": 1517140138,
+      "p50_ns": 162562410,
+      "p95_ns": 288084075,
+      "p99_ns": 288084075,
+      "operations_per_second": 659.1348913346066
+    },
+    {
+      "name": "load_claims",
+      "operations": 10000,
+      "batches": 100,
+      "duration_ns": 64757255821,
+      "p50_ns": 775689285,
+      "p95_ns": 939667130,
+      "p99_ns": 1008683521,
+      "operations_per_second": 154.42284996822116
+    },
+    {
+      "name": "query_claims",
+      "operations": 10000,
+      "batches": 10000,
+      "duration_ns": 9776630173,
+      "p50_ns": 965126,
+      "p95_ns": 1068461,
+      "p99_ns": 1272341,
+      "operations_per_second": 1022.8473229576462
+    }
+  ]
+}

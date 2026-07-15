@@ -68,6 +68,14 @@ func renderReport(metrics Metrics) string {
 	var report strings.Builder
 	fmt.Fprintf(&report, "# Storage spike run: %s\n\n", metrics.Backend)
 	fmt.Fprintf(&report, "- Dataset SHA-256: `%s`\n", metrics.DatasetSHA256)
+	if metrics.BackendVersion != "" {
+		fmt.Fprintf(&report, "- Backend version: `%s`\n", metrics.BackendVersion)
+	}
+	if metrics.DriverVersion != "" {
+		fmt.Fprintf(&report, "- Driver version: `%s`\n", metrics.DriverVersion)
+	}
+	fmt.Fprintf(&report, "- Go/platform: `%s` on `%s/%s`\n", metrics.GoVersion, metrics.GOOS, metrics.GOARCH)
+	fmt.Fprintf(&report, "- Batch size: %d\n", metrics.BatchSize)
 	fmt.Fprintf(&report, "- Started: %s\n- Finished: %s\n", metrics.StartedAt.Format("2006-01-02T15:04:05.999999999Z07:00"), metrics.FinishedAt.Format("2006-01-02T15:04:05.999999999Z07:00"))
 	if metrics.Footprint != nil {
 		fmt.Fprintf(&report, "- Disk footprint: %d → %d bytes (delta %+d)\n", metrics.Footprint.BeforeBytes, metrics.Footprint.AfterBytes, metrics.Footprint.DeltaBytes)

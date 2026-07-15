@@ -1,0 +1,50 @@
+{
+  "schema_version": 3,
+  "backend": "dolt-server",
+  "backend_version": "dolt version 2.2.0",
+  "driver_version": "github.com/go-sql-driver/mysql v1.9.3",
+  "go_version": "go1.26.5",
+  "goos": "linux",
+  "goarch": "amd64",
+  "batch_size": 100,
+  "dataset_sha256": "89e2e35498bfa091feab5004e6bf4a5fb0b984b6f241260836cf26498f4eaa04",
+  "started_at": "2026-07-15T22:23:56.568832801Z",
+  "finished_at": "2026-07-15T22:24:52.54020749Z",
+  "footprint": {
+    "before_bytes": 9850,
+    "after_bytes": 170181869,
+    "delta_bytes": 170172019
+  },
+  "phases": [
+    {
+      "name": "load_sources",
+      "operations": 1000,
+      "batches": 10,
+      "duration_ns": 2764665422,
+      "p50_ns": 186352121,
+      "p95_ns": 459930339,
+      "p99_ns": 459930339,
+      "operations_per_second": 361.7074211014601
+    },
+    {
+      "name": "load_claims",
+      "operations": 10000,
+      "batches": 100,
+      "duration_ns": 43609184547,
+      "p50_ns": 442068799,
+      "p95_ns": 537257408,
+      "p99_ns": 562243927,
+      "operations_per_second": 229.30949303173634
+    },
+    {
+      "name": "query_claims",
+      "operations": 10000,
+      "batches": 10000,
+      "duration_ns": 9593281142,
+      "p50_ns": 952957,
+      "p95_ns": 1022767,
+      "p99_ns": 1061500,
+      "operations_per_second": 1042.3962200189628
+    }
+  ]
+}

@@ -96,6 +96,18 @@ func (s *Store) View(ctx context.Context, fn func(port.Reader) error) error {
 	return s.core.View(ctx, fn)
 }
 
+// RuntimeVersion returns the SQLite engine version actually loaded by the
+// configured driver, rather than inferring it from the Go module version.
+func (s *Store) RuntimeVersion() (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var version string
+	if err := s.db.QueryRow(`SELECT sqlite_version()`).Scan(&version); err != nil {
+		return "", fmt.Errorf("query sqlite runtime version: %w", err)
+	}
+	return version, nil
+}
+
 func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) error {
 	if err := ctx.Err(); err != nil {
 		return err

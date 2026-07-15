@@ -26,6 +26,9 @@ func TestRunnerAppliesAndQueriesDataset(t *testing.T) {
 	if metrics.DatasetSHA256 != manifest.SHA256 || metrics.Backend != "memory" {
 		t.Fatalf("metrics identity = %#v", metrics)
 	}
+	if metrics.SchemaVersion != 3 || metrics.BatchSize != 2 || metrics.GoVersion == "" || metrics.GOOS == "" || metrics.GOARCH == "" {
+		t.Fatalf("missing reproducibility metadata: %#v", metrics)
+	}
 	if len(metrics.Phases) != 3 {
 		t.Fatalf("phase count = %d, want 3", len(metrics.Phases))
 	}
@@ -57,7 +60,7 @@ func TestRunnerRecordsDiskFootprintBeforeAndAfter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if metrics.SchemaVersion != 2 || metrics.Footprint == nil {
+	if metrics.SchemaVersion != 3 || metrics.Footprint == nil {
 		t.Fatalf("missing versioned footprint: %#v", metrics)
 	}
 	if metrics.Footprint.BeforeBytes != 4 || metrics.Footprint.AfterBytes != 4 || metrics.Footprint.DeltaBytes != 0 {
