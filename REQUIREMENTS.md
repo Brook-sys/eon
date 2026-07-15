@@ -120,6 +120,24 @@ Reparo e retry MUST possuir budget persistido. O runtime SHOULD preferir normali
 
 **Evidência de aceitação:** modelo sempre inválido termina em estado explícito sem loop de chamadas.
 
+### FR-MODEL-005 — Descoberta de capacidade limitada
+
+O runtime MUST representar capacidades e limites do provider/modelo como perfil versionado, distinguindo valores declarados, confirmados por probe, inferidos empiricamente e sobrescritos pelo operador. Capacidade desconhecida MUST NOT ser presumida disponível. Probes MUST possuir budget, timeout, cache e política explícita de reavaliação.
+
+**Evidência de aceitação:** provider que anuncia recurso incompatível é rebaixado sem interromper o caminho texto→texto; probes não se repetem indefinidamente e seus resultados ficam auditáveis.
+
+### FR-MODEL-006 — Adaptação progressiva e reversível
+
+O runtime SHOULD explorar capacidades confiáveis — como formatos estruturados, tool calling, contexto maior ou competência superior — para melhorar eficiência ou qualidade. Toda promoção MUST preservar a semântica da `OperationSpec`, autoridade exclusiva do kernel, validação externa e fallback para nível mais simples. Falha de uma otimização MUST permitir degradação segura sem perder a `Operation` nem duplicar efeito lógico.
+
+**Evidência de aceitação:** a mesma operação executa no baseline texto→texto e em perfil enriquecido; injeção de falha em JSON mode, tool calling ou limite de contexto provoca fallback seguro e resultado oficial equivalente quando semanticamente possível.
+
+### FR-MODEL-007 — Uso conservador de contexto e horizonte
+
+Janela de contexto maior MUST NOT implicar inclusão automática de histórico integral, abandono de microturnos ou expansão ilimitada do plano. Aumento de contexto, opções e horizonte MUST ser limitado por política e justificado por necessidade da operação ou ganho empírico.
+
+**Evidência de aceitação:** testes com perfis 2k, 8k e maiores demonstram margens de segurança, seleção localizada de evidência e limites explícitos de expansão.
+
 ## 5. Continuidade e execução durável
 
 ### FR-DUR-001 — Estado operacional persistido
@@ -157,6 +175,18 @@ Deadlines, retries, backoff, leases, cadência e repouso MUST depender de `Clock
 Toda tentativa malsucedida MUST produzir `FailureRecord` tipado com código, classe, locus, disposição de recuperação, certeza do efeito, escopo, correlação e política aplicada. Efeito `UNKNOWN` ou `PARTIAL` MUST ser reconciliado antes de retry, salvo garantia documentada de idempotência no destino.
 
 **Evidência de aceitação:** contract tests mapeiam falhas de adapters, distinguem timeout antes/depois do envio e impedem segundo efeito sob resposta ambígua.
+
+### FR-DUR-007 — Continuidade com fronteira renovável
+
+Após mudança relevante no estado, conclusão, falha ou invalidação, o runtime MUST atualizar uma fronteira limitada de próximos trabalhos derivados da missão. Não havendo trabalho admissível imediato, MUST persistir motivo e condição de reavaliação. Continuidade MUST NOT depender de geração artificial de atividade, retries ilimitados ou recurso opcional de modelo.
+
+**Evidência de aceitação:** cenários de conclusão, bloqueio, degradação de provider e agenda vazia terminam em próximo passo admissível ou `Rest` retomável, sem busy loop nem perda de missão.
+
+### FR-DUR-008 — Preferência por avanço seguro
+
+Quando estratégias equivalentes estiverem disponíveis, a política SHOULD preferir operações menores, idempotentes, verificáveis e reversíveis, com checkpoint antes de fronteiras frágeis. O runtime MUST degradar qualidade, velocidade ou sofisticação antes de comprometer integridade, auditabilidade ou recuperabilidade.
+
+**Evidência de aceitação:** fault-injection demonstra que falha de otimização ou capability não essencial preserva estado, fallback e possibilidade de retomada.
 
 ## 6. Recursos, segurança e observabilidade
 

@@ -30,7 +30,7 @@ O protocolo deve continuar funcionando quando o modelo:
 - possui janela de contexto de 2k a 8k tokens;
 - sofre rate limiting severo.
 
-Recursos modernos são acelerações opcionais, nunca requisitos estruturais.
+Recursos modernos são acelerações opcionais, nunca requisitos estruturais. O baseline mínimo não deve produzir um teto artificial: capacidades adicionais podem ser exploradas quando descobertas e empiricamente confiáveis, sem criar um segundo modo de runtime nem enfraquecer as garantias do caminho mínimo.
 
 ## Regra de autoridade
 
@@ -355,13 +355,34 @@ Quando a saída é inválida:
 
 Não reenviar automaticamente todo o prompt várias vezes. Isso desperdiça rate limit e pode reproduzir o mesmo erro.
 
-## Perfil de modelo
+## Perfil adaptativo de modelo e provider
 
-Cada modelo possui um perfil empiricamente medido:
+Cada combinação de provider, modelo, versão e configuração possui um perfil versionado. O perfil separa quatro fontes de informação:
+
+1. capacidades declaradas pelo operador ou pelo endpoint;
+2. capacidades confirmadas por probes seguros e limitados;
+3. confiabilidade empírica observada por operação, formato e faixa de contexto;
+4. overrides explícitos, inclusive para desabilitar uma capacidade anunciada mas instável.
 
 ```yaml
+provider: local-openai-compatible
 model: llama-3.1-8b
-context_limit: 8192
+model_revision: unknown
+profile_version: 3
+observed_at: 2026-07-15T20:47:00-03:00
+capabilities:
+  text_completion: confirmed
+  system_role: confirmed
+  tool_calling: unsupported
+  json_mode: unreliable
+  streaming: untested
+limits:
+  context_tokens:
+    declared: 8192
+    safe_observed: 7168
+  output_tokens:
+    declared: 2048
+    safe_observed: 768
 reliable_formats:
   closed_choice: 0.99
   delimited_fields: 0.93
@@ -374,7 +395,30 @@ preferred_prompt_style: concise
 max_safe_options: 5
 ```
 
-O router escolhe operação, template e modelo com base em resultados reais, não apenas no tamanho declarado do modelo.
+Ausência de evidência é `unknown`, não `supported`. Probes devem ter orçamento, timeout, cache, validade e condição de nova execução; nunca podem formar um loop de autodetecção. Falhas reais podem rebaixar temporariamente uma capacidade e abrir circuit breaker, mas promoção exige evidência suficiente ou confirmação do operador.
+
+O router escolhe operação, template, formato e modelo com base em resultados reais, não apenas no tamanho declarado ou no marketing do modelo.
+
+## Adaptação monotônica e segura
+
+A adaptação segue uma escada única. O caminho mínimo `text -> text` permanece sempre disponível; níveis superiores somente substituem partes do transporte ou aumentam eficiência:
+
+1. **Baseline:** prompt textual curto, resposta textual, parser e validação externa.
+2. **Formato assistido:** campos delimitados, JSON mode ou JSON Schema quando a taxa de validade justificar o uso.
+3. **Tool calling nativo:** pode reduzir serialização e parsing, mas a chamada recebida continua sendo somente uma proposta validada e vinculada pelo `CapabilityBinder`.
+4. **Contexto ampliado:** permite selecionar mais evidência relevante, reduzir compressão com perda ou executar comparação local mais rica; não autoriza enviar histórico integral nem abandonar microturnos.
+5. **Competência superior:** pode receber operações cognitivas um pouco mais abertas ou horizonte imediato maior, dentro de limites explícitos e com verificação igual ou mais forte.
+
+Toda promoção deve ser reversível por chamada. Se um recurso falhar, o runtime degrada para o próximo nível seguro sem perder a `Operation`, seu budget ou a possibilidade de retomada. Uma capacidade melhor MAY melhorar qualidade, velocidade ou custo; MUST NOT ampliar autoridade, ignorar validadores, alterar a semântica do `OperationSpec` ou tornar o estado dependente de contexto conversacional oculto.
+
+A adaptação é conservadora:
+
+- usar a menor capacidade que cumpra a operação com confiabilidade suficiente;
+- reservar margens abaixo do limite de contexto anunciado;
+- limitar o aumento de contexto, opções e horizonte por política;
+- comparar sucesso semântico, não somente validade de formato;
+- rebaixar rapidamente diante de incompatibilidade e promover lentamente;
+- preservar registro de qual perfil e nível produziram cada decisão.
 
 ## Melhoria contínua do harness
 
@@ -447,6 +491,20 @@ foram consideradas no preflight; o harness local permanece estreito porque
 precisa exercitar diretamente `OperationSpec`, o compilador e a porta
 `ModelProvider`, sem introduzir um runtime Python paralelo no primeiro slice.
 
+## Continuidade acima de sofisticação
+
+O runtime deve manter uma fronteira limitada de trabalho futuro derivado da missão, das lacunas e do estado persistido. Concluir uma `Operation` deve normalmente revelar, atualizar ou invalidar próximos candidatos. Agenda vazia dispara replenishment limitado; falta de trabalho admissível produz `Rest` retomável com condição de reavaliação.
+
+“Continuar” não significa inventar trabalho, fazer busy loop ou insistir numa ação arriscada. Continuidade inclui:
+
+- persistir antes de atravessar fronteiras frágeis;
+- preferir ações pequenas, idempotentes, verificáveis e reversíveis;
+- evitar dependência desnecessária de recursos opcionais do modelo;
+- limitar retries e reconciliar efeitos ambíguos antes de repetir;
+- preservar alternativas e fallback quando uma ação pode bloquear a agenda;
+- degradar qualidade ou velocidade antes de degradar integridade;
+- repousar de forma explícita quando continuar agora aumentaria o risco.
+
 ## Critério arquitetural de sucesso
 
 O harness está cumprindo sua proposta quando:
@@ -455,5 +513,8 @@ O harness está cumprindo sua proposta quando:
 2. uma saída malformada não produz efeito colateral;
 3. a tarefa pode ser retomada em outro turno ou modelo apenas com estado persistido;
 4. tool calling nativo melhora eficiência, mas sua ausência não impede execução;
-5. o contexto médio por chamada permanece pequeno e previsível;
-6. erros recorrentes se transformam em validadores, templates ou regras melhores.
+5. contexto maior melhora seletivamente evidência ou qualidade, sem crescimento descontrolado do prompt;
+6. o contexto médio por chamada permanece pequeno e previsível;
+7. o runtime detecta, promove, rebaixa e audita capacidades sem interromper o caminho mínimo;
+8. erros recorrentes se transformam em validadores, templates ou regras melhores;
+9. a agenda mantém próximos passos úteis ou repouso retomável sem loops artificiais.
