@@ -146,6 +146,18 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
   - Preparado: corpus inicial `cognitive-v1` cobre as quatro operações em escolha, campos delimitados e JSON; falta executar contra pelo menos um modelo pequeno/local e um baseline superior e interpretar os resultados.
 
+### Fase 6 — control plane e dashboard operacional
+
+- [x] `DONE` Definir a arquitetura de autonomia supervisionável e do dashboard.
+  - Evidência: `CONTROL_PLANE.md` separa UI, Control API, command/event inbox, projeções e kernel; fixa superfícies, segurança, consistência, slices e critérios de aceitação.
+- [ ] `READY` Formalizar schemas de `OperatorCommand`, `CommandReceipt` e `ExternalEvent` e portas do control plane.
+- [ ] `READY` Implementar read models e API de inspeção correlacionada sobre estado/event log.
+- [ ] `READY` Implementar command inbox idempotente com pause/resume/shutdown e testes de crash/replay.
+- [ ] `READY` Implementar external event inbox para mensagem, resposta e despertar deduplicados.
+- [ ] `READY` Implementar configuração versionada com validação, diff e fronteira segura de aplicação.
+- [ ] `READY` Implementar dashboard web mínimo: overview, timeline SSE, inspetor, interação e configuração.
+- [ ] `READY` Exportar telemetria OpenTelemetry opcional sem torná-la fonte canônica ou autoridade.
+
 ## Política de seleção
 
 Entre itens `READY`, escolher nesta ordem:

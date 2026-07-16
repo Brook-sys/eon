@@ -226,6 +226,48 @@ Segredos MUST NOT ser persistidos em prompts, respostas de erro, eventos, artifa
 
 **Evidência de aceitação:** teste de redaction cobre headers e campos sensíveis conhecidos.
 
+### FR-CTRL-001 — Autonomia supervisionável
+
+O runtime MUST continuar sob missão ativa sem depender da interface humana, mas MUST permanecer limitado por missão, políticas, capabilities e budgets versionados pelo operador. O operador MUST poder inspecionar estado, pausar novos despachos, retomar, cancelar e solicitar shutdown gracioso sem escrever diretamente no armazenamento canônico.
+
+**Evidência de aceitação:** fechar ou reiniciar o dashboard não interrompe o kernel; comandos autorizados produzem transições e recibos, e comandos inválidos não causam mutação parcial.
+
+### FR-CTRL-002 — Comandos idempotentes e auditáveis
+
+Toda mutação originada por CLI, API ou dashboard MUST entrar como `OperatorCommand` tipado, autenticado, autorizado, persistido e idempotente, com revisão esperada quando aplicável. Aceitação HTTP MUST NOT ser confundida com efeito confirmado; o resultado MUST possuir recibo consultável e estado explícito, incluindo reconciliação quando a certeza do efeito for desconhecida.
+
+**Evidência de aceitação:** timeout e replay com a mesma chave produzem um único efeito lógico; conflito de revisão, permissão ou intenção é rejeitado com evento correlacionado.
+
+### FR-CTRL-003 — Eventos e mensagens externas
+
+O runtime MUST aceitar `ExternalEvent`s tipados, limitados e correlacionáveis, incluindo mensagem do operador, resposta a pergunta, fonte autorizada e sinal de disponibilidade. Conteúdo externo MUST permanecer dado não confiável e MUST NOT se tornar política, configuração, capability ou comando privilegiado por interpretação textual.
+
+**Evidência de aceitação:** mensagem acorda ou atualiza somente linhas compatíveis com a política; prompt injection no conteúdo não amplia autoridade; replay é deduplicado.
+
+### FR-CTRL-004 — Configuração versionada
+
+Configuração mutável MUST possuir schema e revisão, validação, diff, análise de impacto e regra de aplicação `HOT`, `NEXT_CYCLE`, `RESTART_REQUIRED` ou `IMMUTABLE`. Segredos MUST ser referenciados indiretamente. Mudanças de missão continuam sujeitas a `FR-AUTH-004`.
+
+**Evidência de aceitação:** edição concorrente é detectada; configuração inválida não altera o runtime; aplicação diferida ocorre somente em fronteira segura e produz recibo.
+
+### FR-CTRL-005 — Inspeção correlacionada e ao vivo
+
+A Control API MUST permitir consultar e acompanhar, por sequência retomável, missão, agenda, scheduler, operações, tentativas, chamadas de modelo, validações, changesets, commits, artifacts, budgets, falhas, comandos e eventos externos. A explicação MUST ser reconstruível de registros oficiais e MUST NOT depender de cadeia de pensamento oculta do modelo.
+
+**Evidência de aceitação:** após desconexão, o cliente retoma da última sequência e reconstrói a mesma timeline; uma operação pode ser navegada do motivo de seleção ao commit ou rejeição.
+
+### FR-CTRL-006 — Aprovação e interrupção seguras
+
+O plano de controle MUST distinguir pausa de novos despachos, cancelamento cooperativo, shutdown gracioso e eventual parada emergencial. Interrupção MUST NOT presumir ausência de efeito externo em voo; efeitos `UNKNOWN` ou `PARTIAL` continuam sujeitos a reconciliação. Aprovações e rejeições MUST registrar ator, escopo, revisão e motivo.
+
+**Evidência de aceitação:** pausa preserva trabalho em voo e impede novo despacho; cancelamento em fronteira ambígua entra em reconciliação; aprovação repetida não duplica efeito.
+
+### FR-CTRL-007 — Isolamento da interface
+
+Dashboard e exportadores de telemetria MUST ser dispensáveis para execução, recuperação e auditoria canônica. Eles MUST NOT possuir acesso de escrita direta ao banco nem autoridade superior à Control API. Falha, lentidão ou ausência da interface MUST NOT paralisar o kernel.
+
+**Evidência de aceitação:** fault injection derruba UI/stream/exportador enquanto o runtime persiste progresso e depois permite reconstrução por event log e read models.
+
 ## 7. Requisitos não funcionais
 
 ### NFR-PORT-001 — Portabilidade

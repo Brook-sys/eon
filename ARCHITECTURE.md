@@ -43,9 +43,9 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 
 ```text
 ┌────────────────────────────────────────────────────────────────┐
-│ Interfaces: CLI, API de inspeção, eventos autorizados          │
+│ Interfaces: CLI, Control API e dashboard web                   │
 ├────────────────────────────────────────────────────────────────┤
-│ Control Plane: MissionSpec, políticas, budgets e aprovação     │
+│ Control Plane: missão, políticas, comandos, eventos e aprovação│
 ├────────────────────────────────────────────────────────────────┤
 │ Kernel: supervisor, scheduler, eventos, espera e retomada      │
 ├────────────────────────────────────────────────────────────────┤
@@ -151,6 +151,14 @@ Define, de forma versionada, o espaço legítimo de progresso:
 ```
 
 O motor não cria uma missão independente. Ele deriva trabalho apenas de missões configuradas, resultados observados e obrigações autorizadas.
+
+### Autonomia supervisionável e plano de controle
+
+O runtime é autônomo quanto à continuidade e à derivação limitada de trabalho, mas permanece subordinado ao operador. Missão, políticas, budgets, capabilities e revisões configuradas delimitam seu espaço de ação. O operador MUST poder observar, pausar, retomar, cancelar, alterar a missão e introduzir informação externa sem escrever diretamente no estado canônico.
+
+CLI, Control API e dashboard são clientes do mesmo plano de controle. Leituras usam projeções do estado e do event log; mutações entram como comandos idempotentes ou eventos externos tipados, são autorizadas e validadas pelo kernel e produzem recibos auditáveis. Fechar ou perder a interface não pode interromper a missão nem apagar trabalho persistido.
+
+O dashboard deve expor decisões operacionais registradas — inputs selecionados, regra de prioridade, chamadas, outputs, validações, changesets, commits e falhas — sem depender de raciocínio oculto do modelo. A arquitetura detalhada está em `CONTROL_PLANE.md`.
 
 ### Agenda
 
@@ -580,6 +588,8 @@ Inclui:
 - operações sobre observações, claims, evidências, perguntas e sínteses;
 - `ProposedChangeSet` validado antes de alteração oficial;
 - CLI para iniciar, inspecionar, pausar e retomar missões;
+- Control API e command/event inbox para inspeção e intervenção auditáveis;
+- dashboard web para configuração, timeline, chamadas, aprovações e interação;
 - event log e observabilidade estruturada.
 
 Não inclui inicialmente:
@@ -589,7 +599,7 @@ Não inclui inicialmente:
 - múltiplos agentes conversando livremente;
 - banco vetorial como fonte canônica;
 - execução distribuída;
-- interface visual complexa;
+- visualizações analíticas avançadas, colaboração multiusuário e customização irrestrita da interface;
 - geração dinâmica irrestrita de ferramentas;
 - autonomia sem missão, orçamento ou limites.
 
