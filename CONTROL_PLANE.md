@@ -430,8 +430,9 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
 - detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log; raw model outputs correlacionados por `ValidationReceipt.ArtifactRef`);
 - SSE ao vivo — implementado (`GET /events/stream` com `after_sequence`/`Last-Event-ID`, poll configurável, eventos `ready`/`event`/`page`/`error` e keep-alive; somente-leitura sobre `Projector.ListEvents`);
-- redaction de apresentação — implementada em `inspect.RedactOperationDetail`/`RedactRawModelOutput`: substitui padrões secret-shaped (Bearer, API keys, bot tokens, env de secrets), limita bytes de conteúdo bruto e anexa relatório `redaction` na resposta HTTP; store canônico permanece intacto e `content_hash` é preservado;
-- residual de Slice A: expansão de redaction para artefatos de conhecimento/exportadores; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
+- catálogo e browse de conhecimento — implementado: `GET /knowledge` (contagens), `GET /knowledge/sources|observations|claims|artifacts` (listas offset/limit), e detalhe por ID (`.../sources/{id}`, `.../observations/{id}`, `.../claims/{id}`, `.../artifacts/{id}`); claims aceitam `without_evidence`, artifacts aceitam `stale`; snapshots de bytes não são exportados (apenas hash/ref/tamanho);
+- redaction de apresentação — implementada em `inspect.RedactOperationDetail`/`RedactRawModelOutput` e estendida a knowledge (`RedactObservationDetail`/`RedactClaimDetail`/`RedactArtifactDetail` + listas): substitui padrões secret-shaped (Bearer, API keys, bot tokens, env de secrets), limita bytes de conteúdo bruto/free-text e anexa relatório `redaction` na resposta HTTP; store canônico permanece intacto e `content_hash` é preservado;
+- residual de Slice A: nenhum bloqueador de browse/knowledge; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -466,7 +467,9 @@ Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, s
 
 Inspetor de execução no dashboard experimental: carrega `GET /api/inspect/operations|commits|commands/{id}` com abas de resumo/linhagem/changeset/raw/eventos/JSON, atalhos a partir da agenda e navegação operation↔commit. Redaction fina de raw model outputs é aplicada na Control API antes do browser.
 
-Residual: conhecimento/artifacts dedicados na UI e expansão de redaction para outros free-text exports. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
+Browse de conhecimento no dashboard experimental: seção **Conhecimento** com catálogo (`GET /api/inspect/knowledge`), listas e detalhe de claims/sources/observations/artifacts via Control API; filtros de claims sem evidência e artifacts stale; sem escrita canônica e sem snapshot bytes. Redaction de free-text de knowledge também é aplicada na API.
+
+Residual de Slice D: polish UX e filtros avançados de knowledge. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
 
 ### Outbox de entrega de perguntas
 

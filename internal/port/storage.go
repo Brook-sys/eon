@@ -100,15 +100,28 @@ type IdempotencyWriter interface {
 
 type KnowledgeReader interface {
 	Source(domain.SourceID) (domain.Source, error)
+	// Sources returns all sources sorted by ID.
+	Sources() ([]domain.Source, error)
 	SourceVersion(domain.SourceVersionID) (domain.SourceVersion, error)
+	// SourceVersions returns versions for a source sorted by ObservedAt then ID.
+	// Empty sourceID lists every version in the store.
+	SourceVersions(domain.SourceID) ([]domain.SourceVersion, error)
 	SourceSnapshot(domain.SourceVersionID) (domain.SourceSnapshot, error)
 	SourceFragment(domain.SourceFragmentID) (domain.SourceFragment, error)
 	SourceFragments(domain.SourceVersionID) ([]domain.SourceFragment, error)
 	Observation(domain.ObservationID) (domain.Observation, error)
+	// Observations returns all observations sorted by ID.
+	Observations() ([]domain.Observation, error)
 	Claim(domain.ClaimID) (domain.Claim, error)
+	// Claims returns all claims sorted by ID.
+	Claims() ([]domain.Claim, error)
 	EvidenceLink(domain.EvidenceLinkID) (domain.EvidenceLink, error)
 	EvidenceLinksForClaim(domain.ClaimID) ([]domain.EvidenceLink, error)
+	// EvidenceLinks returns all evidence links sorted by ID.
+	EvidenceLinks() ([]domain.EvidenceLink, error)
 	KnowledgeArtifact(domain.ArtifactID) (domain.KnowledgeArtifact, error)
+	// KnowledgeArtifacts returns all knowledge artifacts sorted by ID.
+	KnowledgeArtifacts() ([]domain.KnowledgeArtifact, error)
 	RawModelOutput(domain.ArtifactID) (domain.RawModelOutput, error)
 	ProposedChangeSet(domain.ChangeSetID) (domain.ProposedChangeSet, error)
 	AcceptedChangeSet(domain.ChangeSetID) (domain.AcceptedChangeSet, error)

@@ -3,6 +3,7 @@ package inspect
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -41,6 +42,15 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /events", a.handleEvents)
 	mux.HandleFunc("GET /events/{eventID}", a.handleEvent)
 	mux.HandleFunc("GET /events/stream", a.handleEventStream)
+	mux.HandleFunc("GET /knowledge", a.handleKnowledgeCatalog)
+	mux.HandleFunc("GET /knowledge/sources", a.handleKnowledgeSources)
+	mux.HandleFunc("GET /knowledge/sources/{sourceID}", a.handleKnowledgeSource)
+	mux.HandleFunc("GET /knowledge/observations", a.handleKnowledgeObservations)
+	mux.HandleFunc("GET /knowledge/observations/{observationID}", a.handleKnowledgeObservation)
+	mux.HandleFunc("GET /knowledge/claims", a.handleKnowledgeClaims)
+	mux.HandleFunc("GET /knowledge/claims/{claimID}", a.handleKnowledgeClaim)
+	mux.HandleFunc("GET /knowledge/artifacts", a.handleKnowledgeArtifacts)
+	mux.HandleFunc("GET /knowledge/artifacts/{artifactID}", a.handleKnowledgeArtifact)
 	return mux
 }
 
@@ -176,6 +186,174 @@ func (a *API) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, event)
+}
+
+func (a *API) handleKnowledgeCatalog(w http.ResponseWriter, r *http.Request) {
+	summary, err := a.Projector.KnowledgeCatalog(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, summary)
+}
+
+func (a *API) handleKnowledgeSources(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := parseKnowledgePage(w, r)
+	if !ok {
+		return
+	}
+	page, err := a.Projector.ListSources(r.Context(), limit, offset)
+	if err != nil {
+		writeKnowledgeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+func (a *API) handleKnowledgeSource(w http.ResponseWriter, r *http.Request) {
+	sourceID := domain.SourceID(r.PathValue("sourceID"))
+	detail, err := a.Projector.SourceInspector(r.Context(), sourceID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
+}
+
+func (a *API) handleKnowledgeObservations(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := parseKnowledgePage(w, r)
+	if !ok {
+		return
+	}
+	page, err := a.Projector.ListObservations(r.Context(), limit, offset)
+	if err != nil {
+		writeKnowledgeError(w, err)
+		return
+	}
+	// Presentation redaction on list rows (statement/quote free text).
+	for i := range page.Items {
+		if page.Items[i].Statement != "" {
+			text, _ := RedactSensitiveText(page.Items[i].Statement)
+			page.Items[i].Statement, _ = BoundUTF8(text, knowledgeTextMax)
+		}
+		if page.Items[i].ExactQuote != "" {
+			text, _ := RedactSensitiveText(page.Items[i].ExactQuote)
+			page.Items[i].ExactQuote, _ = BoundUTF8(text, knowledgeTextMax)
+		}
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+func (a *API) handleKnowledgeObservation(w http.ResponseWriter, r *http.Request) {
+	observationID := domain.ObservationID(r.PathValue("observationID"))
+	detail, err := a.Projector.ObservationInspector(r.Context(), observationID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	safe, report := RedactObservationDetail(detail)
+	writeJSON(w, http.StatusOK, ObservationDetailResponse{
+		ObservationDetail: safe,
+		Redaction:         report,
+	})
+}
+
+func (a *API) handleKnowledgeClaims(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := parseKnowledgePage(w, r)
+	if !ok {
+		return
+	}
+	withoutEvidenceOnly := false
+	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("without_evidence"))) {
+	case "1", "true", "yes":
+		withoutEvidenceOnly = true
+	}
+	page, err := a.Projector.ListClaims(r.Context(), limit, offset, withoutEvidenceOnly)
+	if err != nil {
+		writeKnowledgeError(w, err)
+		return
+	}
+	for i := range page.Items {
+		if page.Items[i].Proposition != "" {
+			text, _ := RedactSensitiveText(page.Items[i].Proposition)
+			page.Items[i].Proposition, _ = BoundUTF8(text, knowledgeTextMax)
+		}
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+func (a *API) handleKnowledgeClaim(w http.ResponseWriter, r *http.Request) {
+	claimID := domain.ClaimID(r.PathValue("claimID"))
+	detail, err := a.Projector.ClaimInspector(r.Context(), claimID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	safe, report := RedactClaimDetail(detail)
+	writeJSON(w, http.StatusOK, ClaimDetailResponse{
+		ClaimDetail: safe,
+		Redaction:   report,
+	})
+}
+
+func (a *API) handleKnowledgeArtifacts(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := parseKnowledgePage(w, r)
+	if !ok {
+		return
+	}
+	staleOnly := false
+	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("stale"))) {
+	case "1", "true", "yes":
+		staleOnly = true
+	}
+	page, err := a.Projector.ListArtifacts(r.Context(), limit, offset, staleOnly)
+	if err != nil {
+		writeKnowledgeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+func (a *API) handleKnowledgeArtifact(w http.ResponseWriter, r *http.Request) {
+	artifactID := domain.ArtifactID(r.PathValue("artifactID"))
+	detail, err := a.Projector.ArtifactInspector(r.Context(), artifactID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	safe, report := RedactArtifactDetail(detail)
+	writeJSON(w, http.StatusOK, ArtifactDetailResponse{
+		ArtifactDetail: safe,
+		Redaction:      report,
+	})
+}
+
+func parseKnowledgePage(w http.ResponseWriter, r *http.Request) (limit, offset int, ok bool) {
+	q := r.URL.Query()
+	var err error
+	limit, err = parseIntDefault(q.Get("limit"), DefaultKnowledgeListLimit)
+	if err != nil || limit <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid_limit", "limit must be a positive integer")
+		return 0, 0, false
+	}
+	if limit > MaxKnowledgeListLimit {
+		writeError(w, http.StatusBadRequest, "invalid_limit", fmt.Sprintf("limit must be between 1 and %d", MaxKnowledgeListLimit))
+		return 0, 0, false
+	}
+	offset, err = parseIntDefault(q.Get("offset"), 0)
+	if err != nil || offset < 0 {
+		writeError(w, http.StatusBadRequest, "invalid_offset", "offset must be a non-negative integer")
+		return 0, 0, false
+	}
+	return limit, offset, true
+}
+
+func writeKnowledgeError(w http.ResponseWriter, err error) {
+	if strings.Contains(err.Error(), "limit must be") || strings.Contains(err.Error(), "offset must be") {
+		writeError(w, http.StatusBadRequest, "invalid_page", err.Error())
+		return
+	}
+	writeStoreError(w, err)
 }
 
 type errorBody struct {

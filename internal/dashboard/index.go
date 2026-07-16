@@ -149,6 +149,35 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
     <section>
+      <h2>Conhecimento</h2>
+      <p class="hint">Browse somente-leitura de sources, claims, evidence e artifacts. Conteúdo livre chega redigido pela Control API; snapshot bytes não são exportados. Mutações canônicas não passam por aqui.</p>
+      <div id="knowCatalog" class="muted">carregue o catálogo</div>
+      <div class="row" style="margin-top:10px">
+        <label>coleção
+          <select id="knowKind">
+            <option value="claims">claims</option>
+            <option value="sources">sources</option>
+            <option value="observations">observations</option>
+            <option value="artifacts">artifacts</option>
+          </select>
+        </label>
+        <label>id (detalhe)
+          <input id="knowId" placeholder="claim_... / source_... / observation_... / artifact_..." spellcheck="false" style="min-width:240px"/>
+        </label>
+        <button class="primary" type="button" id="btnKnowList">Listar</button>
+        <button type="button" id="btnKnowDetail">Detalhe</button>
+        <button type="button" id="btnKnowRefresh">Catálogo</button>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="knowWithoutEvidence"/> só claims sem evidência</label>
+        <label><input type="checkbox" id="knowStaleOnly"/> só artifacts stale</label>
+      </div>
+      <div class="okbox" id="knowOk"></div>
+      <div class="errbox" id="knowErr"></div>
+      <div id="knowList" class="list muted">nenhuma lista carregada</div>
+      <div id="knowDetail" class="prebox muted" hidden></div>
+    </section>
+    <section>
       <h2>Inspetor de execução</h2>
       <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem.</p>
       <div class="row">
@@ -1036,8 +1065,134 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       showInspPanel(btn.getAttribute("data-panel") || "summary");
     });
   });
+
+  async function refreshKnowledgeCatalog() {
+    el("knowErr").textContent = "";
+    try {
+      const body = await getJSON(inspectBase + "/knowledge");
+      let html = '<dl class="kv">';
+      html += '<dt>sources</dt><dd>' + esc(String(body.sources || 0)) + "</dd>";
+      html += '<dt>source_versions</dt><dd>' + esc(String(body.source_versions || 0)) + "</dd>";
+      html += '<dt>observations</dt><dd>' + esc(String(body.observations || 0)) + "</dd>";
+      html += '<dt>claims</dt><dd>' + esc(String(body.claims || 0)) + "</dd>";
+      html += '<dt>evidence_links</dt><dd>' + esc(String(body.evidence_links || 0)) + "</dd>";
+      html += '<dt>artifacts</dt><dd>' + esc(String(body.artifacts || 0)) + "</dd>";
+      html += '<dt>stale_artifacts</dt><dd>' + esc(String(body.stale_artifacts || 0)) + "</dd>";
+      html += '<dt>claims_without_evidence</dt><dd>' + esc(String(body.claims_without_evidence || 0)) + "</dd>";
+      html += '<dt>supporting</dt><dd>' + esc(String(body.supporting_evidence_links || 0)) + "</dd>";
+      html += '<dt>contradicting</dt><dd>' + esc(String(body.contradicting_evidence_links || 0)) + "</dd>";
+      html += "</dl>";
+      el("knowCatalog").innerHTML = html;
+      el("knowCatalog").className = "";
+      el("knowOk").textContent = "catálogo atualizado";
+    } catch (err) {
+      el("knowErr").textContent = String(err.message || err);
+    }
+  }
+
+  function knowledgeCollectionPath(kind) {
+    if (kind === "claims") return "/knowledge/claims";
+    if (kind === "sources") return "/knowledge/sources";
+    if (kind === "observations") return "/knowledge/observations";
+    if (kind === "artifacts") return "/knowledge/artifacts";
+    return "";
+  }
+
+  async function listKnowledge() {
+    el("knowErr").textContent = "";
+    el("knowOk").textContent = "";
+    el("knowDetail").hidden = true;
+    const kind = el("knowKind").value;
+    const path = knowledgeCollectionPath(kind);
+    if (!path) {
+      el("knowErr").textContent = "coleção desconhecida";
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set("limit", "50");
+    if (kind === "claims" && el("knowWithoutEvidence").checked) params.set("without_evidence", "true");
+    if (kind === "artifacts" && el("knowStaleOnly").checked) params.set("stale", "true");
+    try {
+      const body = await getJSON(inspectBase + path + "?" + params.toString());
+      const items = body.items || [];
+      if (!items.length) {
+        el("knowList").textContent = "lista vazia (total=" + String(body.total || 0) + ")";
+        el("knowList").className = "list muted";
+        el("knowOk").textContent = "listado " + kind + " total=" + String(body.total || 0);
+        return;
+      }
+      let html = "";
+      items.forEach(function (item) {
+        const id = item.id || "";
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + "</div>";
+        if (kind === "claims") {
+          html += "<h3>" + esc(item.proposition || "") + "</h3>";
+          html += '<div class="muted">evidence=' + esc(String(item.evidence_count || 0))
+            + " supports=" + esc(String(item.supports || 0))
+            + " contradicts=" + esc(String(item.contradicts || 0))
+            + (item.without_evidence ? " · SEM EVIDÊNCIA" : "") + "</div>";
+        } else if (kind === "sources") {
+          html += "<h3>" + esc(item.kind || "") + " · " + esc(item.locator || "") + "</h3>";
+          html += '<div class="muted">versions=' + esc(String(item.versions || 0)) + "</div>";
+        } else if (kind === "observations") {
+          html += "<h3>" + esc(item.statement || "") + "</h3>";
+          html += '<div class="muted">provenance=' + esc(item.provenance || "") + "</div>";
+        } else {
+          html += "<h3>" + esc(item.kind || "artifact") + (item.stale ? " · STALE" : "") + "</h3>";
+          html += '<div class="muted">deps=' + esc(String(item.dependency_count || 0))
+            + " bytes=" + esc(String(item.content_bytes || 0)) + "</div>";
+        }
+        html += '<div class="ops"><button type="button" data-know-id="' + esc(id) + '">Abrir detalhe</button></div>';
+        html += "</div>";
+      });
+      el("knowList").innerHTML = html;
+      el("knowList").className = "list";
+      el("knowList").querySelectorAll("button[data-know-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("knowId").value = btn.getAttribute("data-know-id") || "";
+          loadKnowledgeDetail();
+        });
+      });
+      el("knowOk").textContent = "listado " + kind + " items=" + String(items.length) + " total=" + String(body.total || 0);
+    } catch (err) {
+      el("knowErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadKnowledgeDetail() {
+    el("knowErr").textContent = "";
+    el("knowOk").textContent = "";
+    const kind = el("knowKind").value;
+    const id = el("knowId").value.trim();
+    if (!id) {
+      el("knowErr").textContent = "id é obrigatório";
+      return;
+    }
+    const base = knowledgeCollectionPath(kind);
+    if (!base) {
+      el("knowErr").textContent = "coleção desconhecida";
+      return;
+    }
+    try {
+      const body = await getJSON(inspectBase + base + "/" + encodeURIComponent(id));
+      el("knowDetail").hidden = false;
+      el("knowDetail").textContent = pretty(body);
+      el("knowDetail").className = "prebox";
+      el("knowOk").textContent = "detalhe " + kind + " " + id;
+      el("knowDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err) {
+      el("knowErr").textContent = String(err.message || err);
+    }
+  }
+
+  el("btnKnowList").addEventListener("click", listKnowledge);
+  el("btnKnowDetail").addEventListener("click", loadKnowledgeDetail);
+  el("btnKnowRefresh").addEventListener("click", refreshKnowledgeCatalog);
+
   // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
   fillDefaultPayload();
+  refreshKnowledgeCatalog();
   if (el("missionId").value.trim()) {
     refresh();
   }

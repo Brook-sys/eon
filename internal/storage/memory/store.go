@@ -320,8 +320,14 @@ func (t transaction) CanonicalEntity(entityType, entityID string) (domain.Canoni
 func (t transaction) Source(id domain.SourceID) (domain.Source, error) {
 	return reader(t).Source(id)
 }
+func (t transaction) Sources() ([]domain.Source, error) {
+	return reader(t).Sources()
+}
 func (t transaction) SourceVersion(id domain.SourceVersionID) (domain.SourceVersion, error) {
 	return reader(t).SourceVersion(id)
+}
+func (t transaction) SourceVersions(id domain.SourceID) ([]domain.SourceVersion, error) {
+	return reader(t).SourceVersions(id)
 }
 func (t transaction) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot, error) {
 	return reader(t).SourceSnapshot(id)
@@ -335,8 +341,14 @@ func (t transaction) SourceFragments(id domain.SourceVersionID) ([]domain.Source
 func (t transaction) Observation(id domain.ObservationID) (domain.Observation, error) {
 	return reader(t).Observation(id)
 }
+func (t transaction) Observations() ([]domain.Observation, error) {
+	return reader(t).Observations()
+}
 func (t transaction) Claim(id domain.ClaimID) (domain.Claim, error) {
 	return reader(t).Claim(id)
+}
+func (t transaction) Claims() ([]domain.Claim, error) {
+	return reader(t).Claims()
 }
 func (t transaction) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink, error) {
 	return reader(t).EvidenceLink(id)
@@ -344,8 +356,14 @@ func (t transaction) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink
 func (t transaction) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink, error) {
 	return reader(t).EvidenceLinksForClaim(id)
 }
+func (t transaction) EvidenceLinks() ([]domain.EvidenceLink, error) {
+	return reader(t).EvidenceLinks()
+}
 func (t transaction) KnowledgeArtifact(id domain.ArtifactID) (domain.KnowledgeArtifact, error) {
 	return reader(t).KnowledgeArtifact(id)
+}
+func (t transaction) KnowledgeArtifacts() ([]domain.KnowledgeArtifact, error) {
+	return reader(t).KnowledgeArtifacts()
 }
 
 func (r reader) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
@@ -798,12 +816,41 @@ func (r reader) Source(id domain.SourceID) (domain.Source, error) {
 	}
 	return v, nil
 }
+func (r reader) Sources() ([]domain.Source, error) {
+	out := make([]domain.Source, 0, len(r.state.sources))
+	for _, source := range r.state.sources {
+		out = append(out, source)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
 func (r reader) SourceVersion(id domain.SourceVersionID) (domain.SourceVersion, error) {
 	v, ok := r.state.sourceVersions[id]
 	if !ok {
 		return domain.SourceVersion{}, notFound("source version", id)
 	}
 	return v, nil
+}
+func (r reader) SourceVersions(sourceID domain.SourceID) ([]domain.SourceVersion, error) {
+	if sourceID != "" {
+		if _, ok := r.state.sources[sourceID]; !ok {
+			return nil, notFound("source", sourceID)
+		}
+	}
+	out := make([]domain.SourceVersion, 0)
+	for _, version := range r.state.sourceVersions {
+		if sourceID != "" && version.SourceID != sourceID {
+			continue
+		}
+		out = append(out, version)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ObservedAt.Equal(out[j].ObservedAt) {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].ObservedAt.Before(out[j].ObservedAt)
+	})
+	return out, nil
 }
 func (r reader) SourceSnapshot(id domain.SourceVersionID) (domain.SourceSnapshot, error) {
 	v, ok := r.state.sourceSnapshots[id]
@@ -844,12 +891,28 @@ func (r reader) Observation(id domain.ObservationID) (domain.Observation, error)
 	}
 	return v, nil
 }
+func (r reader) Observations() ([]domain.Observation, error) {
+	out := make([]domain.Observation, 0, len(r.state.observations))
+	for _, observation := range r.state.observations {
+		out = append(out, observation)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
 func (r reader) Claim(id domain.ClaimID) (domain.Claim, error) {
 	v, ok := r.state.claims[id]
 	if !ok {
 		return domain.Claim{}, notFound("claim", id)
 	}
 	return cloneClaim(v), nil
+}
+func (r reader) Claims() ([]domain.Claim, error) {
+	out := make([]domain.Claim, 0, len(r.state.claims))
+	for _, claim := range r.state.claims {
+		out = append(out, cloneClaim(claim))
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
 }
 func (r reader) EvidenceLink(id domain.EvidenceLinkID) (domain.EvidenceLink, error) {
 	v, ok := r.state.evidenceLinks[id]
@@ -871,12 +934,28 @@ func (r reader) EvidenceLinksForClaim(id domain.ClaimID) ([]domain.EvidenceLink,
 	sort.Slice(links, func(i, j int) bool { return links[i].ID < links[j].ID })
 	return links, nil
 }
+func (r reader) EvidenceLinks() ([]domain.EvidenceLink, error) {
+	out := make([]domain.EvidenceLink, 0, len(r.state.evidenceLinks))
+	for _, link := range r.state.evidenceLinks {
+		out = append(out, link)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
 func (r reader) KnowledgeArtifact(id domain.ArtifactID) (domain.KnowledgeArtifact, error) {
 	v, ok := r.state.artifacts[id]
 	if !ok {
 		return domain.KnowledgeArtifact{}, notFound("knowledge artifact", id)
 	}
 	return cloneKnowledgeArtifact(v), nil
+}
+func (r reader) KnowledgeArtifacts() ([]domain.KnowledgeArtifact, error) {
+	out := make([]domain.KnowledgeArtifact, 0, len(r.state.artifacts))
+	for _, artifact := range r.state.artifacts {
+		out = append(out, cloneKnowledgeArtifact(artifact))
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
 }
 func (r reader) RawModelOutput(id domain.ArtifactID) (domain.RawModelOutput, error) {
 	v, ok := r.state.rawModelOutputs[id]

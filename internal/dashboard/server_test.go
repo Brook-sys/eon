@@ -111,6 +111,10 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"open_candidates",
 		"frontier_families",
 		"continuity_blocked",
+		"Conhecimento",
+		"/knowledge",
+		"btnKnowList",
+		"claims_without_evidence",
 	} {
 		if !strings.Contains(html, marker) {
 			t.Fatalf("index missing marker %q", marker)
