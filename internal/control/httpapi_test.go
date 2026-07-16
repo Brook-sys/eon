@@ -123,13 +123,13 @@ func TestControlAPISubmitExternalEventAndDisposition(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	body := map[string]any{
-		"schema_version":     1,
-		"deduplication_key":  "dashboard:msg:1",
-		"kind":               "USER_MESSAGE",
-		"mission_id":         "mission_1",
-		"content":            map[string]any{"media_type": "text/plain", "text": "hello from dashboard"},
-		"source":             "operator-dashboard",
-		"source_actor_id":    "operator_1",
+		"schema_version":       1,
+		"deduplication_key":    "dashboard:msg:1",
+		"kind":                 "USER_MESSAGE",
+		"mission_id":           "mission_1",
+		"content":              map[string]any{"media_type": "text/plain", "text": "hello from dashboard"},
+		"source":               "operator-dashboard",
+		"source_actor_id":      "operator_1",
 		"transport_message_id": "ui-1",
 	}
 	first := mustPOSTJSON(t, server.URL+"/external-events", body)
@@ -180,6 +180,135 @@ func TestControlAPISubmitExternalEventAndDisposition(t *testing.T) {
 	decodeJSON(t, dispResp.Body, &terminal)
 	if terminal.State != domain.ExternalEventIgnored {
 		t.Fatalf("terminal disposition = %#v", terminal)
+	}
+}
+
+func TestControlAPIQuestionsListGetSubmitAndProcessAnswer(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 5, 15, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(70)
+	seedMission(t, store, now)
+	question := domain.OperatorQuestion{
+		SchemaVersion: domain.SchemaVersionV1, ID: "ask_dashboard", MissionID: "mission_1", MissionRevision: "revision_1",
+		Revision: 1, Kind: domain.QuestionSingleChoiceWithOther, Prompt: "Choose a style", Context: "Affects artifact presentation only.",
+		Options:    []domain.QuestionOption{{ID: "minimal", Label: "Minimal"}, {ID: "modern", Label: "Modern"}},
+		AllowOther: true, AllowContext: true, AllowSkip: true, FallbackPolicy: domain.QuestionContinueOtherWork,
+		DedupSignature: "style:artifact", Priority: 50, Status: domain.OperatorQuestionPending, CreatedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Hour),
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.CreateOperatorQuestion(question) }); err != nil {
+		t.Fatal(err)
+	}
+
+	api := newControlAPI(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	listed := mustGET(t, server.URL+"/questions?mission_id=mission_1&status=PENDING")
+	defer listed.Body.Close()
+	if listed.StatusCode != http.StatusOK {
+		t.Fatalf("list status = %d body=%s", listed.StatusCode, readBody(t, listed))
+	}
+	var listBody struct {
+		Questions []domain.OperatorQuestion `json:"questions"`
+	}
+	decodeJSON(t, listed.Body, &listBody)
+	if len(listBody.Questions) != 1 || listBody.Questions[0].ID != question.ID {
+		t.Fatalf("questions = %#v", listBody.Questions)
+	}
+
+	got := mustGET(t, server.URL+"/questions/"+string(question.ID))
+	defer got.Body.Close()
+	if got.StatusCode != http.StatusOK {
+		t.Fatalf("get question status = %d", got.StatusCode)
+	}
+
+	body := map[string]any{
+		"schema_version": 1, "idempotency_key": "dashboard:answer:1", "expected_question_revision": 1,
+		"kind": "OPTIONS", "option_ids": []string{"minimal"}, "actor_id": "operator_1",
+	}
+	first := mustPOSTJSON(t, server.URL+"/questions/"+string(question.ID)+"/answers", body)
+	defer first.Body.Close()
+	if first.StatusCode != http.StatusAccepted {
+		t.Fatalf("answer status = %d body=%s", first.StatusCode, readBody(t, first))
+	}
+	var accepted map[string]any
+	decodeJSON(t, first.Body, &accepted)
+	answerID := accepted["answer_id"]
+	eventID := accepted["event_id"]
+	if answerID == "" || eventID == "" {
+		t.Fatalf("accepted answer = %#v", accepted)
+	}
+
+	// A retry may omit the server-generated answer ID and timestamp; the durable
+	// event identity and answer identity remain stable by idempotency key.
+	retry := mustPOSTJSON(t, server.URL+"/questions/"+string(question.ID)+"/answers", body)
+	defer retry.Body.Close()
+	if retry.StatusCode != http.StatusAccepted {
+		t.Fatalf("retry status = %d body=%s", retry.StatusCode, readBody(t, retry))
+	}
+	var replay map[string]any
+	decodeJSON(t, retry.Body, &replay)
+	if replay["answer_id"] != answerID || replay["event_id"] != eventID {
+		t.Fatalf("replay diverged: first=%#v replay=%#v", accepted, replay)
+	}
+
+	processor, err := kernel.NewExternalEventProcessor(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disposition, processed, err := processor.ProcessNext(context.Background()); err != nil {
+		t.Fatal(err)
+	} else if !processed || disposition.State != domain.ExternalEventApplied {
+		t.Fatalf("processed=%v disposition=%#v", processed, disposition)
+	}
+	answered := mustGET(t, server.URL+"/questions/"+string(question.ID))
+	defer answered.Body.Close()
+	var terminal domain.OperatorQuestion
+	decodeJSON(t, answered.Body, &terminal)
+	if terminal.Status != domain.OperatorQuestionAnswered || string(terminal.AnswerID) != answerID {
+		t.Fatalf("terminal question = %#v", terminal)
+	}
+}
+
+func TestControlAPIQuestionAnswerRejectsStaleRevisionAndDivergentReplay(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 5, 18, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(80)
+	seedMission(t, store, now)
+	question := domain.OperatorQuestion{
+		SchemaVersion: 1, ID: "ask_confirm", MissionID: "mission_1", MissionRevision: "revision_1", Revision: 1,
+		Kind: domain.QuestionConfirmation, Prompt: "Proceed?", Context: "Affects one reversible action.",
+		FallbackPolicy: domain.QuestionContinueOtherWork, DedupSignature: "confirm:1", Priority: 50,
+		Status: domain.OperatorQuestionPending, CreatedAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Hour),
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.CreateOperatorQuestion(question) }); err != nil {
+		t.Fatal(err)
+	}
+	api := newControlAPI(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	stale := mustPOSTJSON(t, server.URL+"/questions/ask_confirm/answers", map[string]any{
+		"schema_version": 1, "idempotency_key": "answer:stale", "expected_question_revision": 2, "kind": "CONFIRM",
+	})
+	defer stale.Body.Close()
+	if stale.StatusCode != http.StatusConflict {
+		t.Fatalf("stale status = %d body=%s", stale.StatusCode, readBody(t, stale))
+	}
+
+	validBody := map[string]any{"schema_version": 1, "idempotency_key": "answer:same", "expected_question_revision": 1, "kind": "CONFIRM"}
+	valid := mustPOSTJSON(t, server.URL+"/questions/ask_confirm/answers", validBody)
+	defer valid.Body.Close()
+	if valid.StatusCode != http.StatusAccepted {
+		t.Fatalf("valid status = %d body=%s", valid.StatusCode, readBody(t, valid))
+	}
+	validBody["kind"] = "DECLINE"
+	conflict := mustPOSTJSON(t, server.URL+"/questions/ask_confirm/answers", validBody)
+	defer conflict.Body.Close()
+	if conflict.StatusCode != http.StatusConflict {
+		t.Fatalf("divergent replay status = %d body=%s", conflict.StatusCode, readBody(t, conflict))
 	}
 }
 

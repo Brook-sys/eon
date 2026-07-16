@@ -2,6 +2,7 @@ package control
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,6 +62,9 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /external-events", a.handleSubmitExternalEvent)
 	mux.HandleFunc("GET /external-events/{eventID}", a.handleGetExternalEvent)
 	mux.HandleFunc("GET /external-events/{eventID}/disposition", a.handleGetExternalEventDisposition)
+	mux.HandleFunc("GET /questions", a.handleListQuestions)
+	mux.HandleFunc("GET /questions/{questionID}", a.handleGetQuestion)
+	mux.HandleFunc("POST /questions/{questionID}/answers", a.handleSubmitQuestionAnswer)
 	return mux
 }
 
@@ -87,26 +91,47 @@ type commandSubmitResponse struct {
 }
 
 type externalEventSubmitRequest struct {
-	SchemaVersion      int                     `json:"schema_version"`
-	EventID            domain.ExternalEventID  `json:"event_id"`
-	DeduplicationKey   string                  `json:"deduplication_key"`
-	Source             string                  `json:"source"`
-	SourceActorID      string                  `json:"source_actor_id"`
+	SchemaVersion      int                      `json:"schema_version"`
+	EventID            domain.ExternalEventID   `json:"event_id"`
+	DeduplicationKey   string                   `json:"deduplication_key"`
+	Source             string                   `json:"source"`
+	SourceActorID      string                   `json:"source_actor_id"`
 	Kind               domain.ExternalEventKind `json:"kind"`
-	MissionID          domain.MissionID        `json:"mission_id,omitempty"`
-	CorrelationID      string                  `json:"correlation_id,omitempty"`
-	TransportMessageID string                  `json:"transport_message_id,omitempty"`
-	Content            domain.ExternalContent  `json:"content"`
-	ReceivedAt         *time.Time              `json:"received_at,omitempty"`
+	MissionID          domain.MissionID         `json:"mission_id,omitempty"`
+	CorrelationID      string                   `json:"correlation_id,omitempty"`
+	TransportMessageID string                   `json:"transport_message_id,omitempty"`
+	Content            domain.ExternalContent   `json:"content"`
+	ReceivedAt         *time.Time               `json:"received_at,omitempty"`
 }
 
 type externalEventSubmitResponse struct {
-	SchemaVersion int                            `json:"schema_version"`
-	EventID       domain.ExternalEventID         `json:"event_id"`
+	SchemaVersion int                             `json:"schema_version"`
+	EventID       domain.ExternalEventID          `json:"event_id"`
 	Disposition   domain.ExternalEventDisposition `json:"disposition"`
 	// Accepted means the stimulus was durably received. Kernel disposition may
 	// later mark it applied, rejected, or ignored.
 	Accepted bool `json:"accepted"`
+}
+
+type questionAnswerSubmitRequest struct {
+	SchemaVersion            int                       `json:"schema_version"`
+	AnswerID                 domain.OperatorAnswerID   `json:"answer_id,omitempty"`
+	IdempotencyKey           string                    `json:"idempotency_key"`
+	ExpectedQuestionRevision uint64                    `json:"expected_question_revision"`
+	Kind                     domain.OperatorAnswerKind `json:"kind"`
+	OptionIDs                []string                  `json:"option_ids,omitempty"`
+	Text                     string                    `json:"text,omitempty"`
+	ActorID                  string                    `json:"actor_id,omitempty"`
+	SubmittedAt              *time.Time                `json:"submitted_at,omitempty"`
+}
+
+type questionAnswerSubmitResponse struct {
+	SchemaVersion int                             `json:"schema_version"`
+	QuestionID    domain.OperatorQuestionID       `json:"question_id"`
+	AnswerID      domain.OperatorAnswerID         `json:"answer_id"`
+	EventID       domain.ExternalEventID          `json:"event_id"`
+	Disposition   domain.ExternalEventDisposition `json:"disposition"`
+	Accepted      bool                            `json:"accepted"`
 }
 
 func (a *API) handleSubmitCommand(w http.ResponseWriter, r *http.Request) {
@@ -290,6 +315,211 @@ func (a *API) handleGetExternalEventDisposition(w http.ResponseWriter, r *http.R
 		return
 	}
 	writeJSON(w, http.StatusOK, disposition)
+}
+
+func (a *API) handleListQuestions(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	if missionID == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "mission_id is required"})
+		return
+	}
+	status := domain.OperatorQuestionStatus(strings.TrimSpace(r.URL.Query().Get("status")))
+	if status == "" {
+		status = domain.OperatorQuestionPending
+	}
+	if !knownQuestionStatus(status) {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "unknown question status"})
+		return
+	}
+	var questions []domain.OperatorQuestion
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		questions, err = reader.OperatorQuestions(missionID, status)
+		return err
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "question"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"questions":      questions,
+	})
+}
+
+func (a *API) handleGetQuestion(w http.ResponseWriter, r *http.Request) {
+	question, err := a.question(r.Context(), domain.OperatorQuestionID(r.PathValue("questionID")))
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "question"))
+		return
+	}
+	writeJSON(w, http.StatusOK, question)
+}
+
+func (a *API) handleSubmitQuestionAnswer(w http.ResponseWriter, r *http.Request) {
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req questionAnswerSubmitRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	questionID := domain.OperatorQuestionID(r.PathValue("questionID"))
+	question, err := a.question(r.Context(), questionID)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "question"))
+		return
+	}
+	if req.SchemaVersion == 0 {
+		req.SchemaVersion = domain.SchemaVersionV1
+	}
+	if strings.TrimSpace(req.IdempotencyKey) == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "idempotency_key is required"})
+		return
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	if actorID == "" {
+		actorID = a.DefaultActorID
+	}
+	receivedAt := a.Clock.Now().UTC()
+	if req.SubmittedAt != nil {
+		receivedAt = req.SubmittedAt.UTC()
+	}
+	if existing, lookupErr := a.Events.ExternalEventByDeduplicationKey(strings.TrimSpace(req.IdempotencyKey)); lookupErr == nil {
+		existingAnswer, decodeErr := decodeDashboardAnswer(existing)
+		if decodeErr != nil || existing.CorrelationID != string(question.ID) || existing.SourceActorID != actorID ||
+			existingAnswer.ExpectedQuestionRevision != req.ExpectedQuestionRevision || existingAnswer.Kind != req.Kind ||
+			!equalStrings(existingAnswer.OptionIDs, req.OptionIDs) || existingAnswer.Text != req.Text ||
+			(req.AnswerID != "" && existingAnswer.ID != req.AnswerID) {
+			writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: "idempotency_key was already used for a different answer"})
+			return
+		}
+		disposition, dispositionErr := a.Events.SubmitExternalEvent(existing)
+		if dispositionErr != nil {
+			writeAPIError(w, mapStoreError(dispositionErr, "question_answer"))
+			return
+		}
+		writeJSON(w, http.StatusAccepted, questionAnswerSubmitResponse{
+			SchemaVersion: domain.SchemaVersionV1, QuestionID: question.ID, AnswerID: existingAnswer.ID,
+			EventID: existing.ID, Disposition: disposition, Accepted: true,
+		})
+		return
+	} else if lookupErr != nil && !errors.Is(lookupErr, port.ErrNotFound) {
+		writeAPIError(w, mapStoreError(lookupErr, "question_answer"))
+		return
+	}
+	answerID := req.AnswerID
+	if answerID == "" {
+		id, idErr := a.IDs.NewID("answer")
+		if idErr != nil {
+			writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "identity_failed", message: "could not assign answer identity"})
+			return
+		}
+		answerID = domain.OperatorAnswerID(id)
+	}
+	answer := domain.UserAnswer{
+		SchemaVersion:            req.SchemaVersion,
+		ID:                       answerID,
+		QuestionID:               questionID,
+		ExpectedQuestionRevision: req.ExpectedQuestionRevision,
+		Kind:                     req.Kind,
+		OptionIDs:                append([]string(nil), req.OptionIDs...),
+		Text:                     req.Text,
+		ActorID:                  actorID,
+		Channel:                  "operator-dashboard",
+		TransportEventID:         strings.TrimSpace(req.IdempotencyKey),
+		ReceivedAt:               receivedAt,
+	}
+	if err := answer.ValidateForQuestion(question); err != nil {
+		writeAPIError(w, apiError{status: http.StatusConflict, code: "invalid_answer", message: sanitizeValidationMessage(err)})
+		return
+	}
+	structured, err := json.Marshal(answer)
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "encode_failed", message: "could not encode answer"})
+		return
+	}
+	event := domain.ExternalEvent{
+		SchemaVersion:    domain.SchemaVersionV1,
+		DeduplicationKey: answer.TransportEventID,
+		Source:           answer.Channel,
+		SourceActorID:    answer.ActorID,
+		Kind:             domain.ExternalUserAnswer,
+		MissionID:        question.MissionID,
+		CorrelationID:    string(question.ID),
+		Content: domain.ExternalContent{
+			MediaType:  "application/json",
+			Structured: structured,
+		},
+		ReceivedAt: receivedAt,
+	}
+	filled, err := ensureExternalEventIdentity(event, a.Clock, a.IDs)
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "identity_failed", message: "could not assign answer event identity"})
+		return
+	}
+	disposition, err := a.Events.SubmitExternalEvent(filled)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "question_answer"))
+		return
+	}
+	writeJSON(w, http.StatusAccepted, questionAnswerSubmitResponse{
+		SchemaVersion: domain.SchemaVersionV1,
+		QuestionID:    question.ID,
+		AnswerID:      answer.ID,
+		EventID:       filled.ID,
+		Disposition:   disposition,
+		Accepted:      true,
+	})
+}
+
+func (a *API) question(ctx context.Context, id domain.OperatorQuestionID) (domain.OperatorQuestion, error) {
+	if id == "" {
+		return domain.OperatorQuestion{}, port.ErrNotFound
+	}
+	var question domain.OperatorQuestion
+	err := a.Events.Store.View(ctx, func(reader port.Reader) error {
+		var err error
+		question, err = reader.OperatorQuestion(id)
+		return err
+	})
+	return question, err
+}
+
+func knownQuestionStatus(status domain.OperatorQuestionStatus) bool {
+	switch status {
+	case domain.OperatorQuestionPending, domain.OperatorQuestionClarificationRequested, domain.OperatorQuestionAnswered,
+		domain.OperatorQuestionExpired, domain.OperatorQuestionSuperseded, domain.OperatorQuestionCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
+func decodeDashboardAnswer(event domain.ExternalEvent) (domain.UserAnswer, error) {
+	if event.Kind != domain.ExternalUserAnswer || event.Source != "operator-dashboard" {
+		return domain.UserAnswer{}, errors.New("event is not a dashboard answer")
+	}
+	var answer domain.UserAnswer
+	if err := decodeStrictJSON(event.Content.Structured, &answer); err != nil {
+		return domain.UserAnswer{}, err
+	}
+	return answer, answer.Validate()
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 type apiError struct {
