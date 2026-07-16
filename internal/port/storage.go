@@ -171,12 +171,33 @@ type ContinuityWriter interface {
 	CreateContinuityDiagnosis(domain.ContinuityDiagnosis) error
 }
 
+// ConfigReader exposes versioned operator configuration drafts and revisions.
+// Active revision is the last applied pointer per scope.
+type ConfigReader interface {
+	ConfigDraft(domain.ConfigDraftID) (domain.ConfigDraft, error)
+	ConfigRevision(domain.ConfigRevisionID) (domain.ConfigRevision, error)
+	ActiveConfigRevision(domain.ConfigScope) (domain.ConfigRevision, error)
+	ConfigRevisions(domain.ConfigScope) ([]domain.ConfigRevision, error)
+	ConfigApplyReceipt(domain.ConfigDraftID) (domain.ConfigApplyReceipt, error)
+}
+
+// ConfigWriter persists drafts, immutable revisions, apply receipts, and the
+// active pointer. Only the kernel apply path may promote a draft to active.
+type ConfigWriter interface {
+	CreateConfigDraft(domain.ConfigDraft) error
+	SaveConfigDraft(domain.ConfigDraft) error
+	AppendConfigRevision(domain.ConfigRevision) error
+	ActivateConfigRevision(domain.ConfigScope, domain.ConfigRevisionID) error
+	SaveConfigApplyReceipt(domain.ConfigApplyReceipt) error
+}
+
 type Reader interface {
 	MissionReader
 	AgendaReader
 	OperatorQuestionReader
 	ControlReader
 	ContinuityReader
+	ConfigReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -189,6 +210,7 @@ type Transaction interface {
 	OperatorQuestionWriter
 	ControlWriter
 	ContinuityWriter
+	ConfigWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter

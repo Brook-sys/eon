@@ -1093,6 +1093,141 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("config drafts revisions and apply receipts are durable with sequential activation", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC)
+		policy := domain.DefaultInterruptionRuntimePolicy()
+		draft := domain.ConfigDraft{
+			SchemaVersion: domain.SchemaVersionV1, ID: "draft_cfg_1", Scope: domain.ConfigScopeInterruption,
+			BasedOnRevision: 0, Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+			ActorType: domain.ActorOperator, ActorID: "operator_1", Reason: "baseline", Interruption: &policy, CreatedAt: now,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateConfigDraft(draft)
+		}); err != nil {
+			t.Fatalf("create draft: %v", err)
+		}
+		validated, err := domain.MarkConfigDraftValidated(draft, now.Add(time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt := domain.ConfigApplyReceipt{
+			SchemaVersion: domain.SchemaVersionV1, ID: "receipt_cfg_1", DraftID: draft.ID,
+			State: domain.ConfigApplyReceived, RecordedAt: now,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.SaveConfigDraft(validated); err != nil {
+				return err
+			}
+			for _, step := range []domain.ConfigApplyState{
+				domain.ConfigApplyReceived, domain.ConfigApplyValidating, domain.ConfigApplyAccepted, domain.ConfigApplyApplying,
+			} {
+				receipt.State = step
+				receipt.RecordedAt = receipt.RecordedAt.Add(time.Second)
+				if err := tx.SaveConfigApplyReceipt(receipt); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			t.Fatalf("validate draft trail: %v", err)
+		}
+		revision, appliedDraft, appliedReceipt, err := domain.ApplyConfigDraft(nil, validated, "cfgrev_1", receipt.ID, now.Add(10*time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendConfigRevision(revision); err != nil {
+				return err
+			}
+			if err := tx.ActivateConfigRevision(revision.Scope, revision.ID); err != nil {
+				return err
+			}
+			if err := tx.SaveConfigDraft(appliedDraft); err != nil {
+				return err
+			}
+			return tx.SaveConfigApplyReceipt(appliedReceipt)
+		}); err != nil {
+			t.Fatalf("apply revision: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.ActivateConfigRevision(revision.Scope, revision.ID)
+		}); err != nil {
+			t.Fatalf("idempotent activate: %v", err)
+		}
+		// Stale reverse activation must fail when a higher revision exists after second apply setup.
+		nextPolicy := policy
+		nextPolicy.MaxPending = 7
+		nextDraft := domain.ConfigDraft{
+			SchemaVersion: domain.SchemaVersionV1, ID: "draft_cfg_2", Scope: domain.ConfigScopeInterruption,
+			BasedOnRevision: 1, Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+			ActorType: domain.ActorOperator, ActorID: "operator_1", Reason: "raise", Interruption: &nextPolicy, CreatedAt: now.Add(time.Minute),
+		}
+		nextValidated, err := domain.MarkConfigDraftValidated(nextDraft, now.Add(time.Minute+time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		nextRevision, nextApplied, nextReceipt, err := domain.ApplyConfigDraft(&revision, nextValidated, "cfgrev_2", "receipt_cfg_2", now.Add(2*time.Minute))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.CreateConfigDraft(nextDraft); err != nil {
+				return err
+			}
+			if err := tx.SaveConfigDraft(nextValidated); err != nil {
+				return err
+			}
+			seed := domain.ConfigApplyReceipt{
+				SchemaVersion: domain.SchemaVersionV1, ID: nextReceipt.ID, DraftID: nextDraft.ID,
+				State: domain.ConfigApplyReceived, RecordedAt: now.Add(time.Minute),
+			}
+			for _, step := range []domain.ConfigApplyState{
+				domain.ConfigApplyReceived, domain.ConfigApplyValidating, domain.ConfigApplyAccepted, domain.ConfigApplyApplying,
+			} {
+				seed.State = step
+				seed.RecordedAt = seed.RecordedAt.Add(time.Second)
+				if err := tx.SaveConfigApplyReceipt(seed); err != nil {
+					return err
+				}
+			}
+			if err := tx.AppendConfigRevision(nextRevision); err != nil {
+				return err
+			}
+			if err := tx.ActivateConfigRevision(nextRevision.Scope, nextRevision.ID); err != nil {
+				return err
+			}
+			if err := tx.SaveConfigDraft(nextApplied); err != nil {
+				return err
+			}
+			return tx.SaveConfigApplyReceipt(nextReceipt)
+		}); err != nil {
+			t.Fatalf("second revision: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.ActivateConfigRevision(revision.Scope, revision.ID)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("reverse activation error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			active, err := r.ActiveConfigRevision(domain.ConfigScopeInterruption)
+			if err != nil || active.ID != nextRevision.ID || active.Revision != 2 {
+				t.Fatalf("active = %#v err=%v", active, err)
+			}
+			list, err := r.ConfigRevisions(domain.ConfigScopeInterruption)
+			if err != nil || len(list) != 2 {
+				t.Fatalf("revisions = %#v err=%v", list, err)
+			}
+			gotReceipt, err := r.ConfigApplyReceipt(draft.ID)
+			if err != nil || gotReceipt.State != domain.ConfigApplyApplied {
+				t.Fatalf("receipt = %#v err=%v", gotReceipt, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("work opportunities and continuity diagnoses are durable with dedup and lineage", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)

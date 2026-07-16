@@ -56,6 +56,10 @@ type persistedState struct {
 	ExternalEventDispositions map[domain.ExternalEventID]domain.ExternalEventDisposition
 	WorkOpportunities         map[domain.WorkOpportunityID]domain.WorkOpportunity
 	ContinuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
+	ConfigDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
+	ConfigRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
+	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
+	ConfigApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
 }
 
 // MarshalBinary returns an isolated checkpoint of the reference store.
@@ -83,6 +87,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ExternalEvents:          cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
 		ExternalEventDispositions: cloned.externalEventDispositions,
 		WorkOpportunities:         cloned.workOpportunities, ContinuityDiagnoses: cloned.continuityDiagnoses,
+		ConfigDrafts:              cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
+		ActiveConfig:              cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
@@ -142,6 +148,10 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.externalEventDispositions = nonNil(p.ExternalEventDispositions, base.externalEventDispositions)
 	base.workOpportunities = nonNil(p.WorkOpportunities, base.workOpportunities)
 	base.continuityDiagnoses = nonNil(p.ContinuityDiagnoses, base.continuityDiagnoses)
+	base.configDrafts = nonNil(p.ConfigDrafts, base.configDrafts)
+	base.configRevisions = nonNil(p.ConfigRevisions, base.configRevisions)
+	base.activeConfig = nonNil(p.ActiveConfig, base.activeConfig)
+	base.configApplyReceipts = nonNil(p.ConfigApplyReceipts, base.configApplyReceipts)
 	return &Store{state: base}, nil
 }
 

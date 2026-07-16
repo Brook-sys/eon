@@ -32,5 +32,7 @@ type (
 	QuestionGateDecisionID string
 	WorkOpportunityID      string
 	ContinuityDiagnosisID  string
+	ConfigDraftID          string
+	ConfigRevisionID       string
 	IdempotencyKey         string
 )

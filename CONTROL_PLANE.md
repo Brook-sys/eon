@@ -446,10 +446,11 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 ### Slice C — configuração versionada
 
-- schemas e drafts;
-- validação e diff;
-- aplicação por fronteira segura;
-- histórico e rollback quando semanticamente suportado.
+- schemas e drafts versionados por escopo (`RUNTIME`, `SCHEDULER`, `HORIZON`, `INTERRUPTION`, `CHANNELS`) — implementados em `domain.ConfigDraft`/`ConfigRevision` com `SecretRef` apenas por referência;
+- pipeline `draft → validate → impact preview → apply → receipt` com aplicabilidade `HOT|NEXT_CYCLE|RESTART_REQUIRED|IMMUTABLE` — implementado em `domain` e `kernel.ConfigApplier`;
+- validação, diff determinístico (redação de secret refs) e preview de impacto — implementados;
+- portas `ConfigReader`/`ConfigWriter`, store em memória + checkpoint gob (SQLite/Dolt via payload), receipts monotônicos e ponteiro ativo por escopo — implementados;
+- residual: projeção no scheduler/question-gate a partir do active revision, HTTP admin de drafts, rollback semântico (re-apply de revisão ancestral) e UI.
 
 ### Slice D — dashboard web
 

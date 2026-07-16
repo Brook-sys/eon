@@ -65,6 +65,10 @@ type state struct {
 	externalEventDispositions map[domain.ExternalEventID]domain.ExternalEventDisposition
 	workOpportunities         map[domain.WorkOpportunityID]domain.WorkOpportunity
 	continuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
+	configDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
+	configRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
+	activeConfig              map[domain.ConfigScope]domain.ConfigRevisionID
+	configApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -112,6 +116,10 @@ func newState() state {
 		externalEventDispositions: make(map[domain.ExternalEventID]domain.ExternalEventDisposition),
 		workOpportunities:         make(map[domain.WorkOpportunityID]domain.WorkOpportunity),
 		continuityDiagnoses:       make(map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis),
+		configDrafts:              make(map[domain.ConfigDraftID]domain.ConfigDraft),
+		configRevisions:           make(map[domain.ConfigRevisionID]domain.ConfigRevision),
+		activeConfig:              make(map[domain.ConfigScope]domain.ConfigRevisionID),
+		configApplyReceipts:       make(map[domain.ConfigDraftID]domain.ConfigApplyReceipt),
 	}
 }
 
@@ -228,6 +236,21 @@ func (t transaction) ContinuityDiagnosis(id domain.ContinuityDiagnosisID) (domai
 }
 func (t transaction) LatestContinuityDiagnosis(id domain.MissionRevisionID) (domain.ContinuityDiagnosis, error) {
 	return reader(t).LatestContinuityDiagnosis(id)
+}
+func (t transaction) ConfigDraft(id domain.ConfigDraftID) (domain.ConfigDraft, error) {
+	return reader(t).ConfigDraft(id)
+}
+func (t transaction) ConfigRevision(id domain.ConfigRevisionID) (domain.ConfigRevision, error) {
+	return reader(t).ConfigRevision(id)
+}
+func (t transaction) ActiveConfigRevision(scope domain.ConfigScope) (domain.ConfigRevision, error) {
+	return reader(t).ActiveConfigRevision(scope)
+}
+func (t transaction) ConfigRevisions(scope domain.ConfigScope) ([]domain.ConfigRevision, error) {
+	return reader(t).ConfigRevisions(scope)
+}
+func (t transaction) ConfigApplyReceipt(id domain.ConfigDraftID) (domain.ConfigApplyReceipt, error) {
+	return reader(t).ConfigApplyReceipt(id)
 }
 func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	return reader(t).OperationSpec(id)
@@ -608,6 +631,52 @@ func (r reader) LatestContinuityDiagnosis(missionRevision domain.MissionRevision
 		return domain.ContinuityDiagnosis{}, notFound("continuity diagnosis", missionRevision)
 	}
 	return cloneContinuityDiagnosis(latest), nil
+}
+func (r reader) ConfigDraft(id domain.ConfigDraftID) (domain.ConfigDraft, error) {
+	v, ok := r.state.configDrafts[id]
+	if !ok {
+		return domain.ConfigDraft{}, notFound("config draft", id)
+	}
+	return cloneConfigDraft(v), nil
+}
+func (r reader) ConfigRevision(id domain.ConfigRevisionID) (domain.ConfigRevision, error) {
+	v, ok := r.state.configRevisions[id]
+	if !ok {
+		return domain.ConfigRevision{}, notFound("config revision", id)
+	}
+	return cloneConfigRevision(v), nil
+}
+func (r reader) ActiveConfigRevision(scope domain.ConfigScope) (domain.ConfigRevision, error) {
+	id, ok := r.state.activeConfig[scope]
+	if !ok {
+		return domain.ConfigRevision{}, notFound("active config revision", scope)
+	}
+	return r.ConfigRevision(id)
+}
+func (r reader) ConfigRevisions(scope domain.ConfigScope) ([]domain.ConfigRevision, error) {
+	if !scope.Valid() {
+		return nil, fmt.Errorf("config revision query requires valid scope")
+	}
+	result := make([]domain.ConfigRevision, 0)
+	for _, revision := range r.state.configRevisions {
+		if revision.Scope == scope {
+			result = append(result, cloneConfigRevision(revision))
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Revision == result[j].Revision {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].Revision < result[j].Revision
+	})
+	return result, nil
+}
+func (r reader) ConfigApplyReceipt(id domain.ConfigDraftID) (domain.ConfigApplyReceipt, error) {
+	v, ok := r.state.configApplyReceipts[id]
+	if !ok {
+		return domain.ConfigApplyReceipt{}, notFound("config apply receipt", id)
+	}
+	return v, nil
 }
 func (r reader) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	v, ok := r.state.operationSpecs[id]
@@ -1175,6 +1244,146 @@ func (t transaction) CreateContinuityDiagnosis(v domain.ContinuityDiagnosis) err
 		return conflict("continuity diagnosis", v.ID)
 	}
 	t.state.continuityDiagnoses[v.ID] = cloneContinuityDiagnosis(v)
+	return nil
+}
+
+func (t transaction) CreateConfigDraft(v domain.ConfigDraft) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate config draft: %w", err)
+	}
+	if v.Status != domain.ConfigDraftOpen {
+		return fmt.Errorf("%w: config draft must be created OPEN", port.ErrConflict)
+	}
+	if _, exists := t.state.configDrafts[v.ID]; exists {
+		return conflict("config draft", v.ID)
+	}
+	t.state.configDrafts[v.ID] = cloneConfigDraft(v)
+	return nil
+}
+
+func (t transaction) SaveConfigDraft(v domain.ConfigDraft) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate config draft: %w", err)
+	}
+	current, ok := t.state.configDrafts[v.ID]
+	if !ok {
+		return notFound("config draft", v.ID)
+	}
+	if current.Scope != v.Scope || current.BasedOnRevision != v.BasedOnRevision || current.Applicability != v.Applicability || current.ActorType != v.ActorType || current.ActorID != v.ActorID || current.Reason != v.Reason || !current.CreatedAt.Equal(v.CreatedAt) {
+		return fmt.Errorf("%w: immutable config draft fields changed", port.ErrConflict)
+	}
+	if !equalConfigPayloads(current, v) {
+		return fmt.Errorf("%w: config draft payload is immutable", port.ErrConflict)
+	}
+	if current.Status.Terminal() && current.Status != v.Status {
+		return fmt.Errorf("%w: terminal config draft cannot change status", port.ErrConflict)
+	}
+	if current.Status == v.Status {
+		if current.ValidatedAt.Equal(v.ValidatedAt) {
+			return nil
+		}
+		return fmt.Errorf("%w: config draft status unchanged with different validation time", port.ErrConflict)
+	}
+	switch {
+	case current.Status == domain.ConfigDraftOpen && (v.Status == domain.ConfigDraftValidated || v.Status == domain.ConfigDraftRejected):
+	case current.Status == domain.ConfigDraftValidated && (v.Status == domain.ConfigDraftApplied || v.Status == domain.ConfigDraftRejected):
+	default:
+		return fmt.Errorf("%w: illegal config draft status transition %s → %s", port.ErrConflict, current.Status, v.Status)
+	}
+	t.state.configDrafts[v.ID] = cloneConfigDraft(v)
+	return nil
+}
+
+func (t transaction) AppendConfigRevision(v domain.ConfigRevision) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate config revision: %w", err)
+	}
+	if _, exists := t.state.configRevisions[v.ID]; exists {
+		return conflict("config revision", v.ID)
+	}
+	var max uint64
+	for _, existing := range t.state.configRevisions {
+		if existing.Scope != v.Scope {
+			continue
+		}
+		if existing.Revision > max {
+			max = existing.Revision
+		}
+		if existing.Revision == v.Revision {
+			return fmt.Errorf("%w: config revision number already used for scope", port.ErrConflict)
+		}
+	}
+	if v.Revision != max+1 {
+		return fmt.Errorf("%w: config revision number must be sequential", port.ErrConflict)
+	}
+	if v.ParentID != "" {
+		parent, ok := t.state.configRevisions[v.ParentID]
+		if !ok {
+			return notFound("parent config revision", v.ParentID)
+		}
+		if parent.Scope != v.Scope || parent.Revision+1 != v.Revision {
+			return fmt.Errorf("%w: config revision parent lineage is invalid", port.ErrConflict)
+		}
+	} else if v.Revision != 1 {
+		return fmt.Errorf("%w: first config revision must omit parent", port.ErrConflict)
+	}
+	draft, ok := t.state.configDrafts[v.DraftID]
+	if !ok {
+		return notFound("config draft", v.DraftID)
+	}
+	if draft.Scope != v.Scope {
+		return fmt.Errorf("%w: config draft scope disagrees with revision", port.ErrConflict)
+	}
+	t.state.configRevisions[v.ID] = cloneConfigRevision(v)
+	return nil
+}
+
+func (t transaction) ActivateConfigRevision(scope domain.ConfigScope, id domain.ConfigRevisionID) error {
+	if !scope.Valid() {
+		return fmt.Errorf("activate config requires valid scope")
+	}
+	revision, ok := t.state.configRevisions[id]
+	if !ok {
+		return notFound("config revision", id)
+	}
+	if revision.Scope != scope {
+		return fmt.Errorf("%w: config revision scope disagrees with activation", port.ErrConflict)
+	}
+	if current, ok := t.state.activeConfig[scope]; ok {
+		if current == id {
+			return nil
+		}
+		existing := t.state.configRevisions[current]
+		if revision.Revision <= existing.Revision {
+			return fmt.Errorf("%w: active config can only move forward", port.ErrConflict)
+		}
+	}
+	t.state.activeConfig[scope] = id
+	return nil
+}
+
+func (t transaction) SaveConfigApplyReceipt(receipt domain.ConfigApplyReceipt) error {
+	if err := receipt.Validate(); err != nil {
+		return fmt.Errorf("validate config apply receipt: %w", err)
+	}
+	if _, ok := t.state.configDrafts[receipt.DraftID]; !ok {
+		return notFound("config draft", receipt.DraftID)
+	}
+	current, ok := t.state.configApplyReceipts[receipt.DraftID]
+	if !ok {
+		if receipt.State != domain.ConfigApplyReceived {
+			return fmt.Errorf("%w: config apply receipt must start RECEIVED", port.ErrConflict)
+		}
+		t.state.configApplyReceipts[receipt.DraftID] = receipt
+		return nil
+	}
+	if err := domain.AdvanceConfigApplyReceipt(current, receipt); err != nil {
+		if errors.Is(err, domain.ErrConflict) {
+			return fmt.Errorf("%w: %v", port.ErrConflict, err)
+		}
+		return err
+	}
+	t.state.configApplyReceipts[receipt.DraftID] = receipt
 	return nil
 }
 
@@ -1832,6 +2041,18 @@ func cloneState(src state) state {
 	for k, v := range src.continuityDiagnoses {
 		dst.continuityDiagnoses[k] = cloneContinuityDiagnosis(v)
 	}
+	for k, v := range src.configDrafts {
+		dst.configDrafts[k] = cloneConfigDraft(v)
+	}
+	for k, v := range src.configRevisions {
+		dst.configRevisions[k] = cloneConfigRevision(v)
+	}
+	for k, v := range src.activeConfig {
+		dst.activeConfig[k] = v
+	}
+	for k, v := range src.configApplyReceipts {
+		dst.configApplyReceipts[k] = v
+	}
 	return dst
 }
 
@@ -1846,6 +2067,74 @@ func cloneContinuityDiagnosis(v domain.ContinuityDiagnosis) domain.ContinuityDia
 	v.EliminatedAlternatives = append([]string(nil), v.EliminatedAlternatives...)
 	v.RecoveryConditions = append([]string(nil), v.RecoveryConditions...)
 	return v
+}
+
+func cloneConfigDraft(v domain.ConfigDraft) domain.ConfigDraft {
+	v.Runtime = cloneRuntimePtr(v.Runtime)
+	v.Scheduler = cloneSchedulerPtr(v.Scheduler)
+	v.Horizon = cloneHorizonPtr(v.Horizon)
+	v.Interruption = cloneInterruptionPtr(v.Interruption)
+	v.Channels = cloneChannelsPtr(v.Channels)
+	return v
+}
+
+func cloneConfigRevision(v domain.ConfigRevision) domain.ConfigRevision {
+	v.Runtime = cloneRuntimePtr(v.Runtime)
+	v.Scheduler = cloneSchedulerPtr(v.Scheduler)
+	v.Horizon = cloneHorizonPtr(v.Horizon)
+	v.Interruption = cloneInterruptionPtr(v.Interruption)
+	v.Channels = cloneChannelsPtr(v.Channels)
+	return v
+}
+
+func cloneRuntimePtr(v *domain.RuntimeProcessConfig) *domain.RuntimeProcessConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	return &cp
+}
+
+func cloneSchedulerPtr(v *domain.SchedulerCadenceConfig) *domain.SchedulerCadenceConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	return &cp
+}
+
+func cloneHorizonPtr(v *domain.HorizonPolicy) *domain.HorizonPolicy {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	return &cp
+}
+
+func cloneInterruptionPtr(v *domain.InterruptionRuntimePolicy) *domain.InterruptionRuntimePolicy {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	return &cp
+}
+
+func cloneChannelsPtr(v *domain.ChannelsConfig) *domain.ChannelsConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Routes = append([]domain.ChannelRouteConfig(nil), v.Routes...)
+	return &cp
+}
+
+func equalConfigPayloads(a, b domain.ConfigDraft) bool {
+	ha, errA := domain.ConfigPayloadHash(a.Scope, a.Runtime, a.Scheduler, a.Horizon, a.Interruption, a.Channels)
+	hb, errB := domain.ConfigPayloadHash(b.Scope, b.Runtime, b.Scheduler, b.Horizon, b.Interruption, b.Channels)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return ha == hb
 }
 
 func cloneExternalEvent(event domain.ExternalEvent) domain.ExternalEvent {
