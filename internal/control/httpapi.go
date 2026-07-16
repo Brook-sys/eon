@@ -135,17 +135,19 @@ func (a *API) Handler() http.Handler {
 }
 
 type missionAmendmentRequest struct {
-	SchemaVersion     int                  `json:"schema_version"`
-	MissionID         domain.MissionID     `json:"mission_id"`
-	BaseRevision      uint64               `json:"base_revision"`
-	CandidateRevision uint64               `json:"candidate_revision"`
-	OriginalText      string               `json:"original_text"`
-	Purpose           string               `json:"purpose"`
-	Domains           []string             `json:"domains"`
-	Policies          []string             `json:"policies"`
-	Budget            domain.Budget        `json:"budget"`
-	Status            domain.MissionStatus `json:"status"`
-	Reason            string               `json:"reason"`
+	SchemaVersion        int                          `json:"schema_version"`
+	MissionID            domain.MissionID             `json:"mission_id"`
+	BaseRevision         uint64                       `json:"base_revision"`
+	CandidateRevision    uint64                       `json:"candidate_revision"`
+	OriginalText         string                       `json:"original_text"`
+	Purpose              string                       `json:"purpose"`
+	Domains              []string                     `json:"domains"`
+	Policies             []string                     `json:"policies"`
+	Budget               domain.Budget                `json:"budget"`
+	Status               domain.MissionStatus         `json:"status"`
+	StandingObjectives   []string                     `json:"standing_objectives,omitempty"`
+	RecurringObligations []domain.RecurringObligation `json:"recurring_obligations,omitempty"`
+	Reason               string                       `json:"reason"`
 	// Provenance is accept-only; ignored on preview. Defaults to control actor.
 	Provenance string `json:"provenance,omitempty"`
 }
@@ -155,17 +157,19 @@ func (a *API) amendmentFromRequest(req missionAmendmentRequest) (domain.UserAmen
 		req.SchemaVersion = domain.SchemaVersionV1
 	}
 	amendment := domain.UserAmendment{
-		SchemaVersion:     req.SchemaVersion,
-		MissionID:         req.MissionID,
-		BaseRevision:      req.BaseRevision,
-		CandidateRevision: req.CandidateRevision,
-		OriginalText:      req.OriginalText,
-		Purpose:           req.Purpose,
-		Domains:           append([]string(nil), req.Domains...),
-		Policies:          append([]string(nil), req.Policies...),
-		Budget:            req.Budget,
-		Status:            req.Status,
-		Reason:            req.Reason,
+		SchemaVersion:        req.SchemaVersion,
+		MissionID:            req.MissionID,
+		BaseRevision:         req.BaseRevision,
+		CandidateRevision:    req.CandidateRevision,
+		OriginalText:         req.OriginalText,
+		Purpose:              req.Purpose,
+		Domains:              append([]string(nil), req.Domains...),
+		Policies:             append([]string(nil), req.Policies...),
+		Budget:               req.Budget,
+		Status:               req.Status,
+		StandingObjectives:   append([]string(nil), req.StandingObjectives...),
+		RecurringObligations: append([]domain.RecurringObligation(nil), req.RecurringObligations...),
+		Reason:               req.Reason,
 	}
 	if err := amendment.Validate(); err != nil {
 		return domain.UserAmendment{}, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)}

@@ -325,7 +325,7 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 	if err := RegisterDefaultContinuityFamilies(reg, store, clock, ids, policy); err != nil {
 		t.Fatal(err)
 	}
-	want := map[domain.WorkFamily]string{
+	wantFamilies := map[domain.WorkFamily]string{
 		domain.FamilyGapScan:           "gap_scan",
 		domain.FamilyConflictReview:    "conflict_evidence_review",
 		domain.FamilyCoverageScan:      "mission_coverage_scan",
@@ -335,11 +335,20 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 		domain.FamilyHarnessEvaluation: "harness_evaluation",
 		domain.FamilyFrontierManage:    "frontier_management",
 	}
-	if reg.Len() != len(want) {
-		t.Fatalf("registry len = %d, want %d", reg.Len(), len(want))
+	// 8 local families + recurring_obligations seeder (FR-DUR-011).
+	if reg.Len() != len(wantFamilies)+1 {
+		t.Fatalf("registry len = %d, want %d", reg.Len(), len(wantFamilies)+1)
 	}
 	got := map[domain.WorkFamily]string{}
+	var sawRecurring bool
 	for _, d := range reg.Descriptors() {
+		if d.Name == "recurring_obligations" {
+			sawRecurring = true
+			if d.Version != "v1" || d.Priority != 40 || !d.LocalOnly {
+				t.Fatalf("recurring descriptor = %+v", d)
+			}
+			continue
+		}
 		got[d.Family] = d.Name
 		if !d.LocalOnly {
 			t.Fatalf("family %s should be local-only", d.Family)
@@ -348,7 +357,10 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 			t.Fatalf("family %s version = %q, want v2", d.Family, d.Version)
 		}
 	}
-	for family, name := range want {
+	if !sawRecurring {
+		t.Fatal("missing recurring_obligations strategy")
+	}
+	for family, name := range wantFamilies {
 		if got[family] != name {
 			t.Fatalf("family %s = %q, want %q (got map %#v)", family, got[family], name, got)
 		}
@@ -357,7 +369,7 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 		t.Fatalf("catalog version = %q, want %q", reg.CatalogVersion(), DefaultContinuityCatalogVersion)
 	}
 	refs := reg.StrategyRefs()
-	if len(refs) != len(want) || refs[0] != "gap_scan@v2" {
+	if len(refs) != len(wantFamilies)+1 || refs[0] != "recurring_obligations@v1" {
 		t.Fatalf("strategy refs = %#v", refs)
 	}
 
@@ -367,7 +379,7 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 	} {
 		var strategy ContinuityStrategy
 		for _, s := range reg.Strategies() {
-			if s.Name() == want[family] {
+			if s.Name() == wantFamilies[family] {
 				strategy = s
 				break
 			}

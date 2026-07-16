@@ -13,7 +13,7 @@ import (
 // RegisterDefaultContinuityFamilies. Catalogue evolution is a code change that
 // MUST bump this string (or register a new named version) so diagnosis/inspect
 // can attribute strategy behaviour without model authority.
-const DefaultContinuityCatalogVersion = "continuity-catalog.v2"
+const DefaultContinuityCatalogVersion = "continuity-catalog.v3"
 
 // StrategyDescriptor is the versioned metadata for a continuity family.
 // Registration is deterministic and independent from model authority.

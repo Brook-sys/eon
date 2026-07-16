@@ -212,6 +212,8 @@ A missão ativa MUST poder declarar obrigações recorrentes de revisão, revali
 
 **Evidência de aceitação:** relógio virtual demonstra criação limitada de operações recorrentes, ausência de duplicação antes da cadência e novos increments após mudança de evidência, capacidade ou estado.
 
+**Estado (2026-07-17):** implementado. `domain.RecurringObligation` + `PlanRecurringSeeds`; persistência via `MissionRevision`/`MissionSpec`/emenda; materialização por `kernel.RecurringSeeder` no portfólio local `recurring_obligations@v1` (`continuity-catalog.v3`); testes `TestPlanRecurringSeedsCadenceAndAntiRepetition` e `TestRecurringSeederCadenceAntiRepetitionAndDelta`.
+
 ## 6. Recursos, segurança e observabilidade
 
 ### FR-RES-001 — Budgets e backpressure

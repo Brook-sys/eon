@@ -176,6 +176,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           <input id="amendPolicies" placeholder="fail_closed" spellcheck="false"/>
         </label>
       </div>
+      <label style="margin-top:8px">standing_objectives (CSV)
+        <input id="amendStanding" style="min-width:100%" placeholder="objetivos permanentes" spellcheck="true"/>
+      </label>
+      <label style="margin-top:8px">recurring_obligations (JSON array, FR-DUR-011)
+        <textarea id="amendRecurring" style="min-height:90px" placeholder='[{"schema_version":1,"id":"harness_hourly","kind":"harness_evaluation","title":"offline harness","cadence":3600000000000,"budget":{"tokens":32,"attempts":1},"delta_criterion":"new report","anti_repetition":"require_state_change","enabled":true}]'></textarea>
+      </label>
       <div class="row">
         <label>budget.model_calls
           <input id="amendBudgetCalls" type="number" min="0" value="0" style="width:90px"/>
@@ -1425,6 +1431,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   function splitCSV(v) {
     return String(v || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
   }
+  function parseRecurringObligations() {
+    const raw = String(el("amendRecurring").value || "").trim();
+    if (!raw) return [];
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      throw new Error("recurring_obligations JSON inválido: " + (err.message || err));
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error("recurring_obligations deve ser um array JSON");
+    }
+    return parsed;
+  }
   function amendmentPayload() {
     const missionId = el("missionId").value.trim();
     const base = Number(el("amendBase").value);
@@ -1438,6 +1458,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       purpose: el("amendPurpose").value.trim(),
       domains: splitCSV(el("amendDomains").value),
       policies: splitCSV(el("amendPolicies").value),
+      standing_objectives: splitCSV(el("amendStanding").value),
+      recurring_obligations: parseRecurringObligations(),
       budget: {
         model_calls: Number(el("amendBudgetCalls").value) || 0,
         tokens: Number(el("amendBudgetTokens").value) || 0
@@ -1463,6 +1485,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       el("amendText").value = m.original_text || "";
       el("amendDomains").value = Array.isArray(m.domains) ? m.domains.join(",") : "";
       el("amendPolicies").value = Array.isArray(m.policies) ? m.policies.join(",") : "";
+      el("amendStanding").value = Array.isArray(m.standing_objectives) ? m.standing_objectives.join(",") : "";
+      el("amendRecurring").value = Array.isArray(m.recurring_obligations) && m.recurring_obligations.length
+        ? JSON.stringify(m.recurring_obligations, null, 2)
+        : "";
       el("amendStatus").value = m.status || "ACTIVE";
       if (m.budget) {
         el("amendBudgetCalls").value = String(m.budget.model_calls || 0);

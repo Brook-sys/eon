@@ -28,15 +28,17 @@ type IDGenerator interface {
 // Spec is the external, versioned MissionSpec accepted by the runtime. It is
 // deliberately separate from the persistence-facing MissionRevision.
 type Spec struct {
-	SchemaVersion int                  `json:"schema_version"`
-	ID            domain.MissionID     `json:"id"`
-	Revision      uint64               `json:"revision"`
-	OriginalText  string               `json:"original_text"`
-	Purpose       string               `json:"purpose"`
-	Domains       []string             `json:"domains"`
-	Policies      []string             `json:"policies"`
-	Budget        domain.Budget        `json:"budget"`
-	Status        domain.MissionStatus `json:"status"`
+	SchemaVersion        int                          `json:"schema_version"`
+	ID                   domain.MissionID             `json:"id"`
+	Revision             uint64                       `json:"revision"`
+	OriginalText         string                       `json:"original_text"`
+	Purpose              string                       `json:"purpose"`
+	Domains              []string                     `json:"domains"`
+	Policies             []string                     `json:"policies"`
+	Budget               domain.Budget                `json:"budget"`
+	Status               domain.MissionStatus         `json:"status"`
+	StandingObjectives   []string                     `json:"standing_objectives,omitempty"`
+	RecurringObligations []domain.RecurringObligation `json:"recurring_obligations,omitempty"`
 }
 
 func (s Spec) Validate() error {
@@ -54,6 +56,12 @@ func (s Spec) Validate() error {
 	}
 	if s.Status != domain.MissionActive {
 		return fmt.Errorf("mission spec status must be %s to become active, got %q", domain.MissionActive, s.Status)
+	}
+	if err := domain.ValidateStandingObjectives(s.StandingObjectives); err != nil {
+		return err
+	}
+	if err := domain.ValidateRecurringObligations(s.RecurringObligations); err != nil {
+		return err
 	}
 	return s.Budget.Validate()
 }
@@ -131,10 +139,20 @@ func (l Loader) Load(ctx context.Context, raw []byte, provenance string) (domain
 	}
 	now := l.Clock.Now().UTC()
 	revision := domain.MissionRevision{
-		SchemaVersion: spec.SchemaVersion, ID: domain.MissionRevisionID(revisionID), MissionID: spec.ID,
-		Revision: spec.Revision, OriginalText: spec.OriginalText, Purpose: spec.Purpose,
-		Domains: append([]string(nil), spec.Domains...), Policies: append([]string(nil), spec.Policies...),
-		Budget: spec.Budget, Status: spec.Status, Provenance: provenance, AcceptedAt: now,
+		SchemaVersion:        spec.SchemaVersion,
+		ID:                   domain.MissionRevisionID(revisionID),
+		MissionID:            spec.ID,
+		Revision:             spec.Revision,
+		OriginalText:         spec.OriginalText,
+		Purpose:              spec.Purpose,
+		Domains:              append([]string(nil), spec.Domains...),
+		Policies:             append([]string(nil), spec.Policies...),
+		Budget:               spec.Budget,
+		Status:               spec.Status,
+		StandingObjectives:   append([]string(nil), spec.StandingObjectives...),
+		RecurringObligations: append([]domain.RecurringObligation(nil), spec.RecurringObligations...),
+		Provenance:           provenance,
+		AcceptedAt:           now,
 	}
 	if err := revision.Validate(); err != nil {
 		return domain.MissionRevision{}, fmt.Errorf("build mission revision: %w", err)

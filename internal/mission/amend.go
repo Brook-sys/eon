@@ -95,18 +95,20 @@ func (a Acceptor) Accept(ctx context.Context, amendment domain.UserAmendment, pr
 	now := a.Clock.Now().UTC()
 
 	accepted := domain.MissionRevision{
-		SchemaVersion: domain.SchemaVersionV1,
-		ID:            domain.MissionRevisionID(revisionID),
-		MissionID:     amendment.MissionID,
-		Revision:      amendment.CandidateRevision,
-		OriginalText:  amendment.OriginalText,
-		Purpose:       amendment.Purpose,
-		Domains:       append([]string(nil), amendment.Domains...),
-		Policies:      append([]string(nil), amendment.Policies...),
-		Budget:        amendment.Budget,
-		Status:        amendment.Status,
-		Provenance:    provenance,
-		AcceptedAt:    now,
+		SchemaVersion:        domain.SchemaVersionV1,
+		ID:                   domain.MissionRevisionID(revisionID),
+		MissionID:            amendment.MissionID,
+		Revision:             amendment.CandidateRevision,
+		OriginalText:         amendment.OriginalText,
+		Purpose:              amendment.Purpose,
+		Domains:              append([]string(nil), amendment.Domains...),
+		Policies:             append([]string(nil), amendment.Policies...),
+		Budget:               amendment.Budget,
+		Status:               amendment.Status,
+		StandingObjectives:   append([]string(nil), amendment.StandingObjectives...),
+		RecurringObligations: append([]domain.RecurringObligation(nil), amendment.RecurringObligations...),
+		Provenance:           provenance,
+		AcceptedAt:           now,
 	}
 	if err := accepted.Validate(); err != nil {
 		return AmendmentAcceptance{}, fmt.Errorf("build accepted mission revision: %w", err)

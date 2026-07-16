@@ -156,6 +156,11 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"btnAmendPreview",
 		"btnAmendAccept",
 		"btnAmendLoad",
+		"standing_objectives",
+		"recurring_obligations",
+		"FR-DUR-011",
+		"amendStanding",
+		"amendRecurring",
 	} {
 		if !strings.Contains(html, marker) {
 			t.Fatalf("index missing marker %q", marker)

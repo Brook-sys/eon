@@ -47,8 +47,12 @@ type MissionRevision struct {
 	Policies      []string          `json:"policies"`
 	Budget        Budget            `json:"budget"`
 	Status        MissionStatus     `json:"status"`
-	Provenance    string            `json:"provenance"`
-	AcceptedAt    time.Time         `json:"accepted_at"`
+	// StandingObjectives are free-text permanent goals (ARCHITECTURE MissionSpec).
+	StandingObjectives []string `json:"standing_objectives,omitempty"`
+	// RecurringObligations are cadence-bound maintenance duties (FR-DUR-011).
+	RecurringObligations []RecurringObligation `json:"recurring_obligations,omitempty"`
+	Provenance           string                `json:"provenance"`
+	AcceptedAt           time.Time             `json:"accepted_at"`
 }
 
 func (m MissionRevision) Validate() error {
@@ -62,6 +66,12 @@ func (m MissionRevision) Validate() error {
 	case MissionActive, MissionPaused, MissionCancelled:
 	default:
 		return fmt.Errorf("unknown mission status %q", m.Status)
+	}
+	if err := ValidateStandingObjectives(m.StandingObjectives); err != nil {
+		return err
+	}
+	if err := ValidateRecurringObligations(m.RecurringObligations); err != nil {
+		return err
 	}
 	return m.Budget.Validate()
 }

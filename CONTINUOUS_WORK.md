@@ -180,7 +180,8 @@ A família local `frontier_management` (`LocalExecutor`) materializa o plano na 
 
 #### Catálogo versionado e split estrutural (MVP executável)
 
-- `StrategyRegistry` carrega um portfólio com `CatalogVersion` explícito (`continuity-catalog.v2`) e cada família com `StrategyDescriptor.Version`.
+- `StrategyRegistry` carrega um portfólio com `CatalogVersion` explícito (`continuity-catalog.v3`) e cada família com `StrategyDescriptor.Version`.
+- FR-DUR-011: a estratégia local `recurring_obligations@v1` (prioridade 40) materializa `MissionRevision.RecurringObligations` em raízes `WorkOpportunity` com cadência, budget, `delta_criterion` e anti-repetição; assinaturas por bucket e fingerprint de head commit impedem atividade vazia.
 - Diagnosis e auditoria usam refs estáveis `name@version` (`StrategyDescriptor.Ref` / `StrategyRefs`); cooldown continua indexado só pelo `Name()` da estratégia.
 - `PlanChildDraftsFromStoreWithPolicy` decompõe inventários agregados de gap/coverage/integrity/conflict em drafts ortogonais (assinaturas distintas, prioridade estável) e aplica `HorizonPolicy.MaxChildren` via `capChildDrafts` antes do `Decomposer`.
 - Modelo não escolhe o split: contagens e ordem vêm de joins determinísticos; fallback estático permanece quando o grafo não apresenta gap.

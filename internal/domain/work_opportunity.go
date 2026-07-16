@@ -358,6 +358,7 @@ const (
 	EventContinuityExpanded          = "continuity.expanded"
 	EventContinuityBlocked           = "continuity.blocked"
 	EventContinuityFrontierCompacted = "continuity.frontier_compacted"
+	EventContinuityRecurringSeeded   = "continuity.recurring_seeded"
 	EventWorkOpportunityAbandoned    = "continuity.opportunity_abandoned"
 	EventWorkOpportunitySuperseded   = "continuity.opportunity_superseded"
 	EventWorkOpportunityDeferred     = "continuity.opportunity_deferred"

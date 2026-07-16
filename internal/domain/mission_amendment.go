@@ -15,14 +15,16 @@ type UserAmendment struct {
 	// BaseRevision is the numeric MissionRevision.Revision currently active.
 	BaseRevision uint64 `json:"base_revision"`
 	// CandidateRevision must equal BaseRevision+1; monotonic lineage only.
-	CandidateRevision uint64        `json:"candidate_revision"`
-	OriginalText      string        `json:"original_text"`
-	Purpose           string        `json:"purpose"`
-	Domains           []string      `json:"domains"`
-	Policies          []string      `json:"policies"`
-	Budget            Budget        `json:"budget"`
-	Status            MissionStatus `json:"status"`
-	Reason            string        `json:"reason"`
+	CandidateRevision    uint64                `json:"candidate_revision"`
+	OriginalText         string                `json:"original_text"`
+	Purpose              string                `json:"purpose"`
+	Domains              []string              `json:"domains"`
+	Policies             []string              `json:"policies"`
+	Budget               Budget                `json:"budget"`
+	Status               MissionStatus         `json:"status"`
+	StandingObjectives   []string              `json:"standing_objectives,omitempty"`
+	RecurringObligations []RecurringObligation `json:"recurring_obligations,omitempty"`
+	Reason               string                `json:"reason"`
 }
 
 func (a UserAmendment) Validate() error {
@@ -48,6 +50,12 @@ func (a UserAmendment) Validate() error {
 	case MissionActive, MissionPaused, MissionCancelled:
 	default:
 		return fmt.Errorf("unknown mission status %q", a.Status)
+	}
+	if err := ValidateStandingObjectives(a.StandingObjectives); err != nil {
+		return err
+	}
+	if err := ValidateRecurringObligations(a.RecurringObligations); err != nil {
+		return err
 	}
 	return a.Budget.Validate()
 }
@@ -180,18 +188,20 @@ func CandidateFromAmendment(base MissionRevision, amendment UserAmendment) (Miss
 		return MissionRevision{}, fmt.Errorf("amendment base_revision %d disagrees with active revision %d", amendment.BaseRevision, base.Revision)
 	}
 	candidate := MissionRevision{
-		SchemaVersion: SchemaVersionV1,
-		ID:            "candidate",
-		MissionID:     amendment.MissionID,
-		Revision:      amendment.CandidateRevision,
-		OriginalText:  amendment.OriginalText,
-		Purpose:       amendment.Purpose,
-		Domains:       append([]string(nil), amendment.Domains...),
-		Policies:      append([]string(nil), amendment.Policies...),
-		Budget:        amendment.Budget,
-		Status:        amendment.Status,
-		Provenance:    "candidate",
-		AcceptedAt:    base.AcceptedAt,
+		SchemaVersion:        SchemaVersionV1,
+		ID:                   "candidate",
+		MissionID:            amendment.MissionID,
+		Revision:             amendment.CandidateRevision,
+		OriginalText:         amendment.OriginalText,
+		Purpose:              amendment.Purpose,
+		Domains:              append([]string(nil), amendment.Domains...),
+		Policies:             append([]string(nil), amendment.Policies...),
+		Budget:               amendment.Budget,
+		Status:               amendment.Status,
+		StandingObjectives:   append([]string(nil), amendment.StandingObjectives...),
+		RecurringObligations: append([]RecurringObligation(nil), amendment.RecurringObligations...),
+		Provenance:           "candidate",
+		AcceptedAt:           base.AcceptedAt,
 	}
 	if err := candidate.Validate(); err != nil {
 		return MissionRevision{}, fmt.Errorf("build candidate mission revision: %w", err)
@@ -265,6 +275,8 @@ func collectMissionFields(dst map[string]string, m MissionRevision) {
 	dst["budget.duration"] = m.Budget.Duration.String()
 	dst["domains"] = joinSortedCopy(m.Domains)
 	dst["policies"] = joinSortedCopy(m.Policies)
+	dst["standing_objectives"] = joinSortedCopy(m.StandingObjectives)
+	dst["recurring_obligations"] = RecurringObligationsFingerprint(m.RecurringObligations)
 }
 
 func joinSortedCopy(values []string) string {
@@ -362,6 +374,22 @@ func PreviewMissionImpact(base, candidate MissionRevision, diff MissionDiff) (Mi
 				Disposition: ImpactInvalidate,
 				Reason:      "policy change requires revalidation of open work against new constraints",
 				Reference:   "policies",
+			})
+		}
+		if _, ok := changed["standing_objectives"]; ok {
+			preview.Items = append(preview.Items, MissionImpactItem{
+				Kind:        "continuity",
+				Disposition: ImpactReprioritize,
+				Reason:      "standing objectives changed; continuity portfolio should rebalance",
+				Reference:   "standing_objectives",
+			})
+		}
+		if _, ok := changed["recurring_obligations"]; ok {
+			preview.Items = append(preview.Items, MissionImpactItem{
+				Kind:        "continuity",
+				Disposition: ImpactNewCapability,
+				Reason:      "recurring obligations changed; new cadence seeds may appear under FR-DUR-011",
+				Reference:   "recurring_obligations",
 			})
 		}
 		if budgetReduced(base.Budget, candidate.Budget) {

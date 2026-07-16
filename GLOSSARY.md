@@ -63,6 +63,14 @@ Reservatório persistido de perguntas, lacunas, conflitos, riscos, decomposiçõ
 
 Unidade persistida da `WorkFrontier` que descreve trabalho potencial antes da admissão. Registra origem, família, ganho esperado, novidade, dependências, custo, risco, condição de parada e, quando derivada recursivamente, pai e profundidade.
 
+### RecurringObligation
+
+Dever de manutenção declarado na `MissionRevision` (FR-DUR-011): kind/família, cadência, budget, critério de delta e política anti-repetição. O planner puro (`PlanRecurringSeeds`) e o seeder do kernel materializam raízes `WorkOpportunity` com `DedupSignature` por bucket de cadência (e fingerprint de estado opcional), sem fabricar trabalho vazio nem autoridade de modelo.
+
+### StandingObjective
+
+Rótulo de texto livre na missão para objetivos permanentes de alto nível. Não agenda operações sozinho; informa impacto de emenda e alinhamento de continuidade.
+
 ### ExecutableHorizon
 
 Faixa limitada de trabalho admitido que o scheduler consegue considerar no curto prazo. É mantida por marcas de reabastecimento definidas em política, sem materializar toda a frontier como operações.

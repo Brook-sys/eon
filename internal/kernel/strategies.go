@@ -183,12 +183,17 @@ func familyPriority(family domain.WorkFamily) uint8 {
 
 // RegisterDefaultContinuityFamilies installs the initial local portfolio.
 // Strategies remain model-free so continuity works without network or LLM.
+// Mission-declared FR-DUR-011 obligations are registered first so cadence seeds
+// run before opportunistic family scans.
 func RegisterDefaultContinuityFamilies(reg *StrategyRegistry, store port.Store, clock source.Clock, ids source.IDGenerator, policy domain.HorizonPolicy) error {
 	if reg == nil {
 		return errors.New("strategy registry is required")
 	}
 	if policy.Version == "" && policy.SchemaVersion == 0 {
 		policy = domain.DefaultHorizonPolicy()
+	}
+	if err := EnsureRecurringStrategy(reg, store, clock, ids, policy); err != nil {
+		return err
 	}
 	families := []struct {
 		name     string
@@ -272,7 +277,7 @@ func RegisterDefaultContinuityFamilies(reg *StrategyRegistry, store port.Store, 
 			return err
 		}
 	}
-	// Portfolio revision is explicit: multi-draft structural splits land in v2.
+	// Portfolio revision is explicit: recurring obligations land in v3 alongside the v2 family set.
 	reg.SetCatalogVersion(DefaultContinuityCatalogVersion)
 	return nil
 }

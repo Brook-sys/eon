@@ -148,13 +148,25 @@ Define, de forma versionada, o espaço legítimo de progresso:
   "domains": ["escopos permitidos"],
   "policies": ["restrições obrigatórias"],
   "standing_objectives": ["objetivos permanentes"],
-  "cadence": {"review_every_seconds": 900},
+  "recurring_obligations": [
+    {
+      "schema_version": 1,
+      "id": "harness_hourly",
+      "kind": "harness_evaluation",
+      "title": "offline harness evaluation",
+      "cadence": 3600000000000,
+      "budget": {"tokens": 32, "attempts": 1},
+      "delta_criterion": "new offline compile report or fixture change",
+      "anti_repetition": "require_state_change",
+      "enabled": true
+    }
+  ],
   "resource_budget": {"requests_per_day": 100},
   "status": "ACTIVE"
 }
 ```
 
-O motor não cria uma missão independente. Ele deriva trabalho apenas de missões configuradas, resultados observados e obrigações autorizadas.
+O motor não cria uma missão independente. Ele deriva trabalho apenas de missões configuradas, resultados observados e obrigações autorizadas. `standing_objectives` são rótulos permanentes; `recurring_obligations` (FR-DUR-011) declaram cadência, budget, critério de delta e anti-repetição e são materializadas pelo seeder local `recurring_obligations` no portfólio de continuidade (`continuity-catalog.v3`), sem inventar atividade vazia.
 
 ### Autonomia supervisionável e plano de controle
 

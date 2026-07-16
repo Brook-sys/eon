@@ -437,18 +437,20 @@ func newControlAPIWithMissionAccept(t *testing.T, store port.Store, clock source
 		}
 		now := clock.Now().UTC()
 		accepted := domain.MissionRevision{
-			SchemaVersion: domain.SchemaVersionV1,
-			ID:            domain.MissionRevisionID(revisionID),
-			MissionID:     amendment.MissionID,
-			Revision:      amendment.CandidateRevision,
-			OriginalText:  amendment.OriginalText,
-			Purpose:       amendment.Purpose,
-			Domains:       append([]string(nil), amendment.Domains...),
-			Policies:      append([]string(nil), amendment.Policies...),
-			Budget:        amendment.Budget,
-			Status:        amendment.Status,
-			Provenance:    provenance,
-			AcceptedAt:    now,
+			SchemaVersion:        domain.SchemaVersionV1,
+			ID:                   domain.MissionRevisionID(revisionID),
+			MissionID:            amendment.MissionID,
+			Revision:             amendment.CandidateRevision,
+			OriginalText:         amendment.OriginalText,
+			Purpose:              amendment.Purpose,
+			Domains:              append([]string(nil), amendment.Domains...),
+			Policies:             append([]string(nil), amendment.Policies...),
+			Budget:               amendment.Budget,
+			Status:               amendment.Status,
+			StandingObjectives:   append([]string(nil), amendment.StandingObjectives...),
+			RecurringObligations: append([]domain.RecurringObligation(nil), amendment.RecurringObligations...),
+			Provenance:           provenance,
+			AcceptedAt:           now,
 		}
 		if err := store.Update(ctx, func(tx port.Transaction) error {
 			if err := tx.AppendMissionRevision(accepted); err != nil {
