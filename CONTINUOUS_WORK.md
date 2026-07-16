@@ -178,6 +178,13 @@ A família local `frontier_management` (`LocalExecutor`) materializa o plano na 
 
 ### 3.10 Decomposição e melhoria recursiva
 
+#### Catálogo versionado e split estrutural (MVP executável)
+
+- `StrategyRegistry` carrega um portfólio com `CatalogVersion` explícito (`continuity-catalog.v2`) e cada família com `StrategyDescriptor.Version`.
+- Diagnosis e auditoria usam refs estáveis `name@version` (`StrategyDescriptor.Ref` / `StrategyRefs`); cooldown continua indexado só pelo `Name()` da estratégia.
+- `PlanChildDraftsFromStoreWithPolicy` decompõe inventários agregados de gap/coverage/integrity/conflict em drafts ortogonais (assinaturas distintas, prioridade estável) e aplica `HorizonPolicy.MaxChildren` via `capChildDrafts` antes do `Decomposer`.
+- Modelo não escolhe o split: contagens e ordem vêm de joins determinísticos; fallback estático permanece quando o grafo não apresenta gap.
+
 - decompor missão, objetivo, inquiry, tarefa ou artifact amplo em unidades menores;
 - decompor conhecimento anterior em claims, perguntas, pressupostos, dependências e testes;
 - transformar resumo em mapa de lacunas e mapa de lacunas em novas inquiries;

@@ -250,15 +250,21 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(gapDrafts) != 1 || gapDrafts[0].DedupSignature != "gap:join_inventory" {
+	if len(gapDrafts) != 2 {
 		t.Fatalf("gap drafts = %+v", gapDrafts)
+	}
+	if gapDrafts[0].DedupSignature != "gap:without_obs" || gapDrafts[1].DedupSignature != "gap:frags_without_obs" {
+		t.Fatalf("gap split signatures = %q, %q", gapDrafts[0].DedupSignature, gapDrafts[1].DedupSignature)
 	}
 	covDrafts, err := PlanChildDraftsFromStore(ctx, store, domain.FamilyCoverageScan, "revision_1", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(covDrafts) != 1 || covDrafts[0].DedupSignature != "coverage:join_inventory" {
+	if len(covDrafts) != 2 {
 		t.Fatalf("coverage drafts = %+v", covDrafts)
+	}
+	if covDrafts[0].DedupSignature != "coverage:without_obs" || covDrafts[1].DedupSignature != "coverage:frags_without_obs" {
+		t.Fatalf("coverage split signatures = %q, %q", covDrafts[0].DedupSignature, covDrafts[1].DedupSignature)
 	}
 	freshDrafts, err := PlanChildDraftsFromStore(ctx, store, domain.FamilySourceFreshness, "revision_1", now)
 	if err != nil {
@@ -271,7 +277,7 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 	// Empty store / no gaps: fall back via resolveChildDrafts to static catalogue.
 	empty := memory.New()
 	seedMission(t, empty)
-	resolved, err := resolveChildDrafts(ctx, empty, domain.FamilyGapScan, "revision_1", now, nil)
+	resolved, err := resolveChildDrafts(ctx, empty, domain.FamilyGapScan, "revision_1", now, nil, domain.DefaultHorizonPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,17 +323,17 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(integrityDrafts) != 1 || integrityDrafts[0].DedupSignature != "integrity:structural_inventory" {
+	if len(integrityDrafts) != 1 || integrityDrafts[0].DedupSignature != "integrity:conflicted_claims" {
 		t.Fatalf("integrity drafts = %+v", integrityDrafts)
 	}
-	if !strings.Contains(integrityDrafts[0].ExpectedGain, "conflicted=1") {
+	if !strings.Contains(integrityDrafts[0].ExpectedGain, "conflicted_claims=1") {
 		t.Fatalf("integrity gain = %q", integrityDrafts[0].ExpectedGain)
 	}
 	conflictDrafts, err := PlanChildDraftsFromStore(ctx, structStore, domain.FamilyConflictReview, "revision_1", now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(conflictDrafts) != 1 || conflictDrafts[0].DedupSignature != "conflict:evidence_inventory" {
+	if len(conflictDrafts) != 1 || conflictDrafts[0].DedupSignature != "conflict:conflicted" {
 		t.Fatalf("conflict drafts = %+v", conflictDrafts)
 	}
 	if !strings.Contains(conflictDrafts[0].ExpectedGain, "conflicted=1") {
@@ -352,7 +358,7 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 		t.Fatalf("clean conflict drafts = %+v", cleanConflict)
 	}
 	// resolveChildDrafts falls back to static conflict catalogue on clean store.
-	resolvedConflict, err := resolveChildDrafts(ctx, clean, domain.FamilyConflictReview, "revision_1", now, nil)
+	resolvedConflict, err := resolveChildDrafts(ctx, clean, domain.FamilyConflictReview, "revision_1", now, nil, domain.DefaultHorizonPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}

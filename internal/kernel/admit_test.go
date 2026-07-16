@@ -344,11 +344,21 @@ func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T
 		if !d.LocalOnly {
 			t.Fatalf("family %s should be local-only", d.Family)
 		}
+		if d.Version != "v2" {
+			t.Fatalf("family %s version = %q, want v2", d.Family, d.Version)
+		}
 	}
 	for family, name := range want {
 		if got[family] != name {
 			t.Fatalf("family %s = %q, want %q (got map %#v)", family, got[family], name, got)
 		}
+	}
+	if reg.CatalogVersion() != DefaultContinuityCatalogVersion {
+		t.Fatalf("catalog version = %q, want %q", reg.CatalogVersion(), DefaultContinuityCatalogVersion)
+	}
+	refs := reg.StrategyRefs()
+	if len(refs) != len(want) || refs[0] != "gap_scan@v2" {
+		t.Fatalf("strategy refs = %#v", refs)
 	}
 
 	// Residual families must seed + optionally decompose without model calls.

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -65,6 +66,20 @@ func (s Scheduler) strategies() []ContinuityStrategy {
 		return s.Registry.Strategies()
 	}
 	return s.Strategies
+}
+
+// strategyTrialRef returns name@version when the registry has a descriptor,
+// otherwise the bare name. Cooldowns still key on ContinuityStrategy.Name().
+func (s Scheduler) strategyTrialRef(name string) string {
+	if s.Registry == nil {
+		return name
+	}
+	if d, ok := s.Registry.Descriptor(name); ok {
+		if ref := d.Ref(); ref != "" {
+			return ref
+		}
+	}
+	return name
 }
 
 func (s Scheduler) policy() domain.HorizonPolicy {
@@ -147,7 +162,7 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 		if plan.Action != domain.ContinuityExpand {
 			break
 		}
-		tried = append(tried, strategy.Name())
+		tried = append(tried, s.strategyTrialRef(strategy.Name()))
 		result, err := strategy.Replenish(ctx, missionRevision)
 		if err != nil {
 			return Decision{}, fmt.Errorf("continuity strategy %s: %w", strategy.Name(), err)
@@ -250,6 +265,11 @@ func (s Scheduler) persistDiagnosis(ctx context.Context, missionRevision domain.
 	}
 	if len(eliminated) > 0 && strategiesTried[0] == "all_strategies_in_cooldown" {
 		detail = "all continuity strategies are in no-delta cooldown"
+	}
+	if s.Registry != nil {
+		if catalog := strings.TrimSpace(s.Registry.CatalogVersion()); catalog != "" {
+			detail = detail + "; catalog=" + catalog
+		}
 	}
 	recovery := []string{
 		"admit work opportunity with expected delta",

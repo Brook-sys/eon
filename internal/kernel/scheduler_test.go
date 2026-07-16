@@ -141,7 +141,7 @@ func TestSchedulerRegistryExpandPersistsDiagnosisOnBlock(t *testing.T) {
 	if decision.Kind != DecisionContinuityBlocked || decision.Action != domain.ContinuityDiagnose || decision.DiagnosisID == "" {
 		t.Fatalf("decision = %+v", decision)
 	}
-	if len(decision.StrategiesTried) != 2 || decision.StrategiesTried[0] != "gap_scan" {
+	if len(decision.StrategiesTried) != 2 || decision.StrategiesTried[0] != "gap_scan@v1" || decision.StrategiesTried[1] != "integrity_audit@v1" {
 		t.Fatalf("strategies tried = %#v", decision.StrategiesTried)
 	}
 	if err := store.View(context.Background(), func(r port.Reader) error {

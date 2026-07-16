@@ -58,3 +58,62 @@ func TestPlanContinuityActionExpandThenDiagnose(t *testing.T) {
 		t.Fatalf("expand when dispatch set empty = %+v err=%v", plan, err)
 	}
 }
+
+func TestStrategyRegistrySnapshotAndRefs(t *testing.T) {
+	reg := NewStrategyRegistry()
+	gap := continuityStrategy{name: "gap_scan", run: func(context.Context, domain.MissionRevisionID) (ContinuityResult, error) {
+		return ContinuityResult{}, nil
+	}}
+	integrity := continuityStrategy{name: "integrity_audit", run: func(context.Context, domain.MissionRevisionID) (ContinuityResult, error) {
+		return ContinuityResult{}, nil
+	}}
+	if err := reg.Register(StrategyDescriptor{
+		Name: "integrity_audit", Family: domain.FamilyIntegrityAudit, Version: "v2", Priority: 10, LocalOnly: true,
+	}, integrity); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Register(StrategyDescriptor{
+		Name: "gap_scan", Family: domain.FamilyGapScan, Version: "v2", Priority: 30,
+	}, gap); err != nil {
+		t.Fatal(err)
+	}
+	reg.SetCatalogVersion(DefaultContinuityCatalogVersion)
+	snap := reg.Snapshot()
+	if snap.CatalogVersion != DefaultContinuityCatalogVersion {
+		t.Fatalf("catalog version = %q", snap.CatalogVersion)
+	}
+	if len(snap.Descriptors) != 2 || snap.Descriptors[0].Name != "gap_scan" || snap.Descriptors[0].Version != "v2" {
+		t.Fatalf("snapshot descriptors = %+v", snap.Descriptors)
+	}
+	refs := reg.StrategyRefs()
+	if len(refs) != 2 || refs[0] != "gap_scan@v2" || refs[1] != "integrity_audit@v2" {
+		t.Fatalf("refs = %#v", refs)
+	}
+	d, ok := reg.Descriptor("gap_scan")
+	if !ok || d.Ref() != "gap_scan@v2" {
+		t.Fatalf("descriptor = %+v ok=%v", d, ok)
+	}
+	// Mutation of snapshot must not mutate registry order/metadata.
+	snap.Descriptors[0].Name = "mutated"
+	if reg.Descriptors()[0].Name != "gap_scan" {
+		t.Fatal("snapshot shared underlying descriptor storage")
+	}
+}
+
+func TestCapChildDraftsRespectsMaxChildren(t *testing.T) {
+	drafts := []ChildDraft{
+		{Title: "a", Origin: "o", ExpectedGain: "g", Novelty: "n", StopCondition: "s", DedupSignature: "gap:a", Risk: domain.RiskLow, Priority: 3, EstimatedCost: domain.Budget{Tokens: 1, Attempts: 1}},
+		{Title: "b", Origin: "o", ExpectedGain: "g", Novelty: "n", StopCondition: "s", DedupSignature: "gap:b", Risk: domain.RiskLow, Priority: 2, EstimatedCost: domain.Budget{Tokens: 1, Attempts: 1}},
+		{Title: "c", Origin: "o", ExpectedGain: "g", Novelty: "n", StopCondition: "s", DedupSignature: "gap:c", Risk: domain.RiskLow, Priority: 1, EstimatedCost: domain.Budget{Tokens: 1, Attempts: 1}},
+	}
+	capped := capChildDrafts(drafts, 2)
+	if len(capped) != 2 || capped[0].DedupSignature != "gap:a" || capped[1].DedupSignature != "gap:b" {
+		t.Fatalf("capped = %+v", capped)
+	}
+	if capChildDrafts(drafts, 0) != nil {
+		t.Fatal("max<=0 must yield nil")
+	}
+	if len(capChildDrafts(drafts, 10)) != 3 {
+		t.Fatal("cap above length must preserve all")
+	}
+}

@@ -11,14 +11,24 @@ import (
 )
 
 // PlanChildDraftsFromStore inspects the store with the same model-free joins as
-// LocalExecutor and returns at most one actionable child draft for the family.
-// Empty result means the static ChildDrafts (if any) should be used.
+// LocalExecutor and returns actionable child drafts for the family.
+// Structural families may emit multiple split drafts (capped by HorizonPolicy
+// max_children); empty result means the static ChildDrafts (if any) should be used.
 func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family domain.WorkFamily, mission domain.MissionRevisionID, now time.Time) ([]ChildDraft, error) {
+	return PlanChildDraftsFromStoreWithPolicy(ctx, store, family, mission, now, domain.DefaultHorizonPolicy())
+}
+
+// PlanChildDraftsFromStoreWithPolicy is the policy-aware planner used when the
+// active HorizonPolicy is already resolved (fan-out cap, deterministic order).
+func PlanChildDraftsFromStoreWithPolicy(ctx context.Context, store port.Store, family domain.WorkFamily, mission domain.MissionRevisionID, now time.Time, policy domain.HorizonPolicy) ([]ChildDraft, error) {
 	if store == nil || mission == "" || !family.Valid() {
 		return nil, nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := policy.Validate(); err != nil {
+		policy = domain.DefaultHorizonPolicy()
 	}
 	var (
 		sources      []domain.Source
@@ -75,23 +85,54 @@ func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family doma
 		return nil, err
 	}
 
+	stamp := now.UTC().Format(time.RFC3339)
 	switch family {
 	case domain.FamilyGapScan:
 		_, withoutObs, withoutFrag, fragsWithoutObs := coverageJoin(sources, versionByID, fragmentByID, observations)
 		if withoutObs == 0 && withoutFrag == 0 && fragsWithoutObs == 0 {
 			return nil, nil
 		}
-		return []ChildDraft{{
-			Title:          "enumerate sources and fragments lacking observations",
-			Origin:         "decompose:gap_scan:join",
-			ExpectedGain:   fmt.Sprintf("structural gaps without_obs=%d without_frag=%d frags_without_obs=%d", withoutObs, withoutFrag, fragsWithoutObs),
-			Novelty:        fmt.Sprintf("gap join inventory at %s", now.UTC().Format(time.RFC3339)),
-			StopCondition:  "gap inventory persisted or deferred",
-			DedupSignature: "gap:join_inventory",
-			Risk:           domain.RiskLow,
-			Priority:       25,
-			EstimatedCost:  domain.Budget{Tokens: 64, Attempts: 1},
-		}}, nil
+		drafts := make([]ChildDraft, 0, 3)
+		if withoutFrag > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "enumerate sources lacking fragments",
+				Origin:         "decompose:gap_scan:split:without_frag",
+				ExpectedGain:   fmt.Sprintf("sources_without_fragment=%d", withoutFrag),
+				Novelty:        fmt.Sprintf("gap split without_frag at %s", stamp),
+				StopCondition:  "sources without fragments listed or deferred",
+				DedupSignature: "gap:without_frag",
+				Risk:           domain.RiskLow,
+				Priority:       26,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if withoutObs > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "enumerate sources lacking observations",
+				Origin:         "decompose:gap_scan:split:without_obs",
+				ExpectedGain:   fmt.Sprintf("sources_without_observation=%d", withoutObs),
+				Novelty:        fmt.Sprintf("gap split without_obs at %s", stamp),
+				StopCondition:  "sources without observations listed or deferred",
+				DedupSignature: "gap:without_obs",
+				Risk:           domain.RiskLow,
+				Priority:       25,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if fragsWithoutObs > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "enumerate fragments lacking observations",
+				Origin:         "decompose:gap_scan:split:frags_without_obs",
+				ExpectedGain:   fmt.Sprintf("fragments_without_observation=%d", fragsWithoutObs),
+				Novelty:        fmt.Sprintf("gap split frags_without_obs at %s", stamp),
+				StopCondition:  "fragments without observations listed or deferred",
+				DedupSignature: "gap:frags_without_obs",
+				Risk:           domain.RiskLow,
+				Priority:       24,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		return capChildDrafts(drafts, policy.MaxChildren), nil
 
 	case domain.FamilyCoverageScan:
 		_, withoutObs, withoutFrag, fragsWithoutObs := coverageJoin(sources, versionByID, fragmentByID, observations)
@@ -110,17 +151,60 @@ func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family doma
 		if withoutObs == 0 && withoutFrag == 0 && fragsWithoutObs == 0 && claimsWithoutEv == 0 {
 			return nil, nil
 		}
-		return []ChildDraft{{
-			Title:          "map mission coverage holes from source joins",
-			Origin:         "decompose:coverage_scan:join",
-			ExpectedGain:   fmt.Sprintf("coverage gaps without_obs=%d claims_without_ev=%d", withoutObs, claimsWithoutEv),
-			Novelty:        fmt.Sprintf("coverage join inventory at %s", now.UTC().Format(time.RFC3339)),
-			StopCondition:  "coverage inventory persisted",
-			DedupSignature: "coverage:join_inventory",
-			Risk:           domain.RiskLow,
-			Priority:       23,
-			EstimatedCost:  domain.Budget{Tokens: 64, Attempts: 1},
-		}}, nil
+		drafts := make([]ChildDraft, 0, 4)
+		if withoutFrag > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "map sources without fragment coverage",
+				Origin:         "decompose:coverage_scan:split:without_frag",
+				ExpectedGain:   fmt.Sprintf("coverage without_frag=%d", withoutFrag),
+				Novelty:        fmt.Sprintf("coverage split without_frag at %s", stamp),
+				StopCondition:  "sources without fragments covered or deferred",
+				DedupSignature: "coverage:without_frag",
+				Risk:           domain.RiskLow,
+				Priority:       24,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if withoutObs > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "map sources without observation coverage",
+				Origin:         "decompose:coverage_scan:split:without_obs",
+				ExpectedGain:   fmt.Sprintf("coverage without_obs=%d", withoutObs),
+				Novelty:        fmt.Sprintf("coverage split without_obs at %s", stamp),
+				StopCondition:  "sources without observations covered or deferred",
+				DedupSignature: "coverage:without_obs",
+				Risk:           domain.RiskLow,
+				Priority:       23,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if fragsWithoutObs > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "map fragments without observation coverage",
+				Origin:         "decompose:coverage_scan:split:frags_without_obs",
+				ExpectedGain:   fmt.Sprintf("coverage frags_without_obs=%d", fragsWithoutObs),
+				Novelty:        fmt.Sprintf("coverage split frags_without_obs at %s", stamp),
+				StopCondition:  "fragments without observations covered or deferred",
+				DedupSignature: "coverage:frags_without_obs",
+				Risk:           domain.RiskLow,
+				Priority:       22,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if claimsWithoutEv > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "map claims without evidence coverage",
+				Origin:         "decompose:coverage_scan:split:claims_without_ev",
+				ExpectedGain:   fmt.Sprintf("coverage claims_without_ev=%d", claimsWithoutEv),
+				Novelty:        fmt.Sprintf("coverage split claims_without_ev at %s", stamp),
+				StopCondition:  "claims without evidence covered or deferred",
+				DedupSignature: "coverage:claims_without_ev",
+				Risk:           domain.RiskMedium,
+				Priority:       21,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		return capChildDrafts(drafts, policy.MaxChildren), nil
 
 	case domain.FamilySourceFreshness:
 		newestBySource := map[domain.SourceID]domain.SourceVersion{}
@@ -196,34 +280,107 @@ func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family doma
 		if orphanEvidence == 0 && orphanObs == 0 && conflicted == 0 && claimsWithoutEv == 0 {
 			return nil, nil
 		}
-		return []ChildDraft{{
-			Title:          "audit structural integrity of knowledge graph",
-			Origin:         "decompose:integrity_audit:findings",
-			ExpectedGain:   fmt.Sprintf("integrity orphans_ev=%d orphans_obs=%d conflicted=%d claims_without_ev=%d", orphanEvidence, orphanObs, conflicted, claimsWithoutEv),
-			Novelty:        fmt.Sprintf("integrity inventory at %s", now.UTC().Format(time.RFC3339)),
-			StopCondition:  "integrity inventory persisted or deferred",
-			DedupSignature: "integrity:structural_inventory",
-			Risk:           domain.RiskLow,
-			Priority:       21,
-			EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
-		}}, nil
+		drafts := make([]ChildDraft, 0, 4)
+		if orphanEvidence > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "audit orphan evidence links",
+				Origin:         "decompose:integrity_audit:split:orphan_ev",
+				ExpectedGain:   fmt.Sprintf("orphan_evidence=%d", orphanEvidence),
+				Novelty:        fmt.Sprintf("integrity split orphan_ev at %s", stamp),
+				StopCondition:  "orphan evidence listed or deferred",
+				DedupSignature: "integrity:orphan_evidence",
+				Risk:           domain.RiskLow,
+				Priority:       23,
+				EstimatedCost:  domain.Budget{Tokens: 40, Attempts: 1},
+			})
+		}
+		if orphanObs > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "audit observations with missing fragment anchors",
+				Origin:         "decompose:integrity_audit:split:orphan_obs",
+				ExpectedGain:   fmt.Sprintf("orphan_observations=%d", orphanObs),
+				Novelty:        fmt.Sprintf("integrity split orphan_obs at %s", stamp),
+				StopCondition:  "orphan observations listed or deferred",
+				DedupSignature: "integrity:orphan_observations",
+				Risk:           domain.RiskLow,
+				Priority:       22,
+				EstimatedCost:  domain.Budget{Tokens: 40, Attempts: 1},
+			})
+		}
+		if conflicted > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "audit claims with supporting and contradicting evidence",
+				Origin:         "decompose:integrity_audit:split:conflicted",
+				ExpectedGain:   fmt.Sprintf("conflicted_claims=%d", conflicted),
+				Novelty:        fmt.Sprintf("integrity split conflicted at %s", stamp),
+				StopCondition:  "conflicted claims listed or deferred",
+				DedupSignature: "integrity:conflicted_claims",
+				Risk:           domain.RiskMedium,
+				Priority:       21,
+				EstimatedCost:  domain.Budget{Tokens: 40, Attempts: 1},
+			})
+		}
+		if claimsWithoutEv > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "audit claims without evidence",
+				Origin:         "decompose:integrity_audit:split:claims_without_ev",
+				ExpectedGain:   fmt.Sprintf("claims_without_evidence=%d", claimsWithoutEv),
+				Novelty:        fmt.Sprintf("integrity split claims_without_ev at %s", stamp),
+				StopCondition:  "claims without evidence listed or deferred",
+				DedupSignature: "integrity:claims_without_ev",
+				Risk:           domain.RiskLow,
+				Priority:       20,
+				EstimatedCost:  domain.Budget{Tokens: 40, Attempts: 1},
+			})
+		}
+		return capChildDrafts(drafts, policy.MaxChildren), nil
 
 	case domain.FamilyConflictReview:
 		unopposed, conflicted, claimsWithoutEv := conflictStructuralCounts(claims, evidence)
 		if unopposed == 0 && conflicted == 0 && claimsWithoutEv == 0 {
 			return nil, nil
 		}
-		return []ChildDraft{{
-			Title:          "review unopposed and conflicted claims",
-			Origin:         "decompose:conflict:findings",
-			ExpectedGain:   fmt.Sprintf("conflict candidates unopposed=%d conflicted=%d claims_without_ev=%d", unopposed, conflicted, claimsWithoutEv),
-			Novelty:        fmt.Sprintf("conflict inventory at %s", now.UTC().Format(time.RFC3339)),
-			StopCondition:  "each candidate reviewed or deferred",
-			DedupSignature: "conflict:evidence_inventory",
-			Risk:           domain.RiskMedium,
-			Priority:       24,
-			EstimatedCost:  domain.Budget{Tokens: 64, Attempts: 1},
-		}}, nil
+		drafts := make([]ChildDraft, 0, 3)
+		if conflicted > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "review claims with opposing evidence",
+				Origin:         "decompose:conflict:split:conflicted",
+				ExpectedGain:   fmt.Sprintf("conflicted=%d", conflicted),
+				Novelty:        fmt.Sprintf("conflict split conflicted at %s", stamp),
+				StopCondition:  "conflicted claims reviewed or deferred",
+				DedupSignature: "conflict:conflicted",
+				Risk:           domain.RiskMedium,
+				Priority:       26,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if unopposed > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "review claims lacking opposing evidence",
+				Origin:         "decompose:conflict:split:unopposed",
+				ExpectedGain:   fmt.Sprintf("unopposed=%d", unopposed),
+				Novelty:        fmt.Sprintf("conflict split unopposed at %s", stamp),
+				StopCondition:  "unopposed claims reviewed or deferred",
+				DedupSignature: "conflict:unopposed_inventory",
+				Risk:           domain.RiskMedium,
+				Priority:       24,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		if claimsWithoutEv > 0 {
+			drafts = append(drafts, ChildDraft{
+				Title:          "review claims without any evidence",
+				Origin:         "decompose:conflict:split:claims_without_ev",
+				ExpectedGain:   fmt.Sprintf("claims_without_ev=%d", claimsWithoutEv),
+				Novelty:        fmt.Sprintf("conflict split claims_without_ev at %s", stamp),
+				StopCondition:  "claims without evidence reviewed or deferred",
+				DedupSignature: "conflict:claims_without_ev",
+				Risk:           domain.RiskLow,
+				Priority:       22,
+				EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+			})
+		}
+		return capChildDrafts(drafts, policy.MaxChildren), nil
 
 	case domain.FamilyHarnessEvaluation:
 		// Offline compile inventory is always actionable without a provider.
@@ -432,8 +589,9 @@ func staticChildDrafts(family domain.WorkFamily) []ChildDraft {
 
 // resolveChildDrafts prefers store-planned drafts when the family can derive
 // them from findings; otherwise falls back to static catalogue drafts.
-func resolveChildDrafts(ctx context.Context, store port.Store, family domain.WorkFamily, mission domain.MissionRevisionID, now time.Time, configured []ChildDraft) ([]ChildDraft, error) {
-	planned, err := PlanChildDraftsFromStore(ctx, store, family, mission, now)
+// policy caps fan-out for multi-draft structural splits (max_children).
+func resolveChildDrafts(ctx context.Context, store port.Store, family domain.WorkFamily, mission domain.MissionRevisionID, now time.Time, configured []ChildDraft, policy domain.HorizonPolicy) ([]ChildDraft, error) {
+	planned, err := PlanChildDraftsFromStoreWithPolicy(ctx, store, family, mission, now, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -441,11 +599,24 @@ func resolveChildDrafts(ctx context.Context, store port.Store, family domain.Wor
 		return planned, nil
 	}
 	if len(configured) > 0 {
-		return configured, nil
+		return capChildDrafts(configured, policy.MaxChildren), nil
 	}
 	// Empty configured + empty plan: use static defaults for families that need
 	// a seed child to avoid pure root-only frontiers.
-	return staticChildDrafts(family), nil
+	return capChildDrafts(staticChildDrafts(family), policy.MaxChildren), nil
+}
+
+// capChildDrafts enforces HorizonPolicy.MaxChildren on planned drafts.
+// Order is preserved (callers emit highest-priority splits first).
+// max <= 0 returns nil so invalid policy never implies unbounded fan-out.
+func capChildDrafts(drafts []ChildDraft, max int) []ChildDraft {
+	if len(drafts) == 0 || max <= 0 {
+		return nil
+	}
+	if len(drafts) <= max {
+		return drafts
+	}
+	return append([]ChildDraft(nil), drafts[:max]...)
 }
 
 // draftSignaturePrefix is used by tests to assert planner provenance.

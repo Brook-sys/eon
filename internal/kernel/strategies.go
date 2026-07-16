@@ -85,7 +85,7 @@ func (s LocalFamilyStrategy) Replenish(ctx context.Context, mission domain.Missi
 	// 2. Optional single-level decomposition of the still-open root.
 	// Prefer store-planned drafts (gap/coverage/freshness/refresh findings);
 	// fall back to configured/static drafts so empty missions still fan out once.
-	drafts, err := resolveChildDrafts(ctx, s.Store, s.Family, mission, s.Clock.Now().UTC(), s.ChildDrafts)
+	drafts, err := resolveChildDrafts(ctx, s.Store, s.Family, mission, s.Clock.Now().UTC(), s.ChildDrafts, policy)
 	if err != nil {
 		return ContinuityResult{}, err
 	}
@@ -265,12 +265,14 @@ func RegisterDefaultContinuityFamilies(reg *StrategyRegistry, store port.Store, 
 		if err := reg.Register(StrategyDescriptor{
 			Name:      item.name,
 			Family:    item.family,
-			Version:   "v1",
+			Version:   "v2",
 			Priority:  item.priority,
 			LocalOnly: item.local,
 		}, strategy); err != nil {
 			return err
 		}
 	}
+	// Portfolio revision is explicit: multi-draft structural splits land in v2.
+	reg.SetCatalogVersion(DefaultContinuityCatalogVersion)
 	return nil
 }

@@ -9,6 +9,12 @@ import (
 	"motor-autonomo/internal/domain"
 )
 
+// DefaultContinuityCatalogVersion is the explicit portfolio revision installed by
+// RegisterDefaultContinuityFamilies. Catalogue evolution is a code change that
+// MUST bump this string (or register a new named version) so diagnosis/inspect
+// can attribute strategy behaviour without model authority.
+const DefaultContinuityCatalogVersion = "continuity-catalog.v2"
+
 // StrategyDescriptor is the versioned metadata for a continuity family.
 // Registration is deterministic and independent from model authority.
 type StrategyDescriptor struct {
@@ -19,6 +25,19 @@ type StrategyDescriptor struct {
 	RequiresModel   bool
 	RequiresNetwork bool
 	LocalOnly       bool
+}
+
+// Ref returns the stable name@version token used in diagnosis and audit trails.
+func (d StrategyDescriptor) Ref() string {
+	name := strings.TrimSpace(d.Name)
+	version := strings.TrimSpace(d.Version)
+	if name == "" {
+		return ""
+	}
+	if version == "" {
+		return name
+	}
+	return name + "@" + version
 }
 
 func (d StrategyDescriptor) Validate() error {
@@ -42,12 +61,30 @@ type RegisteredStrategy struct {
 
 // StrategyRegistry is an ordered, versioned catalogue of continuity families.
 type StrategyRegistry struct {
-	byName map[string]RegisteredStrategy
-	order  []string
+	catalogVersion string
+	byName         map[string]RegisteredStrategy
+	order          []string
 }
 
 func NewStrategyRegistry() *StrategyRegistry {
 	return &StrategyRegistry{byName: make(map[string]RegisteredStrategy)}
+}
+
+// SetCatalogVersion records the portfolio revision for Snapshot/inspect. Empty
+// clears any prior version (tests may leave it unset).
+func (r *StrategyRegistry) SetCatalogVersion(version string) {
+	if r == nil {
+		return
+	}
+	r.catalogVersion = strings.TrimSpace(version)
+}
+
+// CatalogVersion returns the portfolio revision string, if any.
+func (r *StrategyRegistry) CatalogVersion() string {
+	if r == nil {
+		return ""
+	}
+	return r.catalogVersion
 }
 
 // Register inserts a strategy. Duplicate names are rejected so catalogue
@@ -79,6 +116,50 @@ func (r *StrategyRegistry) Register(descriptor StrategyDescriptor, strategy Cont
 		return left.Priority > right.Priority
 	})
 	return nil
+}
+
+// StrategyCatalogSnapshot is a read-only view of the ordered registry used by
+// diagnosis, inspect, and tests. It never grants model authority.
+type StrategyCatalogSnapshot struct {
+	CatalogVersion string
+	Descriptors    []StrategyDescriptor
+}
+
+// Snapshot clones ordered descriptors and the catalogue version.
+func (r *StrategyRegistry) Snapshot() StrategyCatalogSnapshot {
+	if r == nil {
+		return StrategyCatalogSnapshot{}
+	}
+	descriptors := r.Descriptors()
+	out := StrategyCatalogSnapshot{
+		CatalogVersion: r.catalogVersion,
+		Descriptors:    append([]StrategyDescriptor(nil), descriptors...),
+	}
+	return out
+}
+
+// Descriptor returns the metadata for a registered strategy name.
+func (r *StrategyRegistry) Descriptor(name string) (StrategyDescriptor, bool) {
+	if r == nil {
+		return StrategyDescriptor{}, false
+	}
+	item, ok := r.byName[strings.TrimSpace(name)]
+	if !ok {
+		return StrategyDescriptor{}, false
+	}
+	return item.Descriptor, true
+}
+
+// StrategyRefs returns ordered name@version tokens for diagnosis trails.
+func (r *StrategyRegistry) StrategyRefs() []string {
+	if r == nil {
+		return nil
+	}
+	out := make([]string, 0, len(r.order))
+	for _, name := range r.order {
+		out = append(out, r.byName[name].Descriptor.Ref())
+	}
+	return out
 }
 
 func (r *StrategyRegistry) Len() int {
