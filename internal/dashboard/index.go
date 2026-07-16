@@ -438,6 +438,29 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           + " open=" + esc(String(d.open_candidate_count||0))
           + " · " + esc(fmtTime(d.occurred_at)) + "</dd>";
       }
+      if (m.continuity_findings) {
+        const cf = m.continuity_findings;
+        html += '<dt>continuity_findings</dt><dd>reports=' + esc(String(cf.total_reports||0))
+          + " active=" + esc(String(cf.active_reports||0))
+          + " stale=" + esc(String(cf.stale_reports||0)) + "</dd>";
+        if (cf.latest) {
+          const L = cf.latest;
+          const fl = Array.isArray(L.findings) ? L.findings.slice(0, 6) : [];
+          html += '<dt>latest_audit</dt><dd class="' + (L.stale ? 'muted' : '') + '">' + esc(L.family || L.kind || "?")
+            + (L.stale ? ' · stale' : '')
+            + " · artifact=" + esc(L.artifact_id || "")
+            + " · " + esc(fmtTime(L.verified_at))
+            + (fl.length ? (" · " + fl.map(function (line) { return esc(line); }).join("; ")) : "")
+            + "</dd>";
+        }
+        if (Array.isArray(cf.latest_by_family) && cf.latest_by_family.length) {
+          html += '<dt>audits_by_family</dt><dd>' + cf.latest_by_family.map(function (row) {
+            const f0 = (Array.isArray(row.findings) && row.findings.length) ? row.findings[0] : "";
+            return esc(row.family || row.kind || "?") + (row.stale ? "(stale)" : "")
+              + (f0 ? (" → " + esc(f0)) : "");
+          }).join("; ") + "</dd>";
+        }
+      }
     } else {
       html += '<dt>mission</dt><dd class="muted">não selecionada / não encontrada</dd>';
     }

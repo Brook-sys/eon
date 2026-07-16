@@ -51,6 +51,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /knowledge/claims/{claimID}", a.handleKnowledgeClaim)
 	mux.HandleFunc("GET /knowledge/artifacts", a.handleKnowledgeArtifacts)
 	mux.HandleFunc("GET /knowledge/artifacts/{artifactID}", a.handleKnowledgeArtifact)
+	mux.HandleFunc("GET /continuity/findings", a.handleContinuityFindings)
 	return mux
 }
 
@@ -326,6 +327,24 @@ func (a *API) handleKnowledgeArtifact(w http.ResponseWriter, r *http.Request) {
 		ArtifactDetail: safe,
 		Redaction:      report,
 	})
+}
+
+// handleContinuityFindings projects model-free local continuity audit findings.
+// Query: mission_id (required for mission-scoped active revision filter).
+// Without mission_id, returns an empty projection with 400 — operators should
+// always scope findings to a mission to avoid cross-mission leakage of free text.
+func (a *API) handleContinuityFindings(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	if missionID == "" {
+		writeError(w, http.StatusBadRequest, "missing_mission_id", "mission_id is required")
+		return
+	}
+	proj, err := a.Projector.ContinuityFindingsForMission(r.Context(), missionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
 }
 
 func parseKnowledgePage(w http.ResponseWriter, r *http.Request) (limit, offset int, ok bool) {

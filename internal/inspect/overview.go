@@ -73,20 +73,21 @@ type ContinuityDiagnosisSummary struct {
 
 // MissionOverview is the operator-facing mission projection.
 type MissionOverview struct {
-	MissionID         domain.MissionID            `json:"mission_id"`
-	ActiveRevisionID  domain.MissionRevisionID    `json:"active_revision_id"`
-	ActiveRevision    uint64                      `json:"active_revision"`
-	Status            domain.MissionStatus        `json:"status"`
-	Purpose           string                      `json:"purpose"`
-	DispatchMode      domain.MissionDispatchMode  `json:"dispatch_mode"`
-	DispatchAllowsNew bool                        `json:"dispatch_allows_new"`
-	ControlReason     string                      `json:"control_reason,omitempty"`
-	ControlUpdatedAt  time.Time                   `json:"control_updated_at,omitempty"`
-	Agenda            AgendaCounts                `json:"agenda"`
-	Operations        []OperationSummary          `json:"operations"`
-	Horizon           *domain.ExecutableHorizon   `json:"horizon,omitempty"`
-	Frontier          *FrontierSummary            `json:"frontier,omitempty"`
-	LatestDiagnosis   *ContinuityDiagnosisSummary `json:"latest_continuity_diagnosis,omitempty"`
+	MissionID          domain.MissionID              `json:"mission_id"`
+	ActiveRevisionID   domain.MissionRevisionID      `json:"active_revision_id"`
+	ActiveRevision     uint64                        `json:"active_revision"`
+	Status             domain.MissionStatus          `json:"status"`
+	Purpose            string                        `json:"purpose"`
+	DispatchMode       domain.MissionDispatchMode    `json:"dispatch_mode"`
+	DispatchAllowsNew  bool                          `json:"dispatch_allows_new"`
+	ControlReason      string                        `json:"control_reason,omitempty"`
+	ControlUpdatedAt   time.Time                     `json:"control_updated_at,omitempty"`
+	Agenda             AgendaCounts                  `json:"agenda"`
+	Operations         []OperationSummary            `json:"operations"`
+	Horizon            *domain.ExecutableHorizon     `json:"horizon,omitempty"`
+	Frontier           *FrontierSummary              `json:"frontier,omitempty"`
+	LatestDiagnosis    *ContinuityDiagnosisSummary   `json:"latest_continuity_diagnosis,omitempty"`
+	ContinuityFindings *ContinuityFindingsProjection `json:"continuity_findings,omitempty"`
 }
 
 // Overview is Slice A of the control plane: health, control, mission, agenda.
@@ -276,6 +277,13 @@ func buildMissionOverview(r port.Reader, control domain.ControlState, missionID 
 		out.LatestDiagnosis = &summary
 	} else if !errors.Is(err, port.ErrNotFound) {
 		return MissionOverview{}, err
+	}
+	findings, ferr := ProjectContinuityFindings(r, active.ID)
+	if ferr != nil {
+		return MissionOverview{}, ferr
+	}
+	if findings.TotalReports > 0 || findings.Latest != nil || len(findings.LatestByFamily) > 0 {
+		out.ContinuityFindings = &findings
 	}
 	return out, nil
 }
