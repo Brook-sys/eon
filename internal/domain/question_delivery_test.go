@@ -28,6 +28,21 @@ func TestQuestionDeliveryLeaseComplete(t *testing.T) {
 	}
 }
 
+func TestPermanentlyFailQuestionDeliveryPreservesAttemptPolicy(t *testing.T) {
+	base := pendingDelivery()
+	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, base.CreatedAt.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dead, err := PermanentlyFailQuestionDelivery(leased, "worker", "UNAUTHORIZED", base.CreatedAt.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dead.Status != QuestionDeliveryDead || dead.MaxAttempts != base.MaxAttempts || dead.Attempt != 1 || dead.LastFailureCode != "UNAUTHORIZED" {
+		t.Fatalf("dead delivery = %#v", dead)
+	}
+}
+
 func TestQuestionDeliveryRetryAndDeadLetter(t *testing.T) {
 	base := pendingDelivery()
 	leased, err := LeaseQuestionDelivery(base, "worker_1", base.CreatedAt, base.CreatedAt.Add(time.Minute))

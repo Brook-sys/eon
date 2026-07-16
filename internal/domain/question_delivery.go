@@ -150,6 +150,21 @@ func FailQuestionDelivery(current QuestionDelivery, owner, failureCode string, n
 	return next, next.Validate()
 }
 
+// PermanentlyFailQuestionDelivery records a non-retryable adapter failure
+// without mutating the immutable attempt policy.
+func PermanentlyFailQuestionDelivery(current QuestionDelivery, owner, failureCode string, now time.Time) (QuestionDelivery, error) {
+	if err := current.Validate(); err != nil {
+		return QuestionDelivery{}, err
+	}
+	if current.Status != QuestionDeliveryLeased || current.LeaseOwner != owner || strings.TrimSpace(failureCode) == "" || now.IsZero() || now.Before(current.UpdatedAt) {
+		return QuestionDelivery{}, errors.New("question delivery permanent failure does not match active lease")
+	}
+	next := current
+	next.Status, next.UpdatedAt, next.LastFailureCode = QuestionDeliveryDead, now, failureCode
+	next.LeaseOwner, next.LeaseUntil, next.TransportMessageID = "", time.Time{}, ""
+	return next, next.Validate()
+}
+
 // ReclaimExpiredQuestionDelivery converts an abandoned lease into a due retry
 // without hiding the ambiguous transport outcome. The caller must reconcile
 // the old attempt when the adapter cannot prove that no message was sent.

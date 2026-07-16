@@ -457,14 +457,18 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 ### Slice E — Telegram
 
-- configuração segura do bot próprio do operador;
-- entrega por outbox;
-- inline keyboards para opções;
+Implementado no adapter `internal/channel/telegram`:
+
+- configuração segura do bot próprio do operador, mantendo token somente na instância do adapter;
+- entrega por worker sobre a outbox persistida;
+- inline keyboards com callbacks opacos e mapeamento server-side para opções;
 - reply/`ForceReply` para texto livre;
-- ingestão deduplicada de updates e callbacks;
-- allowlist de ator/chat;
-- correlação `message_id/callback → question_id`;
-- respostas tardias, expiradas, ambíguas e concorrentes.
+- ingestão deduplicada de updates e callbacks pelo `ExternalEventInbox` existente;
+- allowlist de ator/chat e roteamento `destination_ref → chat_id`;
+- correlação pelo vínculo durável da entrega `chat_id + message_id → question_id/revision`;
+- respostas tardias, expiradas e concorrentes fecham de forma segura na validação canônica do kernel; mensagens sem reply/callback inequívoco são recusadas como não correlacionadas.
+
+Residual operacional: selecionar polling ou webhook validado no bootstrap configurável do runtime e implementar resposta de UX para updates recusados/ambíguos; isso não altera o domínio nem concede autoridade ao canal.
 
 ### Slice F — interoperabilidade
 
