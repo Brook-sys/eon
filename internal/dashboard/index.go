@@ -221,6 +221,31 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="knowDetail" class="prebox muted" hidden></div>
     </section>
     <section>
+      <h2>Commits / provider</h2>
+      <p class="hint">Browse somente-leitura de commits canônicos (GET /commits) e perfil de capacidades do provider (FR-MODEL-005). Probe é orçamentado e não inventa features; secrets nunca aparecem.</p>
+      <div class="row">
+        <label>mission_revision_id
+          <input id="commitRev" placeholder="revision_..." spellcheck="false" style="min-width:180px"/>
+        </label>
+        <label>head_only
+          <select id="commitHeadOnly">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </label>
+        <label>limit
+          <input id="commitLimit" value="20" spellcheck="false" style="width:70px"/>
+        </label>
+        <button class="primary" type="button" id="btnCommitList">Listar commits</button>
+        <button type="button" id="btnProviderProfile">Perfil declarado</button>
+        <button type="button" id="btnProviderProbe">Probe live</button>
+      </div>
+      <div id="commitList" class="list muted">nenhuma lista de commits</div>
+      <div id="providerProfile" class="prebox muted" hidden></div>
+      <div class="okbox" id="commitOk"></div>
+      <div class="errbox" id="commitErr"></div>
+    </section>
+    <section>
       <h2>Inspetor de execução</h2>
       <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem.</p>
       <div class="row">
@@ -1532,9 +1557,71 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnFrontHygiene").addEventListener("click", loadFrontierHygiene);
   el("btnFrontDetail").addEventListener("click", loadFrontierDetail);
 
+  async function listCommits() {
+    el("commitErr").textContent = "";
+    el("commitOk").textContent = "";
+    try {
+      const params = new URLSearchParams();
+      const limit = el("commitLimit").value.trim() || "20";
+      params.set("limit", limit);
+      const rev = el("commitRev").value.trim();
+      if (rev) params.set("mission_revision_id", rev);
+      if (el("commitHeadOnly").value === "true") params.set("head_only", "true");
+      const body = await getJSON(inspectBase + "/commits?" + params.toString());
+      const items = body.items || [];
+      let html = "";
+      items.forEach(function (item) {
+        const id = item.id || "";
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + (item.is_head ? " · HEAD" : "") + "</div>";
+        html += "<h3>v" + esc(String(item.version || "")) + " · " + esc(item.mission_revision_id || "?") + "</h3>";
+        html += '<div class="muted">base=' + esc(item.base_commit_id || "") + " · accepted=" + esc(item.accepted_change_set_id || "") + "</div>";
+        if (item.committed_at) html += '<div class="muted">' + esc(item.committed_at) + "</div>";
+        html += '<div class="ops"><button type="button" data-inspect-commit="' + esc(id) + '">Inspecionar</button></div>';
+        html += "</div>";
+      });
+      el("commitList").innerHTML = html || '<div class="muted">sem commits</div>';
+      el("commitList").className = "list";
+      el("commitList").querySelectorAll("button[data-inspect-commit]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("inspKind").value = "commit";
+          el("inspId").value = btn.getAttribute("data-inspect-commit") || "";
+          loadInspector();
+        });
+      });
+      el("commitOk").textContent = "commits items=" + String(items.length) + " total=" + String(body.total || 0);
+    } catch (err) {
+      el("commitErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadProviderProfile(live) {
+    el("commitErr").textContent = "";
+    el("commitOk").textContent = "";
+    try {
+      const path = live ? "/provider/profile/probe" : "/provider/profile";
+      const body = await getJSON(inspectBase + path);
+      el("providerProfile").hidden = false;
+      el("providerProfile").textContent = pretty(body);
+      el("providerProfile").className = "prebox";
+      const conf = body.configured ? "configured" : "not_configured";
+      const mode = body.live ? "live_probe" : "declared";
+      el("commitOk").textContent = "provider profile " + conf + " " + mode
+        + (body.profile && body.profile.source ? (" source=" + body.profile.source) : "")
+        + (body.note ? (" · " + body.note) : "");
+    } catch (err) {
+      el("commitErr").textContent = String(err.message || err);
+    }
+  }
+
+  el("btnCommitList").addEventListener("click", listCommits);
+  el("btnProviderProfile").addEventListener("click", function () { loadProviderProfile(false); });
+  el("btnProviderProbe").addEventListener("click", function () { loadProviderProfile(true); });
+
   // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
   fillDefaultPayload();
   refreshKnowledgeCatalog();
+  loadProviderProfile(false);
   if (el("missionId").value.trim()) {
     refresh();
     loadFrontierHygiene();

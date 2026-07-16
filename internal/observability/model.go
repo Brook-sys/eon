@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 )
 
@@ -95,6 +96,49 @@ func (p *ModelProvider) Complete(ctx context.Context, request port.CompletionReq
 	}
 	return result, nil
 }
+
+// DeclaredProfile forwards capability snapshots when the inner provider reports them.
+// When the inner adapter does not implement ModelCapabilityReporter, a valid
+// unknown profile is returned so inspect never invents support for features.
+func (p *ModelProvider) DeclaredProfile() domain.ProviderProfile {
+	if p == nil || p.Inner == nil {
+		return unknownProviderProfile("missing", "observability decorator has no inner provider")
+	}
+	if reporter, ok := p.Inner.(port.ModelCapabilityReporter); ok {
+		return reporter.DeclaredProfile()
+	}
+	name := p.Name
+	if name == "" {
+		name = "model"
+	}
+	return unknownProviderProfile(name, "inner model provider does not report capabilities")
+}
+
+// Probe forwards budgeted probes when the inner provider reports capabilities.
+func (p *ModelProvider) Probe(ctx context.Context) (domain.ProviderProfile, error) {
+	if p == nil || p.Inner == nil {
+		return domain.ProviderProfile{}, errMissingProvider
+	}
+	if reporter, ok := p.Inner.(port.ModelCapabilityReporter); ok {
+		return reporter.Probe(ctx)
+	}
+	return domain.ProviderProfile{}, errString("inner model provider does not report capabilities")
+}
+
+func unknownProviderProfile(name, detail string) domain.ProviderProfile {
+	return domain.ProviderProfile{
+		SchemaVersion:    domain.SchemaVersionV1,
+		Name:             name,
+		APIStyle:         domain.APIStyleChatCompletions,
+		MaxOutputDialect: domain.MaxOutputDialectLegacy,
+		Source:           domain.CapabilityUnknown,
+		SafeDetail:       detail,
+		PolicyVersion:    "provider-profile@1",
+	}
+}
+
+// Compile-time: decorator exposes the optional capability surface.
+var _ port.ModelCapabilityReporter = (*ModelProvider)(nil)
 
 var errMissingProvider = errString("observability model provider is missing")
 

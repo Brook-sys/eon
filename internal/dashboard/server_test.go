@@ -136,6 +136,13 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"/knowledge",
 		"btnKnowList",
 		"claims_without_evidence",
+		"Commits / provider",
+		"btnCommitList",
+		"btnProviderProfile",
+		"btnProviderProbe",
+		"/commits",
+		"/provider/profile",
+		"FR-MODEL-005",
 	} {
 		if !strings.Contains(html, marker) {
 			t.Fatalf("index missing marker %q", marker)

@@ -999,6 +999,22 @@ func (r reader) Commit(id domain.CommitID) (domain.Commit, error) {
 	}
 	return v, nil
 }
+func (r reader) Commits() ([]domain.Commit, error) {
+	out := make([]domain.Commit, 0, len(r.state.commits))
+	for _, commit := range r.state.commits {
+		out = append(out, commit)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Version != out[j].Version {
+			return out[i].Version < out[j].Version
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out, nil
+}
+func (t transaction) Commits() ([]domain.Commit, error) {
+	return reader(t).Commits()
+}
 func (r reader) CommitByIdempotencyKey(key domain.IdempotencyKey) (domain.Commit, error) {
 	id, ok := r.state.commitByIntent[key]
 	if !ok {

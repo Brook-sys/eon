@@ -128,6 +128,8 @@ type KnowledgeReader interface {
 	ValidationReceipt(domain.ReceiptID) (domain.ValidationReceipt, error)
 	CommitReceipt(domain.ReceiptID) (domain.CommitReceipt, error)
 	Commit(domain.CommitID) (domain.Commit, error)
+	// Commits returns all commits sorted by Version then ID (stable browse order).
+	Commits() ([]domain.Commit, error)
 	CommitByIdempotencyKey(domain.IdempotencyKey) (domain.Commit, error)
 	HeadCommit(domain.MissionRevisionID) (domain.Commit, error)
 	CanonicalEntity(entityType, entityID string) (domain.CanonicalEntity, error)

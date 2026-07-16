@@ -245,6 +245,10 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
+	// Expose declared/probed provider capabilities on inspect (read-only; FR-MODEL-005).
+	if modelExec != nil {
+		projector.SetModelProvider(modelExec.Provider)
+	}
 	return &Runtime{
 		Opts:             opts,
 		Store:            store,
@@ -286,6 +290,14 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 func (rt *Runtime) AttachModel(model *kernel.ModelExecutor) {
 	if rt == nil {
 		return
+	}
+	// Keep inspect capability surface aligned with the dispatch path.
+	if rt.Inspect != nil && rt.Inspect.Projector != nil {
+		if model == nil {
+			rt.Inspect.Projector.SetModelProvider(nil)
+		} else {
+			rt.Inspect.Projector.SetModelProvider(model.Provider)
+		}
 	}
 	rt.Model = model
 	rt.Executor.Model = model

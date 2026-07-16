@@ -48,7 +48,7 @@ func buildModel(
 		Model:            opts.Model.Model,
 		MaxOutputField:   maxField,
 		MaxResponseBytes: opts.Model.MaxResponseBytes,
-	})
+	}, openai.WithContextTokens(opts.Model.ContextTokens), openai.WithProfileName("openai-compatible"))
 	if err != nil {
 		return nil, fmt.Errorf("model provider: %w", err)
 	}

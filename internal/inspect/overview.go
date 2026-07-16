@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"sync"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -126,6 +127,10 @@ type Projector struct {
 	Clock   func() time.Time
 	// continuityCatalog is optional process assembly metadata for the strategy portfolio.
 	continuityCatalog *ContinuityStrategyCatalog
+	// modelProvider is optional process-local capability source (FR-MODEL-005).
+	// Never used to execute operator-authored free text; only DeclaredProfile/Probe.
+	mu            sync.Mutex
+	modelProvider port.ModelProvider
 }
 
 func NewProjector(store port.Store, runtime RuntimeIdentity) (*Projector, error) {

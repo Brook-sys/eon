@@ -429,11 +429,13 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - agenda e operação atual — implementado (`GET /missions/{id}/operations`, summaries por estado);
 - consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
 - detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log; raw model outputs correlacionados por `ValidationReceipt.ArtifactRef`);
+- browse paginado de commits — implementado (`GET /commits` com `limit`/`offset`, `mission_revision_id`, `head_only`; order Version↑+ID; flag `is_head`);
+- perfil de capacidades do provider (FR-MODEL-005) — implementado: `GET /provider/profile` (snapshot declarado, sem I/O de rede) e `GET /provider/profile/probe` (probe orçamentado, cacheado, sem secrets); domínio `ProviderProfile` com sources `declared|probed|inferred|override|unknown` e baseline conservadora; adapter OpenAI + decorator de observabilidade expõem a superfície opcional; bootstrap projeta o provider no inspect;
 - SSE ao vivo — implementado (`GET /events/stream` com `after_sequence`/`Last-Event-ID`, poll configurável, eventos `ready`/`event`/`page`/`error` e keep-alive; somente-leitura sobre `Projector.ListEvents`);
 - catálogo e browse de conhecimento — implementado: `GET /knowledge` (contagens), `GET /knowledge/sources|observations|claims|artifacts` (listas offset/limit), e detalhe por ID (`.../sources/{id}`, `.../observations/{id}`, `.../claims/{id}`, `.../artifacts/{id}`); filtros avançados: sources `kind`/`q`, observations `provenance`/`q`/`linked_only`, claims `without_evidence`/`has_contradiction`/`q`, artifacts `stale`/`kind`/`q` (echo nos page structs; booleans inválidos → 400); snapshots de bytes não são exportados (apenas hash/ref/tamanho);
 - redaction de apresentação — implementada em `inspect.RedactOperationDetail`/`RedactRawModelOutput` e estendida a knowledge (`RedactObservationDetail`/`RedactClaimDetail`/`RedactArtifactDetail` + listas): substitui padrões secret-shaped (Bearer, API keys, bot tokens, env de secrets), limita bytes de conteúdo bruto/free-text e anexa relatório `redaction` na resposta HTTP; store canônico permanece intacto e `content_hash` é preservado;
 - browse do reservatório de frontier — implementado: `GET /frontier` (lista paginada com filtros `status`/`family`), `GET /frontier/hygiene` (dry-run de `PlanFrontierReservoirHygiene` com contagens/actions capadas, sem mutação), `GET /frontier/opportunities/{id}` (detalhe + lineage/signature peers/can_spawn); overview embute sinais `needs_hygiene`/`unique_signatures`/`over_depth_open`/policy marks; free-text de opportunity redigido na apresentação;
-- residual de Slice A: nenhum bloqueador de browse/knowledge/frontier; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
+- residual de Slice A: nenhum bloqueador de browse/knowledge/frontier/commits/provider-profile; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -472,7 +474,9 @@ Browse de conhecimento no dashboard experimental: seção **Conhecimento** com c
 
 Browse de frontier no dashboard experimental: seção **Frontier / higiene** com listagem filtrada (`GET /api/inspect/frontier`), dry-run de higiene (`GET /api/inspect/frontier/hygiene`) e detalhe de opportunity (`GET /api/inspect/frontier/opportunities/{id}`); overview mostra `needs_hygiene` e contagens de assinatura. Compactação real permanece com a família local `frontier_management` — a UI não aplica transições.
 
-Residual de Slice D: polish UX geral residual (se necessário). Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental. Filtros avançados de knowledge fechados em 2026-07-16 14:20.
+Browse de commits e provider no dashboard experimental: seção **Commits / provider** lista `GET /api/inspect/commits` (filtros head/revision) com atalho ao inspetor de commit; exibe perfil declarado e probe live via `/provider/profile` e `/provider/profile/probe` sem mutação nem secrets.
+
+Residual de Slice D: polish UX geral residual (se necessário). Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental. Filtros avançados de knowledge fechados em 2026-07-16 14:20. Commits browse + FR-MODEL-005 fechados em 2026-07-16 21:04.
 
 ### Outbox de entrega de perguntas
 

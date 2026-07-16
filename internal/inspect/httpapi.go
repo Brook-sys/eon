@@ -37,7 +37,10 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /missions/{missionID}", a.handleMission)
 	mux.HandleFunc("GET /missions/{missionID}/operations", a.handleMissionOperations)
 	mux.HandleFunc("GET /operations/{operationID}", a.handleOperation)
+	mux.HandleFunc("GET /commits", a.handleCommits)
 	mux.HandleFunc("GET /commits/{commitID}", a.handleCommit)
+	mux.HandleFunc("GET /provider/profile", a.handleProviderProfile)
+	mux.HandleFunc("GET /provider/profile/probe", a.handleProviderProfileProbe)
 	mux.HandleFunc("GET /commands/{commandID}", a.handleCommand)
 	mux.HandleFunc("GET /events", a.handleEvents)
 	mux.HandleFunc("GET /events/{eventID}", a.handleEvent)
@@ -132,6 +135,36 @@ func (a *API) handleOperation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *API) handleCommits(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := parseKnowledgePage(w, r)
+	if !ok {
+		return
+	}
+	q := r.URL.Query()
+	headOnly := false
+	switch strings.TrimSpace(q.Get("head_only")) {
+	case "", "0", "false", "no":
+	case "1", "true", "yes":
+		headOnly = true
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_head_only", "head_only must be a boolean")
+		return
+	}
+	page, err := a.Projector.ListCommits(r.Context(), limit, offset, CommitFilter{
+		MissionRevision: domain.MissionRevisionID(strings.TrimSpace(q.Get("mission_revision_id"))),
+		HeadOnly:        headOnly,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "limit must be") || strings.Contains(err.Error(), "offset must be") {
+			writeError(w, http.StatusBadRequest, "invalid_page", err.Error())
+			return
+		}
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
 func (a *API) handleCommit(w http.ResponseWriter, r *http.Request) {
 	commitID := domain.CommitID(r.PathValue("commitID"))
 	detail, err := a.Projector.CommitInspector(r.Context(), commitID)
@@ -144,6 +177,24 @@ func (a *API) handleCommit(w http.ResponseWriter, r *http.Request) {
 		CommitDetail: safe,
 		Redaction:    report,
 	})
+}
+
+func (a *API) handleProviderProfile(w http.ResponseWriter, r *http.Request) {
+	view, err := a.Projector.ProviderProfile(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, view)
+}
+
+func (a *API) handleProviderProfileProbe(w http.ResponseWriter, r *http.Request) {
+	view, err := a.Projector.ProviderProfileProbe(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, view)
 }
 
 func (a *API) handleCommand(w http.ResponseWriter, r *http.Request) {
