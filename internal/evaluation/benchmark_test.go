@@ -56,11 +56,15 @@ func TestParseFormatsStrictly(t *testing.T) {
 		{FormatChoice, "a=1\nb=2"},
 		{FormatDelimited, "a: 1\nb: 2"},
 		{FormatJSON, `{"a":"1","b":"2"}`},
+		// FR-MODEL-004 local normalization before strict JSON parse.
+		{FormatJSON, "```json\n{\"a\":\"1\",\"b\":\"2\"}\n```"},
+		{FormatJSON, "Here you go:\n{\"a\":\"1\",\"b\":\"2\"}\n"},
+		{FormatChoice, "a=1\n\nb=2\n"}, // blank lines ignored
 	}
 	for _, tc := range cases {
 		got, err := Parse(tc.format, tc.text, keys)
 		if err != nil || got["a"] != "1" || got["b"] != "2" {
-			t.Fatalf("%s: got=%v err=%v", tc.format, got, err)
+			t.Fatalf("%s: got=%v err=%v text=%q", tc.format, got, err, tc.text)
 		}
 	}
 	for _, tc := range []struct {

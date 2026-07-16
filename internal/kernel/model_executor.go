@@ -10,6 +10,7 @@ import (
 
 	"motor-autonomo/internal/changeset"
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/modeltext"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/runtime/source"
@@ -369,8 +370,18 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 // the response is a JSON object missing them. If the response is already a full
 // valid proposal, it is left unchanged. Non-JSON remains unchanged so
 // changeset.Process can preserve raw text and reject.
+//
+// Before interpreting the object, a deterministic local normalization step
+// (FR-MODEL-004: trim/BOM/fence/object extract) is applied so weak-model
+// fences do not block lineage injection. The original provider text is still
+// what Process preserves as RawModelOutput when the executor passes the
+// post-lineage completion through — callers that need exact bytes should copy
+// them before this helper rewrites the working text.
 func ensureProposalLineage(text string, operation domain.Operation, baseCommit domain.CommitID, ids source.IDGenerator, modelName string) (string, error) {
-	trimmed := strings.TrimSpace(text)
+	// Work on a normalized candidate; if normalization finds no object, keep
+	// the original bytes untouched for raw preservation + strict rejection.
+	candidate := modeltext.BestJSONCandidate(text)
+	trimmed := strings.TrimSpace(candidate)
 	if trimmed == "" || trimmed[0] != '{' {
 		return text, nil
 	}
@@ -378,7 +389,9 @@ func ensureProposalLineage(text string, operation domain.Operation, baseCommit d
 	if err := json.Unmarshal([]byte(trimmed), &fields); err != nil {
 		return text, nil
 	}
-	// If core lineage is already present, do not rewrite (model owns the object).
+	// If core lineage is already present, do not rewrite. Return the original
+	// provider text so RawModelOutput keeps exact bytes; DecodeStrict will
+	// re-apply local normalization when parsing the typed proposal.
 	if _, ok := fields["operation_id"]; ok {
 		if _, ok := fields["idempotency_key"]; ok {
 			if _, ok := fields["mission_revision_id"]; ok {

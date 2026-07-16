@@ -355,6 +355,25 @@ Quando a saída é inválida:
 
 Não reenviar automaticamente todo o prompt várias vezes. Isso desperdiça rate limit e pode reproduzir o mesmo erro.
 
+### Implementação local (passos 1–4, sem provider)
+
+O pacote `internal/modeltext` materializa os passos determinísticos e authority-free:
+
+| Passo | JSON (`NormalizeJSONCandidate` / `BestJSONCandidate`) | Escolha fechada (`NormalizeClosedToken`) |
+| --- | --- | --- |
+| 1 | strip BOM, trim | strip BOM, trim, última linha não vazia |
+| 2 | uma fence markdown externa (` ``` ` / ` ```json `) | prefixos `ANSWER:` / `Opção` / `option:`, aspas, pontuação |
+| 3–4 | extrair o primeiro objeto `{...}` balanceado (respeita strings) e validar no decoder estrito | token único; maiúscula de letra isolada; allowlist no caller |
+
+Regras firmes:
+
+- a saída **crua** do provider permanece no artefato `RawModelOutput` (bytes exatos);
+- a forma normalizada só alimenta decode/validação tipados (`changeset.DecodeStrict`, `evaluation.Parse` JSON, injeção de linhagem em `ensureProposalLineage`);
+- não inventa chaves, não fecha chaves truncadas, não funde múltiplos objetos;
+- se não houver interpretação segura, o caminho falha/replana sem loop de `Complete` (FR-MODEL-004).
+
+Passos 5–8 (correção curta reenviada, formato mais simples, fallback de modelo) permanecem planejados e exigem budget de retry persistido + endpoint; não estão no caminho mínimo offline.
+
 ## Perfil adaptativo de modelo e provider
 
 Cada combinação de provider, modelo, versão e configuração possui um perfil versionado. O perfil separa quatro fontes de informação:

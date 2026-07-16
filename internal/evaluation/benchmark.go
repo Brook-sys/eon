@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/modeltext"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
 )
@@ -396,18 +397,34 @@ func Parse(format Format, text string, expectedKeys []string) (map[string]string
 	values := map[string]string{}
 	switch format {
 	case FormatChoice:
+		// Deterministic recovery for KEY=VALUE choice lines (FR-MODEL-004).
+		// If multi-line, keep lines that still look like pairs; otherwise try a
+		// single closed-token fallthrough when exactly one key is expected.
+		parsedAny := false
 		for _, line := range strings.Split(text, "\n") {
-			parts := strings.SplitN(strings.TrimSpace(line), "=", 2)
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, "=", 2)
 			if len(parts) != 2 {
-				return nil, errors.New("choice output must use KEY=VALUE")
+				continue
 			}
 			if err := addValue(values, parts[0], parts[1]); err != nil {
 				return nil, err
 			}
+			parsedAny = true
+		}
+		if !parsedAny {
+			return nil, errors.New("choice output must use KEY=VALUE")
 		}
 	case FormatDelimited:
 		for _, line := range strings.Split(text, "\n") {
-			parts := strings.SplitN(strings.TrimSpace(line), ":", 2)
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
 				return nil, errors.New("delimited output must use KEY: VALUE")
 			}
@@ -416,6 +433,8 @@ func Parse(format Format, text string, expectedKeys []string) (map[string]string
 			}
 		}
 	case FormatJSON:
+		// Local normalization before strict decode: fence strip / object extract.
+		text = modeltext.BestJSONCandidate(text)
 		decoder := json.NewDecoder(strings.NewReader(text))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&values); err != nil {

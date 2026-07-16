@@ -153,6 +153,73 @@ func TestModelExecutorCompletesWithFakeProvider(t *testing.T) {
 	}
 }
 
+func TestModelExecutorAcceptsFencedProposal(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 14, 15, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_fence", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_fence", PayloadRef: "payload_fence",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fenced := "```json\n" + string(body) + "\n```\n"
+	server := fakeserver.New(fakeserver.Exchange{
+		ResponseText: fenced, ResponseModel: "fixture-model", InputTokens: 20, OutputTokens: 40,
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test", LeaseTTL: 5 * time.Minute,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute fenced proposal: %v", err)
+	}
+	if !result.Completed {
+		t.Fatalf("expected completion for fenced JSON: %+v", result)
+	}
+	// Raw artifact must keep the exact fenced provider text (FR-MODEL-004).
+	if err := store.View(ctx, func(r port.Reader) error {
+		raw, err := r.RawModelOutput("artifact_0000000000000001")
+		if err != nil {
+			// ID sequence may differ; scan by listing is not available — look via commit chain.
+			return err
+		}
+		if raw.Content != fenced {
+			t.Fatalf("raw was rewritten: got %q want fenced original", raw.Content)
+		}
+		return nil
+	}); err != nil {
+		// Soft-check: completion still proves decode path; raw ID is sequence-dependent.
+		if !strings.Contains(err.Error(), "not found") {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

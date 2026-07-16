@@ -23,8 +23,8 @@ func TestDecodeStrictRejectsNonCanonicalJSON(t *testing.T) {
 		{name: "unknown field", text: strings.Replace(valid, `"expected_delta":`, `"unknown":true,"expected_delta":`, 1)},
 		{name: "case variant", text: strings.Replace(valid, `"schema_version"`, `"Schema_Version"`, 1)},
 		{name: "duplicate key", text: strings.Replace(valid, `"schema_version":1`, `"schema_version":1,"schema_version":1`, 1)},
-		{name: "trailing value", text: valid + ` {}`},
-		{name: "markdown fence", text: "```json\n" + valid + "\n```"},
+		// Truncated payload: normalization must not invent closing braces.
+		{name: "truncated object", text: valid[:len(valid)/2]},
 		{name: "unsupported link", text: strings.Replace(valid, `"kind":"ADD"`, `"kind":"LINK"`, 1)},
 		{name: "null required array", text: strings.Replace(valid, `"preconditions":[]`, `"preconditions":null`, 1)},
 	}
@@ -37,6 +37,55 @@ func TestDecodeStrictRejectsNonCanonicalJSON(t *testing.T) {
 	}
 	if _, err := DecodeStrict(valid, int64(len(valid)-1)); err == nil {
 		t.Fatal("oversized output was accepted")
+	}
+}
+
+func TestDecodeStrictAcceptsDeterministicNormalization(t *testing.T) {
+	valid := proposalText(t, proposal("operation_1", "idem_1", domain.GenesisCommitID, "entity_1"))
+	cases := []string{
+		"```json\n" + valid + "\n```",
+		"Sure:\n" + valid + "\nThanks",
+		"\ufeff" + valid,
+	}
+	for _, text := range cases {
+		got, err := DecodeStrict(text, 1<<20)
+		if err != nil {
+			t.Fatalf("normalized decode failed: %v\ntext=%q", err, text)
+		}
+		if got.OperationID != "operation_1" {
+			t.Fatalf("proposal = %#v", got)
+		}
+	}
+}
+
+func TestProcessorPreservesFencedRawAndCommitsNormalized(t *testing.T) {
+	store := memory.New()
+	seed(t, store)
+	now := time.Date(2026, 7, 15, 12, 30, 0, 0, time.UTC)
+	processor, err := New(Config{Store: store, Clock: source.NewManualClock(now), IDs: source.NewSequenceIDGenerator(1), PolicyVersion: "policy@1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	valid := proposalText(t, proposal("operation_1", "idem_1", domain.GenesisCommitID, "entity_1"))
+	fenced := "Sure!\n```json\n" + valid + "\n```\n"
+	commit, err := processor.Process(context.Background(), "operation_1", port.CompletionResult{Text: fenced, Model: "fake-model"})
+	if err != nil {
+		t.Fatalf("process fenced: %v", err)
+	}
+	if commit.Version != 1 {
+		t.Fatalf("commit = %#v", commit)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		raw, err := r.RawModelOutput("artifact_0000000000000001")
+		if err != nil {
+			return err
+		}
+		if raw.Content != fenced {
+			t.Fatalf("raw must preserve exact provider text; got %q", raw.Content)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

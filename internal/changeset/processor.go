@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/modeltext"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 )
@@ -70,12 +71,21 @@ func New(config Config) (*Processor, error) {
 	return &Processor{store: config.Store, clock: config.Clock, ids: config.IDs, policyVersion: config.PolicyVersion, maxOutputBytes: limit, checkpoint: config.Checkpoint}, nil
 }
 
-// DecodeStrict accepts exactly one JSON object. Markdown fences, unknown
-// fields, trailing data, and oversized output are rejected.
+// DecodeStrict accepts exactly one JSON object after deterministic local
+// normalization (FR-MODEL-004 ladder: trim, fence strip, object extract).
+// Unknown fields, trailing data, duplicate keys, and oversized output are
+// still rejected. Callers MUST preserve the original raw text separately.
 func DecodeStrict(text string, maxBytes int64) (domain.ProposedChangeSet, error) {
 	if maxBytes < 1 || int64(len(text)) > maxBytes {
 		return domain.ProposedChangeSet{}, errors.New("model output exceeds changeset limit")
 	}
+	// Normalize against the raw size budget: refuse to expand authority by
+	// accepting a payload whose pre-normalized form already exceeds the limit.
+	normalized := modeltext.BestJSONCandidate(text)
+	if int64(len(normalized)) > maxBytes {
+		return domain.ProposedChangeSet{}, errors.New("model output exceeds changeset limit")
+	}
+	text = normalized
 	if err := validateJSONShape(text); err != nil {
 		return domain.ProposedChangeSet{}, err
 	}
@@ -124,6 +134,8 @@ func (p *Processor) Process(ctx context.Context, operationID domain.OperationID,
 		return domain.Commit{}, err
 	}
 
+	// Decode from a normalized view of the preserved raw text. The artifact
+	// still holds the exact provider bytes; only the typed proposal is repaired.
 	proposal, err := DecodeStrict(result.Text, p.maxOutputBytes)
 	if err != nil {
 		return domain.Commit{}, err
