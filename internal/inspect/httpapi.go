@@ -40,6 +40,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /commands/{commandID}", a.handleCommand)
 	mux.HandleFunc("GET /events", a.handleEvents)
 	mux.HandleFunc("GET /events/{eventID}", a.handleEvent)
+	mux.HandleFunc("GET /events/stream", a.handleEventStream)
 	return mux
 }
 
@@ -88,12 +89,12 @@ func (a *API) handleMissionOperations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"schema_version":      domain.SchemaVersionV1,
-		"mission_id":          detail.MissionID,
-		"active_revision_id":  detail.ActiveRevisionID,
-		"active_revision":     detail.ActiveRevision,
-		"agenda":              detail.Agenda,
-		"operations":          detail.Operations,
+		"schema_version":     domain.SchemaVersionV1,
+		"mission_id":         detail.MissionID,
+		"active_revision_id": detail.ActiveRevisionID,
+		"active_revision":    detail.ActiveRevision,
+		"agenda":             detail.Agenda,
+		"operations":         detail.Operations,
 	})
 }
 
