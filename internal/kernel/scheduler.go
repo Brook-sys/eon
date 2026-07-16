@@ -83,6 +83,22 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 		return decision, err
 	}
 
+	// Preventive replenishment: when ready work is at/below low_watermark but
+	// the frontier still has OPEN opportunities, admit before family strategies.
+	if s.IDs != nil {
+		replenisher := Replenisher{Store: s.Store, Clock: s.Clock, IDs: s.IDs, Policy: policy}
+		if _, _, err := replenisher.PreventivelyReplenish(ctx, missionRevision); err != nil {
+			return Decision{}, err
+		}
+		if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
+			if found {
+				decision.Action = domain.ContinuityExpand
+				decision.Strategy = "frontier_admission"
+			}
+			return decision, err
+		}
+	}
+
 	strategies := s.strategies()
 	tried := make([]string, 0, len(strategies))
 	for index, strategy := range strategies {
