@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -123,6 +124,13 @@ func TestLocalExecutorCompletesContinuityOperation(t *testing.T) {
 			if !strings.Contains(a.Content, `"mode":"model_free_local"`) {
 				t.Fatalf("artifact content missing mode: %s", a.Content)
 			}
+			// Residual family depth fields are always present on local audits.
+			if !strings.Contains(a.Content, `"family":"integrity_audit"`) {
+				t.Fatalf("artifact missing family: %s", a.Content)
+			}
+			if !strings.Contains(a.Content, `"depth_max"`) {
+				t.Fatalf("artifact missing depth_max: %s", a.Content)
+			}
 		}
 	}
 	if !found {
@@ -136,6 +144,100 @@ func TestLocalExecutorCompletesContinuityOperation(t *testing.T) {
 	}
 	if !again.Skipped || again.SkipReason != "terminal" {
 		t.Fatalf("expected terminal skip, got %+v", again)
+	}
+}
+
+func TestLocalAuditResidualFamilyDepth(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 13, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedMission(t, store)
+	if err := EnsureCatalogSpecs(ctx, store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+	// Open opportunities at multiple depths/families feed residual histograms.
+	// Active signature uniqueness is store-enforced, so depth is exercised via parent chain.
+	opps := []domain.WorkOpportunity{
+		{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_cov_1",
+			MissionRevision: "revision_1", Family: domain.FamilyCoverageScan,
+			Title: "coverage", Origin: "test", ExpectedGain: "cover", Novelty: "c1",
+			StopCondition: "done", DedupSignature: "cov:1", Risk: domain.RiskLow, Priority: 10,
+			EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1}, Status: domain.OpportunityOpen,
+			CreatedAt: now, UpdatedAt: now, Depth: 0,
+		},
+		{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_front_root",
+			MissionRevision: "revision_1", Family: domain.FamilyFrontierManage,
+			Title: "frontier root", Origin: "test", ExpectedGain: "frontier", Novelty: "f0",
+			StopCondition: "done", DedupSignature: "front:root", Risk: domain.RiskLow, Priority: 10,
+			EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1}, Status: domain.OpportunityOpen,
+			CreatedAt: now, UpdatedAt: now, Depth: 0,
+		},
+		{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_front_child",
+			MissionRevision: "revision_1", Family: domain.FamilyFrontierManage,
+			Title: "frontier child", Origin: "test", ExpectedGain: "frontier", Novelty: "f1",
+			StopCondition: "done", DedupSignature: "front:child", Risk: domain.RiskLow, Priority: 10,
+			EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1}, Status: domain.OpportunityOpen,
+			CreatedAt: now, UpdatedAt: now, ParentID: "opp_front_root", Depth: 1,
+		},
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		for _, opp := range opps {
+			if err := tx.CreateWorkOpportunity(opp); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Admit coverage scan → local continuity op.
+	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
+	admitted, err := admitter.AdmitOne(ctx, "opp_cov_1")
+	if err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	result, err := exec.Execute(ctx, admitted.Operation.ID)
+	if err != nil || !result.Completed {
+		t.Fatalf("execute: err=%v result=%+v", err, result)
+	}
+	var content string
+	if err := store.View(ctx, func(r port.Reader) error {
+		arts, err := r.KnowledgeArtifacts()
+		if err != nil {
+			return err
+		}
+		for _, a := range arts {
+			if a.ID == result.ArtifactID {
+				content = a.Content
+				if a.Kind != "coverage_scan_report" {
+					t.Fatalf("kind = %q", a.Kind)
+				}
+				return nil
+			}
+		}
+		return errors.New("artifact not found")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		`"family":"mission_coverage_scan"`,
+		`"depth_max":1`,
+		`"frontier_duplicate_signature_count":0`,
+		`"open_by_family"`,
+		`"depth_histogram"`,
+		`"admitted_by_family"`,
+		`coverage:`,
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("artifact missing %q in %s", needle, content)
+		}
 	}
 }
 

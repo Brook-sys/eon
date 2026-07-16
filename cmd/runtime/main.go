@@ -38,6 +38,16 @@ func main() {
 		deliveryBatch  = flag.Int("delivery-batch", 8, "max outbox deliveries / reminder scans per control cycle")
 		deliveryLease  = flag.Duration("delivery-lease", 30*time.Second, "telegram outbox lease duration")
 		deliveryRetry  = flag.Duration("delivery-retry", 15*time.Second, "telegram outbox retry delay")
+		// Optional OpenAI-compatible provider for non-local PROPOSE_ONLY ops.
+		// Secrets never appear as flags: pass -model-api-key-env=NAME only.
+		modelEnabled   = flag.Bool("model", false, "enable OpenAI-compatible PROPOSE_ONLY model path")
+		modelBaseURL   = flag.String("model-base-url", "", "OpenAI-compatible base URL (e.g. http://127.0.0.1:11434)")
+		modelName      = flag.String("model-name", "", "provider model name")
+		modelAPIKeyEnv = flag.String("model-api-key-env", "", "env var name holding API key (empty = no Authorization)")
+		modelMaxField  = flag.String("model-max-output-field", "max_tokens", "max_tokens or max_completion_tokens")
+		modelContext   = flag.Int("model-context-tokens", 8000, "provider context window for prompt budget")
+		modelPolicy    = flag.String("model-policy-version", "policy@runtime", "changeset policy version stamp")
+		modelLeaseTTL  = flag.Duration("model-lease-ttl", 15*time.Minute, "lease TTL for model-backed operations")
 		// Telegram adapter/ingress remain opt-in through bootstrap.Options.Telegram
 		// (token/allowlists/ingress mode). cmd/runtime stays free of secrets and chat IDs.
 	)
@@ -63,6 +73,18 @@ func main() {
 			Insecure:     *otelInsecure,
 			SampleRatio:  *otelSample,
 		},
+	}
+	if *modelEnabled {
+		opts.Model = &bootstrap.ModelOptions{
+			Enabled:        true,
+			BaseURL:        *modelBaseURL,
+			Model:          *modelName,
+			APIKeyEnv:      *modelAPIKeyEnv,
+			MaxOutputField: bootstrap.ModelMaxOutputField(*modelMaxField),
+			ContextTokens:  *modelContext,
+			PolicyVersion:  *modelPolicy,
+			LeaseTTL:       *modelLeaseTTL,
+		}
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

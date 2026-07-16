@@ -232,6 +232,14 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Clock: clock,
 		IDs:   ids,
 	}
+	modelExec, err := buildModel(opts, store, clock, ids, telemetry)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, fmt.Errorf("model provider: %w", err)
+	}
 	return &Runtime{
 		Opts:             opts,
 		Store:            store,
@@ -248,9 +256,10 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Executor: kernel.DispatchExecutor{
 			Store: store,
 			Local: localExec,
-			// Model stays nil until Options wire a provider (tests inject).
+			Model: modelExec,
 		},
 		LeaseReaper:     leaseReaper,
+		Model:           modelExec,
 		Registry:        registry,
 		Cooldowns:       cooldowns,
 		Inspect:         inspectAPI,

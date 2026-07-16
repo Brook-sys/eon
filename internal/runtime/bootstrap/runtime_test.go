@@ -658,3 +658,59 @@ func TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath(t *testing.T) {
 		// dispatch happened and skip counted
 	}
 }
+
+func TestOpenWiresModelExecutorWhenEnabled(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_test","object":"chat.completion","created":1,"model":"fixture","choices":[{"index":0,"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	t.Cleanup(server.Close)
+
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:     "127.0.0.1:0",
+		StoreBackend:   bootstrap.StorageMemory,
+		RuntimeName:    "test-model-wire",
+		RuntimeVersion: "test",
+		Model: &bootstrap.ModelOptions{
+			Enabled:       true,
+			BaseURL:       server.URL,
+			Model:         "fixture-model",
+			ContextTokens: 4096,
+			PolicyVersion: "policy@wire-test",
+			LeaseTTL:      time.Minute,
+		},
+	})
+	if err != nil {
+		t.Fatalf("open with model: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Model == nil {
+		t.Fatal("Runtime.Model must be set when model options are enabled")
+	}
+	if rt.Executor.Model == nil {
+		t.Fatal("DispatchExecutor.Model must be set when model options are enabled")
+	}
+	if rt.Model != rt.Executor.Model {
+		t.Fatal("Runtime.Model and Executor.Model must be the same instance")
+	}
+}
+
+func TestOpenWithoutModelKeepsNilExecutor(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:     "127.0.0.1:0",
+		StoreBackend:   bootstrap.StorageMemory,
+		RuntimeName:    "test-no-model",
+		RuntimeVersion: "test",
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Model != nil || rt.Executor.Model != nil {
+		t.Fatalf("model must stay nil without options: rt=%v exec=%v", rt.Model != nil, rt.Executor.Model != nil)
+	}
+}

@@ -60,6 +60,41 @@ type Options struct {
 	// Telegram, when non-nil and enabled, wires the non-authoritative channel
 	// adapter + outbox worker into the control loop. Token must come from env.
 	Telegram *TelegramOptions
+	// Model, when non-nil and enabled, wires a PROPOSE_ONLY OpenAI-compatible
+	// provider into DispatchExecutor. API keys come only from env (never flags).
+	Model *ModelOptions
+}
+
+// ModelMaxOutputField is the Chat Completions dialect for bounding output.
+type ModelMaxOutputField string
+
+const (
+	ModelMaxOutputTokensLegacy     ModelMaxOutputField = "max_tokens"
+	ModelMaxOutputTokensCompletion ModelMaxOutputField = "max_completion_tokens"
+)
+
+// ModelOptions configures an optional OpenAI-compatible text→text provider for
+// non-local PROPOSE_ONLY operations. Secrets stay in process env; durable
+// config must never hold raw API keys.
+type ModelOptions struct {
+	Enabled bool
+	// BaseURL is an absolute HTTP(S) root (without /v1/chat/completions).
+	BaseURL string
+	// Model is the provider model name.
+	Model string
+	// APIKeyEnv names the env var with the bearer token. Empty means no Authorization header
+	// (typical for open local servers such as Ollama).
+	APIKeyEnv string
+	// MaxOutputField selects max_tokens vs max_completion_tokens dialect.
+	MaxOutputField ModelMaxOutputField
+	// ContextTokens is the provider context window for prompt budgeting.
+	ContextTokens int
+	// PolicyVersion is stamped on accepted changesets.
+	PolicyVersion string
+	// LeaseTTL bounds RUNNING/VERIFYING leases for model-backed ops.
+	LeaseTTL time.Duration
+	// MaxResponseBytes caps raw provider HTTP body size (0 = adapter default).
+	MaxResponseBytes int64
 }
 
 // TelegramIngressMode is the process-local inbound update collection mode.
@@ -173,6 +208,39 @@ func (o *Options) Validate() error {
 		}
 		if route.MaxAttempts == 0 {
 			o.QuestionRoutes[i].MaxAttempts = 3
+		}
+	}
+	if o.Model != nil && o.Model.Enabled {
+		if strings.TrimSpace(o.Model.BaseURL) == "" {
+			return errors.New("model provider requires base URL")
+		}
+		if strings.TrimSpace(o.Model.Model) == "" {
+			return errors.New("model provider requires model name")
+		}
+		field := ModelMaxOutputField(strings.TrimSpace(string(o.Model.MaxOutputField)))
+		if field == "" {
+			field = ModelMaxOutputTokensLegacy
+		}
+		switch field {
+		case ModelMaxOutputTokensLegacy, ModelMaxOutputTokensCompletion:
+			o.Model.MaxOutputField = field
+		default:
+			return fmt.Errorf("unknown model max-output field %q", o.Model.MaxOutputField)
+		}
+		if o.Model.ContextTokens <= 0 {
+			o.Model.ContextTokens = 8000
+		}
+		if o.Model.ContextTokens > 1_000_000 {
+			return errors.New("model context tokens is capped at 1000000")
+		}
+		if strings.TrimSpace(o.Model.PolicyVersion) == "" {
+			o.Model.PolicyVersion = "policy@runtime"
+		}
+		if o.Model.LeaseTTL <= 0 {
+			o.Model.LeaseTTL = 15 * time.Minute
+		}
+		if o.Model.MaxResponseBytes < 0 {
+			return errors.New("model max response bytes must not be negative")
 		}
 	}
 	if o.Telegram != nil && o.Telegram.Enabled {

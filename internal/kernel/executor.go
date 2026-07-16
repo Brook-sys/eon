@@ -235,22 +235,31 @@ func appendOperationEvents(tx port.Transaction, operation domain.Operation, leas
 }
 
 type localAuditBody struct {
-	Schema        string                   `json:"schema"`
-	OperationID   domain.OperationID       `json:"operation_id"`
-	SpecID        domain.OperationSpecID   `json:"spec_id"`
-	Authority     domain.Authority         `json:"authority"`
-	LeaseRef      string                   `json:"lease_ref"`
-	Mission       domain.MissionRevisionID `json:"mission_revision_id"`
-	ReadyCount    int                      `json:"ready_count"`
-	RunningCount  int                      `json:"running_count"`
-	OpenOpps      int                      `json:"open_opportunities"`
-	AdmittedOpps  int                      `json:"admitted_opportunities"`
-	ArtifactCount int                      `json:"knowledge_artifact_count"`
-	SourceCount   int                      `json:"source_count"`
-	ClaimCount    int                      `json:"claim_count"`
-	ObservationN  int                      `json:"observation_count"`
-	VerifiedAt    time.Time                `json:"verified_at"`
-	Mode          string                   `json:"mode"`
+	Schema            string                   `json:"schema"`
+	OperationID       domain.OperationID       `json:"operation_id"`
+	SpecID            domain.OperationSpecID   `json:"spec_id"`
+	Authority         domain.Authority         `json:"authority"`
+	LeaseRef          string                   `json:"lease_ref"`
+	Mission           domain.MissionRevisionID `json:"mission_revision_id"`
+	ReadyCount        int                      `json:"ready_count"`
+	RunningCount      int                      `json:"running_count"`
+	OpenOpps          int                      `json:"open_opportunities"`
+	AdmittedOpps      int                      `json:"admitted_opportunities"`
+	ArtifactCount     int                      `json:"knowledge_artifact_count"`
+	SourceCount       int                      `json:"source_count"`
+	ClaimCount        int                      `json:"claim_count"`
+	ObservationN      int                      `json:"observation_count"`
+	VerifiedAt        time.Time                `json:"verified_at"`
+	Mode              string                   `json:"mode"`
+	Family            string                   `json:"family,omitempty"`
+	DepthMax          int                      `json:"depth_max"`
+	DepthHistogram    map[string]int           `json:"depth_histogram,omitempty"`
+	OpenByFamily      map[string]int           `json:"open_by_family,omitempty"`
+	AdmittedByFamily  map[string]int           `json:"admitted_by_family,omitempty"`
+	SourcesWithoutObs int                      `json:"sources_without_observation_count"`
+	ClaimsWithoutEv   int                      `json:"claims_without_evidence_count"`
+	FrontierDupes     int                      `json:"frontier_duplicate_signature_count"`
+	Findings          []string                 `json:"findings,omitempty"`
 }
 
 func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.Operation, spec domain.OperationSpec, leaseRef string, now time.Time) (domain.KnowledgeArtifact, error) {
@@ -292,24 +301,100 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 	if err != nil {
 		return domain.KnowledgeArtifact{}, err
 	}
+	evidence, err := tx.EvidenceLinks()
+	if err != nil {
+		return domain.KnowledgeArtifact{}, err
+	}
+
+	// Residual family depth: frontier metrics + knowledge coverage hints.
+	depthHist := map[string]int{}
+	openByFamily := map[string]int{}
+	admittedByFamily := map[string]int{}
+	sigCount := map[string]int{}
+	depthMax := 0
+	for _, opp := range open {
+		openByFamily[string(opp.Family)]++
+		depthHist[fmt.Sprintf("%d", opp.Depth)]++
+		if opp.Depth > depthMax {
+			depthMax = opp.Depth
+		}
+		sigCount[opp.DedupSignature]++
+	}
+	for _, opp := range admitted {
+		admittedByFamily[string(opp.Family)]++
+		depthHist[fmt.Sprintf("%d", opp.Depth)]++
+		if opp.Depth > depthMax {
+			depthMax = opp.Depth
+		}
+		sigCount[opp.DedupSignature]++
+	}
+	dupes := 0
+	for _, n := range sigCount {
+		if n > 1 {
+			dupes += n - 1
+		}
+	}
+	observedSources := map[string]struct{}{}
+	for _, obs := range observations {
+		// Count unique fragment anchors as a cheap coverage hint (not a formal join).
+		if obs.Anchor.SourceFragmentID != "" {
+			observedSources[string(obs.Anchor.SourceFragmentID)] = struct{}{}
+		}
+	}
+	// Approximate sources without observation: source count minus distinct fragment anchors
+	// when we cannot join fragments cheaply in the local audit.
+	sourcesWithoutObs := len(sources)
+	if len(observations) > 0 && len(sources) > 0 {
+		// If every source has at least one observation-linked fragment, undercount is ok:
+		// this is an audit hint, not a formal gap proof.
+		if len(observedSources) >= len(sources) {
+			sourcesWithoutObs = 0
+		} else if len(observedSources) > 0 {
+			sourcesWithoutObs = len(sources) - min(len(sources), len(observedSources))
+		}
+	}
+	claimHasEvidence := map[string]struct{}{}
+	for _, link := range evidence {
+		if link.ClaimID != "" {
+			claimHasEvidence[string(link.ClaimID)] = struct{}{}
+		}
+	}
+	claimsWithoutEv := 0
+	for _, claim := range claims {
+		if _, ok := claimHasEvidence[string(claim.ID)]; !ok {
+			claimsWithoutEv++
+		}
+	}
+
+	family := familyFromSpec(spec.ID)
+	findings := residualFindings(family, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
 
 	body := localAuditBody{
-		Schema:        "local-operation-audit-v1",
-		OperationID:   operation.ID,
-		SpecID:        spec.ID,
-		Authority:     spec.MaximumAuthority,
-		LeaseRef:      leaseRef,
-		Mission:       operation.MissionRevision,
-		ReadyCount:    ready,
-		RunningCount:  running,
-		OpenOpps:      len(open),
-		AdmittedOpps:  len(admitted),
-		ArtifactCount: len(artifacts),
-		SourceCount:   len(sources),
-		ClaimCount:    len(claims),
-		ObservationN:  len(observations),
-		VerifiedAt:    now,
-		Mode:          "model_free_local",
+		Schema:            "local-operation-audit-v1",
+		OperationID:       operation.ID,
+		SpecID:            spec.ID,
+		Authority:         spec.MaximumAuthority,
+		LeaseRef:          leaseRef,
+		Mission:           operation.MissionRevision,
+		ReadyCount:        ready,
+		RunningCount:      running,
+		OpenOpps:          len(open),
+		AdmittedOpps:      len(admitted),
+		ArtifactCount:     len(artifacts),
+		SourceCount:       len(sources),
+		ClaimCount:        len(claims),
+		ObservationN:      len(observations),
+		VerifiedAt:        now,
+		Mode:              "model_free_local",
+		Family:            family,
+		DepthMax:          depthMax,
+		DepthHistogram:    depthHist,
+		OpenByFamily:      openByFamily,
+		AdmittedByFamily:  admittedByFamily,
+		SourcesWithoutObs: sourcesWithoutObs,
+		ClaimsWithoutEv:   claimsWithoutEv,
+		FrontierDupes:     dupes,
+		Findings:          findings,
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -342,6 +427,10 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		kind = "frontier_manage_report"
 	case strings.Contains(string(spec.ID), "gap_scan"):
 		kind = "gap_scan_report"
+	case strings.Contains(string(spec.ID), "coverage"):
+		kind = "coverage_scan_report"
+	case strings.Contains(string(spec.ID), "source_freshness"):
+		kind = "source_freshness_report"
 	}
 
 	artifact := domain.KnowledgeArtifact{
@@ -357,4 +446,66 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		return domain.KnowledgeArtifact{}, fmt.Errorf("build local artifact: %w", err)
 	}
 	return artifact, nil
+}
+
+func familyFromSpec(id domain.OperationSpecID) string {
+	s := string(id)
+	switch {
+	case strings.Contains(s, "gap_scan"):
+		return string(domain.FamilyGapScan)
+	case strings.Contains(s, "conflict"):
+		return string(domain.FamilyConflictReview)
+	case strings.Contains(s, "artifact_refresh"):
+		return string(domain.FamilyArtifactRefresh)
+	case strings.Contains(s, "integrity_audit"):
+		return string(domain.FamilyIntegrityAudit)
+	case strings.Contains(s, "harness"):
+		return string(domain.FamilyHarnessEvaluation)
+	case strings.Contains(s, "frontier"):
+		return string(domain.FamilyFrontierManage)
+	case strings.Contains(s, "coverage"):
+		return string(domain.FamilyCoverageScan)
+	case strings.Contains(s, "source_freshness"):
+		return string(domain.FamilySourceFreshness)
+	default:
+		return ""
+	}
+}
+
+func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax int, openByFamily map[string]int) []string {
+	var out []string
+	switch family {
+	case string(domain.FamilyCoverageScan):
+		if sourcesWithoutObs > 0 {
+			out = append(out, fmt.Sprintf("coverage:hint_sources_without_observation=%d", sourcesWithoutObs))
+		}
+		if claimsWithoutEv > 0 {
+			out = append(out, fmt.Sprintf("coverage:claims_without_evidence=%d", claimsWithoutEv))
+		}
+		if sourcesWithoutObs == 0 && claimsWithoutEv == 0 {
+			out = append(out, "coverage:no_structural_gap_hint")
+		}
+	case string(domain.FamilySourceFreshness):
+		if sourcesWithoutObs > 0 {
+			out = append(out, fmt.Sprintf("freshness:sources_lacking_observation_anchor=%d", sourcesWithoutObs))
+		} else {
+			out = append(out, "freshness:all_sources_have_observation_hint_or_none")
+		}
+	case string(domain.FamilyFrontierManage):
+		if dupes > 0 {
+			out = append(out, fmt.Sprintf("frontier:duplicate_signatures=%d", dupes))
+		}
+		out = append(out, fmt.Sprintf("frontier:depth_max=%d", depthMax))
+		for fam, n := range openByFamily {
+			out = append(out, fmt.Sprintf("frontier:open_%s=%d", fam, n))
+		}
+		if len(out) == 1 {
+			out = append(out, "frontier:no_open_opportunities")
+		}
+	default:
+		if depthMax > 0 {
+			out = append(out, fmt.Sprintf("depth_max=%d", depthMax))
+		}
+	}
+	return out
 }
