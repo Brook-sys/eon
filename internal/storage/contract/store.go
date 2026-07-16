@@ -836,6 +836,65 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+
+	t.Run("question delivery outbox leases and completes optimistically", func(t *testing.T) {
+		store := factory()
+		mission := missionRevision()
+		question := operatorQuestionRecord()
+		delivery := questionDeliveryRecord(question)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			if err := tx.CreateOperatorQuestion(question); err != nil {
+				return err
+			}
+			return tx.CreateQuestionDelivery(delivery)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		dueAt := delivery.AvailableAt
+		leased, err := domain.LeaseQuestionDelivery(delivery, "worker_1", dueAt, dueAt.Add(time.Minute))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveQuestionDelivery(leased, delivery.Status, delivery.Attempt)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			due, err := r.DueQuestionDeliveries(dueAt, 10)
+			if err != nil {
+				return err
+			}
+			if len(due) != 0 {
+				t.Fatalf("leased delivery remains due: %#v", due)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		delivered, err := domain.CompleteQuestionDelivery(leased, "worker_1", "message_1", dueAt.Add(time.Second))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveQuestionDelivery(delivered, leased.Status, leased.Attempt)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveQuestionDelivery(delivered, leased.Status, leased.Attempt)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("stale delivery error = %v", err)
+		}
+		duplicate := delivery
+		duplicate.ID = "delivery_2"
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.CreateQuestionDelivery(duplicate) }); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("duplicate route error = %v", err)
+		}
+	})
 }
 
 func event(id domain.EventID, kind string) domain.Event {
@@ -877,5 +936,13 @@ func operatorAnswerRecord(question domain.OperatorQuestion) domain.UserAnswer {
 		SchemaVersion: domain.SchemaVersionV1, ID: "answer_1", QuestionID: question.ID, ExpectedQuestionRevision: question.Revision,
 		Kind: domain.AnswerOptions, OptionIDs: []string{"a"}, ActorID: "operator_1", Channel: "dashboard",
 		TransportEventID: "request_1", ReceivedAt: question.CreatedAt.Add(time.Minute),
+	}
+}
+
+func questionDeliveryRecord(question domain.OperatorQuestion) domain.QuestionDelivery {
+	return domain.QuestionDelivery{
+		SchemaVersion: domain.SchemaVersionV1, ID: "delivery_1", QuestionID: question.ID, QuestionRevision: question.Revision,
+		Channel: "telegram", DestinationRef: "operator_primary", Status: domain.QuestionDeliveryPending, MaxAttempts: 3,
+		AvailableAt: question.CreatedAt, CreatedAt: question.CreatedAt, UpdatedAt: question.CreatedAt,
 	}
 }

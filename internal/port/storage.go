@@ -56,12 +56,16 @@ type OperatorQuestionReader interface {
 	OperatorQuestions(domain.MissionID, domain.OperatorQuestionStatus) ([]domain.OperatorQuestion, error)
 	UserAnswer(domain.OperatorAnswerID) (domain.UserAnswer, error)
 	UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error)
+	QuestionDelivery(domain.QuestionDeliveryID) (domain.QuestionDelivery, error)
+	DueQuestionDeliveries(time.Time, int) ([]domain.QuestionDelivery, error)
 }
 
 type OperatorQuestionWriter interface {
 	CreateOperatorQuestion(domain.OperatorQuestion) error
 	SaveOperatorQuestion(domain.OperatorQuestion, uint64) error
 	AcceptUserAnswer(domain.UserAnswer, domain.OperatorQuestion, uint64) error
+	CreateQuestionDelivery(domain.QuestionDelivery) error
+	SaveQuestionDelivery(domain.QuestionDelivery, domain.QuestionDeliveryStatus, uint32) error
 }
 
 // EventReader returns immutable events in ascending storage sequence. A zero
