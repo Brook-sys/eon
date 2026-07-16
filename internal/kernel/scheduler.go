@@ -55,6 +55,9 @@ type Scheduler struct {
 	Policy     domain.HorizonPolicy
 	// IDs is optional; when set, ContinuityBlocked diagnosis ids are generated with it.
 	IDs source.IDGenerator
+	// Cooldowns, when set, skip families that recently expanded without delta
+	// and rotate toward other registered strategies (anti-fixation).
+	Cooldowns *StrategyCooldownBook
 }
 
 func (s Scheduler) strategies() []ContinuityStrategy {
@@ -101,15 +104,32 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 
 	strategies := s.strategies()
 	tried := make([]string, 0, len(strategies))
+	eliminated := make([]string, 0)
+	now := s.Clock.Now().UTC()
 	for index, strategy := range strategies {
 		if strategy == nil || strategy.Name() == "" {
 			return Decision{}, errors.New("continuity strategy must have a name")
+		}
+		if s.Cooldowns != nil && s.Cooldowns.Active(strategy.Name(), now) {
+			eliminated = append(eliminated, "cooldown:"+strategy.Name())
+			continue
 		}
 		horizon, err := s.observeHorizon(ctx, missionRevision, policy)
 		if err != nil {
 			return Decision{}, err
 		}
-		remaining := len(strategies) - index
+		// remaining counts strategies not yet attempted in this step, including
+		// the current one; cooled strategies do not count as expansion options.
+		remaining := 0
+		for j := index; j < len(strategies); j++ {
+			if strategies[j] == nil {
+				continue
+			}
+			if s.Cooldowns != nil && s.Cooldowns.Active(strategies[j].Name(), now) {
+				continue
+			}
+			remaining++
+		}
 		plan, err := PlanContinuityAction(horizon, remaining, strategy.Name())
 		if err != nil {
 			return Decision{}, err
@@ -124,6 +144,13 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 		}
 		if result.Admitted < 0 {
 			return Decision{}, fmt.Errorf("continuity strategy %s returned negative admission count", strategy.Name())
+		}
+		if result.Admitted == 0 {
+			if s.Cooldowns != nil {
+				s.Cooldowns.MarkNoDelta(strategy.Name(), now, policy.StrategyCooldown)
+			}
+		} else if s.Cooldowns != nil {
+			s.Cooldowns.Clear(strategy.Name())
 		}
 		if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
 			if found {
@@ -140,7 +167,12 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 	if err != nil {
 		return Decision{}, err
 	}
-	diagnosis, err := s.persistDiagnosis(ctx, missionRevision, policy, tried, horizon)
+	if len(tried) == 0 && len(eliminated) > 0 {
+		// Every strategy is cooling down: still a continuity violation, but the
+		// diagnosis records the cooldown barrier instead of pretending none ran.
+		tried = append(tried, "all_strategies_in_cooldown")
+	}
+	diagnosis, err := s.persistDiagnosis(ctx, missionRevision, policy, tried, eliminated, horizon)
 	if err != nil {
 		return Decision{}, err
 	}
@@ -199,17 +231,23 @@ func (s Scheduler) observeHorizon(ctx context.Context, missionRevision domain.Mi
 	return horizon, nil
 }
 
-func (s Scheduler) persistDiagnosis(ctx context.Context, missionRevision domain.MissionRevisionID, policy domain.HorizonPolicy, tried []string, horizon domain.ExecutableHorizon) (domain.ContinuityDiagnosis, error) {
+func (s Scheduler) persistDiagnosis(ctx context.Context, missionRevision domain.MissionRevisionID, policy domain.HorizonPolicy, tried, eliminated []string, horizon domain.ExecutableHorizon) (domain.ContinuityDiagnosis, error) {
 	detail := "no executable work after all configured continuity strategies"
 	strategiesTried := append([]string(nil), tried...)
 	if len(strategiesTried) == 0 {
 		detail = "no continuity strategies configured and no executable work"
 		strategiesTried = []string{"none_configured"}
 	}
+	if len(eliminated) > 0 && strategiesTried[0] == "all_strategies_in_cooldown" {
+		detail = "all continuity strategies are in no-delta cooldown"
+	}
 	recovery := []string{
 		"admit work opportunity with expected delta",
 		"restore blocked capability",
 		"operator command or authorized source providing new scope",
+	}
+	if policy.StrategyCooldown > 0 {
+		recovery = append(recovery, "wait strategy cooldown or clear no-delta cooldowns")
 	}
 	diagnosis := domain.ContinuityDiagnosis{
 		SchemaVersion:      domain.SchemaVersionV1,
@@ -222,6 +260,9 @@ func (s Scheduler) persistDiagnosis(ctx context.Context, missionRevision domain.
 		RecoveryConditions: recovery,
 		SafeDetail:         detail,
 		PolicyVersion:      policy.Version,
+	}
+	if len(eliminated) > 0 {
+		diagnosis.EliminatedAlternatives = append([]string(nil), eliminated...)
 	}
 	if s.IDs != nil {
 		id, idErr := s.IDs.NewID("continuity")

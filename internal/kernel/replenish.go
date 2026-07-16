@@ -16,11 +16,11 @@ import (
 // work frontier. It never invents model authority: only OPEN opportunities
 // that already passed deterministic validation may be admitted.
 type Replenisher struct {
-	Store     port.Store
-	Clock     source.Clock
-	IDs       source.IDGenerator
-	Policy    domain.HorizonPolicy
-	Admitter  *Admitter
+	Store      port.Store
+	Clock      source.Clock
+	IDs        source.IDGenerator
+	Policy     domain.HorizonPolicy
+	Admitter   *Admitter
 	Decomposer *Decomposer
 }
 
@@ -102,11 +102,14 @@ func (r Replenisher) SeedRootOpportunity(ctx context.Context, opportunity domain
 		}
 		active := 0
 		for _, item := range existing {
+			// Any prior opportunity with the same semantic signature blocks reseeding,
+			// including ADMITTED/ABANDONED roots. Re-creating the same root after
+			// admission would be artificial activity without a new delta.
+			if item.DedupSignature == opportunity.DedupSignature || item.ID == opportunity.ID {
+				return nil
+			}
 			if item.Status.Active() {
 				active++
-				if item.DedupSignature == opportunity.DedupSignature {
-					return nil // idempotent no-op
-				}
 			}
 		}
 		if active >= policy.MaxCandidates {

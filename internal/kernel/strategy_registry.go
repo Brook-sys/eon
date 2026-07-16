@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"motor-autonomo/internal/domain"
 )
@@ -151,12 +150,5 @@ func PlanContinuityAction(horizon domain.ExecutableHorizon, remainingStrategies 
 	}, nil
 }
 
-// StrategyCooldown tracks last unsuccessful attempt to avoid fixation.
-type StrategyCooldown struct {
-	Name          string
-	CooldownUntil time.Time
-}
-
-func (c StrategyCooldown) Active(now time.Time) bool {
-	return !c.CooldownUntil.IsZero() && c.CooldownUntil.After(now.UTC())
-}
+// StrategyCooldown and StrategyCooldownBook live in cooldown.go so the
+// registry stays focused on ordered catalogue metadata.
