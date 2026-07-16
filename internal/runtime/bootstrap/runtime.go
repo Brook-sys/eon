@@ -170,6 +170,8 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 	// Projector uses system clock for GeneratedAt; keep aligned with injectable clock.
 	projector.Clock = clock.Now
+	// Expose the process strategy portfolio on inspect (read-only, non-authoritative).
+	projector.SetContinuityCatalog(continuityCatalogFromRegistry(registry))
 
 	inspectAPI, err := inspect.NewAPI(projector)
 	if err != nil {
@@ -620,4 +622,27 @@ func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+// continuityCatalogFromRegistry projects the process StrategyRegistry into an
+// inspect-safe catalogue. Nil/empty registries yield a zero catalogue (not set).
+func continuityCatalogFromRegistry(reg *kernel.StrategyRegistry) inspect.ContinuityStrategyCatalog {
+	if reg == nil || reg.Len() == 0 {
+		return inspect.ContinuityStrategyCatalog{}
+	}
+	snap := reg.Snapshot()
+	descriptors := make([]inspect.ContinuityStrategyDescriptor, 0, len(snap.Descriptors))
+	for _, d := range snap.Descriptors {
+		descriptors = append(descriptors, inspect.ContinuityStrategyDescriptor{
+			Name:            d.Name,
+			Family:          d.Family,
+			Version:         d.Version,
+			Priority:        d.Priority,
+			RequiresModel:   d.RequiresModel,
+			RequiresNetwork: d.RequiresNetwork,
+			LocalOnly:       d.LocalOnly,
+			Ref:             d.Ref(),
+		})
+	}
+	return inspect.BuildContinuityStrategyCatalog(snap.CatalogVersion, descriptors)
 }

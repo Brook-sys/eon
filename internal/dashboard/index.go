@@ -393,6 +393,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     html += '<dt>pending_commands</dt><dd>' + esc(String(o.pending_commands ?? 0)) + "</dd>";
     html += '<dt>pending_questions</dt><dd>' + esc(String(o.pending_operator_questions ?? 0)) + "</dd>";
     html += '<dt>generated_at</dt><dd>' + esc(fmtTime(o.generated_at)) + "</dd>";
+    if (o.continuity_catalog) {
+      const cc = o.continuity_catalog;
+      html += '<dt>continuity_catalog</dt><dd>' + esc(cc.catalog_version || "—")
+        + " · strategies=" + esc(String(cc.strategy_count || 0)) + "</dd>";
+      if (Array.isArray(cc.strategy_refs) && cc.strategy_refs.length) {
+        html += '<dt>strategy_refs</dt><dd class="mono">' + esc(cc.strategy_refs.join(", ")) + "</dd>";
+      }
+    }
     if (m) {
       html += '<dt>mission</dt><dd>' + esc(m.mission_id) + "</dd>";
       html += '<dt>status</dt><dd class="status-' + esc(m.status || "") + '">' + esc(m.status || "—") + "</dd>";
@@ -436,7 +444,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         html += '<dt>continuity_blocked</dt><dd class="status-PAUSED">' + esc(d.safe_detail || d.id || "diagnosis")
           + " · ready=" + esc(String(d.ready_count||0))
           + " open=" + esc(String(d.open_candidate_count||0))
+          + (d.catalog_version ? (" · catalog=" + esc(d.catalog_version)) : "")
           + " · " + esc(fmtTime(d.occurred_at)) + "</dd>";
+        if (Array.isArray(d.strategies_tried) && d.strategies_tried.length) {
+          html += '<dt>strategies_tried</dt><dd class="mono">' + esc(d.strategies_tried.join(", ")) + "</dd>";
+        }
       }
       if (m.continuity_findings) {
         const cf = m.continuity_findings;

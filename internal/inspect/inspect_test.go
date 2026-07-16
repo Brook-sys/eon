@@ -356,9 +356,9 @@ func seedRuntime(t *testing.T) (*memory.Store, domain.MissionRevision, domain.Op
 	}
 	diag := domain.ContinuityDiagnosis{
 		SchemaVersion: domain.SchemaVersionV1, ID: "diag_inspect_1", MissionRevision: mission.ID,
-		OccurredAt: now.Add(-time.Minute), StrategiesTried: []string{"gap_scan"},
+		OccurredAt: now.Add(-time.Minute), StrategiesTried: []string{"gap_scan@v2"},
 		OpenCandidateCount: 1, ReadyCount: 0, RecoveryConditions: []string{"admit open opportunity"},
-		SafeDetail: "no ready work under policy", PolicyVersion: "horizon.v1",
+		SafeDetail: "no ready work under policy; catalog=continuity-catalog.v2", PolicyVersion: "horizon.v1",
 	}
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.AppendMissionRevision(mission); err != nil {

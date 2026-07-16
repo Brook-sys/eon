@@ -52,6 +52,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /knowledge/artifacts", a.handleKnowledgeArtifacts)
 	mux.HandleFunc("GET /knowledge/artifacts/{artifactID}", a.handleKnowledgeArtifact)
 	mux.HandleFunc("GET /continuity/findings", a.handleContinuityFindings)
+	mux.HandleFunc("GET /continuity/catalog", a.handleContinuityCatalog)
 	return mux
 }
 
@@ -65,11 +66,16 @@ func (a *API) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) handleVersion(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
+	payload := map[string]any{
 		"schema_version": domain.SchemaVersionV1,
 		"runtime":        a.Projector.Runtime,
 		"generated_at":   a.Projector.Clock().UTC().Format(time.RFC3339Nano),
-	})
+	}
+	if cat, ok := a.Projector.ContinuityCatalog(); ok {
+		payload["continuity_catalog_version"] = cat.CatalogVersion
+		payload["continuity_strategy_count"] = cat.StrategyCount
+	}
+	writeJSON(w, http.StatusOK, payload)
 }
 
 func (a *API) handleOverview(w http.ResponseWriter, r *http.Request) {
@@ -327,6 +333,18 @@ func (a *API) handleKnowledgeArtifact(w http.ResponseWriter, r *http.Request) {
 		ArtifactDetail: safe,
 		Redaction:      report,
 	})
+}
+
+// handleContinuityCatalog returns the process-local versioned strategy portfolio.
+// It does not require a mission_id: the catalogue is assembly metadata, not store state.
+// When the projector has no catalogue configured, returns 404.
+func (a *API) handleContinuityCatalog(w http.ResponseWriter, r *http.Request) {
+	cat, ok := a.Projector.ContinuityCatalog()
+	if !ok {
+		writeError(w, http.StatusNotFound, "not_found", "continuity catalog not configured")
+		return
+	}
+	writeJSON(w, http.StatusOK, cat)
 }
 
 // handleContinuityFindings projects model-free local continuity audit findings.

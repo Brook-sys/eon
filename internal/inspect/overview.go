@@ -66,9 +66,11 @@ type ContinuityDiagnosisSummary struct {
 	ReadyCount         int                          `json:"ready_count"`
 	OpenCandidateCount int                          `json:"open_candidate_count"`
 	PolicyVersion      string                       `json:"policy_version"`
-	SafeDetail         string                       `json:"safe_detail"`
-	StrategiesTried    []string                     `json:"strategies_tried"`
-	RecoveryConditions []string                     `json:"recovery_conditions"`
+	// CatalogVersion is extracted from SafeDetail when the scheduler embeds catalog=.
+	CatalogVersion     string   `json:"catalog_version,omitempty"`
+	SafeDetail         string   `json:"safe_detail"`
+	StrategiesTried    []string `json:"strategies_tried"`
+	RecoveryConditions []string `json:"recovery_conditions"`
 }
 
 // MissionOverview is the operator-facing mission projection.
@@ -102,7 +104,9 @@ type Overview struct {
 	EventHeadSequence uint64             `json:"event_head_sequence"`
 	PendingCommands   int                `json:"pending_commands"`
 	PendingQuestions  int                `json:"pending_operator_questions"`
-	Mission           *MissionOverview   `json:"mission,omitempty"`
+	// ContinuityCatalog is process-local portfolio metadata (not mission store state).
+	ContinuityCatalog *ContinuityStrategyCatalog `json:"continuity_catalog,omitempty"`
+	Mission           *MissionOverview           `json:"mission,omitempty"`
 }
 
 // Projector materializes inspectable views from a store reader.
@@ -110,6 +114,8 @@ type Projector struct {
 	Store   port.Store
 	Runtime RuntimeIdentity
 	Clock   func() time.Time
+	// continuityCatalog is optional process assembly metadata for the strategy portfolio.
+	continuityCatalog *ContinuityStrategyCatalog
 }
 
 func NewProjector(store port.Store, runtime RuntimeIdentity) (*Projector, error) {
@@ -140,6 +146,10 @@ func (p *Projector) BuildOverview(ctx context.Context, missionID domain.MissionI
 			GeneratedAt:   now,
 			Runtime:       p.Runtime,
 			ProcessMode:   domain.ProcessRunning,
+		}
+		if cat, ok := p.ContinuityCatalog(); ok {
+			cloned := cat
+			out.ContinuityCatalog = &cloned
 		}
 		control, err := r.ControlState()
 		if err == nil {
@@ -270,6 +280,7 @@ func buildMissionOverview(r port.Reader, control domain.ControlState, missionID 
 			ReadyCount:         diag.ReadyCount,
 			OpenCandidateCount: diag.OpenCandidateCount,
 			PolicyVersion:      diag.PolicyVersion,
+			CatalogVersion:     catalogVersionFromSafeDetail(diag.SafeDetail),
 			SafeDetail:         diag.SafeDetail,
 			StrategiesTried:    append([]string(nil), diag.StrategiesTried...),
 			RecoveryConditions: append([]string(nil), diag.RecoveryConditions...),

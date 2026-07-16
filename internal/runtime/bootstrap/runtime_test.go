@@ -45,6 +45,38 @@ func TestOpenAssemblesHTTPSurfaces(t *testing.T) {
 		t.Fatalf("health payload = %#v", health)
 	}
 
+	// Process portfolio is wired from StrategyRegistry into inspect (read-only).
+	req = httptest.NewRequest(http.MethodGet, "/api/inspect/continuity/catalog", nil)
+	rec = httptest.NewRecorder()
+	rt.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("continuity catalog status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var catalog map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &catalog); err != nil {
+		t.Fatalf("decode catalog: %v", err)
+	}
+	if catalog["catalog_version"] != kernel.DefaultContinuityCatalogVersion {
+		t.Fatalf("catalog_version = %#v", catalog["catalog_version"])
+	}
+	if n, ok := catalog["strategy_count"].(float64); !ok || n < 1 {
+		t.Fatalf("strategy_count = %#v", catalog["strategy_count"])
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/inspect/version", nil)
+	rec = httptest.NewRecorder()
+	rt.Handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("version status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var version map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &version); err != nil {
+		t.Fatalf("decode version: %v", err)
+	}
+	if version["continuity_catalog_version"] != kernel.DefaultContinuityCatalogVersion {
+		t.Fatalf("version continuity_catalog_version = %#v", version["continuity_catalog_version"])
+	}
+
 	req = httptest.NewRequest(http.MethodGet, "/dashboard", nil)
 	rec = httptest.NewRecorder()
 	rt.Handler.ServeHTTP(rec, req)
