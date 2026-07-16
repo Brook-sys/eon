@@ -46,9 +46,12 @@ type persistedState struct {
 	Canonical                map[string]domain.CanonicalEntity
 	HasControlState          bool
 	ControlState             domain.ControlState
-	OperatorCommands         map[domain.CommandID]domain.OperatorCommand
-	OperatorCommandByIdem    map[domain.IdempotencyKey]domain.CommandID
-	OperatorCommandReceipts  map[domain.CommandID]domain.CommandReceipt
+	OperatorCommands           map[domain.CommandID]domain.OperatorCommand
+	OperatorCommandByIdem      map[domain.IdempotencyKey]domain.CommandID
+	OperatorCommandReceipts    map[domain.CommandID]domain.CommandReceipt
+	ExternalEvents             map[domain.ExternalEventID]domain.ExternalEvent
+	ExternalEventByDedup       map[string]domain.ExternalEventID
+	ExternalEventDispositions  map[domain.ExternalEventID]domain.ExternalEventDisposition
 }
 
 // MarshalBinary returns an isolated checkpoint of the reference store.
@@ -72,6 +75,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		HasControlState: cloned.hasControlState, ControlState: cloned.controlState,
 		OperatorCommands: cloned.operatorCommands, OperatorCommandByIdem: cloned.operatorCommandByIdem,
 		OperatorCommandReceipts: cloned.operatorCommandReceipts,
+		ExternalEvents: cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
+		ExternalEventDispositions: cloned.externalEventDispositions,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
@@ -124,6 +129,9 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.operatorCommands = nonNil(p.OperatorCommands, base.operatorCommands)
 	base.operatorCommandByIdem = nonNil(p.OperatorCommandByIdem, base.operatorCommandByIdem)
 	base.operatorCommandReceipts = nonNil(p.OperatorCommandReceipts, base.operatorCommandReceipts)
+	base.externalEvents = nonNil(p.ExternalEvents, base.externalEvents)
+	base.externalEventByDedup = nonNil(p.ExternalEventByDedup, base.externalEventByDedup)
+	base.externalEventDispositions = nonNil(p.ExternalEventDispositions, base.externalEventDispositions)
 	return &Store{state: base}, nil
 }
 

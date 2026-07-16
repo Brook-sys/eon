@@ -126,20 +126,28 @@ type KnowledgeWriter interface {
 	ApplyCommit(domain.Commit, domain.CommitReceipt, []domain.Change) error
 }
 
-// ControlReader exposes durable process/mission control and operator commands.
-// Transports must not obtain writers that mutate control state directly.
+// ControlReader exposes durable process/mission control, operator commands, and
+// untrusted external stimuli. Transports must not obtain writers that mutate
+// control state directly.
 type ControlReader interface {
 	ControlState() (domain.ControlState, error)
 	OperatorCommand(domain.CommandID) (domain.OperatorCommand, error)
 	OperatorCommandByIdempotency(domain.IdempotencyKey) (domain.OperatorCommand, error)
 	OperatorCommandReceipt(domain.CommandID) (domain.CommandReceipt, error)
 	PendingOperatorCommands(limit int) ([]domain.OperatorCommand, error)
+	ExternalEvent(domain.ExternalEventID) (domain.ExternalEvent, error)
+	ExternalEventByDeduplicationKey(string) (domain.ExternalEvent, error)
+	ExternalEventDisposition(domain.ExternalEventID) (domain.ExternalEventDisposition, error)
+	PendingExternalEvents(limit int) ([]domain.ExternalEvent, error)
 }
 
-// ControlWriter persists operator commands and kernel-applied control effects.
+// ControlWriter persists operator commands, external events, and kernel-applied
+// control effects. External event content remains untrusted data.
 type ControlWriter interface {
 	CreateOperatorCommand(domain.OperatorCommand, domain.CommandReceipt) error
 	SaveOperatorCommandReceipt(domain.CommandReceipt) error
+	CreateExternalEvent(domain.ExternalEvent, domain.ExternalEventDisposition) error
+	SaveExternalEventDisposition(domain.ExternalEventDisposition) error
 	SaveControlState(domain.ControlState, uint64) error
 }
 

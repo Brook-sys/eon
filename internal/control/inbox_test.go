@@ -8,6 +8,7 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/storage/memory"
 )
 
 func validExternalEvent() domain.ExternalEvent {
@@ -20,14 +21,19 @@ func validExternalEvent() domain.ExternalEvent {
 }
 
 func TestExternalEventInboxReplaysIdenticalDelivery(t *testing.T) {
-	inbox := NewExternalEventInbox()
-	event := validExternalEvent()
-	first, err := inbox.SubmitExternalEvent(event)
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	inbox, err := NewExternalEventInbox(store, FixedDispositionFactory(now))
 	if err != nil {
 		t.Fatal(err)
 	}
+	event := validExternalEvent()
+	first, err := inbox.SubmitExternalEvent(event)
+	if err != nil || first.State != domain.ExternalEventReceived {
+		t.Fatalf("submit = %#v err=%v", first, err)
+	}
 	second, err := inbox.SubmitExternalEvent(event)
-	if err != nil || first.ID != second.ID {
+	if err != nil || first.EventID != second.EventID || second.State != domain.ExternalEventReceived {
 		t.Fatalf("replay = %#v, err = %v", second, err)
 	}
 	byKey, err := inbox.ExternalEventByDeduplicationKey(event.DeduplicationKey)
@@ -39,10 +45,19 @@ func TestExternalEventInboxReplaysIdenticalDelivery(t *testing.T) {
 	if err != nil || string(stored.Content.Structured) != string(event.Content.Structured) {
 		t.Fatal("caller mutated stored external event")
 	}
+	disposition, err := inbox.ExternalEventDisposition(event.ID)
+	if err != nil || disposition.State != domain.ExternalEventReceived {
+		t.Fatalf("disposition = %#v err=%v", disposition, err)
+	}
 }
 
 func TestExternalEventInboxRejectsDivergentReuse(t *testing.T) {
-	inbox := NewExternalEventInbox()
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	inbox, err := NewExternalEventInbox(store, FixedDispositionFactory(now))
+	if err != nil {
+		t.Fatal(err)
+	}
 	event := validExternalEvent()
 	if _, err := inbox.SubmitExternalEvent(event); err != nil {
 		t.Fatal(err)
@@ -60,7 +75,12 @@ func TestExternalEventInboxRejectsDivergentReuse(t *testing.T) {
 }
 
 func TestExternalEventInboxRejectsInvalidAndMissingRecords(t *testing.T) {
-	inbox := NewExternalEventInbox()
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	inbox, err := NewExternalEventInbox(store, FixedDispositionFactory(now))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := inbox.SubmitExternalEvent(domain.ExternalEvent{}); err == nil {
 		t.Fatal("invalid event accepted")
 	}
@@ -69,5 +89,8 @@ func TestExternalEventInboxRejectsInvalidAndMissingRecords(t *testing.T) {
 	}
 	if _, err := inbox.ExternalEventByDeduplicationKey("missing"); !errors.Is(err, port.ErrNotFound) {
 		t.Fatalf("missing key error = %v", err)
+	}
+	if _, err := inbox.ExternalEventDisposition("missing"); !errors.Is(err, port.ErrNotFound) {
+		t.Fatalf("missing disposition error = %v", err)
 	}
 }

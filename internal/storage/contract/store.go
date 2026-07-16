@@ -1039,6 +1039,80 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+
+	t.Run("external events are durable with disposition and dedup", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 5, 0, 0, 0, time.UTC)
+		event := domain.ExternalEvent{
+			SchemaVersion: domain.SchemaVersionV1, ID: "ext_msg_1", DeduplicationKey: "telegram:update:99",
+			Source: "telegram", SourceActorID: "operator_1", Kind: domain.ExternalUserMessage,
+			MissionID: "mission_1", CorrelationID: "thread_1",
+			Content: domain.ExternalContent{MediaType: "text/plain", Text: "hello"}, ReceivedAt: now,
+		}
+		disposition := domain.ExternalEventDisposition{
+			SchemaVersion: domain.SchemaVersionV1, EventID: event.ID, State: domain.ExternalEventReceived, RecordedAt: now,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateExternalEvent(event, disposition)
+		}); err != nil {
+			t.Fatalf("create external event: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateExternalEvent(event, disposition)
+		}); err != nil {
+			t.Fatalf("identical external event replay: %v", err)
+		}
+		divergent := event
+		divergent.ID = "ext_msg_2"
+		divergent.Content.Text = "other"
+		divergentDisposition := disposition
+		divergentDisposition.EventID = divergent.ID
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateExternalEvent(divergent, divergentDisposition)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("divergent dedup error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			pending, err := r.PendingExternalEvents(10)
+			if err != nil || len(pending) != 1 || pending[0].ID != event.ID {
+				t.Fatalf("pending = %#v err=%v", pending, err)
+			}
+			byKey, err := r.ExternalEventByDeduplicationKey(event.DeduplicationKey)
+			if err != nil || byKey.ID != event.ID {
+				t.Fatalf("by key = %#v err=%v", byKey, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		applied := disposition
+		applied.State, applied.ResultRef, applied.RecordedAt = domain.ExternalEventApplied, "wake:ext_msg_1:user.message:resumed=0", now.Add(time.Second)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveExternalEventDisposition(applied)
+		}); err != nil {
+			t.Fatalf("apply disposition: %v", err)
+		}
+		reverse := disposition
+		reverse.RecordedAt = applied.RecordedAt.Add(time.Second)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveExternalEventDisposition(reverse)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("terminal reverse disposition error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			pending, err := r.PendingExternalEvents(10)
+			if err != nil || len(pending) != 0 {
+				t.Fatalf("pending after apply = %#v err=%v", pending, err)
+			}
+			got, err := r.ExternalEventDisposition(event.ID)
+			if err != nil || got.State != domain.ExternalEventApplied {
+				t.Fatalf("disposition = %#v err=%v", got, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func event(id domain.EventID, kind string) domain.Event {

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -94,5 +95,40 @@ func TestExternalEventValidationKeepsContentBoundedAndCorrelated(t *testing.T) {
 	oversized.Content = ExternalContent{MediaType: "text/plain", Text: strings.Repeat("x", MaxControlPayloadBytes+1)}
 	if err := oversized.Validate(); err == nil {
 		t.Fatal("oversized external content was accepted")
+	}
+}
+
+func TestExternalEventDispositionIsMonotonicAndFailClosed(t *testing.T) {
+	now := time.Date(2026, 7, 16, 0, 30, 0, 0, time.UTC)
+	received := ExternalEventDisposition{
+		SchemaVersion: SchemaVersionV1, EventID: "ext_1", State: ExternalEventReceived, RecordedAt: now,
+	}
+	if err := received.Validate(); err != nil {
+		t.Fatalf("received disposition rejected: %v", err)
+	}
+	applied := received
+	applied.State, applied.ResultRef, applied.RecordedAt = ExternalEventApplied, "answer:a@q:resumed=1", now.Add(time.Second)
+	if err := AdvanceExternalEventDisposition(received, applied); err != nil {
+		t.Fatalf("apply advance rejected: %v", err)
+	}
+	reverse := received
+	reverse.RecordedAt = applied.RecordedAt.Add(time.Second)
+	if err := AdvanceExternalEventDisposition(applied, reverse); !errors.Is(err, ErrConflict) {
+		t.Fatalf("terminal reverse advance error = %v", err)
+	}
+	rejected := received
+	rejected.State, rejected.FailureCode, rejected.RecordedAt = ExternalEventRejected, "EXTERNAL_INVALID", now.Add(time.Second)
+	if err := AdvanceExternalEventDisposition(received, rejected); err != nil {
+		t.Fatalf("reject advance rejected: %v", err)
+	}
+	ignored := received
+	ignored.State, ignored.ResultRef, ignored.RecordedAt = ExternalEventIgnored, "NO_MATCHING_WAIT", now.Add(time.Second)
+	if err := AdvanceExternalEventDisposition(received, ignored); err != nil {
+		t.Fatalf("ignore advance rejected: %v", err)
+	}
+	broken := received
+	broken.State = ExternalEventApplied
+	if err := broken.Validate(); err == nil {
+		t.Fatal("applied disposition without result was accepted")
 	}
 }

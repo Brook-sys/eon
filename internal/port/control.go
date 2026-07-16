@@ -19,8 +19,11 @@ type CommandReceiptWriter interface {
 
 // ExternalEventInbox accepts bounded, typed and untrusted stimuli. Duplicate
 // delivery keys replay the original record; divergent reuse is a conflict.
+// Submit returns the durable disposition so transports can acknowledge receipt
+// without obtaining write authority over domain effects.
 type ExternalEventInbox interface {
-	SubmitExternalEvent(domain.ExternalEvent) (domain.ExternalEvent, error)
+	SubmitExternalEvent(domain.ExternalEvent) (domain.ExternalEventDisposition, error)
 	ExternalEvent(domain.ExternalEventID) (domain.ExternalEvent, error)
 	ExternalEventByDeduplicationKey(string) (domain.ExternalEvent, error)
+	ExternalEventDisposition(domain.ExternalEventID) (domain.ExternalEventDisposition, error)
 }

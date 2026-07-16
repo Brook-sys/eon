@@ -253,3 +253,106 @@ func (e ExternalEvent) Validate() error {
 	}
 	return e.Content.Validate()
 }
+
+// ExternalEventDisposition records kernel handling of an untrusted stimulus.
+// Content never becomes policy; only disposition + audit events do.
+type ExternalEventDispositionState string
+
+const (
+	ExternalEventReceived  ExternalEventDispositionState = "RECEIVED"
+	ExternalEventApplied   ExternalEventDispositionState = "APPLIED"
+	ExternalEventRejected  ExternalEventDispositionState = "REJECTED"
+	ExternalEventIgnored   ExternalEventDispositionState = "IGNORED"
+)
+
+func (s ExternalEventDispositionState) valid() bool {
+	switch s {
+	case ExternalEventReceived, ExternalEventApplied, ExternalEventRejected, ExternalEventIgnored:
+		return true
+	default:
+		return false
+	}
+}
+
+func (s ExternalEventDispositionState) Terminal() bool {
+	switch s {
+	case ExternalEventApplied, ExternalEventRejected, ExternalEventIgnored:
+		return true
+	default:
+		return false
+	}
+}
+
+type ExternalEventDisposition struct {
+	SchemaVersion int                          `json:"schema_version"`
+	EventID       ExternalEventID              `json:"event_id"`
+	State         ExternalEventDispositionState `json:"state"`
+	ResultRef     string                       `json:"result_ref,omitempty"`
+	FailureCode   string                       `json:"failure_code,omitempty"`
+	RecordedAt    time.Time                    `json:"recorded_at"`
+}
+
+func (d ExternalEventDisposition) Validate() error {
+	if d.SchemaVersion != SchemaVersionV1 || d.EventID == "" || d.RecordedAt.IsZero() {
+		return errors.New("external event disposition is incomplete or has unsupported schema version")
+	}
+	if !d.State.valid() {
+		return fmt.Errorf("unknown external event disposition state %q", d.State)
+	}
+	if d.ResultRef != "" && d.FailureCode != "" {
+		return errors.New("external event disposition cannot contain both result and failure")
+	}
+	switch d.State {
+	case ExternalEventApplied:
+		if d.ResultRef == "" {
+			return errors.New("applied external event disposition requires result reference")
+		}
+	case ExternalEventRejected:
+		if d.FailureCode == "" {
+			return errors.New("rejected external event disposition requires failure code")
+		}
+	case ExternalEventIgnored:
+		if d.FailureCode == "" && d.ResultRef == "" {
+			return errors.New("ignored external event disposition requires reason ref or failure code")
+		}
+	default:
+		if d.ResultRef != "" || d.FailureCode != "" {
+			return errors.New("received external event disposition must not claim result or failure")
+		}
+	}
+	return nil
+}
+
+// AdvanceExternalEventDisposition enforces monotonic handling of stimuli.
+func AdvanceExternalEventDisposition(current, next ExternalEventDisposition) error {
+	if err := current.Validate(); err != nil {
+		return fmt.Errorf("validate current external disposition: %w", err)
+	}
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate next external disposition: %w", err)
+	}
+	if current.EventID != next.EventID {
+		return errors.New("external event disposition identity changed")
+	}
+	if next.RecordedAt.Before(current.RecordedAt) {
+		return errors.New("external event disposition time moved backwards")
+	}
+	if current.State == next.State {
+		if current == next {
+			return nil
+		}
+		return fmt.Errorf("%w: external event disposition changed without state advance", ErrConflict)
+	}
+	if current.State.Terminal() {
+		return fmt.Errorf("%w: terminal external event disposition cannot advance", ErrConflict)
+	}
+	if current.State != ExternalEventReceived {
+		return fmt.Errorf("%w: illegal external event disposition transition %s → %s", ErrConflict, current.State, next.State)
+	}
+	switch next.State {
+	case ExternalEventApplied, ExternalEventRejected, ExternalEventIgnored:
+		return nil
+	default:
+		return fmt.Errorf("%w: illegal external event disposition transition %s → %s", ErrConflict, current.State, next.State)
+	}
+}

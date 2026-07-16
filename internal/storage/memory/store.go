@@ -58,6 +58,9 @@ type state struct {
 	operatorCommands          map[domain.CommandID]domain.OperatorCommand
 	operatorCommandByIdem     map[domain.IdempotencyKey]domain.CommandID
 	operatorCommandReceipts   map[domain.CommandID]domain.CommandReceipt
+	externalEvents            map[domain.ExternalEventID]domain.ExternalEvent
+	externalEventByDedup      map[string]domain.ExternalEventID
+	externalEventDispositions  map[domain.ExternalEventID]domain.ExternalEventDisposition
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -95,9 +98,12 @@ func newState() state {
 		commitByIntent:          make(map[domain.IdempotencyKey]domain.CommitID),
 		headCommits:             make(map[domain.MissionRevisionID]domain.CommitID),
 		canonical:               make(map[string]domain.CanonicalEntity),
-		operatorCommands:        make(map[domain.CommandID]domain.OperatorCommand),
-		operatorCommandByIdem:   make(map[domain.IdempotencyKey]domain.CommandID),
-		operatorCommandReceipts: make(map[domain.CommandID]domain.CommandReceipt),
+		operatorCommands:           make(map[domain.CommandID]domain.OperatorCommand),
+		operatorCommandByIdem:      make(map[domain.IdempotencyKey]domain.CommandID),
+		operatorCommandReceipts:    make(map[domain.CommandID]domain.CommandReceipt),
+		externalEvents:             make(map[domain.ExternalEventID]domain.ExternalEvent),
+		externalEventByDedup:       make(map[string]domain.ExternalEventID),
+		externalEventDispositions:  make(map[domain.ExternalEventID]domain.ExternalEventDisposition),
 	}
 }
 
@@ -178,6 +184,18 @@ func (t transaction) OperatorCommandReceipt(id domain.CommandID) (domain.Command
 }
 func (t transaction) PendingOperatorCommands(limit int) ([]domain.OperatorCommand, error) {
 	return reader(t).PendingOperatorCommands(limit)
+}
+func (t transaction) ExternalEvent(id domain.ExternalEventID) (domain.ExternalEvent, error) {
+	return reader(t).ExternalEvent(id)
+}
+func (t transaction) ExternalEventByDeduplicationKey(key string) (domain.ExternalEvent, error) {
+	return reader(t).ExternalEventByDeduplicationKey(key)
+}
+func (t transaction) ExternalEventDisposition(id domain.ExternalEventID) (domain.ExternalEventDisposition, error) {
+	return reader(t).ExternalEventDisposition(id)
+}
+func (t transaction) PendingExternalEvents(limit int) ([]domain.ExternalEvent, error) {
+	return reader(t).PendingExternalEvents(limit)
 }
 func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	return reader(t).OperationSpec(id)
@@ -390,6 +408,53 @@ func (r reader) PendingOperatorCommands(limit int) ([]domain.OperatorCommand, er
 			return result[i].ID < result[j].ID
 		}
 		return result[i].SubmittedAt.Before(result[j].SubmittedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (r reader) ExternalEvent(id domain.ExternalEventID) (domain.ExternalEvent, error) {
+	v, ok := r.state.externalEvents[id]
+	if !ok {
+		return domain.ExternalEvent{}, notFound("external event", id)
+	}
+	return cloneExternalEvent(v), nil
+}
+func (r reader) ExternalEventByDeduplicationKey(key string) (domain.ExternalEvent, error) {
+	if key == "" {
+		return domain.ExternalEvent{}, fmt.Errorf("external event deduplication key is required")
+	}
+	id, ok := r.state.externalEventByDedup[key]
+	if !ok {
+		return domain.ExternalEvent{}, notFound("external event deduplication", key)
+	}
+	return r.ExternalEvent(id)
+}
+func (r reader) ExternalEventDisposition(id domain.ExternalEventID) (domain.ExternalEventDisposition, error) {
+	v, ok := r.state.externalEventDispositions[id]
+	if !ok {
+		return domain.ExternalEventDisposition{}, notFound("external event disposition", id)
+	}
+	return v, nil
+}
+func (r reader) PendingExternalEvents(limit int) ([]domain.ExternalEvent, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("pending external event query requires positive limit")
+	}
+	result := make([]domain.ExternalEvent, 0, limit)
+	for _, event := range r.state.externalEvents {
+		disposition, ok := r.state.externalEventDispositions[event.ID]
+		if !ok || disposition.State.Terminal() {
+			continue
+		}
+		result = append(result, cloneExternalEvent(event))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].ReceivedAt.Equal(result[j].ReceivedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].ReceivedAt.Before(result[j].ReceivedAt)
 	})
 	if len(result) > limit {
 		result = result[:limit]
@@ -826,6 +891,63 @@ func (t transaction) SaveOperatorCommandReceipt(receipt domain.CommandReceipt) e
 		return err
 	}
 	t.state.operatorCommandReceipts[receipt.CommandID] = receipt
+	return nil
+}
+
+func (t transaction) CreateExternalEvent(event domain.ExternalEvent, disposition domain.ExternalEventDisposition) error {
+	if err := event.Validate(); err != nil {
+		return fmt.Errorf("validate external event: %w", err)
+	}
+	if err := disposition.Validate(); err != nil {
+		return fmt.Errorf("validate external event disposition: %w", err)
+	}
+	if disposition.EventID != event.ID || disposition.State != domain.ExternalEventReceived {
+		return fmt.Errorf("%w: external event must be created with RECEIVED disposition", port.ErrConflict)
+	}
+	if existing, ok := t.state.externalEvents[event.ID]; ok {
+		if equalExternalEvents(existing, event) {
+			current := t.state.externalEventDispositions[event.ID]
+			if current == disposition {
+				return nil
+			}
+			return fmt.Errorf("%w: external event disposition diverges on replay", port.ErrConflict)
+		}
+		return conflict("external event", event.ID)
+	}
+	if existingID, ok := t.state.externalEventByDedup[event.DeduplicationKey]; ok {
+		existing := t.state.externalEvents[existingID]
+		if equalExternalEvents(existing, event) {
+			return nil
+		}
+		return fmt.Errorf("%w: external event deduplication key reused with different content", port.ErrConflict)
+	}
+	if _, ok := t.state.externalEventDispositions[event.ID]; ok {
+		return conflict("external event disposition", event.ID)
+	}
+	t.state.externalEvents[event.ID] = cloneExternalEvent(event)
+	t.state.externalEventByDedup[event.DeduplicationKey] = event.ID
+	t.state.externalEventDispositions[event.ID] = disposition
+	return nil
+}
+
+func (t transaction) SaveExternalEventDisposition(disposition domain.ExternalEventDisposition) error {
+	if err := disposition.Validate(); err != nil {
+		return fmt.Errorf("validate external event disposition: %w", err)
+	}
+	if _, ok := t.state.externalEvents[disposition.EventID]; !ok {
+		return notFound("external event", disposition.EventID)
+	}
+	current, ok := t.state.externalEventDispositions[disposition.EventID]
+	if !ok {
+		return notFound("external event disposition", disposition.EventID)
+	}
+	if err := domain.AdvanceExternalEventDisposition(current, disposition); err != nil {
+		if errors.Is(err, domain.ErrConflict) {
+			return fmt.Errorf("%w: %v", port.ErrConflict, err)
+		}
+		return err
+	}
+	t.state.externalEventDispositions[disposition.EventID] = disposition
 	return nil
 }
 
@@ -1462,7 +1584,31 @@ func cloneState(src state) state {
 	for k, v := range src.operatorCommandReceipts {
 		dst.operatorCommandReceipts[k] = v
 	}
+	for k, v := range src.externalEvents {
+		dst.externalEvents[k] = cloneExternalEvent(v)
+	}
+	for k, v := range src.externalEventByDedup {
+		dst.externalEventByDedup[k] = v
+	}
+	for k, v := range src.externalEventDispositions {
+		dst.externalEventDispositions[k] = v
+	}
 	return dst
+}
+
+func cloneExternalEvent(event domain.ExternalEvent) domain.ExternalEvent {
+	event.Content.Structured = append([]byte(nil), event.Content.Structured...)
+	return event
+}
+
+func equalExternalEvents(a, b domain.ExternalEvent) bool {
+	if a.SchemaVersion != b.SchemaVersion || a.ID != b.ID || a.DeduplicationKey != b.DeduplicationKey || a.Source != b.Source || a.SourceActorID != b.SourceActorID || a.Kind != b.Kind || a.MissionID != b.MissionID || a.CorrelationID != b.CorrelationID || a.TransportMessageID != b.TransportMessageID || !a.ReceivedAt.Equal(b.ReceivedAt) {
+		return false
+	}
+	if a.Content.MediaType != b.Content.MediaType || a.Content.Text != b.Content.Text || a.Content.Reference != b.Content.Reference {
+		return false
+	}
+	return string(a.Content.Structured) == string(b.Content.Structured)
 }
 func cloneKnowledgeArtifact(v domain.KnowledgeArtifact) domain.KnowledgeArtifact {
 	v.Dependencies = append([]string(nil), v.Dependencies...)

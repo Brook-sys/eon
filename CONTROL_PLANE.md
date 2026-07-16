@@ -428,7 +428,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 - command inbox idempotente — implementado (`control.CommandInbox` + store); transports só submetem;
 - pause/resume/cancel/shutdown gracioso — implementados no domínio e `kernel.CommandProcessor`; scheduler usa `ControlState.AllowsDispatch` para bloquear **novo** despacho sob pause/cancel/stopping, sem matar in-flight nem impedir retomada de waits locais;
-- external event/message inbox genérico — parcial (respostas de pergunta têm inbox dedicada; mensagem/despertar genéricos ainda abertos);
+- external event/message inbox genérico — implementado (`control.ExternalEventInbox` store-backed + `ExternalEventDisposition` monotônico; `kernel.ExternalEventProcessor` aplica `USER_ANSWER` com resume de waits locais e trata `USER_MESSAGE`/`AVAILABILITY_SIGNAL`/`AUTHORIZED_SOURCE` como wake tipado sem elevar conteúdo a política; stimuli sem wait correspondente ficam `IGNORED` e auditáveis);
 - respostas e aprovações — implementados no slice de perguntas;
 - contratos e persistência de `OperatorQuestion`/`UserAnswer`, correlação por identidade/revisão, waits locais e núcleo determinístico do `QuestionGate` — implementados;
 - persistência da decisão do gate e integração com inbox/outbox — residual;
