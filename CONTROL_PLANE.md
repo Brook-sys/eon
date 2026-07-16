@@ -429,7 +429,8 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - agenda e operação atual — implementado (`GET /missions/{id}/operations`, summaries por estado);
 - consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
 - detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log);
-- residual: SSE ao vivo e redaction fina de payloads sensíveis; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
+- SSE ao vivo — implementado (`GET /events/stream` com `after_sequence`/`Last-Event-ID`, poll configurável, eventos `ready`/`event`/`page`/`error` e keep-alive; somente-leitura sobre `Projector.ListEvents`);
+- residual: redaction fina de payloads sensíveis; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -438,11 +439,11 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - external event/message inbox genérico — implementado (`control.ExternalEventInbox` store-backed + `ExternalEventDisposition` monotônico; `kernel.ExternalEventProcessor` aplica `USER_ANSWER` com resume de waits locais e trata `USER_MESSAGE`/`AVAILABILITY_SIGNAL`/`AUTHORIZED_SOURCE` como wake tipado sem elevar conteúdo a política; stimuli sem wait correspondente ficam `IGNORED` e auditáveis);
 - respostas e aprovações — implementados no slice de perguntas;
 - contratos e persistência de `OperatorQuestion`/`UserAnswer`, correlação por identidade/revisão, waits locais e núcleo determinístico do `QuestionGate` — implementados;
-- persistência da decisão do gate e integração com inbox/outbox — residual;
+- persistência da decisão do gate e integração com inbox/outbox — implementados (`QuestionGateProcessor` + outbox atômica em `ADMIT`);
 - recibos e optimistic concurrency — implementados (`CommandReceipt` monotônico, revisão de missão esperada, `SaveControlState` com revisão monotônica);
 - superfícies HTTP de submit/consulta — implementadas em `control.API`: `POST /commands`, `GET /commands/{id}`, `GET /commands/{id}/receipt`, `POST /external-events`, `GET /external-events/{id}`, `GET /external-events/{id}/disposition`; HTTP 202 distingue aceitação de inbox de efeito confirmado; retries reutilizam identidade por `idempotency_key`/`deduplication_key` sem mintar ID divergente;
 - crash-replay dos processadores — implementado com reopen SQLite real: comando/evento `RECEIVED` sobrevive a restart e aplica uma vez; recibo/disposição terminal é pure replay sem segundo efeito nem eventos extras;
-- residual restante: SSE ao vivo e redaction fina (Slice A), persistência da decisão do `QuestionGate` e integração com outbox.
+- residual restante: redaction fina de payloads sensíveis (Slice A).
 
 ### Slice C — configuração versionada
 
@@ -454,21 +455,31 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 ### Slice D — dashboard web
 
-- overview;
-- timeline ao vivo por SSE;
-- inspetor de execução;
-- missão/agenda;
-- interação e aprovações;
-- caixa de perguntas pendentes e formulários correlacionados;
-- configuração;
-- conhecimento e artifacts.
+Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, sem build step):
+
+- overview via `GET /api/inspect/overview`;
+- timeline ao vivo por SSE (`GET /api/inspect/events/stream`);
+- missão/agenda e contagens no overview;
+- caixa de perguntas pendentes (`GET /api/control/questions`) e formulário correlacionado (`POST .../answers`);
+- montagem de inspect/control sob `/api/*` sem escrita canônica direta da UI.
+
+Residual: inspetor rico de operation/commit/command, tela de configuração (drafts), conhecimento/artifacts e redaction fina.
+
+### Outbox de entrega de perguntas
+
+Estados: `PENDING` → `LEASED` → `DELIVERED` | `RETRY` | `DEAD` | `CANCELLED`, com `EFFECT_UNKNOWN` para efeito externo ambíguo.
+
+- lease expirado **não** re-lease automático: worker parkeia em `EFFECT_UNKNOWN` com código `LEASE_EXPIRED`;
+- transporte ambíguo (timeout/resposta truncada) parkeia em `EFFECT_UNKNOWN` com `AMBIGUOUS_TRANSPORT`;
+- reenvio só após reconciliação explícita (`ResolveQuestionDeliveryEffectUnknown` ou `CompleteQuestionDeliveryAfterReconcile`);
+- `DueQuestionDeliveries` nunca devolve `EFFECT_UNKNOWN` como elegível a novo efeito.
 
 ### Slice E — Telegram
 
 Implementado no adapter `internal/channel/telegram`:
 
 - configuração segura do bot próprio do operador, mantendo token somente na instância do adapter;
-- entrega por worker sobre a outbox persistida;
+- entrega por worker sobre a outbox persistida, com park em `EFFECT_UNKNOWN` sem reenvio inseguro;
 - inline keyboards com callbacks opacos e mapeamento server-side para opções;
 - reply/`ForceReply` para texto livre;
 - ingestão deduplicada de updates e callbacks pelo `ExternalEventInbox` existente;

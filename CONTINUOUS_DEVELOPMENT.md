@@ -174,9 +174,15 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `QuestionGateDecisionRecord` versionado e auditável; `QuestionGateProcessor` reconstrói histórico do store, persiste `ADMIT/SUPPRESS/DEFER` e evento e, somente em `ADMIT`, cria pergunta + entregas na mesma transação; replay por `question_id`, rollback integral e reopen SQLite cobertos por testes.
 - [x] `DONE` Completar deduplicação semântica assistida, digest, budget versionado e política de lembretes.
   - Evidência: `NormalizeDedupSignature`/`SemanticTopicKey`, `InterruptionBudgetPolicy`, `DigestPolicy` e `ReminderPolicy` no domínio; gate com topic cooldown, budget de admissão, hold de digest e `AvailableAt` adiado; `QuestionReminderProcessor` agenda reentregas `#reminder:N` e cessa após resposta/expiração/`MaxCount`; `CONTROL_PLANE.md` §4.4 atualizado.
-- [ ] `READY` Implementar configuração versionada com validação, diff e fronteira segura de aplicação.
-- [ ] `READY` Implementar dashboard web mínimo: overview, timeline SSE, inspetor, interação e configuração.
+- [x] `DONE` Implementar configuração versionada com validação, diff e fronteira segura de aplicação.
+  - Evidência: `domain.ConfigDraft`/`ConfigRevision`/receipts, schemas por escopo, `kernel.ConfigApplier`, portas/store/checkpoint e contract tests; secrets apenas por referência (`8eec038`). Residual: consumir active revision no scheduler/gate e HTTP admin de drafts.
+- [x] `DONE` Implementar dashboard web mínimo: overview, timeline SSE, inspetor, interação e configuração.
+  - Evidência: `GET /events/stream` SSE em `internal/inspect` (resume `after_sequence`/`Last-Event-ID`, keep-alive); `internal/dashboard` serve UI experimental com overview, timeline, perguntas pendentes e formulário correlacionado de resposta; monta inspect/control sob `/api/*` sem escrita canônica direta. Residual: tela de config drafts, redaction fina de payloads e inspetor de commits/operations mais rico.
+- [x] `DONE` Reconciliar outbox com `EFFECT_UNKNOWN` sem re-lease inseguro.
+  - Evidência: status `EFFECT_UNKNOWN`; lease expirado e transporte ambíguo param reenvio automático; `ResolveQuestionDeliveryEffectUnknown` / `CompleteQuestionDeliveryAfterReconcile` só por reconciliação explícita; worker Telegram não reenvia após park; testes de domínio e adapter.
 - [ ] `READY` Exportar telemetria OpenTelemetry opcional sem torná-la fonte canônica ou autoridade.
+- [ ] `READY` Smoke E2E ponta a ponta: admissão → outbox → canal → `ExternalEvent` → `UserAnswer` → resume de waits.
+- [ ] `READY` HTTP admin de config drafts e projeção de active revision no scheduler/question-gate.
 
 ### Fase 7 — atividade contínua sem repouso
 
@@ -276,3 +282,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-16 04:20 — Fase 6/Telegram — adapter Bot API próprio, worker sobre outbox, keyboard/ForceReply, allowlists e correlação server-side de callbacks/replies implementados sem autoridade canônica no canal — verificação: testes de renderização sem leak, entrega, dedupe e ingestão autenticada; `go test ./...`, `go vet ./...`, `git diff --check` — próximo: wiring configurável do polling/webhook no runtime ou política persistida de digest/budget/lembretes.
 2026-07-16 04:40 — Fase 6/antispam avançado — dedupe semântica normalizada + topic cooldown, budget versionado de admissão/entrega, digest com hold/capacidade e lembretes limitados por política (default off) — verificação: `go test ./...`, `go vet ./internal/domain ./internal/kernel`, `git diff --check` — próximo: configuração versionada com validação/diff/aplicação segura ou dashboard web mínimo.
 2026-07-16 04:55 — Fase 6/Slice C config versionada — schemas por escopo, draft/revision/receipt, diff/impact, apply puro + `ConfigApplier`, portas/store/checkpoint e contract tests; secrets só por referência — verificação: `go test ./...`, `git diff --check` — próximo: consumir active config no scheduler/gate, HTTP admin de drafts ou dashboard web mínimo.
+2026-07-16 05:15 — Fase 6/SSE + dashboard + outbox segura — `GET /events/stream` com resume e keep-alive; UI experimental em `internal/dashboard` (overview/timeline/perguntas/resposta); outbox com `EFFECT_UNKNOWN` sem re-lease automático e worker Telegram sem reenvio após lease expirado/transporte ambíguo; backlog de config versionada marcado DONE com residual de projeção/HTTP admin — verificação: `go test ./...`, `gofmt`, `git diff --check` — próximo: smoke E2E, HTTP admin de drafts, ou famílias/OTel.
