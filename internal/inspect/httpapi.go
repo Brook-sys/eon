@@ -34,6 +34,8 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /health", a.handleHealth)
 	mux.HandleFunc("GET /version", a.handleVersion)
 	mux.HandleFunc("GET /overview", a.handleOverview)
+	mux.HandleFunc("GET /alerts", a.handleAlerts)
+	mux.HandleFunc("GET /telemetry", a.handleTelemetry)
 	mux.HandleFunc("GET /missions/{missionID}", a.handleMission)
 	mux.HandleFunc("GET /missions/{missionID}/operations", a.handleMissionOperations)
 	mux.HandleFunc("GET /operations/{operationID}", a.handleOperation)
@@ -92,6 +94,30 @@ func (a *API) handleOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, overview)
+}
+
+func (a *API) handleAlerts(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	snap, err := a.Projector.BuildAlerts(r.Context(), missionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, snap)
+}
+
+func (a *API) handleTelemetry(w http.ResponseWriter, r *http.Request) {
+	tel, ok := a.Projector.Telemetry()
+	if !ok {
+		// Explicit disabled posture when bootstrap never installed telemetry.
+		tel = TelemetryStatus{
+			Enabled:   false,
+			HasOTLP:   false,
+			Canonical: false,
+			Retention: a.Projector.defaultRetentionView(),
+		}
+	}
+	writeJSON(w, http.StatusOK, tel)
 }
 
 func (a *API) handleMission(w http.ResponseWriter, r *http.Request) {

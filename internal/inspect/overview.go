@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
 )
 
@@ -117,7 +118,11 @@ type Overview struct {
 	PendingQuestions  int                `json:"pending_operator_questions"`
 	// ContinuityCatalog is process-local portfolio metadata (not mission store state).
 	ContinuityCatalog *ContinuityStrategyCatalog `json:"continuity_catalog,omitempty"`
-	Mission           *MissionOverview           `json:"mission,omitempty"`
+	// Telemetry is process-local OTel export posture (disposable, non-canonical).
+	Telemetry *TelemetryStatus `json:"telemetry,omitempty"`
+	// Alerts is a derived operator signal bag; never authoritative for the kernel.
+	Alerts  *observability.AlertSnapshot `json:"alerts,omitempty"`
+	Mission *MissionOverview             `json:"mission,omitempty"`
 }
 
 // Projector materializes inspectable views from a store reader.
@@ -131,6 +136,8 @@ type Projector struct {
 	// Never used to execute operator-authored free text; only DeclaredProfile/Probe.
 	mu            sync.Mutex
 	modelProvider port.ModelProvider
+	// telemetry is optional process assembly posture for derived OTel export.
+	telemetry *TelemetryStatus
 }
 
 func NewProjector(store port.Store, runtime RuntimeIdentity) (*Projector, error) {
@@ -209,7 +216,47 @@ func (p *Projector) BuildOverview(ctx context.Context, missionID domain.MissionI
 	if err != nil {
 		return Overview{}, err
 	}
+	if tel, ok := p.Telemetry(); ok {
+		cloned := tel
+		out.Telemetry = &cloned
+	}
+	// Alerts are pure projections over the overview we just built (no second store walk).
+	out.Alerts = attachOverviewAlerts(out)
 	return out, nil
+}
+
+func attachOverviewAlerts(out Overview) *observability.AlertSnapshot {
+	in := observability.AlertInput{
+		ObservedAt:       out.GeneratedAt,
+		StoreReachable:   true,
+		ProcessMode:      string(out.ProcessMode),
+		PendingCommands:  out.PendingCommands,
+		PendingQuestions: out.PendingQuestions,
+	}
+	if out.Telemetry != nil {
+		in.TelemetryEnabled = out.Telemetry.Enabled
+		in.TelemetryHasOTLP = out.Telemetry.HasOTLP
+	}
+	if out.Mission != nil {
+		m := out.Mission
+		if m.Horizon != nil {
+			in.HorizonPresent = true
+			in.HorizonReady = m.Horizon.ReadyCount
+			in.HorizonLowWatermark = m.Horizon.LowWatermark
+		}
+		if m.Frontier != nil {
+			in.FrontierNeedsHygiene = m.Frontier.NeedsHygiene
+		}
+		if m.LatestDiagnosis != nil {
+			in.ContinuityBlocked = true
+			in.ContinuityBlockedDetail = m.LatestDiagnosis.SafeDetail
+		}
+		if m.ContinuityFindings != nil && m.ContinuityFindings.Latest != nil && m.ContinuityFindings.Latest.Stale {
+			in.ContinuityFindingsStale = true
+		}
+	}
+	snap := observability.EvaluateAlerts(in)
+	return &snap
 }
 
 // ListOperations returns stable, sorted operation summaries for a mission revision.

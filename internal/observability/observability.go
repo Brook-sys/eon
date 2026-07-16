@@ -49,17 +49,24 @@ type Config struct {
 	Insecure bool
 	// SampleRatio is in [0,1]. Zero with Enabled keeps traces off; use 1 for always-on.
 	SampleRatio float64
+	// Retention bounds disposable OTLP export buffers (not store retention).
+	// Zero fields apply package defaults when OTLP export is active.
+	Retention ExportRetention
 }
 
 func (c Config) Validate() error {
 	if !c.Enabled {
-		return nil
+		// Still validate retention when partially filled so bad flags fail early.
+		return c.Retention.Validate()
 	}
 	if c.SampleRatio < 0 || c.SampleRatio > 1 {
 		return errors.New("observability sample ratio must be between 0 and 1")
 	}
 	if strings.ContainsAny(c.ServiceName, "\r\n") || strings.ContainsAny(c.ServiceVersion, "\r\n") {
 		return errors.New("observability service labels must be single-line")
+	}
+	if err := c.Retention.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -68,6 +75,8 @@ func (c Config) Validate() error {
 type Runtime struct {
 	mu             sync.Mutex
 	enabled        bool
+	hasOTLP        bool
+	retention      ExportRetention
 	tracer         trace.Tracer
 	meter          metric.Meter
 	tracerProvider *sdktrace.TracerProvider
@@ -85,9 +94,11 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 	for _, opt := range opts {
 		opt(&options)
 	}
+	retention := cfg.Retention.Normalize()
 	rt := &Runtime{
-		tracer: noop.NewTracerProvider().Tracer(instrumentationName),
-		meter:  otel.Meter(instrumentationName),
+		retention: retention,
+		tracer:    noop.NewTracerProvider().Tracer(instrumentationName),
+		meter:     otel.Meter(instrumentationName),
 	}
 	if !cfg.Enabled {
 		return rt, nil
@@ -120,6 +131,7 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 		spanProcessors = append(spanProcessors, sdktrace.NewSimpleSpanProcessor(options.spanExporter))
 	}
 	if strings.TrimSpace(cfg.OTLPEndpoint) != "" {
+		rt.hasOTLP = true
 		traceOpts := []otlptracehttp.Option{otlptracehttp.WithEndpoint(cfg.OTLPEndpoint)}
 		if cfg.Insecure {
 			traceOpts = append(traceOpts, otlptracehttp.WithInsecure())
@@ -128,7 +140,13 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 		if err != nil {
 			return nil, fmt.Errorf("observability otlp trace exporter: %w", err)
 		}
-		spanProcessors = append(spanProcessors, sdktrace.NewBatchSpanProcessor(otlpTrace))
+		spanProcessors = append(spanProcessors, sdktrace.NewBatchSpanProcessor(
+			otlpTrace,
+			sdktrace.WithMaxQueueSize(retention.TraceMaxQueueSize),
+			sdktrace.WithMaxExportBatchSize(retention.TraceMaxExportBatchSize),
+			sdktrace.WithBatchTimeout(retention.TraceBatchTimeout),
+			sdktrace.WithExportTimeout(retention.TraceExportTimeout),
+		))
 		rt.shutdowns = append(rt.shutdowns, otlpTrace.Shutdown)
 	}
 	if len(spanProcessors) == 0 {
@@ -166,7 +184,11 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 			return nil, fmt.Errorf("observability otlp metric exporter: %w", err)
 		}
 		// PeriodicReader owns exporter shutdown via MeterProvider.Shutdown.
-		metricReaders = append(metricReaders, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpMetric)))
+		metricReaders = append(metricReaders, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(
+			otlpMetric,
+			sdkmetric.WithInterval(retention.MetricInterval),
+			sdkmetric.WithTimeout(retention.MetricExportTimeout),
+		)))
 	}
 	mp := sdkmetric.NewMeterProvider(metricReaders...)
 
@@ -207,6 +229,28 @@ func (r *Runtime) Enabled() bool {
 		return false
 	}
 	return r.enabled
+}
+
+// HasOTLP reports whether an OTLP HTTP exporter was configured (remote path).
+func (r *Runtime) HasOTLP() bool {
+	if r == nil {
+		return false
+	}
+	return r.hasOTLP
+}
+
+// Retention returns the effective export-buffer policy (normalized defaults).
+// Disposable only: never consult from kernel decision paths.
+func (r *Runtime) Retention() ExportRetention {
+	if r == nil {
+		return ExportRetention{}.Normalize()
+	}
+	return r.retention.Normalize()
+}
+
+// RetentionView is the presentation-safe export retention snapshot.
+func (r *Runtime) RetentionView() RetentionView {
+	return r.Retention().View()
 }
 
 // Tracer returns the package tracer (noop when disabled).

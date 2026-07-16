@@ -172,6 +172,8 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	projector.Clock = clock.Now
 	// Expose the process strategy portfolio on inspect (read-only, non-authoritative).
 	projector.SetContinuityCatalog(continuityCatalogFromRegistry(registry))
+	// Disposable OTel export posture for alerts/retention projections (never kernel input).
+	projector.SetTelemetry(telemetry.Enabled(), telemetry.HasOTLP(), telemetry.Retention())
 
 	inspectAPI, err := inspect.NewAPI(projector)
 	if err != nil {

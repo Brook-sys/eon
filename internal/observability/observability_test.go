@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -129,6 +130,102 @@ func TestControlTraceHelper(t *testing.T) {
 func TestConfigValidation(t *testing.T) {
 	if err := (observability.Config{Enabled: true, SampleRatio: 2}).Validate(); err == nil {
 		t.Fatal("expected invalid ratio")
+	}
+	if err := (observability.Config{Retention: observability.ExportRetention{TraceMaxQueueSize: -1}}).Validate(); err == nil {
+		t.Fatal("expected invalid retention")
+	}
+	if err := (observability.Config{Retention: observability.ExportRetention{
+		TraceMaxQueueSize: 10, TraceMaxExportBatchSize: 20,
+	}}).Validate(); err == nil {
+		t.Fatal("expected batch > queue rejection")
+	}
+}
+
+func TestExportRetentionDefaultsAndView(t *testing.T) {
+	n := observability.ExportRetention{}.Normalize()
+	if n.TraceMaxQueueSize != observability.DefaultTraceMaxQueueSize {
+		t.Fatalf("queue default = %d", n.TraceMaxQueueSize)
+	}
+	if n.MetricInterval != observability.DefaultMetricInterval {
+		t.Fatalf("metric interval = %s", n.MetricInterval)
+	}
+	view := n.View()
+	if view.Canonical || view.PolicyVersion != observability.RetentionPolicyVersion {
+		t.Fatalf("view = %#v", view)
+	}
+	if view.TraceMaxQueueSize != n.TraceMaxQueueSize || view.MetricIntervalMS != n.MetricInterval.Milliseconds() {
+		t.Fatalf("view fields = %#v", view)
+	}
+	// batch clamped to queue when both set with batch > queue after normalize path
+	clamped := observability.ExportRetention{TraceMaxQueueSize: 100, TraceMaxExportBatchSize: 1000}.Normalize()
+	if clamped.TraceMaxExportBatchSize != 100 {
+		t.Fatalf("batch clamp = %d", clamped.TraceMaxExportBatchSize)
+	}
+}
+
+func TestRuntimeRetentionAccessorsWhenDisabled(t *testing.T) {
+	rt, err := observability.Setup(context.Background(), observability.Config{
+		Retention: observability.ExportRetention{TraceMaxQueueSize: 128, MetricInterval: time.Second},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Shutdown(context.Background()) })
+	if rt.Enabled() || rt.HasOTLP() {
+		t.Fatal("expected disabled / no OTLP")
+	}
+	got := rt.Retention()
+	if got.TraceMaxQueueSize != 128 || got.MetricInterval != time.Second {
+		t.Fatalf("retention = %#v", got)
+	}
+	if rt.RetentionView().Canonical {
+		t.Fatal("retention must be non-canonical")
+	}
+}
+
+func TestEvaluateAlertsDerivedOnly(t *testing.T) {
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	snap := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt:              now,
+		TelemetryEnabled:        false,
+		StoreReachable:          true,
+		ProcessMode:             "RUNNING",
+		PendingCommands:         0,
+		HorizonPresent:          true,
+		HorizonReady:            1,
+		HorizonLowWatermark:     2,
+		FrontierNeedsHygiene:    true,
+		ContinuityBlocked:       true,
+		ContinuityBlockedDetail: "no ready work",
+	})
+	if snap.Canonical || snap.SchemaVersion != 1 {
+		t.Fatalf("snap meta = %#v", snap)
+	}
+	codes := map[string]bool{}
+	for _, a := range snap.Alerts {
+		if a.Canonical {
+			t.Fatalf("alert must be non-canonical: %#v", a)
+		}
+		codes[a.Code] = true
+	}
+	for _, want := range []string{
+		observability.AlertCodeTelemetryDisabled,
+		observability.AlertCodeHorizonNeedsReplenish,
+		observability.AlertCodeFrontierNeedsHygiene,
+		observability.AlertCodeContinuityBlocked,
+	} {
+		if !codes[want] {
+			t.Fatalf("missing code %s in %#v", want, snap.Alerts)
+		}
+	}
+	if snap.Warnings < 3 {
+		t.Fatalf("warnings = %d", snap.Warnings)
+	}
+	critical := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: false, TelemetryEnabled: true, TelemetryHasOTLP: true,
+	})
+	if critical.Critical != 1 {
+		t.Fatalf("critical = %#v", critical)
 	}
 }
 

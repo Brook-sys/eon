@@ -609,6 +609,8 @@ type Health struct {
 	ControlRevision   uint64             `json:"control_revision"`
 	EventHeadSequence uint64             `json:"event_head_sequence"`
 	StoreReachable    bool               `json:"store_reachable"`
+	// Telemetry is optional process-local OTel export posture (never canonical).
+	Telemetry *TelemetryStatus `json:"telemetry,omitempty"`
 }
 
 // HealthProbe performs a read-only store touch for liveness.
@@ -616,6 +618,10 @@ func (p *Projector) HealthProbe(ctx context.Context) (Health, error) {
 	health := Health{
 		Status:  "ok",
 		Runtime: p.Runtime,
+	}
+	if tel, ok := p.Telemetry(); ok {
+		cloned := tel
+		health.Telemetry = &cloned
 	}
 	err := p.Store.View(ctx, func(r port.Reader) error {
 		health.StoreReachable = true
@@ -640,11 +646,16 @@ func (p *Projector) HealthProbe(ctx context.Context) (Health, error) {
 		return nil
 	})
 	if err != nil {
-		return Health{
+		degraded := Health{
 			Status:         "degraded",
 			Runtime:        p.Runtime,
 			StoreReachable: false,
-		}, fmt.Errorf("health probe: %w", err)
+		}
+		if tel, ok := p.Telemetry(); ok {
+			cloned := tel
+			degraded.Telemetry = &cloned
+		}
+		return degraded, fmt.Errorf("health probe: %w", err)
 	}
 	return health, nil
 }

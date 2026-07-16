@@ -145,6 +145,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="cmdErr"></div>
     </section>
     <section>
+      <h2>Alertas / telemetria</h2>
+      <p class="hint">Sinais derivados e postura OTel (FR-CTRL-007). Nunca canônicos, nunca autoritativos para o kernel. Retention limita buffers de export descartáveis, não retenção de store.</p>
+      <div id="alertsBox" class="muted">carregue overview ou /alerts</div>
+      <div id="telemetryBox" class="prebox muted" style="margin-top:8px">telemetria não carregada</div>
+      <div class="row" style="margin-top:8px">
+        <button type="button" id="btnAlertsRefresh" class="primary">Atualizar alertas</button>
+        <button type="button" id="btnTelemetry">GET /telemetry</button>
+      </div>
+      <div class="errbox" id="alertsErr"></div>
+    </section>
+    <section>
       <h2>Perguntas pendentes</h2>
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
@@ -603,6 +614,88 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       });
     });
     el("clockMeta").textContent = "head=" + (o.event_head_sequence ?? "—");
+    if (o.alerts) renderAlerts(o.alerts);
+    if (o.telemetry) renderTelemetry(o.telemetry);
+  }
+
+  function severityClass(sev) {
+    const s = String(sev || "").toLowerCase();
+    if (s === "critical") return "status-FAILED";
+    if (s === "warning") return "status-PAUSED";
+    return "muted";
+  }
+
+  function renderAlerts(snap) {
+    if (!snap) {
+      el("alertsBox").innerHTML = '<span class="muted">sem snapshot de alertas</span>';
+      return;
+    }
+    let html = '<dl class="kv">';
+    html += '<dt>total</dt><dd>' + esc(String(snap.total ?? 0))
+      + ' · warnings=' + esc(String(snap.warnings ?? 0))
+      + ' · critical=' + esc(String(snap.critical ?? 0))
+      + (snap.canonical === false ? ' · <span class="muted">non-canonical</span>' : '')
+      + '</dd>';
+    html += '<dt>generated_at</dt><dd>' + esc(fmtTime(snap.generated_at)) + '</dd>';
+    html += '</dl>';
+    const items = Array.isArray(snap.alerts) ? snap.alerts : [];
+    if (!items.length) {
+      html += '<div class="muted">nenhum alerta derivado</div>';
+    } else {
+      html += '<div class="list">';
+      items.forEach(function (a) {
+        html += '<div class="card">';
+        html += '<div class="id ' + severityClass(a.severity) + '">' + esc(a.code || "?") + ' · ' + esc(a.severity || "") + '</div>';
+        html += '<div>' + esc(a.summary || "") + '</div>';
+        if (a.detail) html += '<div class="muted">' + esc(a.detail) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    el("alertsBox").innerHTML = html;
+  }
+
+  function renderTelemetry(tel) {
+    if (!tel) {
+      el("telemetryBox").textContent = "telemetria não configurada";
+      return;
+    }
+    const ret = tel.retention || {};
+    const lines = [
+      "enabled=" + String(!!tel.enabled),
+      "has_otlp=" + String(!!tel.has_otlp),
+      "canonical=" + String(!!tel.canonical),
+      "retention.policy=" + (ret.policy_version || "—"),
+      "trace.queue=" + (ret.trace_max_queue_size ?? "—"),
+      "trace.batch=" + (ret.trace_max_export_batch_size ?? "—"),
+      "trace.flush_ms=" + (ret.trace_batch_timeout_ms ?? "—"),
+      "metric.interval_ms=" + (ret.metric_interval_ms ?? "—")
+    ];
+    el("telemetryBox").textContent = lines.join("\n");
+  }
+
+  async function loadAlerts() {
+    setError("");
+    el("alertsErr").textContent = "";
+    const missionId = el("missionId").value.trim();
+    try {
+      const url = inspectBase + "/alerts" + (missionId ? ("?mission_id=" + encodeURIComponent(missionId)) : "");
+      const snap = await getJSON(url);
+      renderAlerts(snap);
+    } catch (err) {
+      el("alertsErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadTelemetry() {
+    setError("");
+    el("alertsErr").textContent = "";
+    try {
+      const tel = await getJSON(inspectBase + "/telemetry");
+      renderTelemetry(tel);
+    } catch (err) {
+      el("alertsErr").textContent = String(err.message || err);
+    }
   }
 
   function renderQuestions(items) {
@@ -1617,14 +1710,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnCommitList").addEventListener("click", listCommits);
   el("btnProviderProfile").addEventListener("click", function () { loadProviderProfile(false); });
   el("btnProviderProbe").addEventListener("click", function () { loadProviderProfile(true); });
+  el("btnAlertsRefresh").addEventListener("click", loadAlerts);
+  el("btnTelemetry").addEventListener("click", loadTelemetry);
 
   // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
   fillDefaultPayload();
   refreshKnowledgeCatalog();
   loadProviderProfile(false);
+  loadTelemetry();
   if (el("missionId").value.trim()) {
     refresh();
     loadFrontierHygiene();
+    loadAlerts();
   }
 })();
 </script>

@@ -519,7 +519,9 @@ Baseline de telemetria opcional em `internal/observability`:
 - `CycleInstruments` no bootstrap registra contagens derivadas do ciclo de controle (commands/events/ops/leases/scheduler);
 - helpers de controle (`TraceControl`/`EndControl`) marcam unidades de control plane com `motor.telemetry.canonical=false`;
 - exportadores OTLP HTTP opcionais para traces e métricas; testes usam exporter/reader em memória;
-- residual: alertas e políticas de retenção (não bloqueiam o vertical slice).
+- `ExportRetention` limita filas/batches/timeouts de export OTLP (buffers descartáveis; **não** é retenção de store/eventos canônicos);
+- alertas derivados (`EvaluateAlerts`) e projeção inspect `GET /alerts` + `GET /telemetry` + campos em `/health` e `/overview` — sempre `canonical=false`, nunca input do kernel;
+- residual histórico de alertas/retenção de export fechado no baseline Slice F (políticas avançadas de GC de telemetria externa ficam fora do runtime).
 
 ## 10. Critérios de aceitação do primeiro dashboard
 
