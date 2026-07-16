@@ -895,6 +895,53 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatalf("duplicate route error = %v", err)
 		}
 	})
+
+	t.Run("question delivery outbox exposes expired leases for recovery", func(t *testing.T) {
+		store := factory()
+		mission := missionRevision()
+		question := operatorQuestionRecord()
+		delivery := questionDeliveryRecord(question)
+		leaseUntil := delivery.AvailableAt.Add(time.Minute)
+		leased, err := domain.LeaseQuestionDelivery(delivery, "crashed_worker", delivery.AvailableAt, leaseUntil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			if err := tx.CreateOperatorQuestion(question); err != nil {
+				return err
+			}
+			if err := tx.CreateQuestionDelivery(delivery); err != nil {
+				return err
+			}
+			return tx.SaveQuestionDelivery(leased, delivery.Status, delivery.Attempt)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			due, err := r.DueQuestionDeliveries(leaseUntil, 10)
+			if err != nil {
+				return err
+			}
+			if len(due) != 1 || due[0].ID != delivery.ID {
+				t.Fatalf("expired lease due = %#v", due)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		reclaimed, err := domain.ReclaimExpiredQuestionDelivery(leased, leaseUntil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveQuestionDelivery(reclaimed, leased.Status, leased.Attempt)
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func event(id domain.EventID, kind string) domain.Event {

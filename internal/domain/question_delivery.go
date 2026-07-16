@@ -94,10 +94,14 @@ func (d QuestionDelivery) Validate() error {
 }
 
 func (d QuestionDelivery) Due(now time.Time) bool {
-	if d.Status != QuestionDeliveryPending && d.Status != QuestionDeliveryRetry {
+	switch d.Status {
+	case QuestionDeliveryPending, QuestionDeliveryRetry:
+		return !now.Before(d.AvailableAt)
+	case QuestionDeliveryLeased:
+		return !now.Before(d.LeaseUntil)
+	default:
 		return false
 	}
-	return !now.Before(d.AvailableAt)
 }
 
 func LeaseQuestionDelivery(current QuestionDelivery, owner string, now, until time.Time) (QuestionDelivery, error) {
@@ -142,6 +146,27 @@ func FailQuestionDelivery(current QuestionDelivery, owner, failureCode string, n
 			return QuestionDelivery{}, errors.New("retryable question delivery requires future retry time")
 		}
 		next.Status, next.AvailableAt = QuestionDeliveryRetry, retryAt
+	}
+	return next, next.Validate()
+}
+
+// ReclaimExpiredQuestionDelivery converts an abandoned lease into a due retry
+// without hiding the ambiguous transport outcome. The caller must reconcile
+// the old attempt when the adapter cannot prove that no message was sent.
+func ReclaimExpiredQuestionDelivery(current QuestionDelivery, now time.Time) (QuestionDelivery, error) {
+	if err := current.Validate(); err != nil {
+		return QuestionDelivery{}, err
+	}
+	if current.Status != QuestionDeliveryLeased || now.IsZero() || now.Before(current.LeaseUntil) {
+		return QuestionDelivery{}, errors.New("question delivery lease is not expired")
+	}
+	next := current
+	next.LeaseOwner, next.LeaseUntil, next.UpdatedAt = "", time.Time{}, now
+	next.LastFailureCode = "LEASE_EXPIRED_RECONCILE"
+	if current.Attempt >= current.MaxAttempts {
+		next.Status = QuestionDeliveryDead
+	} else {
+		next.Status, next.AvailableAt = QuestionDeliveryRetry, now
 	}
 	return next, next.Validate()
 }

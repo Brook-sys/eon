@@ -685,6 +685,15 @@ func (t transaction) SaveQuestionDelivery(v domain.QuestionDelivery, expectedSta
 	if current.QuestionID != v.QuestionID || current.QuestionRevision != v.QuestionRevision || current.Channel != v.Channel || current.DestinationRef != v.DestinationRef || current.CreatedAt != v.CreatedAt || current.MaxAttempts != v.MaxAttempts {
 		return fmt.Errorf("%w: immutable question delivery fields changed", port.ErrConflict)
 	}
+	if v.Status == domain.QuestionDeliveryLeased {
+		question, ok := t.state.operatorQuestions[v.QuestionID]
+		if !ok {
+			return notFound("operator question", v.QuestionID)
+		}
+		if question.Revision != v.QuestionRevision || question.Status.Terminal() {
+			return fmt.Errorf("%w: cannot lease delivery for stale or terminal operator question", port.ErrConflict)
+		}
+	}
 	t.state.questionDeliveries[v.ID] = v
 	return nil
 }

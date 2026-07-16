@@ -131,4 +131,52 @@ func TestDurableStore(t *testing.T, factory DurableFactory) {
 			}
 		}
 	})
+
+	t.Run("question delivery lease survives restart and remains recoverable", func(t *testing.T) {
+		h := factory(t)
+		t.Cleanup(func() {
+			if err := h.Close(); err != nil {
+				t.Errorf("close durable harness: %v", err)
+			}
+		})
+		mission := missionRevision()
+		question := operatorQuestionRecord()
+		delivery := questionDeliveryRecord(question)
+		leaseUntil := delivery.AvailableAt.Add(time.Minute)
+		leased, err := domain.LeaseQuestionDelivery(delivery, "crashed_worker", delivery.AvailableAt, leaseUntil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := h.Store().Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			if err := tx.CreateOperatorQuestion(question); err != nil {
+				return err
+			}
+			if err := tx.CreateQuestionDelivery(delivery); err != nil {
+				return err
+			}
+			return tx.SaveQuestionDelivery(leased, delivery.Status, delivery.Attempt)
+		}); err != nil {
+			t.Fatalf("persist leased delivery: %v", err)
+		}
+
+		reopened, err := h.Restart()
+		if err != nil {
+			t.Fatalf("restart backend: %v", err)
+		}
+		if err := reopened.View(context.Background(), func(r port.Reader) error {
+			due, err := r.DueQuestionDeliveries(leaseUntil, 10)
+			if err != nil {
+				return err
+			}
+			if len(due) != 1 || due[0].ID != delivery.ID || due[0].LeaseOwner != "crashed_worker" {
+				t.Fatalf("recoverable delivery after restart = %#v", due)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 }

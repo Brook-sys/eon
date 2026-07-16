@@ -71,3 +71,25 @@ func TestQuestionDeliveryRejectsLeaseMismatchAndEarlyRetry(t *testing.T) {
 		t.Fatal("past retry accepted")
 	}
 }
+
+func TestQuestionDeliveryExpiredLeaseIsDueAndReclaimable(t *testing.T) {
+	base := pendingDelivery()
+	leaseUntil := base.CreatedAt.Add(time.Minute)
+	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, leaseUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if leased.Due(leaseUntil.Add(-time.Nanosecond)) || !leased.Due(leaseUntil) {
+		t.Fatal("expired lease due boundary is incorrect")
+	}
+	retry, err := ReclaimExpiredQuestionDelivery(leased, leaseUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Status != QuestionDeliveryRetry || !retry.AvailableAt.Equal(leaseUntil) || retry.LastFailureCode != "LEASE_EXPIRED_RECONCILE" {
+		t.Fatalf("reclaimed = %#v", retry)
+	}
+	if _, err := ReclaimExpiredQuestionDelivery(leased, leaseUntil.Add(-time.Nanosecond)); err == nil {
+		t.Fatal("active lease reclaimed")
+	}
+}
