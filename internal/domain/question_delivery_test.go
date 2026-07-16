@@ -87,7 +87,7 @@ func TestQuestionDeliveryRejectsLeaseMismatchAndEarlyRetry(t *testing.T) {
 	}
 }
 
-func TestQuestionDeliveryExpiredLeaseIsDueAndReclaimable(t *testing.T) {
+func TestExpiredLeaseBecomesEffectUnknownAndIsNotAutoleased(t *testing.T) {
 	base := pendingDelivery()
 	leaseUntil := base.CreatedAt.Add(time.Minute)
 	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, leaseUntil)
@@ -97,14 +97,87 @@ func TestQuestionDeliveryExpiredLeaseIsDueAndReclaimable(t *testing.T) {
 	if leased.Due(leaseUntil.Add(-time.Nanosecond)) || !leased.Due(leaseUntil) {
 		t.Fatal("expired lease due boundary is incorrect")
 	}
-	retry, err := ReclaimExpiredQuestionDelivery(leased, leaseUntil)
+	unknown, err := ReclaimExpiredQuestionDelivery(leased, leaseUntil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retry.Status != QuestionDeliveryRetry || !retry.AvailableAt.Equal(leaseUntil) || retry.LastFailureCode != "LEASE_EXPIRED_RECONCILE" {
-		t.Fatalf("reclaimed = %#v", retry)
+	if unknown.Status != QuestionDeliveryEffectUnknown || unknown.LastFailureCode != DeliveryFailureLeaseExpired {
+		t.Fatalf("reclaimed = %#v", unknown)
+	}
+	if unknown.Due(leaseUntil) || unknown.Due(leaseUntil.Add(time.Hour)) {
+		t.Fatal("EFFECT_UNKNOWN must never be auto-due for lease")
+	}
+	if _, err := LeaseQuestionDelivery(unknown, "worker_2", leaseUntil, leaseUntil.Add(time.Minute)); err == nil {
+		t.Fatal("EFFECT_UNKNOWN leased without reconciliation")
 	}
 	if _, err := ReclaimExpiredQuestionDelivery(leased, leaseUntil.Add(-time.Nanosecond)); err == nil {
 		t.Fatal("active lease reclaimed")
+	}
+
+	// Explicit resolve re-enables retry.
+	retry, err := ResolveQuestionDeliveryEffectUnknown(unknown, leaseUntil.Add(time.Second), leaseUntil.Add(2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retry.Status != QuestionDeliveryRetry || !retry.Due(leaseUntil.Add(2*time.Second)) {
+		t.Fatalf("resolved retry = %#v", retry)
+	}
+}
+
+func TestEffectUnknownCanCompleteAfterReconcile(t *testing.T) {
+	base := pendingDelivery()
+	leaseUntil := base.CreatedAt.Add(time.Minute)
+	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, leaseUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := MarkQuestionDeliveryEffectUnknown(leased, leaseUntil, DeliveryFailureLeaseExpired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delivered, err := CompleteQuestionDeliveryAfterReconcile(unknown, "msg_recovered", leaseUntil.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if delivered.Status != QuestionDeliveryDelivered || delivered.TransportMessageID != "msg_recovered" || delivered.LastFailureCode != "" {
+		t.Fatalf("reconciled deliver = %#v", delivered)
+	}
+}
+
+func TestAmbiguousTransportAfterSendParksEffectUnknown(t *testing.T) {
+	base := pendingDelivery()
+	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, base.CreatedAt.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := MarkAmbiguousTransportAfterSend(leased, "worker", base.CreatedAt.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unknown.Status != QuestionDeliveryEffectUnknown || unknown.LastFailureCode != DeliveryFailureAmbiguousTransport {
+		t.Fatalf("ambiguous = %#v", unknown)
+	}
+	if _, err := MarkAmbiguousTransportAfterSend(leased, "other", base.CreatedAt.Add(time.Second)); err == nil {
+		t.Fatal("foreign owner marked ambiguous")
+	}
+}
+
+func TestResolveEffectUnknownExhaustsToDead(t *testing.T) {
+	base := pendingDelivery()
+	base.MaxAttempts = 1
+	leased, err := LeaseQuestionDelivery(base, "worker", base.CreatedAt, base.CreatedAt.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := MarkQuestionDeliveryEffectUnknown(leased, base.CreatedAt.Add(time.Minute), DeliveryFailureLeaseExpired)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dead, err := ResolveQuestionDeliveryEffectUnknown(unknown, base.CreatedAt.Add(time.Minute+time.Second), base.CreatedAt.Add(2*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dead.Status != QuestionDeliveryDead {
+		t.Fatalf("expected dead after exhausted resolve, got %#v", dead)
 	}
 }

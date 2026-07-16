@@ -182,6 +182,124 @@ func TestDeliveryWorkerLeasesAndCompletesTelegramOutbox(t *testing.T) {
 	}
 }
 
+func TestDeliveryWorkerParksExpiredLeaseAsEffectUnknownWithoutResend(t *testing.T) {
+	now := time.Date(2026, 7, 16, 7, 0, 0, 0, time.UTC)
+	sends := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sends++
+		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":99}}`))
+	}))
+	defer server.Close()
+	adapter := testAdapter(t, server)
+	store := memory.New()
+	question := testQuestion(now)
+	leaseUntil := now.Add(time.Minute)
+	pending := domain.QuestionDelivery{SchemaVersion: 1, ID: "delivery_1", QuestionID: question.ID, QuestionRevision: 1, Channel: ChannelName, DestinationRef: "operator_primary", Status: domain.QuestionDeliveryPending, MaxAttempts: 3, AvailableAt: now, CreatedAt: now, UpdatedAt: now}
+	leased, err := domain.LeaseQuestionDelivery(pending, "crashed_worker", now, leaseUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		mission := domain.MissionRevision{SchemaVersion: 1, ID: question.MissionRevision, MissionID: question.MissionID, Revision: 1, OriginalText: "test mission", Purpose: "test", Status: domain.MissionActive, Provenance: "test", AcceptedAt: now}
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		if err := tx.CreateOperatorQuestion(question); err != nil {
+			return err
+		}
+		if err := tx.CreateQuestionDelivery(pending); err != nil {
+			return err
+		}
+		return tx.SaveQuestionDelivery(leased, pending.Status, pending.Attempt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	clock := source.NewManualClock(leaseUntil)
+	worker := DeliveryWorker{Store: store, Adapter: adapter, Clock: clock, Owner: "worker_2", LeaseDuration: time.Minute, RetryDelay: time.Minute}
+	processed, err := worker.ProcessDue(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 {
+		t.Fatalf("processed = %d", processed)
+	}
+	if sends != 0 {
+		t.Fatalf("unexpected resend after lease expiry: %d", sends)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.QuestionDelivery(pending.ID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.QuestionDeliveryEffectUnknown || got.LastFailureCode != domain.DeliveryFailureLeaseExpired {
+			t.Fatalf("delivery = %#v", got)
+		}
+		due, err := r.DueQuestionDeliveries(leaseUntil.Add(time.Hour), 10)
+		if err != nil {
+			return err
+		}
+		if len(due) != 0 {
+			t.Fatalf("EFFECT_UNKNOWN must not be due: %#v", due)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// A second pass must not re-send either.
+	processed, err = worker.ProcessDue(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 0 || sends != 0 {
+		t.Fatalf("second pass processed=%d sends=%d", processed, sends)
+	}
+}
+
+func TestDeliveryWorkerParksAmbiguousTransportAsEffectUnknown(t *testing.T) {
+	now := time.Date(2026, 7, 16, 7, 0, 0, 0, time.UTC)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate truncated / invalid reply after request accepted.
+		_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
+	}))
+	defer server.Close()
+	adapter := testAdapter(t, server)
+	store := memory.New()
+	question := testQuestion(now)
+	delivery := domain.QuestionDelivery{SchemaVersion: 1, ID: "delivery_1", QuestionID: question.ID, QuestionRevision: 1, Channel: ChannelName, DestinationRef: "operator_primary", Status: domain.QuestionDeliveryPending, MaxAttempts: 3, AvailableAt: now, CreatedAt: now, UpdatedAt: now}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		mission := domain.MissionRevision{SchemaVersion: 1, ID: question.MissionRevision, MissionID: question.MissionID, Revision: 1, OriginalText: "test mission", Purpose: "test", Status: domain.MissionActive, Provenance: "test", AcceptedAt: now}
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		if err := tx.CreateOperatorQuestion(question); err != nil {
+			return err
+		}
+		return tx.CreateQuestionDelivery(delivery)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	worker := DeliveryWorker{Store: store, Adapter: adapter, Clock: source.NewManualClock(now), Owner: "worker_1", LeaseDuration: time.Minute, RetryDelay: time.Minute}
+	processed, err := worker.ProcessDue(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if processed != 1 {
+		t.Fatalf("processed = %d", processed)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.QuestionDelivery(delivery.ID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.QuestionDeliveryEffectUnknown || got.LastFailureCode != domain.DeliveryFailureAmbiguousTransport {
+			t.Fatalf("delivery = %#v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDecodeUpdateRejectsAmbiguousAndUnknownPayloads(t *testing.T) {
 	if _, err := DecodeUpdate([]byte(`{"update_id":1,"message":{"message_id":2,"chat":{"id":100}},"extra":true}`)); err == nil {
 		t.Fatal("unknown field accepted")

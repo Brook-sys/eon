@@ -250,24 +250,27 @@ func (w *DeliveryWorker) ProcessDue(ctx context.Context, limit int) (int, error)
 		if candidate.Channel != ChannelName {
 			continue
 		}
+		// Expired leases surface as due LEASED items. Park them as EFFECT_UNKNOWN
+		// and never re-lease in the same pass — re-send requires explicit reconcile.
 		if candidate.Status == domain.QuestionDeliveryLeased {
-			reclaimed, err := domain.ReclaimExpiredQuestionDelivery(candidate, now)
+			parked, err := domain.ReclaimExpiredQuestionDelivery(candidate, now)
 			if err != nil {
 				return processed, err
 			}
 			if err := w.Store.Update(ctx, func(tx port.Transaction) error {
-				return tx.SaveQuestionDelivery(reclaimed, candidate.Status, candidate.Attempt)
+				return tx.SaveQuestionDelivery(parked, candidate.Status, candidate.Attempt)
 			}); err != nil {
 				if errors.Is(err, port.ErrConflict) {
 					continue
 				}
 				return processed, err
 			}
-			candidate = reclaimed
-			if candidate.Status == domain.QuestionDeliveryDead {
-				processed++
-				continue
-			}
+			processed++
+			continue
+		}
+		if candidate.Status.RequiresReconciliation() {
+			// Defensive: due queries must not return EFFECT_UNKNOWN, but skip if they do.
+			continue
 		}
 		leased, err := domain.LeaseQuestionDelivery(candidate, w.Owner, now, now.Add(w.LeaseDuration))
 		if err != nil {
@@ -293,10 +296,14 @@ func (w *DeliveryWorker) ProcessDue(ctx context.Context, limit int) (int, error)
 		if sendErr == nil {
 			final, err = domain.CompleteQuestionDelivery(leased, w.Owner, messageID, finishedAt)
 		} else {
-			code, retryable := classifyFailure(sendErr)
-			if retryable {
+			code, retryable, ambiguous := classifyFailure(sendErr)
+			switch {
+			case ambiguous:
+				// Timeout/truncated reply after the request may already have produced a message.
+				final, err = domain.MarkAmbiguousTransportAfterSend(leased, w.Owner, finishedAt)
+			case retryable:
 				final, err = domain.FailQuestionDelivery(leased, w.Owner, code, finishedAt, finishedAt.Add(w.RetryDelay))
-			} else {
+			default:
 				final, err = domain.PermanentlyFailQuestionDelivery(leased, w.Owner, code, finishedAt)
 			}
 		}
@@ -311,10 +318,20 @@ func (w *DeliveryWorker) ProcessDue(ctx context.Context, limit int) (int, error)
 	return processed, nil
 }
 
-func classifyFailure(err error) (string, bool) {
+func classifyFailure(err error) (code string, retryable bool, ambiguous bool) {
 	var adapterError *Error
 	if errors.As(err, &adapterError) {
-		return string(adapterError.Kind), adapterError.Retryable
+		switch adapterError.Kind {
+		case ErrorTransport:
+			// Network/timeout after the HTTP request may already have delivered the message.
+			return string(adapterError.Kind), false, true
+		case ErrorInvalidReply:
+			// Truncated/unparseable success body is also ambiguous.
+			return string(adapterError.Kind), false, true
+		default:
+			return string(adapterError.Kind), adapterError.Retryable, false
+		}
 	}
-	return "UNKNOWN", false
+	// Unknown errors after send started are treated as ambiguous to avoid silent duplicates.
+	return "UNKNOWN", false, true
 }
