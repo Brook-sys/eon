@@ -120,8 +120,10 @@ Uma pergunta é persistida antes da entrega e independe do canal:
   "schema_version": 1,
   "question_id": "ask_...",
   "mission_id": "mission_...",
+  "mission_revision_id": "mission_revision_...",
   "inquiry_id": "inquiry_...",
   "operation_id": "operation_...",
+  "revision": 1,
   "kind": "SINGLE_CHOICE_WITH_OTHER",
   "prompt": "Que estilo você prefere?",
   "context": "A escolha orientará somente a apresentação do artifact X.",
@@ -133,13 +135,20 @@ Uma pergunta é persistida antes da entrega e independe do canal:
   ],
   "allow_other": true,
   "allow_clarification": true,
-  "blocking_scope": ["artifact:artifact_x"],
-  "default_policy": "CONTINUE_OTHER_WORK",
+  "allow_skip": true,
+  "blocking_scope": [
+    {"kind": "ARTIFACT", "reference": "artifact_x"}
+  ],
+  "fallback_policy": "CONTINUE_OTHER_WORK",
+  "dedup_signature": "style:artifact_x",
+  "priority": 50,
   "status": "PENDING",
   "created_at": "...",
   "expires_at": "..."
 }
 ```
+
+A revisão da pergunta participa da correlação otimista: respostas declaram `expected_question_revision`, e perguntas terminais não aceitam nova transição.
 
 Tipos iniciais:
 
@@ -213,6 +222,8 @@ O gate rejeita ou agrupa perguntas quando:
 - a pergunta é vaga, excessivamente ampla ou sem contexto.
 
 Controles versionados incluem máximo de perguntas pendentes, taxa por janela, cooldown por assinatura e tópico, horário silencioso, agrupamento em digest, prioridade mínima, canais permitidos e política de lembrete. O padrão é sem lembretes; quando autorizados, são poucos, deduplicados e cessam após resposta, expiração ou substituição.
+
+O núcleo inicial retorna `ADMIT`, `SUPPRESS` ou `DEFER`. Admissão não equivale a entrega: persistência da decisão, criação canônica da pergunta e publicação na outbox pertencem à fronteira transacional seguinte. Agrupamento em digest, budget persistido e lembretes continuam como incrementos posteriores.
 
 ## 5. Superfícies do dashboard
 
@@ -418,7 +429,8 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - pause/resume/shutdown gracioso;
 - external event/message inbox;
 - respostas e aprovações;
-- objetos `OperatorQuestion`/`UserAnswer`, correlação forte e `QuestionGate` antispam;
+- contratos e persistência de `OperatorQuestion`/`UserAnswer`, correlação por identidade/revisão, waits locais e núcleo determinístico do `QuestionGate` — implementados;
+- persistência da decisão do gate e integração com inbox/outbox;
 - recibos e optimistic concurrency.
 
 ### Slice C — configuração versionada
