@@ -491,9 +491,13 @@ Residual operacional: selecionar polling ou webhook validado no bootstrap config
 
 ### Slice F — interoperabilidade
 
-- métricas e traces OpenTelemetry;
-- exportador opcional para plataforma externa de observabilidade;
-- alertas e políticas de retenção.
+Baseline de telemetria opcional em `internal/observability`:
+
+- runtime OTel (traces + métricas) desligado por default; falha ou ausência do exportador NÃO afeta o kernel;
+- decorator `InstrumentModel` emite spans `model.complete` e contadores de calls/tokens sem prompt, completion body ou secrets;
+- helpers de controle (`TraceControl`/`EndControl`) marcam unidades de control plane com `motor.telemetry.canonical=false`;
+- exportador OTLP HTTP opcional; testes usam exporter em memória;
+- residual: alertas, políticas de retenção, wiring no bootstrap do runtime e cobertura de mais processadores.
 
 ## 10. Critérios de aceitação do primeiro dashboard
 
