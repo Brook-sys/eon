@@ -1,0 +1,398 @@
+package inspect_test
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"motor-autonomo/internal/control"
+	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/inspect"
+	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/storage/memory"
+)
+
+func TestProjectorOverviewAndEventPagination(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+
+	overview, err := projector.BuildOverview(context.Background(), mission.MissionID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.ProcessMode != domain.ProcessRunning {
+		t.Fatalf("process mode = %s", overview.ProcessMode)
+	}
+	if overview.EventHeadSequence == 0 {
+		t.Fatal("expected event head after seed")
+	}
+	if overview.Mission == nil || overview.Mission.ActiveRevisionID != mission.ID {
+		t.Fatalf("mission overview = %#v", overview.Mission)
+	}
+	if overview.Mission.Agenda.Total != 1 || overview.Mission.Agenda.Ready != 1 {
+		t.Fatalf("agenda = %#v", overview.Mission.Agenda)
+	}
+	if len(overview.Mission.Operations) != 1 || overview.Mission.Operations[0].ID != operation.ID {
+		t.Fatalf("operations = %#v", overview.Mission.Operations)
+	}
+
+	page, err := projector.ListEvents(context.Background(), inspect.EventFilter{Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Events) != 1 || page.NextSequence != page.Events[0].Sequence {
+		t.Fatalf("page = %#v", page)
+	}
+	next, err := projector.ListEvents(context.Background(), inspect.EventFilter{AfterSequence: page.NextSequence, Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(next.Events) == 0 {
+		t.Fatal("expected remaining events after first page")
+	}
+	if next.Events[0].Sequence <= page.NextSequence {
+		t.Fatalf("pagination regressed: first=%d second=%d", page.NextSequence, next.Events[0].Sequence)
+	}
+
+	filtered, err := projector.ListEvents(context.Background(), inspect.EventFilter{
+		OperationID: operation.ID,
+		Limit:       10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filtered.Events) == 0 {
+		t.Fatal("expected operation-correlated events")
+	}
+	for _, event := range filtered.Events {
+		if event.OperationID != operation.ID {
+			t.Fatalf("filter leak: %#v", event)
+		}
+	}
+}
+
+func TestOperationInspectorCorrelatesCommitChain(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	commit := domain.Commit{
+		SchemaVersion: domain.SchemaVersionV1, ID: "commit_1", AcceptedChangeSetID: "accepted_1",
+		MissionRevision: mission.ID, BaseCommitID: domain.GenesisCommitID, Version: 1,
+		CommittedAt: now, ReceiptID: "commit_receipt_1", IdempotencyKey: operation.IdempotencyKey,
+	}
+	accepted := domain.AcceptedChangeSet{
+		SchemaVersion: domain.SchemaVersionV1, ID: "accepted_1", ProposedChangeSetID: "proposed_1",
+		ValidationReceiptIDs: []domain.ReceiptID{"validation_1"}, AcceptedAt: now, PolicyVersion: "v1",
+	}
+	proposed := domain.ProposedChangeSet{
+		SchemaVersion: domain.SchemaVersionV1, ID: "proposed_1", MissionRevision: mission.ID,
+		OperationID: operation.ID, BaseCommitID: domain.GenesisCommitID, ReadSet: []string{"fragment_1"},
+		Preconditions: []string{}, Changes: []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "observation_1", PayloadRef: "payload_1"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"}, Provenance: "model:fake", IdempotencyKey: operation.IdempotencyKey,
+	}
+	raw := domain.RawModelOutput{
+		SchemaVersion: domain.SchemaVersionV1, ID: "artifact_validation_1", OperationID: operation.ID,
+		Model: "fake", Content: `{"ok":true}`, ContentHash: "hash_validation_1", CreatedAt: now,
+	}
+	validation := domain.ValidationReceipt{
+		SchemaVersion: domain.SchemaVersionV1, ID: "validation_1", OperationID: operation.ID,
+		ChangeSetID: proposed.ID, ValidatorID: "schema", Passed: true, ArtifactRef: raw.ID,
+		ProducedAt: now,
+	}
+	commitReceipt := domain.CommitReceipt{
+		SchemaVersion: domain.SchemaVersionV1, ID: "commit_receipt_1", CommitID: commit.ID,
+		ChangeSetID: accepted.ID, OperationID: operation.ID, Version: 1, ProducedAt: now,
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendRawModelOutput(raw); err != nil {
+			return err
+		}
+		if err := tx.AppendProposedChangeSet(proposed); err != nil {
+			return err
+		}
+		if err := tx.AppendValidationReceipt(validation); err != nil {
+			return err
+		}
+		if err := tx.AppendAcceptedChangeSet(accepted); err != nil {
+			return err
+		}
+		if err := tx.ApplyCommit(commit, commitReceipt, proposed.Changes); err != nil {
+			return err
+		}
+		_, err := tx.AppendEvent(domain.Event{
+			SchemaVersion: domain.SchemaVersionV1, ID: "event_commit", Kind: "knowledge.commit.applied",
+			OccurredAt: now, MissionRevision: mission.ID, OperationID: operation.ID, CommitID: commit.ID,
+			PayloadRef: string(proposed.ID),
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Spec == nil || detail.Inquiry == nil || detail.Question == nil {
+		t.Fatalf("missing lineage: %#v", detail)
+	}
+	if len(detail.Commits) != 1 || detail.Commits[0].ID != commit.ID {
+		t.Fatalf("commits = %#v", detail.Commits)
+	}
+	if len(detail.Proposed) != 1 || detail.Proposed[0].ID != proposed.ID {
+		t.Fatalf("proposed = %#v", detail.Proposed)
+	}
+	if len(detail.Events) == 0 {
+		t.Fatal("expected correlated events")
+	}
+
+	commitDetail, err := projector.CommitInspector(context.Background(), commit.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commitDetail.Proposed == nil || commitDetail.Accepted == nil || commitDetail.Receipt == nil {
+		t.Fatalf("commit detail incomplete: %#v", commitDetail)
+	}
+}
+
+func TestCommandInspectorAndHTTPReadOnlySurface(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(100)
+	inbox, err := control.NewCommandInbox(store, control.FixedReceiptFactory("receipt_cmd", now))
+	if err != nil {
+		t.Fatal(err)
+	}
+	revision := mission.Revision
+	pause := domain.OperatorCommand{
+		SchemaVersion: domain.SchemaVersionV1, ID: "cmd_pause", IdempotencyKey: "idem_pause_inspect",
+		ActorType: domain.ActorOperator, ActorID: "operator_1", Kind: domain.CommandPauseMission,
+		Target: domain.CommandTarget{MissionID: mission.MissionID}, ExpectedRevision: &revision,
+		Reason: "inspect test", SubmittedAt: now,
+	}
+	if _, err := inbox.SubmitCommand(pause); err != nil {
+		t.Fatal(err)
+	}
+	processor, err := kernel.NewCommandProcessor(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := processor.ProcessNext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+	commandDetail, err := projector.CommandInspector(context.Background(), pause.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if commandDetail.Receipt.State != domain.CommandApplied {
+		t.Fatalf("receipt = %#v", commandDetail.Receipt)
+	}
+	if len(commandDetail.Events) == 0 {
+		t.Fatal("expected command audit events")
+	}
+
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	// Health and version.
+	mustStatus(t, server.URL+"/health", http.StatusOK)
+	mustStatus(t, server.URL+"/version", http.StatusOK)
+
+	// Overview with mission.
+	resp := mustGET(t, server.URL+"/overview?mission_id="+string(mission.MissionID))
+	defer resp.Body.Close()
+	var overview inspect.Overview
+	if err := json.NewDecoder(resp.Body).Decode(&overview); err != nil {
+		t.Fatal(err)
+	}
+	if overview.Mission == nil {
+		t.Fatal("expected mission in overview")
+	}
+	if overview.Mission.DispatchAllowsNew {
+		t.Fatalf("paused mission still allows dispatch: %#v", overview.Mission)
+	}
+
+	// Events resume by sequence.
+	eventsResp := mustGET(t, server.URL+"/events?limit=1")
+	defer eventsResp.Body.Close()
+	var page inspect.EventPage
+	if err := json.NewDecoder(eventsResp.Body).Decode(&page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Events) != 1 {
+		t.Fatalf("events page = %#v", page)
+	}
+	resume := mustGET(t, server.URL+"/events?after_sequence="+itoa(page.NextSequence)+"&limit=50")
+	defer resume.Body.Close()
+	var page2 inspect.EventPage
+	if err := json.NewDecoder(resume.Body).Decode(&page2); err != nil {
+		t.Fatal(err)
+	}
+	if len(page2.Events) == 0 {
+		t.Fatal("resume page empty")
+	}
+
+	// Operation inspector endpoint.
+	opResp := mustGET(t, server.URL+"/operations/"+string(operation.ID))
+	defer opResp.Body.Close()
+	if opResp.StatusCode != http.StatusOK {
+		t.Fatalf("operation status = %d", opResp.StatusCode)
+	}
+
+	// Command endpoint.
+	cmdResp := mustGET(t, server.URL+"/commands/"+string(pause.ID))
+	defer cmdResp.Body.Close()
+	if cmdResp.StatusCode != http.StatusOK {
+		t.Fatalf("command status = %d", cmdResp.StatusCode)
+	}
+
+	// Missing resource.
+	missing := mustGET(t, server.URL+"/operations/operation_missing")
+	defer missing.Body.Close()
+	if missing.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing status = %d", missing.StatusCode)
+	}
+
+	// Read-only: POST is not registered.
+	post, err := http.Post(server.URL+"/overview", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer post.Body.Close()
+	if post.StatusCode != http.StatusMethodNotAllowed && post.StatusCode != http.StatusNotFound {
+		t.Fatalf("unexpected write status = %d", post.StatusCode)
+	}
+}
+
+func seedRuntime(t *testing.T) (*memory.Store, domain.MissionRevision, domain.Operation, time.Time) {
+	t.Helper()
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 4, 0, 0, 0, time.UTC)
+	mission := domain.MissionRevision{
+		SchemaVersion: domain.SchemaVersionV1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+		OriginalText: "inspect mission", Purpose: "inspect", Status: domain.MissionActive,
+		Provenance: "fixture", AcceptedAt: now,
+	}
+	spec := domain.OperationSpec{
+		SchemaVersion: domain.SchemaVersionV1, ID: "spec_1", ContractVersion: 1, TemplateVersion: 1,
+		InputSchema: "input", OutputSchema: "output", Budget: domain.Budget{Tokens: 100, ModelCalls: 1, Attempts: 1},
+		MaxOutputTokens: 20, SafetyMargin: 5, Validators: []string{"schema"}, RetryPolicy: "none",
+		FallbackPolicy: "none", MaximumAuthority: domain.AuthorityProposeOnly,
+	}
+	question := domain.Question{
+		SchemaVersion: domain.SchemaVersionV1, ID: "question_1", MissionRevision: mission.ID,
+		Text: "What is known?", Origin: "fixture", Relevance: "core", AnswerCondition: "cited claim",
+	}
+	candidate := domain.InquiryCandidate{
+		SchemaVersion: domain.SchemaVersionV1, ID: "candidate_1", MissionRevision: mission.ID, QuestionID: question.ID,
+		DerivedFrom: []string{"mission"}, ExpectedProgress: "one claim", Novelty: "new", EstimatedCost: domain.Budget{Tokens: 50},
+		Risk: domain.RiskLow, SourcePlan: []string{"fixture"}, AnswerCondition: "cited claim", StopCondition: "done", ReviewAfter: now.Add(time.Hour),
+	}
+	inquiry := domain.Inquiry{
+		SchemaVersion: domain.SchemaVersionV1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: mission.ID,
+		QuestionID: question.ID, AdmissionReason: "seed", Budget: domain.Budget{Tokens: 50}, StopCondition: "done",
+		State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+	}
+	operation := domain.Operation{
+		SchemaVersion: domain.SchemaVersionV1, ID: "operation_1", InquiryID: inquiry.ID, MissionRevision: mission.ID,
+		SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"}, ExpectedOutput: "proposed_change_set",
+		IdempotencyKey: "idem_op_1", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		if err := tx.ActivateMissionRevision(mission.MissionID, mission.ID); err != nil {
+			return err
+		}
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		if err := tx.CreateOperation(operation); err != nil {
+			return err
+		}
+		if _, err := tx.AppendEvent(domain.Event{
+			SchemaVersion: domain.SchemaVersionV1, ID: "event_mission", Kind: "mission.revision_activated",
+			OccurredAt: now, MissionRevision: mission.ID, PayloadRef: string(mission.ID),
+		}); err != nil {
+			return err
+		}
+		_, err := tx.AppendEvent(domain.Event{
+			SchemaVersion: domain.SchemaVersionV1, ID: "event_agenda", Kind: "agenda.work_created",
+			OccurredAt: now.Add(time.Second), MissionRevision: mission.ID, InquiryID: inquiry.ID,
+			OperationID: operation.ID, PayloadRef: string(question.ID),
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return store, mission, operation, now
+}
+
+func mustGET(t *testing.T, url string) *http.Response {
+	t.Helper()
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp
+}
+
+func mustStatus(t *testing.T, url string, want int) {
+	t.Helper()
+	resp := mustGET(t, url)
+	defer resp.Body.Close()
+	if resp.StatusCode != want {
+		t.Fatalf("%s status = %d want %d", url, resp.StatusCode, want)
+	}
+}
+
+func itoa(v uint64) string {
+	return strconvFormatUint(v)
+}
+
+func strconvFormatUint(v uint64) string {
+	// local tiny helper to avoid importing strconv in multiple places of helpers
+	const digits = "0123456789"
+	if v == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for v > 0 {
+		i--
+		buf[i] = digits[v%10]
+		v /= 10
+	}
+	return string(buf[i:])
+}

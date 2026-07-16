@@ -417,11 +417,12 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 ### Slice A — API de inspeção
 
-- health/version;
-- estado da missão e scheduler;
-- agenda e operação atual;
-- consulta paginada ao event log;
-- detalhe correlacionado de operação, tentativa, chamada e commit.
+- health/version — implementado (`inspect.API` `GET /health`, `GET /version`);
+- estado da missão e scheduler — implementado em `GET /overview` e `GET /missions/{id}` (process mode, dispatch mode, agenda counts);
+- agenda e operação atual — implementado (`GET /missions/{id}/operations`, summaries por estado);
+- consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
+- detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log);
+- residual: SSE ao vivo, redaction fina de payloads sensíveis e submit de comandos via HTTP (Slice B residual).
 
 ### Slice B — controle seguro
 
