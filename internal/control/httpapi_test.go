@@ -385,6 +385,187 @@ func newControlAPI(t *testing.T, store port.Store, clock source.Clock, ids sourc
 	return api
 }
 
+func newControlAPIWithConfig(t *testing.T, store port.Store, clock source.Clock, ids source.IDGenerator) *control.API {
+	t.Helper()
+	api := newControlAPI(t, store, clock, ids)
+	applier, err := kernel.NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	api.ConfigValidate = applier
+	api.ConfigApply = applier
+	return api
+}
+
+func TestControlAPIConfigDraftLifecycle(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 19, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(90)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	policy := domain.DefaultInterruptionRuntimePolicy()
+	policy.MaxPending = 5
+	createBody := map[string]any{
+		"schema_version": 1,
+		"scope":          "INTERRUPTION",
+		"reason":         "raise pending via admin",
+		"interruption":   policy,
+	}
+	created := mustPOSTJSON(t, server.URL+"/config/drafts", createBody)
+	defer created.Body.Close()
+	if created.StatusCode != http.StatusAccepted {
+		t.Fatalf("create status = %d body=%s", created.StatusCode, readBody(t, created))
+	}
+	var createResp struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &createResp)
+	if createResp.Draft.ID == "" || createResp.Draft.Status != domain.ConfigDraftOpen {
+		t.Fatalf("create draft = %#v", createResp.Draft)
+	}
+	draftID := string(createResp.Draft.ID)
+
+	listed := mustGET(t, server.URL+"/config/drafts?scope=INTERRUPTION&status=OPEN")
+	defer listed.Body.Close()
+	if listed.StatusCode != http.StatusOK {
+		t.Fatalf("list status = %d body=%s", listed.StatusCode, readBody(t, listed))
+	}
+	var listBody struct {
+		Drafts []domain.ConfigDraft `json:"drafts"`
+	}
+	decodeJSON(t, listed.Body, &listBody)
+	if len(listBody.Drafts) != 1 || string(listBody.Drafts[0].ID) != draftID {
+		t.Fatalf("listed drafts = %#v", listBody.Drafts)
+	}
+
+	got := mustGET(t, server.URL+"/config/drafts/"+draftID)
+	defer got.Body.Close()
+	if got.StatusCode != http.StatusOK {
+		t.Fatalf("get draft status = %d", got.StatusCode)
+	}
+
+	validated := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/validate", map[string]any{})
+	defer validated.Body.Close()
+	if validated.StatusCode != http.StatusOK {
+		t.Fatalf("validate status = %d body=%s", validated.StatusCode, readBody(t, validated))
+	}
+	var validateResp struct {
+		Draft   domain.ConfigDraft         `json:"draft"`
+		Preview domain.ConfigImpactPreview `json:"preview"`
+	}
+	decodeJSON(t, validated.Body, &validateResp)
+	if validateResp.Draft.Status != domain.ConfigDraftValidated || validateResp.Preview.Blocked {
+		t.Fatalf("validate resp = %#v", validateResp)
+	}
+
+	clock.Advance(time.Second)
+	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/apply", map[string]any{})
+	defer applied.Body.Close()
+	if applied.StatusCode != http.StatusOK {
+		t.Fatalf("apply status = %d body=%s", applied.StatusCode, readBody(t, applied))
+	}
+	var applyResp struct {
+		Revision domain.ConfigRevision     `json:"revision"`
+		Receipt  domain.ConfigApplyReceipt `json:"receipt"`
+	}
+	decodeJSON(t, applied.Body, &applyResp)
+	if applyResp.Revision.Revision != 1 || applyResp.Receipt.State != domain.ConfigApplyApplied {
+		t.Fatalf("apply resp = %#v", applyResp)
+	}
+
+	// Replay apply is pure.
+	replay := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/apply", map[string]any{})
+	defer replay.Body.Close()
+	if replay.StatusCode != http.StatusOK {
+		t.Fatalf("replay apply status = %d body=%s", replay.StatusCode, readBody(t, replay))
+	}
+
+	active := mustGET(t, server.URL+"/config/revisions/active?scope=INTERRUPTION")
+	defer active.Body.Close()
+	if active.StatusCode != http.StatusOK {
+		t.Fatalf("active status = %d body=%s", active.StatusCode, readBody(t, active))
+	}
+	var activeBody struct {
+		Revision domain.ConfigRevision `json:"revision"`
+	}
+	decodeJSON(t, active.Body, &activeBody)
+	if activeBody.Revision.ID != applyResp.Revision.ID || activeBody.Revision.Interruption == nil || activeBody.Revision.Interruption.MaxPending != 5 {
+		t.Fatalf("active revision = %#v", activeBody.Revision)
+	}
+
+	revisions := mustGET(t, server.URL+"/config/revisions?scope=INTERRUPTION")
+	defer revisions.Body.Close()
+	if revisions.StatusCode != http.StatusOK {
+		t.Fatalf("revisions status = %d", revisions.StatusCode)
+	}
+	var revBody struct {
+		Revisions []domain.ConfigRevision `json:"revisions"`
+	}
+	decodeJSON(t, revisions.Body, &revBody)
+	if len(revBody.Revisions) != 1 {
+		t.Fatalf("revisions = %#v", revBody.Revisions)
+	}
+
+	receipt := mustGET(t, server.URL+"/config/drafts/"+draftID+"/receipt")
+	defer receipt.Body.Close()
+	if receipt.StatusCode != http.StatusOK {
+		t.Fatalf("receipt status = %d", receipt.StatusCode)
+	}
+	var receiptBody domain.ConfigApplyReceipt
+	decodeJSON(t, receipt.Body, &receiptBody)
+	if receiptBody.State != domain.ConfigApplyApplied {
+		t.Fatalf("receipt = %#v", receiptBody)
+	}
+}
+
+func TestControlAPIConfigValidateApplyRequireWiring(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 19, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(100)
+	api := newControlAPI(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	policy := domain.DefaultInterruptionRuntimePolicy()
+	createBody := map[string]any{
+		"schema_version": 1,
+		"scope":          "INTERRUPTION",
+		"reason":         "unwired validate",
+		"interruption":   policy,
+	}
+	created := mustPOSTJSON(t, server.URL+"/config/drafts", createBody)
+	defer created.Body.Close()
+	if created.StatusCode != http.StatusAccepted {
+		t.Fatalf("create status = %d body=%s", created.StatusCode, readBody(t, created))
+	}
+	var createResp struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &createResp)
+	draftID := string(createResp.Draft.ID)
+
+	validated := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/validate", map[string]any{})
+	defer validated.Body.Close()
+	if validated.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("validate without wiring status = %d body=%s", validated.StatusCode, readBody(t, validated))
+	}
+	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/apply", map[string]any{})
+	defer applied.Body.Close()
+	if applied.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("apply without wiring status = %d body=%s", applied.StatusCode, readBody(t, applied))
+	}
+
+	missingScope := mustGET(t, server.URL+"/config/drafts")
+	defer missingScope.Body.Close()
+	if missingScope.StatusCode != http.StatusBadRequest {
+		t.Fatalf("missing scope status = %d", missingScope.StatusCode)
+	}
+}
+
 func seedMission(t *testing.T, store port.Store, now time.Time) {
 	t.Helper()
 	mission := domain.MissionRevision{

@@ -39,7 +39,11 @@ type QuestionGateProcessor struct {
 	IDs           source.IDGenerator
 	Policy        QuestionGatePolicy
 	PolicyVersion string
-	Routes        []QuestionRoute
+	// ResolveActivePolicy, when true, loads the active INTERRUPTION revision
+	// (or the conservative default) on each Process call. Explicit Policy and
+	// PolicyVersion still win when ResolveActivePolicy is false.
+	ResolveActivePolicy bool
+	Routes              []QuestionRoute
 }
 
 func NewQuestionGateProcessor(store port.Store, clock source.Clock, ids source.IDGenerator, policy QuestionGatePolicy, policyVersion string, routes []QuestionRoute) (*QuestionGateProcessor, error) {
@@ -55,6 +59,37 @@ func NewQuestionGateProcessor(store port.Store, clock source.Clock, ids source.I
 		}
 	}
 	return &QuestionGateProcessor{Store: store, Clock: clock, IDs: ids, Policy: policy, PolicyVersion: policyVersion, Routes: append([]QuestionRoute(nil), routes...)}, nil
+}
+
+// NewActiveQuestionGateProcessor constructs a processor that always evaluates
+// against the active durable interruption policy (or default).
+func NewActiveQuestionGateProcessor(store port.Store, clock source.Clock, ids source.IDGenerator, routes []QuestionRoute) (*QuestionGateProcessor, error) {
+	if store == nil || clock == nil || ids == nil {
+		return nil, errors.New("active question gate processor requires store, clock, and IDs")
+	}
+	for i, route := range routes {
+		if err := route.Validate(); err != nil {
+			return nil, fmt.Errorf("validate question route %d: %w", i, err)
+		}
+	}
+	// Seed with defaults so Validate would pass if ResolveActivePolicy is later disabled.
+	defaultPolicy, defaultVersion, err := QuestionGatePolicyFromInterruption(domain.DefaultInterruptionRuntimePolicy())
+	if err != nil {
+		return nil, err
+	}
+	return &QuestionGateProcessor{
+		Store: store, Clock: clock, IDs: ids,
+		Policy: defaultPolicy, PolicyVersion: defaultVersion,
+		ResolveActivePolicy: true,
+		Routes:              append([]QuestionRoute(nil), routes...),
+	}, nil
+}
+
+func (p *QuestionGateProcessor) effectivePolicy(ctx context.Context) (QuestionGatePolicy, string, error) {
+	if !p.ResolveActivePolicy {
+		return p.Policy, p.PolicyVersion, nil
+	}
+	return ActiveQuestionGatePolicy(ctx, p.Store)
 }
 
 func (p *QuestionGateProcessor) Process(ctx context.Context, proposal domain.OperatorQuestionProposal) (domain.QuestionGateDecisionRecord, error) {
@@ -82,6 +117,17 @@ func (p *QuestionGateProcessor) Process(ctx context.Context, proposal domain.Ope
 		return existing, nil
 	}
 
+	policy, policyVersion, err := p.effectivePolicy(ctx)
+	if err != nil {
+		return domain.QuestionGateDecisionRecord{}, err
+	}
+	if err := policy.Validate(); err != nil {
+		return domain.QuestionGateDecisionRecord{}, err
+	}
+	if policyVersion == "" {
+		return domain.QuestionGateDecisionRecord{}, errors.New("question gate policy version is required")
+	}
+
 	now := p.Clock.Now().UTC()
 	decisionID, err := p.IDs.NewID("question_gate")
 	if err != nil {
@@ -99,11 +145,11 @@ func (p *QuestionGateProcessor) Process(ctx context.Context, proposal domain.Ope
 		if err != nil {
 			return err
 		}
-		result, err := EvaluateQuestion(p.Policy, now, proposal, history)
+		result, err := EvaluateQuestion(policy, now, proposal, history)
 		if err != nil {
 			return err
 		}
-		final = persistedQuestionGateDecision(decisionID, proposal, result, p.PolicyVersion, now)
+		final = persistedQuestionGateDecision(decisionID, proposal, result, policyVersion, now)
 		if err := tx.CreateQuestionGateDecision(final); err != nil {
 			return err
 		}

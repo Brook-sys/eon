@@ -1222,6 +1222,21 @@ func TestStore(t *testing.T, factory Factory) {
 			if err != nil || gotReceipt.State != domain.ConfigApplyApplied {
 				t.Fatalf("receipt = %#v err=%v", gotReceipt, err)
 			}
+			allDrafts, err := r.ConfigDrafts(domain.ConfigScopeInterruption, "")
+			if err != nil || len(allDrafts) != 2 {
+				t.Fatalf("all drafts = %#v err=%v", allDrafts, err)
+			}
+			if allDrafts[0].ID != nextDraft.ID || allDrafts[1].ID != draft.ID {
+				t.Fatalf("draft order = %#v", allDrafts)
+			}
+			appliedOnly, err := r.ConfigDrafts(domain.ConfigScopeInterruption, domain.ConfigDraftApplied)
+			if err != nil || len(appliedOnly) != 2 {
+				t.Fatalf("applied drafts = %#v err=%v", appliedOnly, err)
+			}
+			openOnly, err := r.ConfigDrafts(domain.ConfigScopeInterruption, domain.ConfigDraftOpen)
+			if err != nil || len(openOnly) != 0 {
+				t.Fatalf("open drafts = %#v err=%v", openOnly, err)
+			}
 			return nil
 		}); err != nil {
 			t.Fatal(err)

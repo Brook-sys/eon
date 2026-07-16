@@ -175,6 +175,9 @@ type ContinuityWriter interface {
 // Active revision is the last applied pointer per scope.
 type ConfigReader interface {
 	ConfigDraft(domain.ConfigDraftID) (domain.ConfigDraft, error)
+	// ConfigDrafts returns drafts for a scope, newest first by CreatedAt then ID.
+	// Empty status returns all drafts; otherwise filters by exact status.
+	ConfigDrafts(domain.ConfigScope, domain.ConfigDraftStatus) ([]domain.ConfigDraft, error)
 	ConfigRevision(domain.ConfigRevisionID) (domain.ConfigRevision, error)
 	ActiveConfigRevision(domain.ConfigScope) (domain.ConfigRevision, error)
 	ConfigRevisions(domain.ConfigScope) ([]domain.ConfigRevision, error)

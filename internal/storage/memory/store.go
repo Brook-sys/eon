@@ -240,6 +240,9 @@ func (t transaction) LatestContinuityDiagnosis(id domain.MissionRevisionID) (dom
 func (t transaction) ConfigDraft(id domain.ConfigDraftID) (domain.ConfigDraft, error) {
 	return reader(t).ConfigDraft(id)
 }
+func (t transaction) ConfigDrafts(scope domain.ConfigScope, status domain.ConfigDraftStatus) ([]domain.ConfigDraft, error) {
+	return reader(t).ConfigDrafts(scope, status)
+}
 func (t transaction) ConfigRevision(id domain.ConfigRevisionID) (domain.ConfigRevision, error) {
 	return reader(t).ConfigRevision(id)
 }
@@ -638,6 +641,31 @@ func (r reader) ConfigDraft(id domain.ConfigDraftID) (domain.ConfigDraft, error)
 		return domain.ConfigDraft{}, notFound("config draft", id)
 	}
 	return cloneConfigDraft(v), nil
+}
+func (r reader) ConfigDrafts(scope domain.ConfigScope, status domain.ConfigDraftStatus) ([]domain.ConfigDraft, error) {
+	if !scope.Valid() {
+		return nil, fmt.Errorf("config draft query requires valid scope")
+	}
+	if status != "" && !status.Valid() {
+		return nil, fmt.Errorf("config draft query has invalid status %q", status)
+	}
+	result := make([]domain.ConfigDraft, 0)
+	for _, draft := range r.state.configDrafts {
+		if draft.Scope != scope {
+			continue
+		}
+		if status != "" && draft.Status != status {
+			continue
+		}
+		result = append(result, cloneConfigDraft(draft))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID > result[j].ID
+		}
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
+	return result, nil
 }
 func (r reader) ConfigRevision(id domain.ConfigRevisionID) (domain.ConfigRevision, error) {
 	v, ok := r.state.configRevisions[id]

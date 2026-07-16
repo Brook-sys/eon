@@ -74,11 +74,21 @@ func (s Scheduler) policy() domain.HorizonPolicy {
 	return s.Policy
 }
 
+// resolvePolicy prefers an explicit non-zero Policy, then the active durable
+// HORIZON revision, then the built-in default. Explicit still wins so unit
+// tests and callers can pin a horizon without mutating the store.
+func (s Scheduler) resolvePolicy(ctx context.Context) (domain.HorizonPolicy, error) {
+	return ResolveHorizonPolicy(ctx, s.Store, s.Policy)
+}
+
 func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevisionID) (Decision, error) {
 	if s.Store == nil || s.Clock == nil || missionRevision == "" {
 		return Decision{}, errors.New("invalid scheduler configuration")
 	}
-	policy := s.policy()
+	policy, err := s.resolvePolicy(ctx)
+	if err != nil {
+		return Decision{}, fmt.Errorf("horizon policy: %w", err)
+	}
 	if err := policy.Validate(); err != nil {
 		return Decision{}, fmt.Errorf("horizon policy: %w", err)
 	}

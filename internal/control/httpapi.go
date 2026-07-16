@@ -18,12 +18,24 @@ import (
 
 const maxSubmitBodyBytes = domain.MaxControlPayloadBytes
 
+// ConfigDraftValidator marks OPEN drafts VALIDATED (or REJECTED) without
+// elevating payload text into authority. Implemented by kernel.ConfigApplier.
+type ConfigDraftValidator interface {
+	ValidateDraft(context.Context, domain.ConfigDraftID) (domain.ConfigImpactPreview, domain.ConfigDiff, error)
+}
+
+// ConfigDraftApplicator promotes a VALIDATED draft to an immutable revision.
+// Implemented by kernel.ConfigApplier.
+type ConfigDraftApplicator interface {
+	ApplyDraft(context.Context, domain.ConfigDraftID) (domain.ConfigRevision, domain.ConfigApplyReceipt, error)
+}
+
 // API is the mutable Control API surface for Slice B. It accepts commands and
 // external events into durable inboxes; kernel processors own effects.
 //
 // Auth and local bind remain deployment concerns. This package never elevates
 // untrusted content into policy and never mutates canonical domain state
-// beyond inbox persistence.
+// beyond inbox persistence and operator-authored config drafts.
 type API struct {
 	Commands  *CommandInbox
 	Events    *ExternalEventInbox
@@ -35,6 +47,10 @@ type API struct {
 	DefaultActorID string
 	// DefaultSource labels external events submitted through this API.
 	DefaultSource string
+	// ConfigValidate/ConfigApply are optional. Without them, draft create/list
+	// and active-revision reads still work; validate/apply return 503.
+	ConfigValidate ConfigDraftValidator
+	ConfigApply    ConfigDraftApplicator
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -65,6 +81,14 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /questions", a.handleListQuestions)
 	mux.HandleFunc("GET /questions/{questionID}", a.handleGetQuestion)
 	mux.HandleFunc("POST /questions/{questionID}/answers", a.handleSubmitQuestionAnswer)
+	mux.HandleFunc("GET /config/drafts", a.handleListConfigDrafts)
+	mux.HandleFunc("POST /config/drafts", a.handleCreateConfigDraft)
+	mux.HandleFunc("GET /config/drafts/{draftID}", a.handleGetConfigDraft)
+	mux.HandleFunc("POST /config/drafts/{draftID}/validate", a.handleValidateConfigDraft)
+	mux.HandleFunc("POST /config/drafts/{draftID}/apply", a.handleApplyConfigDraft)
+	mux.HandleFunc("GET /config/drafts/{draftID}/receipt", a.handleGetConfigApplyReceipt)
+	mux.HandleFunc("GET /config/revisions/active", a.handleGetActiveConfigRevision)
+	mux.HandleFunc("GET /config/revisions", a.handleListConfigRevisions)
 	return mux
 }
 
@@ -317,6 +341,254 @@ func (a *API) handleGetExternalEventDisposition(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, disposition)
 }
 
+type configDraftCreateRequest struct {
+	SchemaVersion   int                               `json:"schema_version"`
+	DraftID         domain.ConfigDraftID              `json:"draft_id,omitempty"`
+	Scope           domain.ConfigScope                `json:"scope"`
+	BasedOnRevision uint64                            `json:"based_on_revision"`
+	Applicability   domain.ConfigApplicability        `json:"applicability"`
+	ActorType       domain.ActorType                  `json:"actor_type"`
+	ActorID         string                            `json:"actor_id"`
+	Reason          string                            `json:"reason"`
+	Runtime         *domain.RuntimeProcessConfig      `json:"runtime,omitempty"`
+	Scheduler       *domain.SchedulerCadenceConfig    `json:"scheduler,omitempty"`
+	Horizon         *domain.HorizonPolicy             `json:"horizon,omitempty"`
+	Interruption    *domain.InterruptionRuntimePolicy `json:"interruption,omitempty"`
+	Channels        *domain.ChannelsConfig            `json:"channels,omitempty"`
+	CreatedAt       *time.Time                        `json:"created_at,omitempty"`
+}
+
+func (a *API) handleCreateConfigDraft(w http.ResponseWriter, r *http.Request) {
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req configDraftCreateRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if req.SchemaVersion == 0 {
+		req.SchemaVersion = domain.SchemaVersionV1
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	if actorID == "" {
+		actorID = a.DefaultActorID
+	}
+	actorType := req.ActorType
+	if actorType == "" {
+		actorType = a.ActorType
+	}
+	applicability := req.Applicability
+	if applicability == "" {
+		applicability = domain.DefaultApplicabilityForScope(req.Scope)
+	}
+	createdAt := a.Clock.Now().UTC()
+	if req.CreatedAt != nil {
+		createdAt = req.CreatedAt.UTC()
+	}
+	draftID := req.DraftID
+	if draftID == "" {
+		id, idErr := a.IDs.NewID("cfgdraft")
+		if idErr != nil {
+			writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "identity_failed", message: "could not assign draft identity"})
+			return
+		}
+		draftID = domain.ConfigDraftID(id)
+	}
+	draft := domain.ConfigDraft{
+		SchemaVersion: req.SchemaVersion, ID: draftID, Scope: req.Scope,
+		BasedOnRevision: req.BasedOnRevision, Applicability: applicability,
+		Status: domain.ConfigDraftOpen, ActorType: actorType, ActorID: actorID,
+		Reason: strings.TrimSpace(req.Reason), Runtime: req.Runtime, Scheduler: req.Scheduler,
+		Horizon: req.Horizon, Interruption: req.Interruption, Channels: req.Channels,
+		CreatedAt: createdAt,
+	}
+	if err := draft.Validate(); err != nil {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
+		return
+	}
+	err = a.Events.Store.Update(r.Context(), func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(draft)
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"draft":          draft,
+		"accepted":       true,
+	})
+}
+
+func (a *API) handleListConfigDrafts(w http.ResponseWriter, r *http.Request) {
+	scope := domain.ConfigScope(strings.TrimSpace(r.URL.Query().Get("scope")))
+	if !scope.Valid() {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "valid scope is required"})
+		return
+	}
+	status := domain.ConfigDraftStatus(strings.TrimSpace(r.URL.Query().Get("status")))
+	if status != "" && !status.Valid() {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "unknown draft status"})
+		return
+	}
+	var drafts []domain.ConfigDraft
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		drafts, err = reader.ConfigDrafts(scope, status)
+		return err
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"scope":          scope,
+		"status":         status,
+		"drafts":         drafts,
+	})
+}
+
+func (a *API) handleGetConfigDraft(w http.ResponseWriter, r *http.Request) {
+	id := domain.ConfigDraftID(r.PathValue("draftID"))
+	var draft domain.ConfigDraft
+	var receipt domain.ConfigApplyReceipt
+	hasReceipt := false
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		draft, err = reader.ConfigDraft(id)
+		if err != nil {
+			return err
+		}
+		if got, recErr := reader.ConfigApplyReceipt(id); recErr == nil {
+			receipt = got
+			hasReceipt = true
+			return nil
+		} else if !errors.Is(recErr, port.ErrNotFound) {
+			return recErr
+		}
+		return nil
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	payload := map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"draft":          draft,
+	}
+	if hasReceipt {
+		payload["receipt"] = receipt
+	}
+	writeJSON(w, http.StatusOK, payload)
+}
+
+func (a *API) handleValidateConfigDraft(w http.ResponseWriter, r *http.Request) {
+	if a.ConfigValidate == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "not_configured", message: "config validation is not wired"})
+		return
+	}
+	id := domain.ConfigDraftID(r.PathValue("draftID"))
+	preview, diff, err := a.ConfigValidate.ValidateDraft(r.Context(), id)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	var draft domain.ConfigDraft
+	_ = a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var loadErr error
+		draft, loadErr = reader.ConfigDraft(id)
+		return loadErr
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"draft":          draft,
+		"preview":        preview,
+		"diff":           diff,
+	})
+}
+
+func (a *API) handleApplyConfigDraft(w http.ResponseWriter, r *http.Request) {
+	if a.ConfigApply == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "not_configured", message: "config apply is not wired"})
+		return
+	}
+	id := domain.ConfigDraftID(r.PathValue("draftID"))
+	revision, receipt, err := a.ConfigApply.ApplyDraft(r.Context(), id)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"revision":       revision,
+		"receipt":        receipt,
+	})
+}
+
+func (a *API) handleGetConfigApplyReceipt(w http.ResponseWriter, r *http.Request) {
+	id := domain.ConfigDraftID(r.PathValue("draftID"))
+	var receipt domain.ConfigApplyReceipt
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		receipt, err = reader.ConfigApplyReceipt(id)
+		return err
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_apply_receipt"))
+		return
+	}
+	writeJSON(w, http.StatusOK, receipt)
+}
+
+func (a *API) handleGetActiveConfigRevision(w http.ResponseWriter, r *http.Request) {
+	scope := domain.ConfigScope(strings.TrimSpace(r.URL.Query().Get("scope")))
+	if !scope.Valid() {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "valid scope is required"})
+		return
+	}
+	var revision domain.ConfigRevision
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		revision, err = reader.ActiveConfigRevision(scope)
+		return err
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"revision":       revision,
+	})
+}
+
+func (a *API) handleListConfigRevisions(w http.ResponseWriter, r *http.Request) {
+	scope := domain.ConfigScope(strings.TrimSpace(r.URL.Query().Get("scope")))
+	if !scope.Valid() {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "valid scope is required"})
+		return
+	}
+	var revisions []domain.ConfigRevision
+	err := a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		var err error
+		revisions, err = reader.ConfigRevisions(scope)
+		return err
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"scope":          scope,
+		"revisions":      revisions,
+	})
+}
+
 func (a *API) handleListQuestions(w http.ResponseWriter, r *http.Request) {
 	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
 	if missionID == "" {
@@ -563,7 +835,7 @@ func mapStoreError(err error, resource string) error {
 	switch {
 	case errors.Is(err, port.ErrNotFound):
 		return apiError{status: http.StatusNotFound, code: "not_found", message: resource + " not found"}
-	case errors.Is(err, port.ErrConflict):
+	case errors.Is(err, port.ErrConflict), errors.Is(err, domain.ErrConflict):
 		return apiError{status: http.StatusConflict, code: "conflict", message: resource + " conflict"}
 	case isValidationError(err):
 		return apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)}
