@@ -27,5 +27,7 @@ type (
 	ReceiptID          string
 	CommandID          string
 	ExternalEventID    string
+	OperatorQuestionID string
+	OperatorAnswerID   string
 	IdempotencyKey     string
 )
