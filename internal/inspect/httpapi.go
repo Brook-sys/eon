@@ -212,7 +212,11 @@ func (a *API) handleKnowledgeSources(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	page, err := a.Projector.ListSources(r.Context(), limit, offset)
+	filter := KnowledgeSourceFilter{
+		Kind: strings.TrimSpace(r.URL.Query().Get("kind")),
+		Q:    strings.TrimSpace(r.URL.Query().Get("q")),
+	}
+	page, err := a.Projector.ListSources(r.Context(), limit, offset, filter)
 	if err != nil {
 		writeKnowledgeError(w, err)
 		return
@@ -235,7 +239,19 @@ func (a *API) handleKnowledgeObservations(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	page, err := a.Projector.ListObservations(r.Context(), limit, offset)
+	filter := KnowledgeObservationFilter{
+		Provenance: strings.TrimSpace(r.URL.Query().Get("provenance")),
+		Q:          strings.TrimSpace(r.URL.Query().Get("q")),
+	}
+	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("linked_only"))) {
+	case "1", "true", "yes":
+		filter.LinkedOnly = true
+	case "", "0", "false", "no":
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_filter", "linked_only must be true or false")
+		return
+	}
+	page, err := a.Projector.ListObservations(r.Context(), limit, offset, filter)
 	if err != nil {
 		writeKnowledgeError(w, err)
 		return
@@ -273,12 +289,26 @@ func (a *API) handleKnowledgeClaims(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	withoutEvidenceOnly := false
+	filter := KnowledgeClaimFilter{
+		Q: strings.TrimSpace(r.URL.Query().Get("q")),
+	}
 	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("without_evidence"))) {
 	case "1", "true", "yes":
-		withoutEvidenceOnly = true
+		filter.WithoutEvidenceOnly = true
+	case "", "0", "false", "no":
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_filter", "without_evidence must be true or false")
+		return
 	}
-	page, err := a.Projector.ListClaims(r.Context(), limit, offset, withoutEvidenceOnly)
+	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("has_contradiction"))) {
+	case "1", "true", "yes":
+		filter.HasContradiction = true
+	case "", "0", "false", "no":
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_filter", "has_contradiction must be true or false")
+		return
+	}
+	page, err := a.Projector.ListClaims(r.Context(), limit, offset, filter)
 	if err != nil {
 		writeKnowledgeError(w, err)
 		return
@@ -311,12 +341,19 @@ func (a *API) handleKnowledgeArtifacts(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	staleOnly := false
+	filter := KnowledgeArtifactFilter{
+		Kind: strings.TrimSpace(r.URL.Query().Get("kind")),
+		Q:    strings.TrimSpace(r.URL.Query().Get("q")),
+	}
 	switch strings.ToLower(strings.TrimSpace(r.URL.Query().Get("stale"))) {
 	case "1", "true", "yes":
-		staleOnly = true
+		filter.StaleOnly = true
+	case "", "0", "false", "no":
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_filter", "stale must be true or false")
+		return
 	}
-	page, err := a.Projector.ListArtifacts(r.Context(), limit, offset, staleOnly)
+	page, err := a.Projector.ListArtifacts(r.Context(), limit, offset, filter)
 	if err != nil {
 		writeKnowledgeError(w, err)
 		return

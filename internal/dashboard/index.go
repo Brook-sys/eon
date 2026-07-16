@@ -200,7 +200,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
       <div class="row">
         <label><input type="checkbox" id="knowWithoutEvidence"/> só claims sem evidência</label>
+        <label><input type="checkbox" id="knowHasContradiction"/> só claims com contradição</label>
         <label><input type="checkbox" id="knowStaleOnly"/> só artifacts stale</label>
+        <label><input type="checkbox" id="knowLinkedOnly"/> só observations linkadas</label>
+      </div>
+      <div class="row">
+        <label>q / texto
+          <input id="knowQ" placeholder="substring em proposition/locator/statement" spellcheck="false" style="min-width:220px"/>
+        </label>
+        <label>kind
+          <input id="knowKindFilter" placeholder="fixture / web / cited_claim_view" spellcheck="false"/>
+        </label>
+        <label>provenance
+          <input id="knowProvenance" placeholder="extractor:... (observations)" spellcheck="false"/>
+        </label>
       </div>
       <div class="okbox" id="knowOk"></div>
       <div class="errbox" id="knowErr"></div>
@@ -1290,8 +1303,23 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
     const params = new URLSearchParams();
     params.set("limit", "50");
-    if (kind === "claims" && el("knowWithoutEvidence").checked) params.set("without_evidence", "true");
-    if (kind === "artifacts" && el("knowStaleOnly").checked) params.set("stale", "true");
+    const q = (el("knowQ").value || "").trim();
+    if (q) params.set("q", q);
+    const kindFilter = (el("knowKindFilter").value || "").trim();
+    if (kind === "claims") {
+      if (el("knowWithoutEvidence").checked) params.set("without_evidence", "true");
+      if (el("knowHasContradiction").checked) params.set("has_contradiction", "true");
+    }
+    if (kind === "sources" && kindFilter) params.set("kind", kindFilter);
+    if (kind === "artifacts") {
+      if (el("knowStaleOnly").checked) params.set("stale", "true");
+      if (kindFilter) params.set("kind", kindFilter);
+    }
+    if (kind === "observations") {
+      if (el("knowLinkedOnly").checked) params.set("linked_only", "true");
+      const provenance = (el("knowProvenance").value || "").trim();
+      if (provenance) params.set("provenance", provenance);
+    }
     try {
       const body = await getJSON(inspectBase + path + "?" + params.toString());
       const items = body.items || [];
@@ -1311,7 +1339,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           html += '<div class="muted">evidence=' + esc(String(item.evidence_count || 0))
             + " supports=" + esc(String(item.supports || 0))
             + " contradicts=" + esc(String(item.contradicts || 0))
-            + (item.without_evidence ? " · SEM EVIDÊNCIA" : "") + "</div>";
+            + (item.without_evidence ? " · SEM EVIDÊNCIA" : "")
+            + ((item.contradicts || 0) > 0 ? " · CONTRADIÇÃO" : "") + "</div>";
         } else if (kind === "sources") {
           html += "<h3>" + esc(item.kind || "") + " · " + esc(item.locator || "") + "</h3>";
           html += '<div class="muted">versions=' + esc(String(item.versions || 0)) + "</div>";

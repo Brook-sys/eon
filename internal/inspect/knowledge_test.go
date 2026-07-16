@@ -41,7 +41,7 @@ func TestKnowledgeCatalogBrowseAndInspectors(t *testing.T) {
 		t.Fatalf("catalog quality = %#v", catalog)
 	}
 
-	sources, err := projector.ListSources(context.Background(), 10, 0)
+	sources, err := projector.ListSources(context.Background(), 10, 0, inspect.KnowledgeSourceFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,14 +60,14 @@ func TestKnowledgeCatalogBrowseAndInspectors(t *testing.T) {
 		t.Fatal("expected snapshot content length without exporting bytes")
 	}
 
-	claims, err := projector.ListClaims(context.Background(), 10, 0, false)
+	claims, err := projector.ListClaims(context.Background(), 10, 0, inspect.KnowledgeClaimFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if claims.Total != 2 || len(claims.Items) != 2 {
 		t.Fatalf("claims = %#v", claims)
 	}
-	without, err := projector.ListClaims(context.Background(), 10, 0, true)
+	without, err := projector.ListClaims(context.Background(), 10, 0, inspect.KnowledgeClaimFilter{WithoutEvidenceOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestKnowledgeCatalogBrowseAndInspectors(t *testing.T) {
 		t.Fatalf("observation detail = %#v", obsDetail)
 	}
 
-	artifacts, err := projector.ListArtifacts(context.Background(), 10, 0, false)
+	artifacts, err := projector.ListArtifacts(context.Background(), 10, 0, inspect.KnowledgeArtifactFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,6 +181,68 @@ func TestKnowledgeHTTPEndpoints(t *testing.T) {
 	if allPage.Total != 2 || len(allPage.Items) != 2 {
 		t.Fatalf("http claims list = %#v", allPage)
 	}
+
+	// Advanced filters: contradiction, q, kind, provenance.
+	contradictResp := mustGET(t, server.URL+"/knowledge/claims?has_contradiction=true")
+	defer contradictResp.Body.Close()
+	var contradictPage inspect.ClaimPage
+	if err := json.NewDecoder(contradictResp.Body).Decode(&contradictPage); err != nil {
+		t.Fatal(err)
+	}
+	if contradictPage.Total != 1 || len(contradictPage.Items) != 1 || contradictPage.Items[0].ID != "claim_supported" {
+		t.Fatalf("has_contradiction filter = %#v", contradictPage)
+	}
+	if !contradictPage.HasContradictionOnly {
+		t.Fatalf("expected has_contradiction echo: %#v", contradictPage)
+	}
+	qClaims := mustGET(t, server.URL+"/knowledge/claims?q=secondary")
+	defer qClaims.Body.Close()
+	var qClaimPage inspect.ClaimPage
+	if err := json.NewDecoder(qClaims.Body).Decode(&qClaimPage); err != nil {
+		t.Fatal(err)
+	}
+	if qClaimPage.Total != 1 || qClaimPage.Items[0].ID != "claim_secondary" || qClaimPage.QFilter != "secondary" {
+		t.Fatalf("claims q filter = %#v", qClaimPage)
+	}
+	sourcesKind := mustGET(t, server.URL+"/knowledge/sources?kind=fixture&q=fixture.txt")
+	defer sourcesKind.Body.Close()
+	var sourcePage inspect.SourcePage
+	if err := json.NewDecoder(sourcesKind.Body).Decode(&sourcePage); err != nil {
+		t.Fatal(err)
+	}
+	if sourcePage.Total != 1 || sourcePage.KindFilter != "fixture" || sourcePage.QFilter != "fixture.txt" {
+		t.Fatalf("sources filters = %#v", sourcePage)
+	}
+	missingKind := mustGET(t, server.URL+"/knowledge/sources?kind=web")
+	defer missingKind.Body.Close()
+	var emptySources inspect.SourcePage
+	if err := json.NewDecoder(missingKind.Body).Decode(&emptySources); err != nil {
+		t.Fatal(err)
+	}
+	if emptySources.Total != 0 {
+		t.Fatalf("expected empty source kind filter: %#v", emptySources)
+	}
+	obsProv := mustGET(t, server.URL+"/knowledge/observations?provenance=extractor:test@1&linked_only=true")
+	defer obsProv.Body.Close()
+	var obsPage inspect.ObservationPage
+	if err := json.NewDecoder(obsProv.Body).Decode(&obsPage); err != nil {
+		t.Fatal(err)
+	}
+	if obsPage.Total != 2 || !obsPage.LinkedOnly || obsPage.ProvenanceFilter != "extractor:test@1" {
+		t.Fatalf("observations filters = %#v", obsPage)
+	}
+	artKind := mustGET(t, server.URL+"/knowledge/artifacts?kind=cited_claim_view&q=artifact_1")
+	defer artKind.Body.Close()
+	var artPage inspect.ArtifactPage
+	if err := json.NewDecoder(artKind.Body).Decode(&artPage); err != nil {
+		t.Fatal(err)
+	}
+	if artPage.Total != 1 || artPage.KindFilter != "cited_claim_view" || artPage.QFilter != "artifact_1" {
+		t.Fatalf("artifacts filters = %#v", artPage)
+	}
+	mustStatus(t, server.URL+"/knowledge/claims?has_contradiction=maybe", http.StatusBadRequest)
+	mustStatus(t, server.URL+"/knowledge/observations?linked_only=maybe", http.StatusBadRequest)
+	mustStatus(t, server.URL+"/knowledge/artifacts?stale=maybe", http.StatusBadRequest)
 
 	detailResp := mustGET(t, server.URL+"/knowledge/claims/claim_supported")
 	defer detailResp.Body.Close()
@@ -296,4 +358,113 @@ func seedKnowledge(t *testing.T) (*memory.Store, time.Time) {
 		t.Fatal(err)
 	}
 	return store, now
+}
+
+func TestKnowledgeAdvancedFilters(t *testing.T) {
+	store, now := seedKnowledge(t)
+	// Add a second source/kind and an unlinked observation for negative filters.
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		content := []byte("web")
+		digest := sha256.Sum256(content)
+		hash := "sha256:" + hex.EncodeToString(digest[:])
+		src := domain.Source{SchemaVersion: domain.SchemaVersionV1, ID: "source_web", Kind: "web", Locator: "https://example.test/a", ObservedAt: now}
+		ver := domain.SourceVersion{
+			SchemaVersion: domain.SchemaVersionV1, ID: "source_version_web", SourceID: src.ID,
+			ContentHash: hash, ContentRef: hash, ObservedAt: now,
+		}
+		snap := domain.SourceSnapshot{SchemaVersion: domain.SchemaVersionV1, SourceVersionID: ver.ID, MediaType: "text/plain", Content: content}
+		if err := tx.AppendSource(src, ver, snap); err != nil {
+			return err
+		}
+		frag := domain.SourceFragment{
+			SchemaVersion: domain.SchemaVersionV1, ID: "fragment_web", SourceVersionID: ver.ID,
+			Location: fmt.Sprintf("bytes:0-%d", len(content)), StartOffset: 0, EndOffset: uint64(len(content)),
+			ContentHash: hash, ContentRef: hash,
+		}
+		if err := tx.AppendSourceFragments(ver.ID, []domain.SourceFragment{frag}); err != nil {
+			return err
+		}
+		obs := domain.Observation{
+			SchemaVersion: domain.SchemaVersionV1, ID: "observation_unlinked",
+			Statement: "orphan observation not linked", ExactQuote: string(content),
+			Anchor: domain.ObservationAnchor{SourceFragmentID: frag.ID}, Provenance: "manual",
+		}
+		return tx.AppendObservation(obs)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Mark one artifact stale via SaveKnowledgeArtifact path is not available on Append-only;
+	// seed already has one non-stale. Use ListArtifacts stale filter for empty set.
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+
+	sources, err := projector.ListSources(context.Background(), 10, 0, inspect.KnowledgeSourceFilter{Kind: "web"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sources.Total != 1 || sources.Items[0].ID != "source_web" || sources.KindFilter != "web" {
+		t.Fatalf("source kind filter = %#v", sources)
+	}
+	qSources, err := projector.ListSources(context.Background(), 10, 0, inspect.KnowledgeSourceFilter{Q: "fixture"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if qSources.Total != 1 || qSources.Items[0].ID != "source_1" {
+		t.Fatalf("source q filter = %#v", qSources)
+	}
+
+	obs, err := projector.ListObservations(context.Background(), 10, 0, inspect.KnowledgeObservationFilter{Provenance: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if obs.Total != 1 || obs.Items[0].ID != "observation_unlinked" {
+		t.Fatalf("obs provenance = %#v", obs)
+	}
+	linked, err := projector.ListObservations(context.Background(), 10, 0, inspect.KnowledgeObservationFilter{LinkedOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if linked.Total != 2 {
+		t.Fatalf("linked only = %#v", linked)
+	}
+	qObs, err := projector.ListObservations(context.Background(), 10, 0, inspect.KnowledgeObservationFilter{Q: "orphan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if qObs.Total != 1 || qObs.Items[0].ID != "observation_unlinked" {
+		t.Fatalf("obs q = %#v", qObs)
+	}
+
+	contradict, err := projector.ListClaims(context.Background(), 10, 0, inspect.KnowledgeClaimFilter{HasContradiction: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contradict.Total != 1 || contradict.Items[0].ID != "claim_supported" || contradict.Items[0].Contradicts < 1 {
+		t.Fatalf("claim contradiction = %#v", contradict)
+	}
+	qClaims, err := projector.ListClaims(context.Background(), 10, 0, inspect.KnowledgeClaimFilter{Q: "browse"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if qClaims.Total != 1 || qClaims.Items[0].ID != "claim_supported" {
+		t.Fatalf("claim q = %#v", qClaims)
+	}
+
+	arts, err := projector.ListArtifacts(context.Background(), 10, 0, inspect.KnowledgeArtifactFilter{Kind: "cited_claim_view"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if arts.Total != 1 || arts.Items[0].ID != "artifact_1" {
+		t.Fatalf("artifact kind = %#v", arts)
+	}
+	stale, err := projector.ListArtifacts(context.Background(), 10, 0, inspect.KnowledgeArtifactFilter{StaleOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stale.Total != 0 {
+		t.Fatalf("stale only expected empty: %#v", stale)
+	}
 }

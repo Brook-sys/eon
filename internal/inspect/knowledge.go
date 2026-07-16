@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -41,12 +42,22 @@ type SourceSummary struct {
 	Versions   int             `json:"versions"`
 }
 
+// KnowledgeSourceFilter constrains source browse lists.
+// Empty fields are ignored. Kind is an exact match; Q is a case-insensitive
+// substring match against locator or kind.
+type KnowledgeSourceFilter struct {
+	Kind string `json:"kind,omitempty"`
+	Q    string `json:"q,omitempty"`
+}
+
 // SourcePage is a paginated source browse response.
 type SourcePage struct {
 	SchemaVersion int             `json:"schema_version"`
 	Total         int             `json:"total"`
 	Limit         int             `json:"limit"`
 	Offset        int             `json:"offset"`
+	KindFilter    string          `json:"kind_filter,omitempty"`
+	QFilter       string          `json:"q_filter,omitempty"`
 	Items         []SourceSummary `json:"items"`
 }
 
@@ -81,13 +92,25 @@ type ObservationSummary struct {
 	ReceiptID        domain.ReceiptID        `json:"receipt_id,omitempty"`
 }
 
+// KnowledgeObservationFilter constrains observation browse lists.
+// Provenance is an exact match; Q is a case-insensitive substring on statement.
+// LinkedOnly keeps observations that participate in at least one evidence link.
+type KnowledgeObservationFilter struct {
+	Provenance string `json:"provenance,omitempty"`
+	Q          string `json:"q,omitempty"`
+	LinkedOnly bool   `json:"linked_only,omitempty"`
+}
+
 // ObservationPage is a paginated observation browse response.
 type ObservationPage struct {
-	SchemaVersion int                  `json:"schema_version"`
-	Total         int                  `json:"total"`
-	Limit         int                  `json:"limit"`
-	Offset        int                  `json:"offset"`
-	Items         []ObservationSummary `json:"items"`
+	SchemaVersion    int                  `json:"schema_version"`
+	Total            int                  `json:"total"`
+	Limit            int                  `json:"limit"`
+	Offset           int                  `json:"offset"`
+	ProvenanceFilter string               `json:"provenance_filter,omitempty"`
+	QFilter          string               `json:"q_filter,omitempty"`
+	LinkedOnly       bool                 `json:"linked_only,omitempty"`
+	Items            []ObservationSummary `json:"items"`
 }
 
 // ObservationDetail correlates an observation with its anchor and outbound links.
@@ -114,13 +137,26 @@ type ClaimSummary struct {
 	WithoutEvidence bool           `json:"without_evidence"`
 }
 
+// KnowledgeClaimFilter constrains claim browse lists.
+// WithoutEvidenceOnly keeps claims with zero evidence links.
+// HasContradiction keeps claims with at least one CONTRADICTS relation.
+// Q is a case-insensitive substring match against the proposition.
+type KnowledgeClaimFilter struct {
+	WithoutEvidenceOnly bool   `json:"without_evidence,omitempty"`
+	HasContradiction    bool   `json:"has_contradiction,omitempty"`
+	Q                   string `json:"q,omitempty"`
+}
+
 // ClaimPage is a paginated claim browse response.
 type ClaimPage struct {
-	SchemaVersion int            `json:"schema_version"`
-	Total         int            `json:"total"`
-	Limit         int            `json:"limit"`
-	Offset        int            `json:"offset"`
-	Items         []ClaimSummary `json:"items"`
+	SchemaVersion        int            `json:"schema_version"`
+	Total                int            `json:"total"`
+	Limit                int            `json:"limit"`
+	Offset               int            `json:"offset"`
+	WithoutEvidenceOnly  bool           `json:"without_evidence,omitempty"`
+	HasContradictionOnly bool           `json:"has_contradiction,omitempty"`
+	QFilter              string         `json:"q_filter,omitempty"`
+	Items                []ClaimSummary `json:"items"`
 }
 
 // ClaimDetail reconstructs a claim with evidence chain and optional citations.
@@ -150,12 +186,23 @@ type ArtifactSummary struct {
 	ContentBytes int               `json:"content_bytes"`
 }
 
+// KnowledgeArtifactFilter constrains knowledge-artifact browse lists.
+// Kind is an exact match; Q is a case-insensitive substring on kind or content_ref.
+type KnowledgeArtifactFilter struct {
+	StaleOnly bool   `json:"stale,omitempty"`
+	Kind      string `json:"kind,omitempty"`
+	Q         string `json:"q,omitempty"`
+}
+
 // ArtifactPage is a paginated artifact browse response.
 type ArtifactPage struct {
 	SchemaVersion int               `json:"schema_version"`
 	Total         int               `json:"total"`
 	Limit         int               `json:"limit"`
 	Offset        int               `json:"offset"`
+	StaleOnly     bool              `json:"stale_only,omitempty"`
+	KindFilter    string            `json:"kind_filter,omitempty"`
+	QFilter       string            `json:"q_filter,omitempty"`
 	Items         []ArtifactSummary `json:"items"`
 }
 
@@ -240,11 +287,13 @@ func (p *Projector) KnowledgeCatalog(ctx context.Context) (KnowledgeCatalogSumma
 }
 
 // ListSources returns a stable, offset-limited source browse page.
-func (p *Projector) ListSources(ctx context.Context, limit, offset int) (SourcePage, error) {
+func (p *Projector) ListSources(ctx context.Context, limit, offset int, filter KnowledgeSourceFilter) (SourcePage, error) {
 	limit, offset, err := normalizeKnowledgePage(limit, offset)
 	if err != nil {
 		return SourcePage{}, err
 	}
+	kindFilter := strings.TrimSpace(filter.Kind)
+	qFilter := strings.TrimSpace(filter.Q)
 	var page SourcePage
 	err = p.Store.View(ctx, func(r port.Reader) error {
 		sources, err := r.Sources()
@@ -261,6 +310,12 @@ func (p *Projector) ListSources(ctx context.Context, limit, offset int) (SourceP
 		}
 		items := make([]SourceSummary, 0, len(sources))
 		for _, source := range sources {
+			if kindFilter != "" && source.Kind != kindFilter {
+				continue
+			}
+			if qFilter != "" && !knowledgeTextMatches(qFilter, source.Locator, source.Kind, string(source.ID)) {
+				continue
+			}
 			items = append(items, SourceSummary{
 				ID:         source.ID,
 				Kind:       source.Kind,
@@ -269,11 +324,14 @@ func (p *Projector) ListSources(ctx context.Context, limit, offset int) (SourceP
 				Versions:   versionCount[source.ID],
 			})
 		}
+		sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 		page = SourcePage{
 			SchemaVersion: domain.SchemaVersionV1,
 			Total:         len(items),
 			Limit:         limit,
 			Offset:        offset,
+			KindFilter:    kindFilter,
+			QFilter:       qFilter,
 			Items:         slicePage(items, offset, limit),
 		}
 		return nil
@@ -336,19 +394,42 @@ func (p *Projector) SourceInspector(ctx context.Context, sourceID domain.SourceI
 }
 
 // ListObservations returns a stable, offset-limited observation browse page.
-func (p *Projector) ListObservations(ctx context.Context, limit, offset int) (ObservationPage, error) {
+func (p *Projector) ListObservations(ctx context.Context, limit, offset int, filter KnowledgeObservationFilter) (ObservationPage, error) {
 	limit, offset, err := normalizeKnowledgePage(limit, offset)
 	if err != nil {
 		return ObservationPage{}, err
 	}
+	provenanceFilter := strings.TrimSpace(filter.Provenance)
+	qFilter := strings.TrimSpace(filter.Q)
 	var page ObservationPage
 	err = p.Store.View(ctx, func(r port.Reader) error {
 		observations, err := r.Observations()
 		if err != nil {
 			return err
 		}
+		linked := map[domain.ObservationID]struct{}{}
+		if filter.LinkedOnly {
+			links, lerr := r.EvidenceLinks()
+			if lerr != nil {
+				return lerr
+			}
+			for _, link := range links {
+				linked[link.ObservationID] = struct{}{}
+			}
+		}
 		items := make([]ObservationSummary, 0, len(observations))
 		for _, observation := range observations {
+			if provenanceFilter != "" && observation.Provenance != provenanceFilter {
+				continue
+			}
+			if qFilter != "" && !knowledgeTextMatches(qFilter, observation.Statement, string(observation.ID)) {
+				continue
+			}
+			if filter.LinkedOnly {
+				if _, ok := linked[observation.ID]; !ok {
+					continue
+				}
+			}
 			items = append(items, ObservationSummary{
 				ID:               observation.ID,
 				Statement:        observation.Statement,
@@ -358,12 +439,16 @@ func (p *Projector) ListObservations(ctx context.Context, limit, offset int) (Ob
 				ReceiptID:        observation.Anchor.ReceiptID,
 			})
 		}
+		sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 		page = ObservationPage{
-			SchemaVersion: domain.SchemaVersionV1,
-			Total:         len(items),
-			Limit:         limit,
-			Offset:        offset,
-			Items:         slicePage(items, offset, limit),
+			SchemaVersion:    domain.SchemaVersionV1,
+			Total:            len(items),
+			Limit:            limit,
+			Offset:           offset,
+			ProvenanceFilter: provenanceFilter,
+			QFilter:          qFilter,
+			LinkedOnly:       filter.LinkedOnly,
+			Items:            slicePage(items, offset, limit),
 		}
 		return nil
 	})
@@ -437,11 +522,12 @@ func (p *Projector) ObservationInspector(ctx context.Context, observationID doma
 }
 
 // ListClaims returns a stable, offset-limited claim browse page with evidence tallies.
-func (p *Projector) ListClaims(ctx context.Context, limit, offset int, withoutEvidenceOnly bool) (ClaimPage, error) {
+func (p *Projector) ListClaims(ctx context.Context, limit, offset int, filter KnowledgeClaimFilter) (ClaimPage, error) {
 	limit, offset, err := normalizeKnowledgePage(limit, offset)
 	if err != nil {
 		return ClaimPage{}, err
 	}
+	qFilter := strings.TrimSpace(filter.Q)
 	var page ClaimPage
 	err = p.Store.View(ctx, func(r port.Reader) error {
 		claims, err := r.Claims()
@@ -479,7 +565,13 @@ func (p *Projector) ListClaims(ctx context.Context, limit, offset int, withoutEv
 				t = &tally{}
 			}
 			without := t.total == 0
-			if withoutEvidenceOnly && !without {
+			if filter.WithoutEvidenceOnly && !without {
+				continue
+			}
+			if filter.HasContradiction && t.contradicts == 0 {
+				continue
+			}
+			if qFilter != "" && !knowledgeTextMatches(qFilter, claim.Proposition, string(claim.ID)) {
 				continue
 			}
 			items = append(items, ClaimSummary{
@@ -494,12 +586,16 @@ func (p *Projector) ListClaims(ctx context.Context, limit, offset int, withoutEv
 				WithoutEvidence: without,
 			})
 		}
+		sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 		page = ClaimPage{
-			SchemaVersion: domain.SchemaVersionV1,
-			Total:         len(items),
-			Limit:         limit,
-			Offset:        offset,
-			Items:         slicePage(items, offset, limit),
+			SchemaVersion:        domain.SchemaVersionV1,
+			Total:                len(items),
+			Limit:                limit,
+			Offset:               offset,
+			WithoutEvidenceOnly:  filter.WithoutEvidenceOnly,
+			HasContradictionOnly: filter.HasContradiction,
+			QFilter:              qFilter,
+			Items:                slicePage(items, offset, limit),
 		}
 		return nil
 	})
@@ -561,11 +657,13 @@ func (p *Projector) ClaimInspector(ctx context.Context, claimID domain.ClaimID) 
 }
 
 // ListArtifacts returns a stable, offset-limited knowledge-artifact browse page.
-func (p *Projector) ListArtifacts(ctx context.Context, limit, offset int, staleOnly bool) (ArtifactPage, error) {
+func (p *Projector) ListArtifacts(ctx context.Context, limit, offset int, filter KnowledgeArtifactFilter) (ArtifactPage, error) {
 	limit, offset, err := normalizeKnowledgePage(limit, offset)
 	if err != nil {
 		return ArtifactPage{}, err
 	}
+	kindFilter := strings.TrimSpace(filter.Kind)
+	qFilter := strings.TrimSpace(filter.Q)
 	var page ArtifactPage
 	err = p.Store.View(ctx, func(r port.Reader) error {
 		artifacts, err := r.KnowledgeArtifacts()
@@ -574,7 +672,13 @@ func (p *Projector) ListArtifacts(ctx context.Context, limit, offset int, staleO
 		}
 		items := make([]ArtifactSummary, 0, len(artifacts))
 		for _, artifact := range artifacts {
-			if staleOnly && !artifact.Stale {
+			if filter.StaleOnly && !artifact.Stale {
+				continue
+			}
+			if kindFilter != "" && artifact.Kind != kindFilter {
+				continue
+			}
+			if qFilter != "" && !knowledgeTextMatches(qFilter, artifact.Kind, artifact.ContentRef, string(artifact.ID)) {
 				continue
 			}
 			items = append(items, ArtifactSummary{
@@ -587,11 +691,15 @@ func (p *Projector) ListArtifacts(ctx context.Context, limit, offset int, staleO
 				ContentBytes: len(artifact.Content),
 			})
 		}
+		sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
 		page = ArtifactPage{
 			SchemaVersion: domain.SchemaVersionV1,
 			Total:         len(items),
 			Limit:         limit,
 			Offset:        offset,
+			StaleOnly:     filter.StaleOnly,
+			KindFilter:    kindFilter,
+			QFilter:       qFilter,
 			Items:         slicePage(items, offset, limit),
 		}
 		return nil
@@ -632,6 +740,21 @@ func (p *Projector) ArtifactInspector(ctx context.Context, artifactID domain.Art
 	return detail, nil
 }
 
+// knowledgeTextMatches reports whether needle appears in any haystack field
+// using case-insensitive substring comparison.
+func knowledgeTextMatches(needle string, fields ...string) bool {
+	needle = strings.TrimSpace(needle)
+	if needle == "" {
+		return true
+	}
+	n := strings.ToLower(needle)
+	for _, field := range fields {
+		if strings.Contains(strings.ToLower(field), n) {
+			return true
+		}
+	}
+	return false
+}
 func normalizeKnowledgePage(limit, offset int) (int, int, error) {
 	if limit <= 0 {
 		limit = DefaultKnowledgeListLimit
