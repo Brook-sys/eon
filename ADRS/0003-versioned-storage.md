@@ -32,7 +32,15 @@ As primitivas nativas do Dolt são valiosas, mas não foram pontuadas depois do 
 
 ## Backup e restauração
 
-O artefato canônico do MVP é o banco SQLite local junto de seus arquivos WAL quando houver conexão aberta. Backup e restauração operacionais deverão usar a API de backup/checkpoint do SQLite ou cópia com o store fechado, seguidos por reopen e contract check; copiar somente o arquivo principal durante escrita não é procedimento válido. O runbook e o teste de backup entram antes de dados não descartáveis em produção.
+O artefato canônico do MVP é o banco SQLite local junto de seus arquivos WAL quando houver conexão aberta. Backup e restauração operacionais usam a API de backup online do SQLite (`Store.BackupTo` em `internal/storage/sqlite`, via `modernc.org/sqlite` `NewBackup`/`Step`/`Finish`) ou cópia com o store fechado (`ClosedCopyTo`), seguidos por reopen e contract check; copiar somente o arquivo principal durante escrita não é procedimento válido.
+
+Evidência implementada:
+
+- `BackupTo` segura o mutex de escrita do adapter, copia páginas para um destino que não pode já existir, verifica `runtime_checkpoint` e deixa a origem aberta;
+- testes `TestOnlineBackupPreservesCheckpointAndReopens`, `TestOnlineBackupRejectsExistingDestination`, `TestOnlineBackupEmptyStore`;
+- runbook operacional: `RUNBOOKS/sqlite-backup.md`.
+
+O runbook e esses testes são pré-requisito antes de dados não descartáveis em produção.
 
 ## Consequências
 
