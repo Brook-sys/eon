@@ -144,7 +144,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [x] `DONE` Benchmark 2k/4k/8k para operações selecionadas.
   - Evidência: `internal/evaluation` carrega fixtures estritas, compila a matriz contexto × formato pelo mesmo budget do runtime, mede validade/acerto/tokens/latência e gera artefatos atômicos; `cmd/model-benchmark-runner` executa providers OpenAI-compatible reais sem registrar credenciais.
 - [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
-  - Preparado: corpus inicial `cognitive-v1` cobre as quatro operações em escolha, campos delimitados e JSON; falta executar contra pelo menos um modelo pequeno/local e um baseline superior e interpretar os resultados.
+  - Preparado: corpus inicial `cognitive-v1` cobre as quatro operações em escolha, campos delimitados e JSON; relatórios agora agregam acerto, erros e omissões por operação, formato e contexto. Falta executar contra pelo menos um modelo pequeno/local e um baseline superior e interpretar os resultados.
+  - Ambiente atual: nenhum node de inferência/Ollama está disponível e não há servidor local em `127.0.0.1:11434`; manter o item `READY` até existir endpoint OpenAI-compatible sem credenciais pagas.
 
 ### Fase 6 — control plane e dashboard operacional
 
@@ -221,3 +222,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-15 20:20 — Fase 5/compatibilidade de modelos — matriz portátil e protocolo de qualificação por deploy definidos; adapter passou a versionar o dialeto de limite de saída (`max_tokens`/`max_completion_tokens`) sem fallback arriscado — verificação: fontes primárias OpenAI/Ollama/vLLM/llama.cpp, testes dos dois dialetos, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: harness benchmark 2k/4k/8k e fixtures cognitivas.
 
 2026-07-15 20:43 — Fase 5/harness cognitivo — benchmark reproduzível 2k/4k/8k implementado com fixtures de extração, síntese, conflito e reparo; formatos estritos, métricas e artefatos atômicos integrados a provider OpenAI-compatible — verificação: testes de corpus/parser/matriz/artefatos e CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: executar modelos pequeno/local e baseline superior, comparar formato/operação e registrar avaliação.
+2026-07-15 23:40 — Fase 5/análise comparável — relatório passou a agregar acerto, falhas e fatos omitidos por operação, formato e contexto; execução real permanece pronta mas sem endpoint local disponível — verificação: `go test ./...`, `go vet ./...`, `git diff --check`, descoberta de nodes e probe Ollama — próximo: executar dois baselines quando houver provider OpenAI-compatible local.

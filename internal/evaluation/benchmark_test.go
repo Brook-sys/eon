@@ -96,6 +96,9 @@ func TestRunnerExecutesContextFormatMatrix(t *testing.T) {
 	if report.Summary.Total != 4 || report.Summary.SyntaxValid != 3 || report.Summary.SemanticallyRight != 2 || report.Model != "fake" {
 		t.Fatalf("unexpected report: %+v", report)
 	}
+	if len(report.Breakdown.ByFormat) != 2 || len(report.Breakdown.ByContext) != 2 || report.Breakdown.ByOperation[0].SemanticallyRight != 2 {
+		t.Fatalf("unexpected breakdown: %+v", report.Breakdown)
+	}
 }
 
 func TestRunnerRecordsCompileFailureWithoutCallingProvider(t *testing.T) {
@@ -116,7 +119,8 @@ func TestRunnerRecordsCompileFailureWithoutCallingProvider(t *testing.T) {
 
 func TestWriteArtifacts(t *testing.T) {
 	directory := t.TempDir()
-	report := Report{SchemaVersion: 1, FixtureName: "fixture", Model: "model", Runs: []Run{{CaseID: "case", Operation: OperationExtract, Format: FormatJSON, ContextTokens: 2048, Compiled: true, SyntaxValid: true, SemanticallyCorrect: true}}, Summary: Summary{Total: 1, Compiled: 1, SyntaxValid: 1, SemanticallyRight: 1}}
+	run := Run{CaseID: "case", Operation: OperationExtract, Format: FormatJSON, ContextTokens: 2048, Compiled: true, SyntaxValid: true, SemanticallyCorrect: true}
+	report := Report{SchemaVersion: 1, FixtureName: "fixture", Model: "model", Runs: []Run{run}, Summary: Summary{Total: 1, Compiled: 1, SyntaxValid: 1, SemanticallyRight: 1}, Breakdown: summarizeRuns([]Run{run})}
 	if err := WriteArtifacts(directory, report); err != nil {
 		t.Fatal(err)
 	}
@@ -125,5 +129,9 @@ func TestWriteArtifacts(t *testing.T) {
 		if err != nil || len(body) == 0 {
 			t.Fatalf("%s: body=%q err=%v", name, body, err)
 		}
+	}
+	markdown, err := os.ReadFile(directory + "/report.md")
+	if err != nil || !strings.Contains(string(markdown), "## By operation") || !strings.Contains(string(markdown), "## By context") {
+		t.Fatalf("missing report breakdown: %q err=%v", markdown, err)
 	}
 }

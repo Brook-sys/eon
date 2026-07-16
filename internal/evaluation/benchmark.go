@@ -188,11 +188,12 @@ type Run struct {
 }
 
 type Report struct {
-	SchemaVersion int     `json:"schema_version"`
-	FixtureName   string  `json:"fixture_name"`
-	Model         string  `json:"model"`
-	Runs          []Run   `json:"runs"`
-	Summary       Summary `json:"summary"`
+	SchemaVersion int       `json:"schema_version"`
+	FixtureName   string    `json:"fixture_name"`
+	Model         string    `json:"model"`
+	Runs          []Run     `json:"runs"`
+	Summary       Summary   `json:"summary"`
+	Breakdown     Breakdown `json:"breakdown"`
 }
 
 type Summary struct {
@@ -202,6 +203,26 @@ type Summary struct {
 	SemanticallyRight int `json:"semantically_correct"`
 	InputTokens       int `json:"input_tokens"`
 	OutputTokens      int `json:"output_tokens"`
+	OmittedFacts      int `json:"omitted_facts"`
+	CompileErrors     int `json:"compile_errors"`
+	ProviderErrors    int `json:"provider_errors"`
+	ValidationErrors  int `json:"validation_errors"`
+}
+
+type Breakdown struct {
+	ByOperation []Aggregate `json:"by_operation"`
+	ByFormat    []Aggregate `json:"by_format"`
+	ByContext   []Aggregate `json:"by_context"`
+}
+
+type Aggregate struct {
+	Label             string `json:"label"`
+	Total             int    `json:"total"`
+	Compiled          int    `json:"compiled"`
+	SyntaxValid       int    `json:"syntax_valid"`
+	SemanticallyRight int    `json:"semantically_correct"`
+	OmittedFacts      int    `json:"omitted_facts"`
+	Errors            int    `json:"errors"`
 }
 
 type Runner struct {
@@ -277,8 +298,69 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 		}
 		report.Summary.InputTokens += run.ActualInputTokens
 		report.Summary.OutputTokens += run.OutputTokens
+		report.Summary.OmittedFacts += len(run.OmittedFactIDs)
+		switch run.ErrorKind {
+		case "COMPILE":
+			report.Summary.CompileErrors++
+		case "PROVIDER":
+			report.Summary.ProviderErrors++
+		case "VALIDATION":
+			report.Summary.ValidationErrors++
+		}
 	}
+	report.Breakdown = summarizeRuns(runs)
 	return report, nil
+}
+
+func summarizeRuns(runs []Run) Breakdown {
+	operations := map[string]*Aggregate{}
+	formats := map[string]*Aggregate{}
+	contexts := map[string]*Aggregate{}
+	for _, run := range runs {
+		accumulate(operations, string(run.Operation), run)
+		accumulate(formats, string(run.Format), run)
+		accumulate(contexts, fmt.Sprintf("%d", run.ContextTokens), run)
+	}
+	return Breakdown{
+		ByOperation: sortedAggregates(operations),
+		ByFormat:    sortedAggregates(formats),
+		ByContext:   sortedAggregates(contexts),
+	}
+}
+
+func accumulate(groups map[string]*Aggregate, label string, run Run) {
+	aggregate := groups[label]
+	if aggregate == nil {
+		aggregate = &Aggregate{Label: label}
+		groups[label] = aggregate
+	}
+	aggregate.Total++
+	if run.Compiled {
+		aggregate.Compiled++
+	}
+	if run.SyntaxValid {
+		aggregate.SyntaxValid++
+	}
+	if run.SemanticallyCorrect {
+		aggregate.SemanticallyRight++
+	}
+	aggregate.OmittedFacts += len(run.OmittedFactIDs)
+	if run.ErrorKind != "" {
+		aggregate.Errors++
+	}
+}
+
+func sortedAggregates(groups map[string]*Aggregate) []Aggregate {
+	labels := make([]string, 0, len(groups))
+	for label := range groups {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	result := make([]Aggregate, 0, len(labels))
+	for _, label := range labels {
+		result = append(result, *groups[label])
+	}
+	return result
 }
 
 func benchmarkInput(c Case, format Format) prompt.Input {
@@ -412,7 +494,18 @@ func WriteArtifacts(directory string, report Report) error {
 		return err
 	}
 	var markdown strings.Builder
-	fmt.Fprintf(&markdown, "# Cognitive benchmark\n\n- Fixture: `%s`\n- Model: `%s`\n- Runs: %d\n- Compiled: %d\n- Syntax valid: %d\n- Semantically correct: %d\n- Input tokens: %d\n- Output tokens: %d\n\n", report.FixtureName, report.Model, report.Summary.Total, report.Summary.Compiled, report.Summary.SyntaxValid, report.Summary.SemanticallyRight, report.Summary.InputTokens, report.Summary.OutputTokens)
+	fmt.Fprintf(&markdown, "# Cognitive benchmark\n\n- Fixture: `%s`\n- Model: `%s`\n- Runs: %d\n- Compiled: %d\n- Syntax valid: %d\n- Semantically correct: %d\n- Input tokens: %d\n- Output tokens: %d\n- Omitted facts: %d\n- Errors (compile/provider/validation): %d/%d/%d\n\n", report.FixtureName, report.Model, report.Summary.Total, report.Summary.Compiled, report.Summary.SyntaxValid, report.Summary.SemanticallyRight, report.Summary.InputTokens, report.Summary.OutputTokens, report.Summary.OmittedFacts, report.Summary.CompileErrors, report.Summary.ProviderErrors, report.Summary.ValidationErrors)
+	writeBreakdown := func(title string, aggregates []Aggregate) {
+		fmt.Fprintf(&markdown, "## %s\n\n| Group | Runs | Compiled | Syntax valid | Correct | Omitted facts | Errors |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n", title)
+		for _, aggregate := range aggregates {
+			fmt.Fprintf(&markdown, "| %s | %d | %d | %d | %d | %d | %d |\n", aggregate.Label, aggregate.Total, aggregate.Compiled, aggregate.SyntaxValid, aggregate.SemanticallyRight, aggregate.OmittedFacts, aggregate.Errors)
+		}
+		markdown.WriteString("\n")
+	}
+	writeBreakdown("By operation", report.Breakdown.ByOperation)
+	writeBreakdown("By format", report.Breakdown.ByFormat)
+	writeBreakdown("By context", report.Breakdown.ByContext)
+	markdown.WriteString("## Runs\n\n")
 	markdown.WriteString("| Case | Operation | Format | Context | Result | Input/output tokens | Latency |\n| --- | --- | --- | ---: | --- | ---: | ---: |\n")
 	for _, run := range report.Runs {
 		result := run.ErrorKind
