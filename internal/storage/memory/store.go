@@ -20,65 +20,71 @@ type Store struct {
 }
 
 type state struct {
-	missionRevisions map[domain.MissionRevisionID]domain.MissionRevision
-	activeMissions   map[domain.MissionID]domain.MissionRevisionID
-	operationSpecs   map[domain.OperationSpecID]domain.OperationSpec
-	questions        map[domain.QuestionID]domain.Question
-	candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
-	inquiries        map[domain.InquiryID]domain.Inquiry
-	operations       map[domain.OperationID]domain.Operation
-	events           []domain.Event
-	eventIDs         map[domain.EventID]uint64
-	idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
-	sources          map[domain.SourceID]domain.Source
-	sourceVersions   map[domain.SourceVersionID]domain.SourceVersion
-	sourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
-	sourceFragments  map[domain.SourceFragmentID]domain.SourceFragment
-	observations     map[domain.ObservationID]domain.Observation
-	claims           map[domain.ClaimID]domain.Claim
-	evidenceLinks    map[domain.EvidenceLinkID]domain.EvidenceLink
-	artifacts        map[domain.ArtifactID]domain.KnowledgeArtifact
-	rawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
-	proposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
-	acceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
-	receipts         map[domain.ReceiptID]domain.ValidationReceipt
-	commitReceipts   map[domain.ReceiptID]domain.CommitReceipt
-	commits          map[domain.CommitID]domain.Commit
-	commitByIntent   map[domain.IdempotencyKey]domain.CommitID
-	headCommits      map[domain.MissionRevisionID]domain.CommitID
-	canonical        map[string]domain.CanonicalEntity
+	missionRevisions  map[domain.MissionRevisionID]domain.MissionRevision
+	activeMissions    map[domain.MissionID]domain.MissionRevisionID
+	operationSpecs    map[domain.OperationSpecID]domain.OperationSpec
+	questions         map[domain.QuestionID]domain.Question
+	operatorQuestions map[domain.OperatorQuestionID]domain.OperatorQuestion
+	operatorAnswers   map[domain.OperatorAnswerID]domain.UserAnswer
+	answerByTransport map[string]domain.OperatorAnswerID
+	candidates        map[domain.InquiryCandidateID]domain.InquiryCandidate
+	inquiries         map[domain.InquiryID]domain.Inquiry
+	operations        map[domain.OperationID]domain.Operation
+	events            []domain.Event
+	eventIDs          map[domain.EventID]uint64
+	idempotency       map[domain.IdempotencyKey]domain.IdempotencyRecord
+	sources           map[domain.SourceID]domain.Source
+	sourceVersions    map[domain.SourceVersionID]domain.SourceVersion
+	sourceSnapshots   map[domain.SourceVersionID]domain.SourceSnapshot
+	sourceFragments   map[domain.SourceFragmentID]domain.SourceFragment
+	observations      map[domain.ObservationID]domain.Observation
+	claims            map[domain.ClaimID]domain.Claim
+	evidenceLinks     map[domain.EvidenceLinkID]domain.EvidenceLink
+	artifacts         map[domain.ArtifactID]domain.KnowledgeArtifact
+	rawModelOutputs   map[domain.ArtifactID]domain.RawModelOutput
+	proposedChanges   map[domain.ChangeSetID]domain.ProposedChangeSet
+	acceptedChanges   map[domain.ChangeSetID]domain.AcceptedChangeSet
+	receipts          map[domain.ReceiptID]domain.ValidationReceipt
+	commitReceipts    map[domain.ReceiptID]domain.CommitReceipt
+	commits           map[domain.CommitID]domain.Commit
+	commitByIntent    map[domain.IdempotencyKey]domain.CommitID
+	headCommits       map[domain.MissionRevisionID]domain.CommitID
+	canonical         map[string]domain.CanonicalEntity
 }
 
 func New() *Store { return &Store{state: newState()} }
 
 func newState() state {
 	return state{
-		missionRevisions: make(map[domain.MissionRevisionID]domain.MissionRevision),
-		activeMissions:   make(map[domain.MissionID]domain.MissionRevisionID),
-		operationSpecs:   make(map[domain.OperationSpecID]domain.OperationSpec),
-		questions:        make(map[domain.QuestionID]domain.Question),
-		candidates:       make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
-		inquiries:        make(map[domain.InquiryID]domain.Inquiry),
-		operations:       make(map[domain.OperationID]domain.Operation),
-		eventIDs:         make(map[domain.EventID]uint64),
-		idempotency:      make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
-		sources:          make(map[domain.SourceID]domain.Source),
-		sourceVersions:   make(map[domain.SourceVersionID]domain.SourceVersion),
-		sourceSnapshots:  make(map[domain.SourceVersionID]domain.SourceSnapshot),
-		sourceFragments:  make(map[domain.SourceFragmentID]domain.SourceFragment),
-		observations:     make(map[domain.ObservationID]domain.Observation),
-		claims:           make(map[domain.ClaimID]domain.Claim),
-		evidenceLinks:    make(map[domain.EvidenceLinkID]domain.EvidenceLink),
-		artifacts:        make(map[domain.ArtifactID]domain.KnowledgeArtifact),
-		rawModelOutputs:  make(map[domain.ArtifactID]domain.RawModelOutput),
-		proposedChanges:  make(map[domain.ChangeSetID]domain.ProposedChangeSet),
-		acceptedChanges:  make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
-		receipts:         make(map[domain.ReceiptID]domain.ValidationReceipt),
-		commitReceipts:   make(map[domain.ReceiptID]domain.CommitReceipt),
-		commits:          make(map[domain.CommitID]domain.Commit),
-		commitByIntent:   make(map[domain.IdempotencyKey]domain.CommitID),
-		headCommits:      make(map[domain.MissionRevisionID]domain.CommitID),
-		canonical:        make(map[string]domain.CanonicalEntity),
+		missionRevisions:  make(map[domain.MissionRevisionID]domain.MissionRevision),
+		activeMissions:    make(map[domain.MissionID]domain.MissionRevisionID),
+		operationSpecs:    make(map[domain.OperationSpecID]domain.OperationSpec),
+		questions:         make(map[domain.QuestionID]domain.Question),
+		operatorQuestions: make(map[domain.OperatorQuestionID]domain.OperatorQuestion),
+		operatorAnswers:   make(map[domain.OperatorAnswerID]domain.UserAnswer),
+		answerByTransport: make(map[string]domain.OperatorAnswerID),
+		candidates:        make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
+		inquiries:         make(map[domain.InquiryID]domain.Inquiry),
+		operations:        make(map[domain.OperationID]domain.Operation),
+		eventIDs:          make(map[domain.EventID]uint64),
+		idempotency:       make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
+		sources:           make(map[domain.SourceID]domain.Source),
+		sourceVersions:    make(map[domain.SourceVersionID]domain.SourceVersion),
+		sourceSnapshots:   make(map[domain.SourceVersionID]domain.SourceSnapshot),
+		sourceFragments:   make(map[domain.SourceFragmentID]domain.SourceFragment),
+		observations:      make(map[domain.ObservationID]domain.Observation),
+		claims:            make(map[domain.ClaimID]domain.Claim),
+		evidenceLinks:     make(map[domain.EvidenceLinkID]domain.EvidenceLink),
+		artifacts:         make(map[domain.ArtifactID]domain.KnowledgeArtifact),
+		rawModelOutputs:   make(map[domain.ArtifactID]domain.RawModelOutput),
+		proposedChanges:   make(map[domain.ChangeSetID]domain.ProposedChangeSet),
+		acceptedChanges:   make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
+		receipts:          make(map[domain.ReceiptID]domain.ValidationReceipt),
+		commitReceipts:    make(map[domain.ReceiptID]domain.CommitReceipt),
+		commits:           make(map[domain.CommitID]domain.Commit),
+		commitByIntent:    make(map[domain.IdempotencyKey]domain.CommitID),
+		headCommits:       make(map[domain.MissionRevisionID]domain.CommitID),
+		canonical:         make(map[string]domain.CanonicalEntity),
 	}
 }
 
@@ -126,6 +132,18 @@ func (t transaction) ActiveMissionRevision(id domain.MissionID) (domain.MissionR
 }
 func (t transaction) Question(id domain.QuestionID) (domain.Question, error) {
 	return reader(t).Question(id)
+}
+func (t transaction) OperatorQuestion(id domain.OperatorQuestionID) (domain.OperatorQuestion, error) {
+	return reader(t).OperatorQuestion(id)
+}
+func (t transaction) OperatorQuestions(id domain.MissionID, status domain.OperatorQuestionStatus) ([]domain.OperatorQuestion, error) {
+	return reader(t).OperatorQuestions(id, status)
+}
+func (t transaction) UserAnswer(id domain.OperatorAnswerID) (domain.UserAnswer, error) {
+	return reader(t).UserAnswer(id)
+}
+func (t transaction) UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error) {
+	return reader(t).UserAnswerByTransport(channel, transportEventID)
 }
 func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	return reader(t).OperationSpec(id)
@@ -229,6 +247,42 @@ func (r reader) Question(id domain.QuestionID) (domain.Question, error) {
 		return domain.Question{}, notFound("question", id)
 	}
 	return v, nil
+}
+func (r reader) OperatorQuestion(id domain.OperatorQuestionID) (domain.OperatorQuestion, error) {
+	v, ok := r.state.operatorQuestions[id]
+	if !ok {
+		return domain.OperatorQuestion{}, notFound("operator question", id)
+	}
+	return cloneOperatorQuestion(v), nil
+}
+func (r reader) OperatorQuestions(missionID domain.MissionID, status domain.OperatorQuestionStatus) ([]domain.OperatorQuestion, error) {
+	questions := make([]domain.OperatorQuestion, 0)
+	for _, question := range r.state.operatorQuestions {
+		if question.MissionID == missionID && (status == "" || question.Status == status) {
+			questions = append(questions, cloneOperatorQuestion(question))
+		}
+	}
+	sort.Slice(questions, func(i, j int) bool {
+		if questions[i].CreatedAt.Equal(questions[j].CreatedAt) {
+			return questions[i].ID < questions[j].ID
+		}
+		return questions[i].CreatedAt.Before(questions[j].CreatedAt)
+	})
+	return questions, nil
+}
+func (r reader) UserAnswer(id domain.OperatorAnswerID) (domain.UserAnswer, error) {
+	v, ok := r.state.operatorAnswers[id]
+	if !ok {
+		return domain.UserAnswer{}, notFound("user answer", id)
+	}
+	return cloneUserAnswer(v), nil
+}
+func (r reader) UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error) {
+	id, ok := r.state.answerByTransport[transportAnswerKey(channel, transportEventID)]
+	if !ok {
+		return domain.UserAnswer{}, notFound("user answer transport", transportAnswerKey(channel, transportEventID))
+	}
+	return r.UserAnswer(id)
 }
 func (r reader) Operations(missionRevision domain.MissionRevisionID) ([]domain.Operation, error) {
 	operations := make([]domain.Operation, 0)
@@ -481,6 +535,75 @@ func (t transaction) CreateQuestion(v domain.Question) error {
 		return notFound("mission revision", v.MissionRevision)
 	}
 	t.state.questions[v.ID] = v
+	return nil
+}
+
+func (t transaction) CreateOperatorQuestion(v domain.OperatorQuestion) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate operator question: %w", err)
+	}
+	if v.Status != domain.OperatorQuestionPending || v.Revision != 1 {
+		return fmt.Errorf("%w: operator question must be created pending at revision 1", port.ErrConflict)
+	}
+	if _, ok := t.state.missionRevisions[v.MissionRevision]; !ok {
+		return notFound("mission revision", v.MissionRevision)
+	}
+	if _, exists := t.state.operatorQuestions[v.ID]; exists {
+		return conflict("operator question", v.ID)
+	}
+	for _, existing := range t.state.operatorQuestions {
+		if existing.MissionID == v.MissionID && !existing.Status.Terminal() && existing.DedupSignature == v.DedupSignature {
+			return fmt.Errorf("%w: pending operator question duplicates semantic signature", port.ErrConflict)
+		}
+	}
+	t.state.operatorQuestions[v.ID] = cloneOperatorQuestion(v)
+	return nil
+}
+
+func (t transaction) SaveOperatorQuestion(v domain.OperatorQuestion, expectedRevision uint64) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate operator question: %w", err)
+	}
+	current, ok := t.state.operatorQuestions[v.ID]
+	if !ok {
+		return notFound("operator question", v.ID)
+	}
+	if current.Revision != expectedRevision || v.Revision != expectedRevision+1 {
+		return fmt.Errorf("%w: stale operator question revision", port.ErrConflict)
+	}
+	if current.MissionID != v.MissionID || current.MissionRevision != v.MissionRevision || current.CreatedAt != v.CreatedAt || current.Kind != v.Kind || current.DedupSignature != v.DedupSignature {
+		return fmt.Errorf("%w: immutable operator question fields changed", port.ErrConflict)
+	}
+	t.state.operatorQuestions[v.ID] = cloneOperatorQuestion(v)
+	return nil
+}
+
+func (t transaction) AcceptUserAnswer(v domain.UserAnswer, answered domain.OperatorQuestion, expectedRevision uint64) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate user answer: %w", err)
+	}
+	question, ok := t.state.operatorQuestions[v.QuestionID]
+	if !ok {
+		return notFound("operator question", v.QuestionID)
+	}
+	if err := v.ValidateForQuestion(question); err != nil {
+		return fmt.Errorf("%w: correlate user answer: %v", port.ErrConflict, err)
+	}
+	if _, exists := t.state.operatorAnswers[v.ID]; exists {
+		return conflict("user answer", v.ID)
+	}
+	key := transportAnswerKey(v.Channel, v.TransportEventID)
+	if _, exists := t.state.answerByTransport[key]; exists {
+		return fmt.Errorf("%w: transport event already accepted", port.ErrConflict)
+	}
+	if answered.ID != question.ID || answered.Status != domain.OperatorQuestionAnswered || answered.AnswerID != v.ID || !answered.AnsweredAt.Equal(v.ReceivedAt) {
+		return fmt.Errorf("%w: answered question does not match user answer", port.ErrConflict)
+	}
+	if err := t.SaveOperatorQuestion(answered, expectedRevision); err != nil {
+		return err
+	}
+	t.state.operatorAnswers[v.ID] = cloneUserAnswer(v)
+	t.state.answerByTransport[key] = v.ID
 	return nil
 }
 func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
@@ -994,6 +1117,15 @@ func cloneState(src state) state {
 	for k, v := range src.questions {
 		dst.questions[k] = v
 	}
+	for k, v := range src.operatorQuestions {
+		dst.operatorQuestions[k] = cloneOperatorQuestion(v)
+	}
+	for k, v := range src.operatorAnswers {
+		dst.operatorAnswers[k] = cloneUserAnswer(v)
+	}
+	for k, v := range src.answerByTransport {
+		dst.answerByTransport[k] = v
+	}
 	for k, v := range src.candidates {
 		dst.candidates[k] = cloneCandidate(v)
 	}
@@ -1082,6 +1214,16 @@ func cloneOperation(v domain.Operation) domain.Operation {
 	v.InputRefs = append([]string(nil), v.InputRefs...)
 	return v
 }
+func cloneOperatorQuestion(v domain.OperatorQuestion) domain.OperatorQuestion {
+	v.Options = append([]domain.QuestionOption(nil), v.Options...)
+	v.BlockingScope = append([]domain.QuestionBlockingTarget(nil), v.BlockingScope...)
+	return v
+}
+func cloneUserAnswer(v domain.UserAnswer) domain.UserAnswer {
+	v.OptionIDs = append([]string(nil), v.OptionIDs...)
+	return v
+}
+func transportAnswerKey(channel, eventID string) string { return channel + "\x00" + eventID }
 func cloneSourceSnapshot(v domain.SourceSnapshot) domain.SourceSnapshot {
 	v.Content = append([]byte(nil), v.Content...)
 	return v

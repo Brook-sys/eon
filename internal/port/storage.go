@@ -48,6 +48,22 @@ type AgendaWriter interface {
 	SaveOperation(domain.Operation) error
 }
 
+// OperatorQuestionReader exposes the channel-independent interruption state.
+// Answers remain immutable after acceptance; question revisions use optimistic
+// replacement through SaveOperatorQuestion.
+type OperatorQuestionReader interface {
+	OperatorQuestion(domain.OperatorQuestionID) (domain.OperatorQuestion, error)
+	OperatorQuestions(domain.MissionID, domain.OperatorQuestionStatus) ([]domain.OperatorQuestion, error)
+	UserAnswer(domain.OperatorAnswerID) (domain.UserAnswer, error)
+	UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error)
+}
+
+type OperatorQuestionWriter interface {
+	CreateOperatorQuestion(domain.OperatorQuestion) error
+	SaveOperatorQuestion(domain.OperatorQuestion, uint64) error
+	AcceptUserAnswer(domain.UserAnswer, domain.OperatorQuestion, uint64) error
+}
+
 // EventReader returns immutable events in ascending storage sequence. A zero
 // afterSequence starts at the beginning; limit must be positive.
 type EventReader interface {
@@ -109,6 +125,7 @@ type KnowledgeWriter interface {
 type Reader interface {
 	MissionReader
 	AgendaReader
+	OperatorQuestionReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -118,6 +135,7 @@ type Transaction interface {
 	Reader
 	MissionWriter
 	AgendaWriter
+	OperatorQuestionWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter

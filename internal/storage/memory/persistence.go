@@ -12,33 +12,36 @@ import (
 // adapters to checkpoint the complete in-memory reference model. Domain schema
 // versions remain authoritative for individual records.
 type persistedState struct {
-	MissionRevisions map[domain.MissionRevisionID]domain.MissionRevision
-	ActiveMissions   map[domain.MissionID]domain.MissionRevisionID
-	OperationSpecs   map[domain.OperationSpecID]domain.OperationSpec
-	Questions        map[domain.QuestionID]domain.Question
-	Candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
-	Inquiries        map[domain.InquiryID]domain.Inquiry
-	Operations       map[domain.OperationID]domain.Operation
-	Events           []domain.Event
-	EventIDs         map[domain.EventID]uint64
-	Idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
-	Sources          map[domain.SourceID]domain.Source
-	SourceVersions   map[domain.SourceVersionID]domain.SourceVersion
-	SourceSnapshots  map[domain.SourceVersionID]domain.SourceSnapshot
-	SourceFragments  map[domain.SourceFragmentID]domain.SourceFragment
-	Observations     map[domain.ObservationID]domain.Observation
-	Claims           map[domain.ClaimID]domain.Claim
-	EvidenceLinks    map[domain.EvidenceLinkID]domain.EvidenceLink
-	Artifacts        map[domain.ArtifactID]domain.KnowledgeArtifact
-	RawModelOutputs  map[domain.ArtifactID]domain.RawModelOutput
-	ProposedChanges  map[domain.ChangeSetID]domain.ProposedChangeSet
-	AcceptedChanges  map[domain.ChangeSetID]domain.AcceptedChangeSet
-	Receipts         map[domain.ReceiptID]domain.ValidationReceipt
-	CommitReceipts   map[domain.ReceiptID]domain.CommitReceipt
-	Commits          map[domain.CommitID]domain.Commit
-	CommitByIntent   map[domain.IdempotencyKey]domain.CommitID
-	HeadCommits      map[domain.MissionRevisionID]domain.CommitID
-	Canonical        map[string]domain.CanonicalEntity
+	MissionRevisions  map[domain.MissionRevisionID]domain.MissionRevision
+	ActiveMissions    map[domain.MissionID]domain.MissionRevisionID
+	OperationSpecs    map[domain.OperationSpecID]domain.OperationSpec
+	Questions         map[domain.QuestionID]domain.Question
+	OperatorQuestions map[domain.OperatorQuestionID]domain.OperatorQuestion
+	OperatorAnswers   map[domain.OperatorAnswerID]domain.UserAnswer
+	AnswerByTransport map[string]domain.OperatorAnswerID
+	Candidates        map[domain.InquiryCandidateID]domain.InquiryCandidate
+	Inquiries         map[domain.InquiryID]domain.Inquiry
+	Operations        map[domain.OperationID]domain.Operation
+	Events            []domain.Event
+	EventIDs          map[domain.EventID]uint64
+	Idempotency       map[domain.IdempotencyKey]domain.IdempotencyRecord
+	Sources           map[domain.SourceID]domain.Source
+	SourceVersions    map[domain.SourceVersionID]domain.SourceVersion
+	SourceSnapshots   map[domain.SourceVersionID]domain.SourceSnapshot
+	SourceFragments   map[domain.SourceFragmentID]domain.SourceFragment
+	Observations      map[domain.ObservationID]domain.Observation
+	Claims            map[domain.ClaimID]domain.Claim
+	EvidenceLinks     map[domain.EvidenceLinkID]domain.EvidenceLink
+	Artifacts         map[domain.ArtifactID]domain.KnowledgeArtifact
+	RawModelOutputs   map[domain.ArtifactID]domain.RawModelOutput
+	ProposedChanges   map[domain.ChangeSetID]domain.ProposedChangeSet
+	AcceptedChanges   map[domain.ChangeSetID]domain.AcceptedChangeSet
+	Receipts          map[domain.ReceiptID]domain.ValidationReceipt
+	CommitReceipts    map[domain.ReceiptID]domain.CommitReceipt
+	Commits           map[domain.CommitID]domain.Commit
+	CommitByIntent    map[domain.IdempotencyKey]domain.CommitID
+	HeadCommits       map[domain.MissionRevisionID]domain.CommitID
+	Canonical         map[string]domain.CanonicalEntity
 }
 
 // MarshalBinary returns an isolated checkpoint of the reference store.
@@ -48,7 +51,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 	cloned := cloneState(s.state)
 	p := persistedState{
 		MissionRevisions: cloned.missionRevisions, ActiveMissions: cloned.activeMissions,
-		OperationSpecs: cloned.operationSpecs, Questions: cloned.questions, Candidates: cloned.candidates,
+		OperationSpecs: cloned.operationSpecs, Questions: cloned.questions, OperatorQuestions: cloned.operatorQuestions,
+		OperatorAnswers: cloned.operatorAnswers, AnswerByTransport: cloned.answerByTransport, Candidates: cloned.candidates,
 		Inquiries: cloned.inquiries, Operations: cloned.operations,
 		Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
 		Sources: cloned.sources, SourceVersions: cloned.sourceVersions, SourceSnapshots: cloned.sourceSnapshots,
@@ -76,6 +80,9 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.activeMissions = nonNil(p.ActiveMissions, base.activeMissions)
 	base.operationSpecs = nonNil(p.OperationSpecs, base.operationSpecs)
 	base.questions = nonNil(p.Questions, base.questions)
+	base.operatorQuestions = nonNil(p.OperatorQuestions, base.operatorQuestions)
+	base.operatorAnswers = nonNil(p.OperatorAnswers, base.operatorAnswers)
+	base.answerByTransport = nonNil(p.AnswerByTransport, base.answerByTransport)
 	base.candidates = nonNil(p.Candidates, base.candidates)
 	base.inquiries = nonNil(p.Inquiries, base.inquiries)
 	base.operations = nonNil(p.Operations, base.operations)

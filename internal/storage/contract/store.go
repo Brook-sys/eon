@@ -732,6 +732,110 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatalf("cancelled update error = %v", err)
 		}
 	})
+
+	t.Run("operator questions use optimistic revisions and deduplicate transport answers", func(t *testing.T) {
+		store := factory()
+		mission := missionRevision()
+		question := operatorQuestionRecord()
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			return tx.CreateOperatorQuestion(question)
+		}); err != nil {
+			t.Fatalf("create operator question: %v", err)
+		}
+		answer := operatorAnswerRecord(question)
+		answered, err := domain.TransitionOperatorQuestion(question, domain.OperatorQuestionTransition{Event: domain.QuestionEventAnswer, OccurredAt: answer.ReceivedAt, AnswerID: answer.ID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.AcceptUserAnswer(answer, answered, question.Revision)
+		}); err != nil {
+			t.Fatalf("accept operator answer: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.OperatorQuestion(question.ID)
+			if err != nil {
+				return err
+			}
+			if got.Status != domain.OperatorQuestionAnswered || got.AnswerID != answer.ID {
+				t.Fatalf("question = %#v", got)
+			}
+			byTransport, err := r.UserAnswerByTransport(answer.Channel, answer.TransportEventID)
+			if err != nil {
+				return err
+			}
+			if byTransport.ID != answer.ID {
+				t.Fatalf("answer = %#v", byTransport)
+			}
+			listed, err := r.OperatorQuestions(question.MissionID, domain.OperatorQuestionAnswered)
+			if err != nil || len(listed) != 1 || listed[0].ID != question.ID {
+				t.Fatalf("listed = %#v, err = %v", listed, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		duplicate := answer
+		duplicate.ID = "answer_2"
+		duplicateQuestion := answered
+		duplicateQuestion.AnswerID = duplicate.ID
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.AcceptUserAnswer(duplicate, duplicateQuestion, question.Revision)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("duplicate transport error = %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveOperatorQuestion(answered, question.Revision) }); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("stale revision error = %v", err)
+		}
+	})
+
+	t.Run("operator question answer and state update roll back together", func(t *testing.T) {
+		store := factory()
+		mission := missionRevision()
+		question := operatorQuestionRecord()
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			return tx.CreateOperatorQuestion(question)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		answer := operatorAnswerRecord(question)
+		sentinel := errors.New("abort operator answer")
+		err := store.Update(context.Background(), func(tx port.Transaction) error {
+			answered, err := domain.TransitionOperatorQuestion(question, domain.OperatorQuestionTransition{Event: domain.QuestionEventAnswer, OccurredAt: answer.ReceivedAt, AnswerID: answer.ID})
+			if err != nil {
+				return err
+			}
+			if err := tx.AcceptUserAnswer(answer, answered, question.Revision); err != nil {
+				return err
+			}
+			return sentinel
+		})
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("rollback error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			if _, err := r.UserAnswer(answer.ID); !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("rolled-back answer exists: %v", err)
+			}
+			got, err := r.OperatorQuestion(question.ID)
+			if err != nil {
+				return err
+			}
+			if got.Status != domain.OperatorQuestionPending || got.Revision != 1 {
+				t.Fatalf("question changed during rollback: %#v", got)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func event(id domain.EventID, kind string) domain.Event {
@@ -754,4 +858,24 @@ func agendaRecords() (domain.Question, domain.InquiryCandidate, domain.Inquiry, 
 
 func operationSpec() domain.OperationSpec {
 	return domain.OperationSpec{SchemaVersion: 1, ID: "extract@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "fragment refs", OutputSchema: "proposed change set", Budget: domain.Budget{ModelCalls: 1, Tokens: 1000, Attempts: 1}, MaxOutputTokens: 100, SafetyMargin: 50, Validators: []string{"schema"}, RetryPolicy: "no retry", FallbackPolicy: "fail", MaximumAuthority: domain.AuthorityProposeOnly}
+}
+
+func operatorQuestionRecord() domain.OperatorQuestion {
+	created := time.Date(2026, 7, 15, 12, 1, 0, 0, time.UTC)
+	return domain.OperatorQuestion{
+		SchemaVersion: domain.SchemaVersionV1, ID: "ask_1", MissionID: "mission_1", MissionRevision: "revision_1", Revision: 1,
+		Kind: domain.QuestionSingleChoice, Prompt: "Choose a presentation", Context: "Only the artifact presentation depends on it",
+		Options: []domain.QuestionOption{{ID: "a", Label: "A"}, {ID: "b", Label: "B"}}, AllowContext: true, AllowSkip: true,
+		BlockingScope:  []domain.QuestionBlockingTarget{{Kind: domain.QuestionBlockingArtifact, Reference: "artifact_1"}},
+		FallbackPolicy: domain.QuestionContinueOtherWork, DedupSignature: "presentation:artifact_1", Priority: 50,
+		Status: domain.OperatorQuestionPending, CreatedAt: created, ExpiresAt: created.Add(time.Hour),
+	}
+}
+
+func operatorAnswerRecord(question domain.OperatorQuestion) domain.UserAnswer {
+	return domain.UserAnswer{
+		SchemaVersion: domain.SchemaVersionV1, ID: "answer_1", QuestionID: question.ID, ExpectedQuestionRevision: question.Revision,
+		Kind: domain.AnswerOptions, OptionIDs: []string{"a"}, ActorID: "operator_1", Channel: "dashboard",
+		TransportEventID: "request_1", ReceivedAt: question.CreatedAt.Add(time.Minute),
+	}
 }
