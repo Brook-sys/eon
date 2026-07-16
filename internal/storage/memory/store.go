@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -20,75 +21,83 @@ type Store struct {
 }
 
 type state struct {
-	missionRevisions   map[domain.MissionRevisionID]domain.MissionRevision
-	activeMissions     map[domain.MissionID]domain.MissionRevisionID
-	operationSpecs     map[domain.OperationSpecID]domain.OperationSpec
-	questions          map[domain.QuestionID]domain.Question
-	operatorQuestions  map[domain.OperatorQuestionID]domain.OperatorQuestion
-	operatorAnswers    map[domain.OperatorAnswerID]domain.UserAnswer
-	answerByTransport  map[string]domain.OperatorAnswerID
-	questionDeliveries map[domain.QuestionDeliveryID]domain.QuestionDelivery
-	deliveryByRoute    map[string]domain.QuestionDeliveryID
-	candidates         map[domain.InquiryCandidateID]domain.InquiryCandidate
-	inquiries          map[domain.InquiryID]domain.Inquiry
-	operations         map[domain.OperationID]domain.Operation
-	events             []domain.Event
-	eventIDs           map[domain.EventID]uint64
-	idempotency        map[domain.IdempotencyKey]domain.IdempotencyRecord
-	sources            map[domain.SourceID]domain.Source
-	sourceVersions     map[domain.SourceVersionID]domain.SourceVersion
-	sourceSnapshots    map[domain.SourceVersionID]domain.SourceSnapshot
-	sourceFragments    map[domain.SourceFragmentID]domain.SourceFragment
-	observations       map[domain.ObservationID]domain.Observation
-	claims             map[domain.ClaimID]domain.Claim
-	evidenceLinks      map[domain.EvidenceLinkID]domain.EvidenceLink
-	artifacts          map[domain.ArtifactID]domain.KnowledgeArtifact
-	rawModelOutputs    map[domain.ArtifactID]domain.RawModelOutput
-	proposedChanges    map[domain.ChangeSetID]domain.ProposedChangeSet
-	acceptedChanges    map[domain.ChangeSetID]domain.AcceptedChangeSet
-	receipts           map[domain.ReceiptID]domain.ValidationReceipt
-	commitReceipts     map[domain.ReceiptID]domain.CommitReceipt
-	commits            map[domain.CommitID]domain.Commit
-	commitByIntent     map[domain.IdempotencyKey]domain.CommitID
-	headCommits        map[domain.MissionRevisionID]domain.CommitID
-	canonical          map[string]domain.CanonicalEntity
+	missionRevisions          map[domain.MissionRevisionID]domain.MissionRevision
+	activeMissions            map[domain.MissionID]domain.MissionRevisionID
+	operationSpecs            map[domain.OperationSpecID]domain.OperationSpec
+	questions                 map[domain.QuestionID]domain.Question
+	operatorQuestions         map[domain.OperatorQuestionID]domain.OperatorQuestion
+	operatorAnswers           map[domain.OperatorAnswerID]domain.UserAnswer
+	answerByTransport         map[string]domain.OperatorAnswerID
+	questionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
+	deliveryByRoute           map[string]domain.QuestionDeliveryID
+	candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
+	inquiries                 map[domain.InquiryID]domain.Inquiry
+	operations                map[domain.OperationID]domain.Operation
+	events                    []domain.Event
+	eventIDs                  map[domain.EventID]uint64
+	idempotency               map[domain.IdempotencyKey]domain.IdempotencyRecord
+	sources                   map[domain.SourceID]domain.Source
+	sourceVersions            map[domain.SourceVersionID]domain.SourceVersion
+	sourceSnapshots           map[domain.SourceVersionID]domain.SourceSnapshot
+	sourceFragments           map[domain.SourceFragmentID]domain.SourceFragment
+	observations              map[domain.ObservationID]domain.Observation
+	claims                    map[domain.ClaimID]domain.Claim
+	evidenceLinks             map[domain.EvidenceLinkID]domain.EvidenceLink
+	artifacts                 map[domain.ArtifactID]domain.KnowledgeArtifact
+	rawModelOutputs           map[domain.ArtifactID]domain.RawModelOutput
+	proposedChanges           map[domain.ChangeSetID]domain.ProposedChangeSet
+	acceptedChanges           map[domain.ChangeSetID]domain.AcceptedChangeSet
+	receipts                  map[domain.ReceiptID]domain.ValidationReceipt
+	commitReceipts            map[domain.ReceiptID]domain.CommitReceipt
+	commits                   map[domain.CommitID]domain.Commit
+	commitByIntent            map[domain.IdempotencyKey]domain.CommitID
+	headCommits               map[domain.MissionRevisionID]domain.CommitID
+	canonical                 map[string]domain.CanonicalEntity
+	controlState              domain.ControlState
+	hasControlState           bool
+	operatorCommands          map[domain.CommandID]domain.OperatorCommand
+	operatorCommandByIdem     map[domain.IdempotencyKey]domain.CommandID
+	operatorCommandReceipts   map[domain.CommandID]domain.CommandReceipt
 }
 
 func New() *Store { return &Store{state: newState()} }
 
 func newState() state {
 	return state{
-		missionRevisions:   make(map[domain.MissionRevisionID]domain.MissionRevision),
-		activeMissions:     make(map[domain.MissionID]domain.MissionRevisionID),
-		operationSpecs:     make(map[domain.OperationSpecID]domain.OperationSpec),
-		questions:          make(map[domain.QuestionID]domain.Question),
-		operatorQuestions:  make(map[domain.OperatorQuestionID]domain.OperatorQuestion),
-		operatorAnswers:    make(map[domain.OperatorAnswerID]domain.UserAnswer),
-		answerByTransport:  make(map[string]domain.OperatorAnswerID),
-		questionDeliveries: make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
-		deliveryByRoute:    make(map[string]domain.QuestionDeliveryID),
-		candidates:         make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
-		inquiries:          make(map[domain.InquiryID]domain.Inquiry),
-		operations:         make(map[domain.OperationID]domain.Operation),
-		eventIDs:           make(map[domain.EventID]uint64),
-		idempotency:        make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
-		sources:            make(map[domain.SourceID]domain.Source),
-		sourceVersions:     make(map[domain.SourceVersionID]domain.SourceVersion),
-		sourceSnapshots:    make(map[domain.SourceVersionID]domain.SourceSnapshot),
-		sourceFragments:    make(map[domain.SourceFragmentID]domain.SourceFragment),
-		observations:       make(map[domain.ObservationID]domain.Observation),
-		claims:             make(map[domain.ClaimID]domain.Claim),
-		evidenceLinks:      make(map[domain.EvidenceLinkID]domain.EvidenceLink),
-		artifacts:          make(map[domain.ArtifactID]domain.KnowledgeArtifact),
-		rawModelOutputs:    make(map[domain.ArtifactID]domain.RawModelOutput),
-		proposedChanges:    make(map[domain.ChangeSetID]domain.ProposedChangeSet),
-		acceptedChanges:    make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
-		receipts:           make(map[domain.ReceiptID]domain.ValidationReceipt),
-		commitReceipts:     make(map[domain.ReceiptID]domain.CommitReceipt),
-		commits:            make(map[domain.CommitID]domain.Commit),
-		commitByIntent:     make(map[domain.IdempotencyKey]domain.CommitID),
-		headCommits:        make(map[domain.MissionRevisionID]domain.CommitID),
-		canonical:          make(map[string]domain.CanonicalEntity),
+		missionRevisions:        make(map[domain.MissionRevisionID]domain.MissionRevision),
+		activeMissions:          make(map[domain.MissionID]domain.MissionRevisionID),
+		operationSpecs:          make(map[domain.OperationSpecID]domain.OperationSpec),
+		questions:               make(map[domain.QuestionID]domain.Question),
+		operatorQuestions:       make(map[domain.OperatorQuestionID]domain.OperatorQuestion),
+		operatorAnswers:         make(map[domain.OperatorAnswerID]domain.UserAnswer),
+		answerByTransport:       make(map[string]domain.OperatorAnswerID),
+		questionDeliveries:      make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
+		deliveryByRoute:         make(map[string]domain.QuestionDeliveryID),
+		candidates:              make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
+		inquiries:               make(map[domain.InquiryID]domain.Inquiry),
+		operations:              make(map[domain.OperationID]domain.Operation),
+		eventIDs:                make(map[domain.EventID]uint64),
+		idempotency:             make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
+		sources:                 make(map[domain.SourceID]domain.Source),
+		sourceVersions:          make(map[domain.SourceVersionID]domain.SourceVersion),
+		sourceSnapshots:         make(map[domain.SourceVersionID]domain.SourceSnapshot),
+		sourceFragments:         make(map[domain.SourceFragmentID]domain.SourceFragment),
+		observations:            make(map[domain.ObservationID]domain.Observation),
+		claims:                  make(map[domain.ClaimID]domain.Claim),
+		evidenceLinks:           make(map[domain.EvidenceLinkID]domain.EvidenceLink),
+		artifacts:               make(map[domain.ArtifactID]domain.KnowledgeArtifact),
+		rawModelOutputs:         make(map[domain.ArtifactID]domain.RawModelOutput),
+		proposedChanges:         make(map[domain.ChangeSetID]domain.ProposedChangeSet),
+		acceptedChanges:         make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
+		receipts:                make(map[domain.ReceiptID]domain.ValidationReceipt),
+		commitReceipts:          make(map[domain.ReceiptID]domain.CommitReceipt),
+		commits:                 make(map[domain.CommitID]domain.Commit),
+		commitByIntent:          make(map[domain.IdempotencyKey]domain.CommitID),
+		headCommits:             make(map[domain.MissionRevisionID]domain.CommitID),
+		canonical:               make(map[string]domain.CanonicalEntity),
+		operatorCommands:        make(map[domain.CommandID]domain.OperatorCommand),
+		operatorCommandByIdem:   make(map[domain.IdempotencyKey]domain.CommandID),
+		operatorCommandReceipts: make(map[domain.CommandID]domain.CommandReceipt),
 	}
 }
 
@@ -154,6 +163,21 @@ func (t transaction) QuestionDelivery(id domain.QuestionDeliveryID) (domain.Ques
 }
 func (t transaction) DueQuestionDeliveries(now time.Time, limit int) ([]domain.QuestionDelivery, error) {
 	return reader(t).DueQuestionDeliveries(now, limit)
+}
+func (t transaction) ControlState() (domain.ControlState, error) {
+	return reader(t).ControlState()
+}
+func (t transaction) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
+	return reader(t).OperatorCommand(id)
+}
+func (t transaction) OperatorCommandByIdempotency(key domain.IdempotencyKey) (domain.OperatorCommand, error) {
+	return reader(t).OperatorCommandByIdempotency(key)
+}
+func (t transaction) OperatorCommandReceipt(id domain.CommandID) (domain.CommandReceipt, error) {
+	return reader(t).OperatorCommandReceipt(id)
+}
+func (t transaction) PendingOperatorCommands(limit int) ([]domain.OperatorCommand, error) {
+	return reader(t).PendingOperatorCommands(limit)
 }
 func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	return reader(t).OperationSpec(id)
@@ -316,6 +340,56 @@ func (r reader) DueQuestionDeliveries(now time.Time, limit int) ([]domain.Questi
 			return result[i].ID < result[j].ID
 		}
 		return result[i].AvailableAt.Before(result[j].AvailableAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (r reader) ControlState() (domain.ControlState, error) {
+	if !r.state.hasControlState {
+		return domain.ControlState{}, notFound("control state", "singleton")
+	}
+	return cloneControlState(r.state.controlState), nil
+}
+func (r reader) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
+	v, ok := r.state.operatorCommands[id]
+	if !ok {
+		return domain.OperatorCommand{}, notFound("operator command", id)
+	}
+	return cloneOperatorCommand(v), nil
+}
+func (r reader) OperatorCommandByIdempotency(key domain.IdempotencyKey) (domain.OperatorCommand, error) {
+	id, ok := r.state.operatorCommandByIdem[key]
+	if !ok {
+		return domain.OperatorCommand{}, notFound("operator command idempotency", key)
+	}
+	return r.OperatorCommand(id)
+}
+func (r reader) OperatorCommandReceipt(id domain.CommandID) (domain.CommandReceipt, error) {
+	v, ok := r.state.operatorCommandReceipts[id]
+	if !ok {
+		return domain.CommandReceipt{}, notFound("operator command receipt", id)
+	}
+	return v, nil
+}
+func (r reader) PendingOperatorCommands(limit int) ([]domain.OperatorCommand, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("pending operator command query requires positive limit")
+	}
+	result := make([]domain.OperatorCommand, 0, limit)
+	for _, command := range r.state.operatorCommands {
+		receipt, ok := r.state.operatorCommandReceipts[command.ID]
+		if !ok || receipt.State.Terminal() {
+			continue
+		}
+		result = append(result, cloneOperatorCommand(command))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].SubmittedAt.Equal(result[j].SubmittedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].SubmittedAt.Before(result[j].SubmittedAt)
 	})
 	if len(result) > limit {
 		result = result[:limit]
@@ -697,6 +771,91 @@ func (t transaction) SaveQuestionDelivery(v domain.QuestionDelivery, expectedSta
 	t.state.questionDeliveries[v.ID] = v
 	return nil
 }
+
+func (t transaction) CreateOperatorCommand(command domain.OperatorCommand, receipt domain.CommandReceipt) error {
+	if err := command.Validate(); err != nil {
+		return fmt.Errorf("validate operator command: %w", err)
+	}
+	if err := receipt.Validate(); err != nil {
+		return fmt.Errorf("validate command receipt: %w", err)
+	}
+	if receipt.CommandID != command.ID || receipt.State != domain.CommandReceived {
+		return fmt.Errorf("%w: command must be created with RECEIVED receipt", port.ErrConflict)
+	}
+	if existing, ok := t.state.operatorCommands[command.ID]; ok {
+		if equalOperatorCommands(existing, command) {
+			currentReceipt := t.state.operatorCommandReceipts[command.ID]
+			if currentReceipt == receipt {
+				return nil
+			}
+			return fmt.Errorf("%w: operator command receipt diverges on replay", port.ErrConflict)
+		}
+		return conflict("operator command", command.ID)
+	}
+	if existingID, ok := t.state.operatorCommandByIdem[command.IdempotencyKey]; ok {
+		existing := t.state.operatorCommands[existingID]
+		if equalOperatorCommands(existing, command) {
+			return nil
+		}
+		return fmt.Errorf("%w: operator command idempotency key reused with different content", port.ErrConflict)
+	}
+	if _, ok := t.state.operatorCommandReceipts[command.ID]; ok {
+		return conflict("operator command receipt", command.ID)
+	}
+	t.state.operatorCommands[command.ID] = cloneOperatorCommand(command)
+	t.state.operatorCommandByIdem[command.IdempotencyKey] = command.ID
+	t.state.operatorCommandReceipts[command.ID] = receipt
+	return nil
+}
+
+func (t transaction) SaveOperatorCommandReceipt(receipt domain.CommandReceipt) error {
+	if err := receipt.Validate(); err != nil {
+		return fmt.Errorf("validate command receipt: %w", err)
+	}
+	if _, ok := t.state.operatorCommands[receipt.CommandID]; !ok {
+		return notFound("operator command", receipt.CommandID)
+	}
+	current, ok := t.state.operatorCommandReceipts[receipt.CommandID]
+	if !ok {
+		return notFound("operator command receipt", receipt.CommandID)
+	}
+	if err := domain.AdvanceCommandReceipt(current, receipt); err != nil {
+		if errors.Is(err, domain.ErrConflict) {
+			return fmt.Errorf("%w: %v", port.ErrConflict, err)
+		}
+		return err
+	}
+	t.state.operatorCommandReceipts[receipt.CommandID] = receipt
+	return nil
+}
+
+func (t transaction) SaveControlState(next domain.ControlState, expectedRevision uint64) error {
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate control state: %w", err)
+	}
+	if !t.state.hasControlState {
+		if expectedRevision != 0 || next.Revision != 0 {
+			return fmt.Errorf("%w: initial control state must start at revision 0", port.ErrConflict)
+		}
+		t.state.controlState = cloneControlState(next)
+		t.state.hasControlState = true
+		return nil
+	}
+	current := t.state.controlState
+	if current.Revision != expectedRevision {
+		return fmt.Errorf("%w: stale control state revision", port.ErrConflict)
+	}
+	if next.Revision != expectedRevision+1 {
+		return fmt.Errorf("%w: control state revision must advance by one", port.ErrConflict)
+	}
+	if next.SchemaVersion != current.SchemaVersion {
+		return fmt.Errorf("%w: control state schema is immutable", port.ErrConflict)
+	}
+	t.state.controlState = cloneControlState(next)
+	t.state.hasControlState = true
+	return nil
+}
+
 func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate operation spec: %w", err)
@@ -1290,6 +1449,19 @@ func cloneState(src state) state {
 	for k, v := range src.canonical {
 		dst.canonical[k] = v
 	}
+	if src.hasControlState {
+		dst.controlState = cloneControlState(src.controlState)
+		dst.hasControlState = true
+	}
+	for k, v := range src.operatorCommands {
+		dst.operatorCommands[k] = cloneOperatorCommand(v)
+	}
+	for k, v := range src.operatorCommandByIdem {
+		dst.operatorCommandByIdem[k] = v
+	}
+	for k, v := range src.operatorCommandReceipts {
+		dst.operatorCommandReceipts[k] = v
+	}
 	return dst
 }
 func cloneKnowledgeArtifact(v domain.KnowledgeArtifact) domain.KnowledgeArtifact {
@@ -1367,6 +1539,39 @@ func equalChanges(a, b []domain.Change) bool {
 func cloneOperationSpec(v domain.OperationSpec) domain.OperationSpec {
 	v.Validators = append([]string(nil), v.Validators...)
 	return v
+}
+
+func cloneOperatorCommand(v domain.OperatorCommand) domain.OperatorCommand {
+	if v.ExpectedRevision != nil {
+		revision := *v.ExpectedRevision
+		v.ExpectedRevision = &revision
+	}
+	return v
+}
+
+func cloneControlState(v domain.ControlState) domain.ControlState {
+	if v.Missions != nil {
+		missions := make(map[domain.MissionID]domain.MissionControl, len(v.Missions))
+		for id, mission := range v.Missions {
+			missions[id] = mission
+		}
+		v.Missions = missions
+	}
+	return v
+}
+
+func equalOperatorCommands(a, b domain.OperatorCommand) bool {
+	if a.SchemaVersion != b.SchemaVersion || a.ID != b.ID || a.IdempotencyKey != b.IdempotencyKey || a.ActorType != b.ActorType || a.ActorID != b.ActorID || a.Kind != b.Kind || a.Target != b.Target || a.Reason != b.Reason || !a.SubmittedAt.Equal(b.SubmittedAt) {
+		return false
+	}
+	switch {
+	case a.ExpectedRevision == nil && b.ExpectedRevision == nil:
+		return true
+	case a.ExpectedRevision == nil || b.ExpectedRevision == nil:
+		return false
+	default:
+		return *a.ExpectedRevision == *b.ExpectedRevision
+	}
 }
 
 func equalStrings(a, b []string) bool {

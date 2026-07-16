@@ -942,6 +942,103 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatal(err)
 		}
 	})
+
+	t.Run("operator commands and control state are durable with optimistic concurrency", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 4, 0, 0, 0, time.UTC)
+		mission := missionRevision()
+		revision := uint64(1)
+		command := domain.OperatorCommand{
+			SchemaVersion: domain.SchemaVersionV1, ID: "cmd_pause", IdempotencyKey: "idem_pause",
+			ActorType: domain.ActorOperator, ActorID: "operator_1", Kind: domain.CommandPauseMission,
+			Target: domain.CommandTarget{MissionID: mission.MissionID}, ExpectedRevision: &revision,
+			Reason: "hold", SubmittedAt: now,
+		}
+		receipt := domain.CommandReceipt{
+			SchemaVersion: domain.SchemaVersionV1, ID: "receipt_cmd_pause", CommandID: command.ID,
+			State: domain.CommandReceived, RecordedAt: now,
+		}
+		control := domain.DefaultControlState(now)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(mission); err != nil {
+				return err
+			}
+			if err := tx.ActivateMissionRevision(mission.MissionID, mission.ID); err != nil {
+				return err
+			}
+			if err := tx.CreateOperatorCommand(command, receipt); err != nil {
+				return err
+			}
+			return tx.SaveControlState(control, 0)
+		}); err != nil {
+			t.Fatalf("seed control: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateOperatorCommand(command, receipt)
+		}); err != nil {
+			t.Fatalf("identical command replay: %v", err)
+		}
+		divergent := command
+		divergent.ID = "cmd_pause_other"
+		divergent.Reason = "other"
+		divergentReceipt := receipt
+		divergentReceipt.ID, divergentReceipt.CommandID = "receipt_other", divergent.ID
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateOperatorCommand(divergent, divergentReceipt)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("divergent idempotency error = %v", err)
+		}
+		nextControl, resultRef, err := domain.ApplyOperatorCommand(control, command, mission, now.Add(time.Minute))
+		if err != nil || resultRef != "mission_1@1:PAUSED" {
+			t.Fatalf("apply = %#v ref=%s err=%v", nextControl, resultRef, err)
+		}
+		validating := receipt
+		validating.State, validating.RecordedAt = domain.CommandValidating, now.Add(time.Second)
+		accepted := validating
+		accepted.State, accepted.RecordedAt = domain.CommandAccepted, now.Add(2*time.Second)
+		applying := accepted
+		applying.State, applying.RecordedAt = domain.CommandApplying, now.Add(3*time.Second)
+		applied := applying
+		applied.State, applied.ResultRef, applied.RecordedAt = domain.CommandApplied, resultRef, now.Add(4*time.Second)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			for _, step := range []domain.CommandReceipt{validating, accepted, applying, applied} {
+				if err := tx.SaveOperatorCommandReceipt(step); err != nil {
+					return err
+				}
+			}
+			return tx.SaveControlState(nextControl, control.Revision)
+		}); err != nil {
+			t.Fatalf("apply control: %v", err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveControlState(nextControl, control.Revision)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("stale control revision error = %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			state, err := r.ControlState()
+			if err != nil {
+				return err
+			}
+			if state.AllowsDispatch(mission.MissionID) || state.Revision != 1 {
+				t.Fatalf("control state = %#v", state)
+			}
+			pending, err := r.PendingOperatorCommands(10)
+			if err != nil {
+				return err
+			}
+			if len(pending) != 0 {
+				t.Fatalf("pending after apply = %#v", pending)
+			}
+			gotReceipt, err := r.OperatorCommandReceipt(command.ID)
+			if err != nil || gotReceipt.State != domain.CommandApplied {
+				t.Fatalf("receipt = %#v err=%v", gotReceipt, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func event(id domain.EventID, kind string) domain.Event {

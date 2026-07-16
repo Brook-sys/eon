@@ -425,13 +425,14 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 
 ### Slice B — controle seguro
 
-- command inbox idempotente;
-- pause/resume/shutdown gracioso;
-- external event/message inbox;
-- respostas e aprovações;
+- command inbox idempotente — implementado (`control.CommandInbox` + store); transports só submetem;
+- pause/resume/cancel/shutdown gracioso — implementados no domínio e `kernel.CommandProcessor`; scheduler usa `ControlState.AllowsDispatch` para bloquear **novo** despacho sob pause/cancel/stopping, sem matar in-flight nem impedir retomada de waits locais;
+- external event/message inbox genérico — parcial (respostas de pergunta têm inbox dedicada; mensagem/despertar genéricos ainda abertos);
+- respostas e aprovações — implementados no slice de perguntas;
 - contratos e persistência de `OperatorQuestion`/`UserAnswer`, correlação por identidade/revisão, waits locais e núcleo determinístico do `QuestionGate` — implementados;
-- persistência da decisão do gate e integração com inbox/outbox;
-- recibos e optimistic concurrency.
+- persistência da decisão do gate e integração com inbox/outbox — residual;
+- recibos e optimistic concurrency — implementados (`CommandReceipt` monotônico, revisão de missão esperada, `SaveControlState` com revisão monotônica);
+- residual explícito: crash-replay subprocessado do processador de comandos e superfícies HTTP de submit/consulta.
 
 ### Slice C — configuração versionada
 

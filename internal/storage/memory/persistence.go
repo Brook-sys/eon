@@ -12,38 +12,43 @@ import (
 // adapters to checkpoint the complete in-memory reference model. Domain schema
 // versions remain authoritative for individual records.
 type persistedState struct {
-	MissionRevisions   map[domain.MissionRevisionID]domain.MissionRevision
-	ActiveMissions     map[domain.MissionID]domain.MissionRevisionID
-	OperationSpecs     map[domain.OperationSpecID]domain.OperationSpec
-	Questions          map[domain.QuestionID]domain.Question
-	OperatorQuestions  map[domain.OperatorQuestionID]domain.OperatorQuestion
-	OperatorAnswers    map[domain.OperatorAnswerID]domain.UserAnswer
-	AnswerByTransport  map[string]domain.OperatorAnswerID
-	QuestionDeliveries map[domain.QuestionDeliveryID]domain.QuestionDelivery
-	DeliveryByRoute    map[string]domain.QuestionDeliveryID
-	Candidates         map[domain.InquiryCandidateID]domain.InquiryCandidate
-	Inquiries          map[domain.InquiryID]domain.Inquiry
-	Operations         map[domain.OperationID]domain.Operation
-	Events             []domain.Event
-	EventIDs           map[domain.EventID]uint64
-	Idempotency        map[domain.IdempotencyKey]domain.IdempotencyRecord
-	Sources            map[domain.SourceID]domain.Source
-	SourceVersions     map[domain.SourceVersionID]domain.SourceVersion
-	SourceSnapshots    map[domain.SourceVersionID]domain.SourceSnapshot
-	SourceFragments    map[domain.SourceFragmentID]domain.SourceFragment
-	Observations       map[domain.ObservationID]domain.Observation
-	Claims             map[domain.ClaimID]domain.Claim
-	EvidenceLinks      map[domain.EvidenceLinkID]domain.EvidenceLink
-	Artifacts          map[domain.ArtifactID]domain.KnowledgeArtifact
-	RawModelOutputs    map[domain.ArtifactID]domain.RawModelOutput
-	ProposedChanges    map[domain.ChangeSetID]domain.ProposedChangeSet
-	AcceptedChanges    map[domain.ChangeSetID]domain.AcceptedChangeSet
-	Receipts           map[domain.ReceiptID]domain.ValidationReceipt
-	CommitReceipts     map[domain.ReceiptID]domain.CommitReceipt
-	Commits            map[domain.CommitID]domain.Commit
-	CommitByIntent     map[domain.IdempotencyKey]domain.CommitID
-	HeadCommits        map[domain.MissionRevisionID]domain.CommitID
-	Canonical          map[string]domain.CanonicalEntity
+	MissionRevisions         map[domain.MissionRevisionID]domain.MissionRevision
+	ActiveMissions           map[domain.MissionID]domain.MissionRevisionID
+	OperationSpecs           map[domain.OperationSpecID]domain.OperationSpec
+	Questions                map[domain.QuestionID]domain.Question
+	OperatorQuestions        map[domain.OperatorQuestionID]domain.OperatorQuestion
+	OperatorAnswers          map[domain.OperatorAnswerID]domain.UserAnswer
+	AnswerByTransport        map[string]domain.OperatorAnswerID
+	QuestionDeliveries       map[domain.QuestionDeliveryID]domain.QuestionDelivery
+	DeliveryByRoute          map[string]domain.QuestionDeliveryID
+	Candidates               map[domain.InquiryCandidateID]domain.InquiryCandidate
+	Inquiries                map[domain.InquiryID]domain.Inquiry
+	Operations               map[domain.OperationID]domain.Operation
+	Events                   []domain.Event
+	EventIDs                 map[domain.EventID]uint64
+	Idempotency              map[domain.IdempotencyKey]domain.IdempotencyRecord
+	Sources                  map[domain.SourceID]domain.Source
+	SourceVersions           map[domain.SourceVersionID]domain.SourceVersion
+	SourceSnapshots          map[domain.SourceVersionID]domain.SourceSnapshot
+	SourceFragments          map[domain.SourceFragmentID]domain.SourceFragment
+	Observations             map[domain.ObservationID]domain.Observation
+	Claims                   map[domain.ClaimID]domain.Claim
+	EvidenceLinks            map[domain.EvidenceLinkID]domain.EvidenceLink
+	Artifacts                map[domain.ArtifactID]domain.KnowledgeArtifact
+	RawModelOutputs          map[domain.ArtifactID]domain.RawModelOutput
+	ProposedChanges          map[domain.ChangeSetID]domain.ProposedChangeSet
+	AcceptedChanges          map[domain.ChangeSetID]domain.AcceptedChangeSet
+	Receipts                 map[domain.ReceiptID]domain.ValidationReceipt
+	CommitReceipts           map[domain.ReceiptID]domain.CommitReceipt
+	Commits                  map[domain.CommitID]domain.Commit
+	CommitByIntent           map[domain.IdempotencyKey]domain.CommitID
+	HeadCommits              map[domain.MissionRevisionID]domain.CommitID
+	Canonical                map[string]domain.CanonicalEntity
+	HasControlState          bool
+	ControlState             domain.ControlState
+	OperatorCommands         map[domain.CommandID]domain.OperatorCommand
+	OperatorCommandByIdem    map[domain.IdempotencyKey]domain.CommandID
+	OperatorCommandReceipts  map[domain.CommandID]domain.CommandReceipt
 }
 
 // MarshalBinary returns an isolated checkpoint of the reference store.
@@ -64,6 +69,9 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ProposedChanges: cloned.proposedChanges, AcceptedChanges: cloned.acceptedChanges, Receipts: cloned.receipts,
 		CommitReceipts: cloned.commitReceipts, Commits: cloned.commits, CommitByIntent: cloned.commitByIntent,
 		HeadCommits: cloned.headCommits, Canonical: cloned.canonical,
+		HasControlState: cloned.hasControlState, ControlState: cloned.controlState,
+		OperatorCommands: cloned.operatorCommands, OperatorCommandByIdem: cloned.operatorCommandByIdem,
+		OperatorCommandReceipts: cloned.operatorCommandReceipts,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
@@ -111,6 +119,11 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.commitByIntent = nonNil(p.CommitByIntent, base.commitByIntent)
 	base.headCommits = nonNil(p.HeadCommits, base.headCommits)
 	base.canonical = nonNil(p.Canonical, base.canonical)
+	base.hasControlState = p.HasControlState
+	base.controlState = p.ControlState
+	base.operatorCommands = nonNil(p.OperatorCommands, base.operatorCommands)
+	base.operatorCommandByIdem = nonNil(p.OperatorCommandByIdem, base.operatorCommandByIdem)
+	base.operatorCommandReceipts = nonNil(p.OperatorCommandReceipts, base.operatorCommandReceipts)
 	return &Store{state: base}, nil
 }
 

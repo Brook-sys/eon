@@ -126,10 +126,28 @@ type KnowledgeWriter interface {
 	ApplyCommit(domain.Commit, domain.CommitReceipt, []domain.Change) error
 }
 
+// ControlReader exposes durable process/mission control and operator commands.
+// Transports must not obtain writers that mutate control state directly.
+type ControlReader interface {
+	ControlState() (domain.ControlState, error)
+	OperatorCommand(domain.CommandID) (domain.OperatorCommand, error)
+	OperatorCommandByIdempotency(domain.IdempotencyKey) (domain.OperatorCommand, error)
+	OperatorCommandReceipt(domain.CommandID) (domain.CommandReceipt, error)
+	PendingOperatorCommands(limit int) ([]domain.OperatorCommand, error)
+}
+
+// ControlWriter persists operator commands and kernel-applied control effects.
+type ControlWriter interface {
+	CreateOperatorCommand(domain.OperatorCommand, domain.CommandReceipt) error
+	SaveOperatorCommandReceipt(domain.CommandReceipt) error
+	SaveControlState(domain.ControlState, uint64) error
+}
+
 type Reader interface {
 	MissionReader
 	AgendaReader
 	OperatorQuestionReader
+	ControlReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -140,6 +158,7 @@ type Transaction interface {
 	MissionWriter
 	AgendaWriter
 	OperatorQuestionWriter
+	ControlWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter

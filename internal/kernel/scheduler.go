@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -85,6 +86,10 @@ func (s Scheduler) selectOrResume(ctx context.Context, missionRevision domain.Mi
 			return err
 		}
 		now := s.Clock.Now().UTC()
+		allowsDispatch, err := s.allowsDispatch(tx, missionRevision, now)
+		if err != nil {
+			return err
+		}
 		for _, operation := range operations {
 			if operation.State == domain.StateWaitingTime && operation.Reevaluation.NotBefore != nil && !operation.Reevaluation.NotBefore.After(now) {
 				next, err := domain.Transition(domain.OperationalSnapshot{State: operation.State, Reevaluation: operation.Reevaluation}, domain.TransitionInput{Event: domain.EventResume})
@@ -96,7 +101,7 @@ func (s Scheduler) selectOrResume(ctx context.Context, missionRevision domain.Mi
 					return err
 				}
 			}
-			if selected.ID == "" && operation.State == domain.StateReady {
+			if allowsDispatch && selected.ID == "" && operation.State == domain.StateReady {
 				selected = operation
 			}
 		}
@@ -109,4 +114,27 @@ func (s Scheduler) selectOrResume(ctx context.Context, missionRevision domain.Mi
 		return Decision{}, false, nil
 	}
 	return Decision{Kind: DecisionDispatch, Operation: selected.ID}, true, nil
+}
+
+// allowsDispatch consults durable control state. Missing control state means
+// the process has never received an operator command and remains running.
+func (s Scheduler) allowsDispatch(tx port.Transaction, missionRevision domain.MissionRevisionID, now time.Time) (bool, error) {
+	state, err := tx.ControlState()
+	if err != nil {
+		if errors.Is(err, port.ErrNotFound) {
+			return true, nil
+		}
+		return false, err
+	}
+	missionID := domain.MissionID("")
+	if revision, revErr := tx.MissionRevision(missionRevision); revErr == nil {
+		missionID = revision.MissionID
+	} else if !errors.Is(revErr, port.ErrNotFound) {
+		return false, revErr
+	}
+	if missionID == "" {
+		return state.ProcessMode == domain.ProcessRunning, nil
+	}
+	_ = now
+	return state.AllowsDispatch(missionID), nil
 }

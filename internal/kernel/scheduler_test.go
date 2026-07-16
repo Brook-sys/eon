@@ -113,6 +113,45 @@ func TestSchedulerResumesDueOperationOnceAndSelectsDeterministically(t *testing.
 	}
 }
 
+func TestSchedulerPauseBlocksNewDispatchButStillResumesLocalWaits(t *testing.T) {
+	now := time.Date(2026, 7, 16, 3, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	store := memory.New()
+	seedAgenda(t, store, now)
+	revision := uint64(1)
+	control := domain.DefaultControlState(now)
+	control.Missions = map[domain.MissionID]domain.MissionControl{
+		"mission_1": {
+			MissionID: "mission_1", Mode: domain.MissionDispatchPaused, RevisionAtChange: revision,
+			Reason: "hold", LastCommandID: "cmd_pause", UpdatedAt: now,
+		},
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveControlState(control, 0)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	scheduler := Scheduler{Store: store, Clock: clock}
+	decision, err := scheduler.Step(context.Background(), "revision_1")
+	if err != nil {
+		t.Fatalf("step: %v", err)
+	}
+	if decision.Kind != DecisionContinuityBlocked {
+		t.Fatalf("decision = %+v, want continuity blocked while paused", decision)
+	}
+	var resumed domain.Operation
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		var err error
+		resumed, err = r.Operation("operation_b")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if resumed.State != domain.StateReady {
+		t.Fatalf("local wait was not resumed under pause: %+v", resumed)
+	}
+}
+
 func seedMission(t *testing.T, store port.Store) {
 	t.Helper()
 	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1, OriginalText: "research", Purpose: "learn", Status: domain.MissionActive, Provenance: "fixture", AcceptedAt: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)}
