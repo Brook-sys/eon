@@ -463,6 +463,17 @@ A adaptação é conservadora:
 - rebaixar rapidamente diante de incompatibilidade e promover lentamente;
 - preservar registro de qual perfil e nível produziram cada decisão.
 
+### Implementação offline (FR-MODEL-006 / FR-MODEL-007)
+
+Política pura em `domain` (`SelectAdaptationPlan`, `ContextBudgetPolicy.EffectiveContextTokens`, `DemoteAdaptation` / `PlanAfterDemotion`):
+
+- níveis `BASELINE` → `ASSISTED_JSON` → `NATIVE_TOOLS` (tools só se `AllowNativeTools` e `SupportsTools`);
+- `SupportsJSONMode` falso/desconhecido **nunca** emite `response_format` (FR-MODEL-005);
+- janela efetiva = min(declared, safe_observed) × (1 − margem 12.5%) e, sem expansão, × 87.5% adicional; perfis 2k/8k/32k permanecem estritamente abaixo do declarado;
+- `port.CompletionRequest.ResponseFormat` opcional; adapter OpenAI só serializa `json_object` conhecido;
+- `ModelExecutor` aplica o plano por chamada, grava `operation.model_adaptation`, rebaixa em falha de enrichment/validação e em `SIMPLER_FORMAT`/fallback volta ao baseline;
+- inspect projeta `model_adaptation` a partir dos PayloadRefs (level/format/ctx/reason).
+
 ## Melhoria contínua do harness
 
 O runtime melhora seus procedimentos, não seus objetivos de forma independente.
