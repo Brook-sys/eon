@@ -41,6 +41,7 @@ type Runtime struct {
 	EventProcessor   *kernel.ExternalEventProcessor
 	ConfigApplier    *kernel.ConfigApplier
 	Scheduler        kernel.Scheduler
+	Executor         kernel.LocalExecutor
 	Registry         *kernel.StrategyRegistry
 	Cooldowns        *kernel.StrategyCooldownBook
 
@@ -229,17 +230,22 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		EventProcessor:   eventProcessor,
 		ConfigApplier:    configApplier,
 		Scheduler:        scheduler,
-		Registry:         registry,
-		Cooldowns:        cooldowns,
-		Inspect:          inspectAPI,
-		Control:          controlAPI,
-		Dashboard:        dash,
-		Handler:          handler,
-		TelegramAdapter:  telegramBits.Adapter,
-		TelegramWorker:   telegramBits.Worker,
-		TelegramIngress:  telegramBits.Ingress,
-		Telemetry:        telemetry,
-		logger:           log.Default(),
+		Executor: kernel.LocalExecutor{
+			Store: store,
+			Clock: clock,
+			IDs:   ids,
+		},
+		Registry:        registry,
+		Cooldowns:       cooldowns,
+		Inspect:         inspectAPI,
+		Control:         controlAPI,
+		Dashboard:       dash,
+		Handler:         handler,
+		TelegramAdapter: telegramBits.Adapter,
+		TelegramWorker:  telegramBits.Worker,
+		TelegramIngress: telegramBits.Ingress,
+		Telemetry:       telemetry,
+		logger:          log.Default(),
 	}, nil
 }
 
@@ -320,6 +326,8 @@ type CycleResult struct {
 	TelegramDuplicate   int
 	SchedulerRan        bool
 	SchedulerKind       kernel.DecisionKind
+	OperationsExecuted  int
+	OperationsSkipped   int
 	Worked              bool
 	Stopping            bool
 }
@@ -429,6 +437,21 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	// not count as productive work for idle backoff purposes.
 	if decision.Kind == kernel.DecisionDispatch || decision.Kind == kernel.DecisionExpand {
 		result.Worked = true
+	}
+
+	// After DISPATCH, run the model-free local executor when the operation is
+	// eligible. Non-local specs are skipped without error (model path residual).
+	if decision.Kind == kernel.DecisionDispatch && decision.Operation != "" {
+		execResult, execErr := rt.Executor.Execute(ctx, decision.Operation)
+		if execErr != nil {
+			return result, fmt.Errorf("local executor: %w", execErr)
+		}
+		if execResult.Completed {
+			result.OperationsExecuted++
+			result.Worked = true
+		} else if execResult.Skipped {
+			result.OperationsSkipped++
+		}
 	}
 	return result, nil
 }

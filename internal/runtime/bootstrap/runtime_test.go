@@ -169,6 +169,84 @@ func TestProcessCycleSchedulerWithMission(t *testing.T) {
 	}
 }
 
+func TestProcessCycleExecutesLocalContinuityOperation(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend: bootstrap.StorageMemory,
+		MissionID:    "mission_exec",
+		IdleMin:      time.Millisecond,
+		IdleMax:      2 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+
+	loader := mission.Loader{Store: rt.Store, Clock: rt.Clock, IDs: rt.IDs}
+	specJSON := []byte(`{
+  "schema_version": 1,
+  "id": "mission_exec",
+  "revision": 1,
+  "original_text": "execute local continuity",
+  "purpose": "prove post-dispatch model-free execution",
+  "domains": ["test"],
+  "policies": ["policy.v1"],
+  "budget": {"model_calls": 10, "tokens": 1024, "bytes": 4096, "attempts": 3, "duration": 60000000000},
+  "status": "ACTIVE"
+}`)
+	revision, err := loader.Load(ctx, specJSON, "bootstrap:exec")
+	if err != nil {
+		t.Fatalf("install mission: %v", err)
+	}
+	if err := kernel.EnsureCatalogSpecs(ctx, rt.Store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+
+	now := rt.Clock.Now().UTC()
+	opp := domain.WorkOpportunity{
+		SchemaVersion: domain.SchemaVersionV1, ID: "opp_exec_1",
+		MissionRevision: revision.ID, Family: domain.FamilyIntegrityAudit,
+		Title: "local integrity", Origin: "test", ExpectedGain: "audit",
+		Novelty: "exec-cycle", StopCondition: "report", DedupSignature: "integrity:exec",
+		Risk: domain.RiskLow, Priority: 30, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+		Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := rt.Store.Update(ctx, func(tx port.Transaction) error {
+		return tx.CreateWorkOpportunity(opp)
+	}); err != nil {
+		t.Fatalf("seed opportunity: %v", err)
+	}
+	admitter := kernel.Admitter{Store: rt.Store, Clock: rt.Clock, IDs: rt.IDs}
+	admitted, err := admitter.AdmitOne(ctx, opp.ID)
+	if err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("cycle: %v", err)
+	}
+	if result.SchedulerKind != kernel.DecisionDispatch {
+		t.Fatalf("scheduler kind = %q, want DISPATCH", result.SchedulerKind)
+	}
+	if result.OperationsExecuted != 1 || !result.Worked {
+		t.Fatalf("expected one local execution, got %#v", result)
+	}
+
+	var op domain.Operation
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		var err error
+		op, err = r.Operation(admitted.Operation.ID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if op.State != domain.StateSucceeded {
+		t.Fatalf("operation state = %s, want SUCCEEDED", op.State)
+	}
+}
+
 func TestOptionsValidateDefaults(t *testing.T) {
 	t.Parallel()
 	opts := bootstrap.Options{}
