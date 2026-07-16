@@ -17,20 +17,29 @@ import (
 )
 
 func main() {
-	var fixturePath, outputDirectory, baseURL, model, contexts, maxField, apiKeyEnvironment string
+	var fixturePath, outputDirectory, baseURL, model, contexts, maxField, apiKeyEnvironment, mode string
 	var timeout time.Duration
 	flag.StringVar(&fixturePath, "fixtures", "internal/evaluation/testdata/cognitive-v1.json", "fixture JSON path")
 	flag.StringVar(&outputDirectory, "out", "results/model-benchmark", "artifact directory")
-	flag.StringVar(&baseURL, "base-url", "", "OpenAI-compatible base URL")
-	flag.StringVar(&model, "model", "", "provider model identifier")
+	flag.StringVar(&baseURL, "base-url", "", "OpenAI-compatible base URL (required for mode=live)")
+	flag.StringVar(&model, "model", "", "provider model identifier (required for mode=live)")
 	flag.StringVar(&contexts, "contexts", "2048,4096,8192", "comma-separated context limits")
 	flag.StringVar(&maxField, "max-output-field", string(openai.MaxOutputTokensLegacy), "max_tokens or max_completion_tokens")
 	flag.StringVar(&apiKeyEnvironment, "api-key-env", "OPENAI_API_KEY", "environment variable containing the API key")
+	flag.StringVar(&mode, "mode", "live", "run mode: live | offline-oracle | offline-compile")
 	flag.DurationVar(&timeout, "timeout", 2*time.Minute, "timeout for the complete matrix")
 	flag.Parse()
-	if baseURL == "" || model == "" {
-		log.Fatal("-base-url and -model are required")
+
+	mode = strings.TrimSpace(strings.ToLower(mode))
+	switch mode {
+	case "live", "offline-oracle", "offline-compile":
+	default:
+		log.Fatalf("unsupported -mode %q (want live|offline-oracle|offline-compile)", mode)
 	}
+	if mode == "live" && (baseURL == "" || model == "") {
+		log.Fatal("-base-url and -model are required for mode=live (use -mode=offline-oracle without a provider)")
+	}
+
 	limits, err := parseContexts(contexts)
 	if err != nil {
 		log.Fatal(err)
@@ -47,20 +56,41 @@ func main() {
 	if closeErr != nil {
 		log.Fatal(closeErr)
 	}
-	provider, err := openai.New(openai.Config{BaseURL: baseURL, APIKey: os.Getenv(apiKeyEnvironment), Model: model, MaxOutputField: openai.MaxOutputField(maxField), Client: &http.Client{Timeout: 90 * time.Second}})
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	matrix := evaluation.Matrix{ContextTokens: limits}
+	spec := evaluation.DefaultOperationSpec()
+	estimator := prompt.ConservativeEstimator{}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	report, err := (evaluation.Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: evaluation.DefaultOperationSpec()}).Run(ctx, fixtures, evaluation.Matrix{ContextTokens: limits})
+
+	var report evaluation.Report
+	switch mode {
+	case "offline-compile":
+		report, err = evaluation.CompileMatrix(fixtures, matrix, estimator, spec)
+	case "offline-oracle":
+		report, err = evaluation.RunOracle(ctx, fixtures, matrix, estimator, spec)
+	default:
+		provider, perr := openai.New(openai.Config{
+			BaseURL:        baseURL,
+			APIKey:         os.Getenv(apiKeyEnvironment),
+			Model:          model,
+			MaxOutputField: openai.MaxOutputField(maxField),
+			Client:         &http.Client{Timeout: 90 * time.Second},
+		})
+		if perr != nil {
+			log.Fatal(perr)
+		}
+		report, err = (evaluation.Runner{Provider: provider, Estimator: estimator, Spec: spec}).Run(ctx, fixtures, matrix)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
 	if err := evaluation.WriteArtifacts(outputDirectory, report); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("runs=%d correct=%d syntax_valid=%d artifacts=%s\n", report.Summary.Total, report.Summary.SemanticallyRight, report.Summary.SyntaxValid, outputDirectory)
+	interp := evaluation.InterpretReport(report)
+	fmt.Printf("mode=%s verdict=%s runs=%d correct=%d syntax_valid=%d artifacts=%s\n", mode, interp.Verdict, report.Summary.Total, report.Summary.SemanticallyRight, report.Summary.SyntaxValid, outputDirectory)
+	fmt.Printf("headline=%s\n", interp.Headline)
 }
 
 func parseContexts(value string) ([]int, error) {

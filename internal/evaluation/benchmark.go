@@ -514,6 +514,7 @@ func WriteArtifacts(directory string, report Report) error {
 	}
 	var markdown strings.Builder
 	fmt.Fprintf(&markdown, "# Cognitive benchmark\n\n- Fixture: `%s`\n- Model: `%s`\n- Runs: %d\n- Compiled: %d\n- Syntax valid: %d\n- Semantically correct: %d\n- Input tokens: %d\n- Output tokens: %d\n- Omitted facts: %d\n- Errors (compile/provider/validation): %d/%d/%d\n\n", report.FixtureName, report.Model, report.Summary.Total, report.Summary.Compiled, report.Summary.SyntaxValid, report.Summary.SemanticallyRight, report.Summary.InputTokens, report.Summary.OutputTokens, report.Summary.OmittedFacts, report.Summary.CompileErrors, report.Summary.ProviderErrors, report.Summary.ValidationErrors)
+	markdown.WriteString(FormatInterpretationMarkdown(InterpretReport(report)))
 	writeBreakdown := func(title string, aggregates []Aggregate) {
 		fmt.Fprintf(&markdown, "## %s\n\n| Group | Runs | Compiled | Syntax valid | Correct | Omitted facts | Errors |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n", title)
 		for _, aggregate := range aggregates {

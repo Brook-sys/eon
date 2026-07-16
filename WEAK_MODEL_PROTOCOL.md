@@ -545,6 +545,20 @@ foram consideradas no preflight; o harness local permanece estreito porque
 precisa exercitar diretamente `OperationSpec`, o compilador e a porta
 `ModelProvider`, sem introduzir um runtime Python paralelo no primeiro slice.
 
+Modos offline do runner (sem rede, sem credenciais):
+
+- `-mode=offline-compile` — compila a matriz 2k/4k/8k sem chamar modelo;
+- `-mode=offline-oracle` — respostas perfeitas scriptadas (`EncodeAnswer` ↔ `Parse`)
+  produzem o teto do harness; o label de modelo é `offline-oracle` e **não**
+  conta como skill de modelo;
+- `InterpretReport` anexa veredito `PASS|PARTIAL|FAIL|UNSCORED` e notas estáveis
+  em `report.md` (seção Interpretation) sem alterar política do kernel.
+
+Baseline offline oracle do corpus `cognitive-v1` (2026-07-16): 33/33 runs
+semanticamente corretos na matriz 2k/4k/8k — prova de round-trip encode/Parse,
+não de capacidade cognitiva de um LLM. Eval live permanece bloqueada até existir
+endpoint OpenAI-compatible local.
+
 ## Continuidade permanente acima de sofisticação
 
 Enquanto a `MissionRevision` estiver ativa e o armazenamento permanecer operacional, o runtime é um processo permanente: não existe conclusão global implícita. Concluir uma `Operation` ou `Inquiry` deve revelar, atualizar ou invalidar próximos candidatos; concluir uma frente deve devolver o controle ao replenisher, à manutenção recorrente e à revisão da missão.
