@@ -100,6 +100,8 @@ Um `Commit` MUST aplicar todas ou nenhuma das mudanças aceitas e MUST produzir 
 
 **Evidência de aceitação:** alteração de claim identifica somente artefatos dependentes para refresh ou regeneração.
 
+**Implementação (MVP):** `domain.PlanArtifactInvalidation` + cascade no store em `ApplyCommit` e `AppendEvidenceLinks` (refs `claim:id[@version]`, `evidence_link:…`, `observation:…`, etc.); `view.Patcher` e família `artifact_refresh` continuam caminhos de regeneração; kinds de auditoria local não são cascade-stalados.
+
 ## 4. Modelo e contexto
 
 ### FR-MODEL-001 — Contrato universal texto→texto

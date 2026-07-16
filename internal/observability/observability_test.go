@@ -227,6 +227,18 @@ func TestEvaluateAlertsDerivedOnly(t *testing.T) {
 	if critical.Critical != 1 {
 		t.Fatalf("critical = %#v", critical)
 	}
+	growth := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: true, TelemetryEnabled: true, TelemetryHasOTLP: true,
+		EventHeadSequence:  domain.DefaultEventHeadWarnSequence,
+		StaleArtifactCount: domain.DefaultStaleArtifactWarnCount,
+	})
+	growthCodes := map[string]bool{}
+	for _, a := range growth.Alerts {
+		growthCodes[a.Code] = true
+	}
+	if !growthCodes[observability.AlertCodeEventHeadGrowth] || !growthCodes[observability.AlertCodeStaleArtifactsHigh] {
+		t.Fatalf("missing store growth alerts: %#v", growth.Alerts)
+	}
 }
 
 type stubCommandProcessor struct {

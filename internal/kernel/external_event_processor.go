@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	EventExternalEventReceived  = "external.event.received"
-	EventExternalEventApplied   = "external.event.applied"
-	EventExternalEventRejected  = "external.event.rejected"
-	EventExternalEventIgnored   = "external.event.ignored"
+	EventExternalEventReceived    = "external.event.received"
+	EventExternalEventApplied     = "external.event.applied"
+	EventExternalEventRejected    = "external.event.rejected"
+	EventExternalEventIgnored     = "external.event.ignored"
 	EventOperatorQuestionAnswered = "operator.question.answered"
-	EventExternalWakeObserved   = "external.wake.observed"
+	EventExternalWakeObserved     = "external.wake.observed"
 )
 
 // ExternalEventProcessor applies durable untrusted stimuli. Content never

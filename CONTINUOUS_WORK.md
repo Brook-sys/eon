@@ -127,6 +127,13 @@ A continuidade não deve depender de um único gerador. O runtime mantém um reg
 - compactar projeções derivadas preservando o canônico;
 - aplicar políticas de retenção autorizadas.
 
+Política MVP (`store-retention.v1` em `domain.StoreRetentionPolicy`):
+
+- o **event log canônico é append-only** — prune/GC de eventos **não** é ação autorizada;
+- ações autorizadas: refresh de artefatos derivados obsoletos (FR-KNOW-005), higiene/compactação de frontier (`WorkOpportunity`), trim de buffers descartáveis de export OTLP (`ExportRetention`);
+- pressão de crescimento do head de eventos e contagem de artefatos stale são **alertas de apresentação** (soft thresholds), nunca gatilhos de exclusão;
+- backup/export (`sqlite.BackupTo`) é o caminho operacional para controle de footprint, não delete seletivo do log.
+
 ### 3.8 Melhoria do harness
 
 - avaliar operação contra corpus versionado;

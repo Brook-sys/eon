@@ -83,6 +83,7 @@ func (p Patcher) Apply(ctx context.Context, priorID domain.ArtifactID, patch Evi
 			return err
 		}
 		link := domain.EvidenceLink{SchemaVersion: domain.SchemaVersionV1, ID: domain.EvidenceLinkID(linkID), ObservationID: patch.ObservationID, ClaimID: claimID, Relation: patch.Relation, Rationale: patch.Rationale}
+		// AppendEvidenceLinks may already cascade-stale dependents (FR-KNOW-005).
 		if err := tx.AppendEvidenceLinks(claimID, []domain.EvidenceLink{link}); err != nil {
 			return err
 		}
@@ -90,9 +91,16 @@ func (p Patcher) Apply(ctx context.Context, priorID domain.ArtifactID, patch Evi
 		if err != nil {
 			return err
 		}
-		prior.Stale = true
-		if err := tx.SaveKnowledgeArtifact(prior); err != nil {
+		// Re-load prior: cascade may have marked it stale already.
+		prior, err = tx.KnowledgeArtifact(priorID)
+		if err != nil {
 			return err
+		}
+		if !prior.Stale {
+			prior.Stale = true
+			if err := tx.SaveKnowledgeArtifact(prior); err != nil {
+				return err
+			}
 		}
 		return tx.AppendKnowledgeArtifact(successor)
 	})
@@ -123,7 +131,7 @@ func render(r port.Reader, artifactID domain.ArtifactID, claimID domain.ClaimID,
 		return domain.KnowledgeArtifact{}, errors.New("cited view requires at least one evidence link")
 	}
 	sort.Slice(links, func(i, j int) bool { return links[i].ID < links[j].ID })
-	dependencies := []string{fmt.Sprintf("claim:%s@%d", claim.ID, claim.Version)}
+	dependencies := []string{domain.FormatClaimDependency(claim.ID, claim.Version)}
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Claim\n\n%s\n\n## Evidence\n", claim.Proposition)
 	for _, link := range links {
@@ -150,7 +158,12 @@ func render(r port.Reader, artifactID domain.ArtifactID, claimID domain.ClaimID,
 		if link.Rationale != "" {
 			fmt.Fprintf(&b, " — %s", link.Rationale)
 		}
-		dependencies = append(dependencies, "evidence_link:"+string(link.ID), "observation:"+string(observation.ID), "source_fragment:"+string(fragment.ID), "source_version:"+string(version.ID))
+		dependencies = append(dependencies,
+			domain.FormatDependency(domain.DependencyKindEvidenceLink, string(link.ID)),
+			domain.FormatDependency(domain.DependencyKindObservation, string(observation.ID)),
+			domain.FormatDependency(domain.DependencyKindSourceFragment, string(fragment.ID)),
+			domain.FormatDependency(domain.DependencyKindSourceVersion, string(version.ID)),
+		)
 	}
 	content := b.String() + "\n"
 	hash := sha256.Sum256([]byte(content))
@@ -159,12 +172,9 @@ func render(r port.Reader, artifactID domain.ArtifactID, claimID domain.ClaimID,
 
 func claimDependency(dependencies []string) (domain.ClaimID, error) {
 	for _, dependency := range dependencies {
-		if strings.HasPrefix(dependency, "claim:") {
-			value := strings.TrimPrefix(dependency, "claim:")
-			id, _, ok := strings.Cut(value, "@")
-			if ok && id != "" {
-				return domain.ClaimID(id), nil
-			}
+		kind, id, _, ok := domain.ParseDependencyRef(dependency)
+		if ok && kind == domain.DependencyKindClaim && id != "" {
+			return domain.ClaimID(id), nil
 		}
 	}
 	return "", errors.New("knowledge artifact has no claim dependency")

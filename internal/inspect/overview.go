@@ -227,11 +227,12 @@ func (p *Projector) BuildOverview(ctx context.Context, missionID domain.MissionI
 
 func attachOverviewAlerts(out Overview) *observability.AlertSnapshot {
 	in := observability.AlertInput{
-		ObservedAt:       out.GeneratedAt,
-		StoreReachable:   true,
-		ProcessMode:      string(out.ProcessMode),
-		PendingCommands:  out.PendingCommands,
-		PendingQuestions: out.PendingQuestions,
+		ObservedAt:        out.GeneratedAt,
+		StoreReachable:    true,
+		ProcessMode:       string(out.ProcessMode),
+		PendingCommands:   out.PendingCommands,
+		PendingQuestions:  out.PendingQuestions,
+		EventHeadSequence: out.EventHeadSequence,
 	}
 	if out.Telemetry != nil {
 		in.TelemetryEnabled = out.Telemetry.Enabled

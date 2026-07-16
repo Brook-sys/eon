@@ -259,10 +259,10 @@ func (e ExternalEvent) Validate() error {
 type ExternalEventDispositionState string
 
 const (
-	ExternalEventReceived  ExternalEventDispositionState = "RECEIVED"
-	ExternalEventApplied   ExternalEventDispositionState = "APPLIED"
-	ExternalEventRejected  ExternalEventDispositionState = "REJECTED"
-	ExternalEventIgnored   ExternalEventDispositionState = "IGNORED"
+	ExternalEventReceived ExternalEventDispositionState = "RECEIVED"
+	ExternalEventApplied  ExternalEventDispositionState = "APPLIED"
+	ExternalEventRejected ExternalEventDispositionState = "REJECTED"
+	ExternalEventIgnored  ExternalEventDispositionState = "IGNORED"
 )
 
 func (s ExternalEventDispositionState) valid() bool {
@@ -284,12 +284,12 @@ func (s ExternalEventDispositionState) Terminal() bool {
 }
 
 type ExternalEventDisposition struct {
-	SchemaVersion int                          `json:"schema_version"`
-	EventID       ExternalEventID              `json:"event_id"`
+	SchemaVersion int                           `json:"schema_version"`
+	EventID       ExternalEventID               `json:"event_id"`
 	State         ExternalEventDispositionState `json:"state"`
-	ResultRef     string                       `json:"result_ref,omitempty"`
-	FailureCode   string                       `json:"failure_code,omitempty"`
-	RecordedAt    time.Time                    `json:"recorded_at"`
+	ResultRef     string                        `json:"result_ref,omitempty"`
+	FailureCode   string                        `json:"failure_code,omitempty"`
+	RecordedAt    time.Time                     `json:"recorded_at"`
 }
 
 func (d ExternalEventDisposition) Validate() error {

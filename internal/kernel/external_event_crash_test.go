@@ -36,7 +36,7 @@ func TestExternalEventProcessorCrashReplaySQLite(t *testing.T) {
 		SchemaVersion: domain.SchemaVersionV1, ID: "ext_wake_crash", DeduplicationKey: "dashboard:wake:crash",
 		Source: "operator-dashboard", SourceActorID: "operator_1", Kind: domain.ExternalUserMessage,
 		MissionID: "mission_1", TransportMessageID: "ui-crash-1",
-		Content: domain.ExternalContent{MediaType: "text/plain", Text: "wake after crash"},
+		Content:    domain.ExternalContent{MediaType: "text/plain", Text: "wake after crash"},
 		ReceivedAt: now,
 	}
 	received, err := inbox.SubmitExternalEvent(event)

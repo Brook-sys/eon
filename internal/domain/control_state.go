@@ -67,12 +67,12 @@ func (m MissionControl) Validate() error {
 // ControlState is the authoritative process/mission control projection used by
 // the scheduler and operator commands. It is mutated only by the kernel.
 type ControlState struct {
-	SchemaVersion     int                              `json:"schema_version"`
-	Revision          uint64                           `json:"revision"`
-	ProcessMode       ProcessMode                      `json:"process_mode"`
-	ShutdownCommandID CommandID                        `json:"shutdown_command_id,omitempty"`
-	Missions          map[MissionID]MissionControl     `json:"missions,omitempty"`
-	UpdatedAt         time.Time                        `json:"updated_at"`
+	SchemaVersion     int                          `json:"schema_version"`
+	Revision          uint64                       `json:"revision"`
+	ProcessMode       ProcessMode                  `json:"process_mode"`
+	ShutdownCommandID CommandID                    `json:"shutdown_command_id,omitempty"`
+	Missions          map[MissionID]MissionControl `json:"missions,omitempty"`
+	UpdatedAt         time.Time                    `json:"updated_at"`
 }
 
 func DefaultControlState(now time.Time) ControlState {

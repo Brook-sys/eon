@@ -28,14 +28,14 @@ type EventFilter struct {
 
 // EventPage is a resumable timeline slice.
 type EventPage struct {
-	SchemaVersion   int            `json:"schema_version"`
-	AfterSequence   uint64         `json:"after_sequence"`
-	Limit           int            `json:"limit"`
-	NextSequence    uint64         `json:"next_sequence"`
-	HasMore         bool           `json:"has_more"`
-	Events          []domain.Event `json:"events"`
-	FilterApplied   bool           `json:"filter_applied"`
-	GeneratedAt     time.Time      `json:"generated_at"`
+	SchemaVersion int            `json:"schema_version"`
+	AfterSequence uint64         `json:"after_sequence"`
+	Limit         int            `json:"limit"`
+	NextSequence  uint64         `json:"next_sequence"`
+	HasMore       bool           `json:"has_more"`
+	Events        []domain.Event `json:"events"`
+	FilterApplied bool           `json:"filter_applied"`
+	GeneratedAt   time.Time      `json:"generated_at"`
 }
 
 // ListEvents returns events after a sequence with optional correlation filters.

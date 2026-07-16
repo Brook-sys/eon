@@ -1,8 +1,11 @@
 package observability
 
 import (
+	"fmt"
 	"strings"
 	"time"
+
+	"motor-autonomo/internal/domain"
 )
 
 // Alert severity for derived process signals. Never drives kernel decisions.
@@ -26,6 +29,8 @@ const (
 	AlertCodeFrontierNeedsHygiene    = "frontier.needs_hygiene"
 	AlertCodeContinuityBlocked       = "continuity.blocked"
 	AlertCodeContinuityFindingsStale = "continuity.findings_stale"
+	AlertCodeEventHeadGrowth         = "store.event_head_growth"
+	AlertCodeStaleArtifactsHigh      = "store.stale_artifacts_high"
 )
 
 // Default soft thresholds for control backlog pressure (presentation only).
@@ -79,6 +84,13 @@ type AlertInput struct {
 	ContinuityBlocked       bool
 	ContinuityBlockedDetail string
 	ContinuityFindingsStale bool
+
+	// Soft store growth signals (append-only log / derived stale views).
+	// Never authorize GC; presentation and operator hygiene only.
+	EventHeadSequence  uint64
+	StaleArtifactCount int
+	// Optional override; zero values use domain.DefaultStoreRetentionPolicy.
+	StoreRetention domain.StoreRetentionPolicy
 }
 
 // EvaluateAlerts derives a stable, sorted alert list from pure inputs.
@@ -196,6 +208,33 @@ func EvaluateAlerts(in AlertInput) AlertSnapshot {
 			Code: AlertCodeContinuityFindingsStale, Severity: AlertSeverityInfo,
 			Summary:   "latest continuity audit findings are marked stale",
 			Detail:    "re-run continuity audit families for a fresh artifact",
+			Canonical: false, ObservedAt: now,
+		})
+	}
+
+	// Soft append-only growth / derived-stale pressure (never GC triggers).
+	policy := in.StoreRetention.Normalize()
+	if pressure := policy.EventHeadPressure(in.EventHeadSequence); pressure != "" {
+		sev := AlertSeverityInfo
+		if pressure == "warn" {
+			sev = AlertSeverityWarning
+		}
+		out.Alerts = append(out.Alerts, Alert{
+			Code: AlertCodeEventHeadGrowth, Severity: sev,
+			Summary:   "append-only event log head sequence is elevated",
+			Detail:    fmt.Sprintf("head_sequence=%d policy=%s; prune is not authorized — use backup/export", in.EventHeadSequence, policy.Version),
+			Canonical: false, ObservedAt: now,
+		})
+	}
+	if pressure := policy.StaleArtifactPressure(in.StaleArtifactCount); pressure != "" {
+		sev := AlertSeverityInfo
+		if pressure == "warn" {
+			sev = AlertSeverityWarning
+		}
+		out.Alerts = append(out.Alerts, Alert{
+			Code: AlertCodeStaleArtifactsHigh, Severity: sev,
+			Summary:   "stale derived knowledge artifacts exceed soft threshold",
+			Detail:    fmt.Sprintf("stale_count=%d; authorized action is refresh via artifact_refresh / FR-KNOW-005 cascade", in.StaleArtifactCount),
 			Canonical: false, ObservedAt: now,
 		})
 	}

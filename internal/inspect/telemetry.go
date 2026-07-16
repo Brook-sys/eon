@@ -88,6 +88,7 @@ func (p *Projector) BuildAlerts(ctx context.Context, missionID domain.MissionID)
 	}
 	in.PendingCommands = overview.PendingCommands
 	in.PendingQuestions = overview.PendingQuestions
+	in.EventHeadSequence = overview.EventHeadSequence
 	if overview.Mission != nil {
 		m := overview.Mission
 		if m.Horizon != nil {
@@ -105,6 +106,9 @@ func (p *Projector) BuildAlerts(ctx context.Context, missionID domain.MissionID)
 		if m.ContinuityFindings != nil && m.ContinuityFindings.Latest != nil && m.ContinuityFindings.Latest.Stale {
 			in.ContinuityFindingsStale = true
 		}
+	}
+	if catalog, err := p.KnowledgeCatalog(ctx); err == nil {
+		in.StaleArtifactCount = catalog.StaleArtifacts
 	}
 	return observability.EvaluateAlerts(in), nil
 }

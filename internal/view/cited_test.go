@@ -82,6 +82,81 @@ func TestPatchAppendsEvidenceMarksPriorStaleAndCreatesSuccessor(t *testing.T) {
 	}
 }
 
+func TestEvidenceDeltaCascadesStaleOnDependentArtifactWithoutPatch(t *testing.T) {
+	// FR-KNOW-005: any evidence append must detectably obsolete dependent derived views,
+	// not only the explicit cited-view Patcher path.
+	store, claimID, secondObservation, ids := seededClaimAndSecondObservation(t)
+	prior, err := (view.Generator{Store: store, IDs: ids}).Generate(context.Background(), claimID, domain.GenesisCommitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unrelated := domain.KnowledgeArtifact{
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            "artifact_unrelated",
+		Kind:          "cited_claim_view",
+		BaseCommitID:  domain.GenesisCommitID,
+		Dependencies:  []string{domain.FormatClaimDependency("claim_other", 1)},
+		ContentRef:    "sha256:unrelated",
+		Content:       "unrelated",
+	}
+	audit := domain.KnowledgeArtifact{
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            "artifact_audit",
+		Kind:          "gap_scan_report",
+		BaseCommitID:  domain.GenesisCommitID,
+		Dependencies:  []string{domain.FormatClaimDependency(claimID, 1)},
+		ContentRef:    "sha256:audit",
+		Content:       "audit",
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendKnowledgeArtifact(unrelated); err != nil {
+			return err
+		}
+		return tx.AppendKnowledgeArtifact(audit)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	link := domain.EvidenceLink{
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            "evidence_cascade",
+		ObservationID: secondObservation,
+		ClaimID:       claimID,
+		Relation:      domain.EvidenceQualifies,
+		Rationale:     "cascade fixture",
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.AppendEvidenceLinks(claimID, []domain.EvidenceLink{link})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		old, err := r.KnowledgeArtifact(prior.ID)
+		if err != nil {
+			return err
+		}
+		if !old.Stale {
+			t.Fatal("dependent cited view was not cascade-staled")
+		}
+		other, err := r.KnowledgeArtifact(unrelated.ID)
+		if err != nil {
+			return err
+		}
+		if other.Stale {
+			t.Fatal("unrelated artifact was incorrectly staled")
+		}
+		report, err := r.KnowledgeArtifact(audit.ID)
+		if err != nil {
+			return err
+		}
+		if report.Stale {
+			t.Fatal("local audit artifact must not cascade-stale")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPatchRollsBackWhenObservationIsMissing(t *testing.T) {
 	store, claimID, _, ids := seededClaimAndSecondObservation(t)
 	prior, err := (view.Generator{Store: store, IDs: ids}).Generate(context.Background(), claimID, domain.GenesisCommitID)

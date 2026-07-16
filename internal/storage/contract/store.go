@@ -274,14 +274,24 @@ func TestStore(t *testing.T, factory Factory) {
 			if err := tx.AppendClaimWithEvidence(claim, []domain.EvidenceLink{initial}); err != nil {
 				return err
 			}
-			if err := tx.AppendEvidenceLinks(claim.ID, []domain.EvidenceLink{delta}); err != nil {
+			// Persist the artifact before the evidence delta so FR-KNOW-005 cascade can target it.
+			if err := tx.AppendKnowledgeArtifact(artifact); err != nil {
 				return err
 			}
-			return tx.AppendKnowledgeArtifact(artifact)
+			return tx.AppendEvidenceLinks(claim.ID, []domain.EvidenceLink{delta})
 		}); err != nil {
 			t.Fatal(err)
 		}
-		artifact.Dependencies[0] = "caller mutation"
+		fresh := domain.KnowledgeArtifact{
+			SchemaVersion: 1, ID: "artifact_2", Kind: "cited_claim_view", BaseCommitID: domain.GenesisCommitID,
+			Dependencies: []string{"claim:claim_other@1"}, ContentRef: hash, Content: "# unrelated view", Stale: false,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.AppendKnowledgeArtifact(fresh)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		fresh.Dependencies[0] = "caller mutation"
 		if err := store.View(context.Background(), func(r port.Reader) error {
 			links, err := r.EvidenceLinksForClaim(claim.ID)
 			if err != nil {
@@ -290,9 +300,19 @@ func TestStore(t *testing.T, factory Factory) {
 			if len(links) != 2 || links[0].ID != initial.ID || links[1].ID != delta.ID {
 				t.Fatalf("evidence links = %+v", links)
 			}
-			got, err := r.KnowledgeArtifact("artifact_1")
+			cascaded, err := r.KnowledgeArtifact("artifact_1")
 			if err != nil {
 				return err
+			}
+			if !cascaded.Stale {
+				t.Fatal("evidence delta did not cascade-stale dependent knowledge artifact")
+			}
+			got, err := r.KnowledgeArtifact("artifact_2")
+			if err != nil {
+				return err
+			}
+			if got.Stale {
+				t.Fatal("unrelated artifact was cascade-staled")
 			}
 			if got.Dependencies[0] == "caller mutation" {
 				t.Fatal("stored artifact aliased caller dependencies")
@@ -302,13 +322,13 @@ func TestStore(t *testing.T, factory Factory) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		artifact.Dependencies = []string{"claim:claim_1@1", "evidence_link:evidence_1"}
-		artifact.Stale = true
-		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(artifact) }); err != nil {
+		fresh.Dependencies = []string{"claim:claim_other@1"}
+		fresh.Stale = true
+		if err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(fresh) }); err != nil {
 			t.Fatalf("mark artifact stale: %v", err)
 		}
-		artifact.Content = "mutated"
-		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(artifact) })
+		fresh.Content = "mutated"
+		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveKnowledgeArtifact(fresh) })
 		if !errors.Is(err, port.ErrConflict) {
 			t.Fatalf("artifact mutation error = %v, want ErrConflict", err)
 		}

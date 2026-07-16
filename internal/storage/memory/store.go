@@ -1929,6 +1929,10 @@ func (t transaction) AppendEvidenceLinks(claimID domain.ClaimID, links []domain.
 	for _, link := range links {
 		t.state.evidenceLinks[link.ID] = link
 	}
+	// FR-KNOW-005: evidence deltas invalidate derived views that depend on the claim graph.
+	if err := t.markDependentArtifactsStale(domain.EvidenceDeltaDependencyKeys(claimID, links)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -2107,6 +2111,10 @@ func (t transaction) ApplyCommit(v domain.Commit, receipt domain.CommitReceipt, 
 			return fmt.Errorf("unsupported change kind %q", change.Kind)
 		}
 	}
+	// FR-KNOW-005: official commits mark dependent derived artifacts stale in the same transaction.
+	if err := t.markDependentArtifactsStale(domain.ChangeDependencyKeys(changes)); err != nil {
+		return err
+	}
 	t.state.commits[v.ID] = v
 	t.state.commitReceipts[receipt.ID] = receipt
 	t.state.commitByIntent[v.IdempotencyKey] = v.ID
@@ -2117,6 +2125,30 @@ func (t transaction) ApplyCommit(v domain.Commit, receipt domain.CommitReceipt, 
 func notFound(kind string, id any) error { return fmt.Errorf("%w: %s %v", port.ErrNotFound, kind, id) }
 func conflict(kind string, id any) error {
 	return fmt.Errorf("%w: %s %v already exists", port.ErrConflict, kind, id)
+}
+
+// markDependentArtifactsStale applies FR-KNOW-005 cascade: only false→true Stale
+// on non-audit artifacts whose Dependencies intersect changedKeys.
+func (t transaction) markDependentArtifactsStale(changedKeys []string) error {
+	if len(changedKeys) == 0 || len(t.state.artifacts) == 0 {
+		return nil
+	}
+	artifacts := make([]domain.KnowledgeArtifact, 0, len(t.state.artifacts))
+	for _, artifact := range t.state.artifacts {
+		artifacts = append(artifacts, artifact)
+	}
+	for _, id := range domain.PlanArtifactInvalidation(artifacts, changedKeys, domain.IsLocalAuditArtifactKind) {
+		artifact, ok := t.state.artifacts[id]
+		if !ok || artifact.Stale {
+			continue
+		}
+		artifact.Stale = true
+		if err := artifact.Validate(); err != nil {
+			return fmt.Errorf("validate knowledge artifact %s after stale mark: %w", id, err)
+		}
+		t.state.artifacts[id] = cloneKnowledgeArtifact(artifact)
+	}
+	return nil
 }
 
 func cloneState(src state) state {
