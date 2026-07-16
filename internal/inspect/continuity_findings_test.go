@@ -198,6 +198,80 @@ func TestProjectContinuityFindingsFromArtifacts(t *testing.T) {
 	if httpProj.TotalReports != 3 || httpProj.Latest == nil {
 		t.Fatalf("http projection = %#v", httpProj)
 	}
+
+	// active_only drops the stale freshness report.
+	activeResp := mustGET(t, server.URL+"/continuity/findings?mission_id=mission_1&active_only=true")
+	defer activeResp.Body.Close()
+	if activeResp.StatusCode != http.StatusOK {
+		t.Fatalf("active_only status = %d", activeResp.StatusCode)
+	}
+	var activeProj inspect.ContinuityFindingsProjection
+	if err := json.NewDecoder(activeResp.Body).Decode(&activeProj); err != nil {
+		t.Fatal(err)
+	}
+	if activeProj.TotalReports != 2 || activeProj.StaleReports != 0 || !activeProj.Filter.ActiveOnly {
+		t.Fatalf("active_only projection = %#v", activeProj)
+	}
+	if len(activeProj.LatestByFamily) != 2 {
+		t.Fatalf("active families = %#v", activeProj.LatestByFamily)
+	}
+
+	// family filter keeps a single family.
+	famResp := mustGET(t, server.URL+"/continuity/findings?mission_id=mission_1&family=gap_scan")
+	defer famResp.Body.Close()
+	if famResp.StatusCode != http.StatusOK {
+		t.Fatalf("family status = %d", famResp.StatusCode)
+	}
+	var famProj inspect.ContinuityFindingsProjection
+	if err := json.NewDecoder(famResp.Body).Decode(&famProj); err != nil {
+		t.Fatal(err)
+	}
+	if famProj.TotalReports != 1 || famProj.Latest == nil || famProj.Latest.Family != "gap_scan" {
+		t.Fatalf("family projection = %#v", famProj)
+	}
+	if famProj.Filter.Family != "gap_scan" {
+		t.Fatalf("filter echo = %#v", famProj.Filter)
+	}
+
+	// Latest prefers non-stale even when a stale report is newer.
+	staleNewerBody := map[string]any{
+		"schema":              "local-operation-audit-v1",
+		"operation_id":        "op_gap_stale_new",
+		"spec_id":             "continuity.gap_scan.v1",
+		"mission_revision_id": "revision_1",
+		"ready_count":         0,
+		"open_opportunities":  9,
+		"verified_at":         now.Add(time.Hour).Format(time.RFC3339Nano),
+		"family":              "gap_scan",
+		"findings":            []string{"gap:should_not_be_latest_when_stale"},
+	}
+	rawStaleNewer, err := json.Marshal(staleNewerBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.AppendKnowledgeArtifact(domain.KnowledgeArtifact{
+			SchemaVersion: domain.SchemaVersionV1, ID: "artifact_gap_stale_new", Kind: "gap_scan_report",
+			BaseCommitID: domain.GenesisCommitID, Dependencies: []string{"fixture:gap_stale_new"},
+			ContentRef: "inline:json:local-operation-audit-v1", Content: string(rawStaleNewer), Stale: true,
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var prefer inspect.ContinuityFindingsProjection
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		var err error
+		prefer, err = inspect.ProjectContinuityFindingsFiltered(r, mission.ID, inspect.ContinuityFindingsFilter{Family: "gap_scan"})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if prefer.Latest == nil || prefer.Latest.ArtifactID != "artifact_gap_old" || prefer.Latest.Stale {
+		t.Fatalf("expected non-stale gap latest, got %#v", prefer.Latest)
+	}
+	if len(prefer.LatestByFamily) != 1 || prefer.LatestByFamily[0].ArtifactID != "artifact_gap_old" {
+		t.Fatalf("family latest should prefer non-stale: %#v", prefer.LatestByFamily)
+	}
 }
 
 func TestProjectContinuityFindingsRedactsSecrets(t *testing.T) {

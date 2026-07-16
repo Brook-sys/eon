@@ -41,12 +41,23 @@ type ContinuityFindingSummary struct {
 	Stale               bool                     `json:"stale"`
 }
 
+// ContinuityFindingsFilter constrains which audit reports appear in a projection.
+// Zero value keeps the previous behaviour (all reports for the mission revision).
+type ContinuityFindingsFilter struct {
+	// ActiveOnly drops reports whose KnowledgeArtifact.Stale is true.
+	ActiveOnly bool
+	// Family, when non-empty, keeps only rows whose audit family (or kind fallback) matches.
+	Family string
+}
+
 // ContinuityFindingsProjection aggregates the latest local continuity audits.
 type ContinuityFindingsProjection struct {
-	SchemaVersion  int                        `json:"schema_version"`
-	TotalReports   int                        `json:"total_reports"`
-	StaleReports   int                        `json:"stale_reports"`
-	ActiveReports  int                        `json:"active_reports"`
+	SchemaVersion int `json:"schema_version"`
+	TotalReports  int `json:"total_reports"`
+	StaleReports  int `json:"stale_reports"`
+	ActiveReports int `json:"active_reports"`
+	// Filter echoes the effective presentation filter so clients can render toggles.
+	Filter         ContinuityFindingsFilter   `json:"filter"`
 	Latest         *ContinuityFindingSummary  `json:"latest,omitempty"`
 	LatestByFamily []ContinuityFindingSummary `json:"latest_by_family,omitempty"`
 }
@@ -87,7 +98,13 @@ func isLocalAuditReportKind(kind string) bool {
 // ProjectContinuityFindings builds a read-only aggregation of local continuity
 // audit artifacts. When missionRevision is non-empty, only reports bound to
 // that revision (via audit body) are kept; empty missionRevision returns all.
+// filter is applied after mission scoping; counters reflect the filtered set.
 func ProjectContinuityFindings(r port.Reader, missionRevision domain.MissionRevisionID) (ContinuityFindingsProjection, error) {
+	return ProjectContinuityFindingsFiltered(r, missionRevision, ContinuityFindingsFilter{})
+}
+
+// ProjectContinuityFindingsFiltered is the filter-aware form of ProjectContinuityFindings.
+func ProjectContinuityFindingsFiltered(r port.Reader, missionRevision domain.MissionRevisionID, filter ContinuityFindingsFilter) (ContinuityFindingsProjection, error) {
 	if r == nil {
 		return ContinuityFindingsProjection{}, errors.New("reader is required")
 	}
@@ -95,7 +112,14 @@ func ProjectContinuityFindings(r port.Reader, missionRevision domain.MissionRevi
 	if err != nil {
 		return ContinuityFindingsProjection{}, err
 	}
-	out := ContinuityFindingsProjection{SchemaVersion: domain.SchemaVersionV1}
+	familyFilter := strings.TrimSpace(filter.Family)
+	out := ContinuityFindingsProjection{
+		SchemaVersion: domain.SchemaVersionV1,
+		Filter: ContinuityFindingsFilter{
+			ActiveOnly: filter.ActiveOnly,
+			Family:     familyFilter,
+		},
+	}
 	summaries := make([]ContinuityFindingSummary, 0)
 	for _, artifact := range artifacts {
 		if !isLocalAuditReportKind(artifact.Kind) {
@@ -106,6 +130,16 @@ func ProjectContinuityFindings(r port.Reader, missionRevision domain.MissionRevi
 			continue
 		}
 		if missionRevision != "" && summary.MissionRevision != "" && summary.MissionRevision != missionRevision {
+			continue
+		}
+		if filter.ActiveOnly && artifact.Stale {
+			continue
+		}
+		familyKey := summary.Family
+		if familyKey == "" {
+			familyKey = summary.Kind
+		}
+		if familyFilter != "" && familyKey != familyFilter && summary.Family != familyFilter && summary.Kind != familyFilter {
 			continue
 		}
 		out.TotalReports++
@@ -120,6 +154,10 @@ func ProjectContinuityFindings(r port.Reader, missionRevision domain.MissionRevi
 		return out, nil
 	}
 	sort.SliceStable(summaries, func(i, j int) bool {
+		// Prefer non-stale first so Latest is actionable for operators.
+		if summaries[i].Stale != summaries[j].Stale {
+			return !summaries[i].Stale && summaries[j].Stale
+		}
 		ti, tj := summaries[i].VerifiedAt, summaries[j].VerifiedAt
 		if !ti.Equal(tj) {
 			return ti.After(tj)
@@ -167,6 +205,11 @@ func ProjectContinuityFindings(r port.Reader, missionRevision domain.MissionRevi
 
 // ContinuityFindingsForMission projects continuity audits for a mission's active revision.
 func (p *Projector) ContinuityFindingsForMission(ctx context.Context, missionID domain.MissionID) (ContinuityFindingsProjection, error) {
+	return p.ContinuityFindingsForMissionFiltered(ctx, missionID, ContinuityFindingsFilter{})
+}
+
+// ContinuityFindingsForMissionFiltered applies an optional presentation filter.
+func (p *Projector) ContinuityFindingsForMissionFiltered(ctx context.Context, missionID domain.MissionID, filter ContinuityFindingsFilter) (ContinuityFindingsProjection, error) {
 	if missionID == "" {
 		return ContinuityFindingsProjection{}, errors.New("mission ID is required")
 	}
@@ -176,7 +219,7 @@ func (p *Projector) ContinuityFindingsForMission(ctx context.Context, missionID 
 		if err != nil {
 			return err
 		}
-		proj, err := ProjectContinuityFindings(r, active.ID)
+		proj, err := ProjectContinuityFindingsFiltered(r, active.ID, filter)
 		if err != nil {
 			return err
 		}

@@ -330,16 +330,33 @@ func (a *API) handleKnowledgeArtifact(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleContinuityFindings projects model-free local continuity audit findings.
-// Query: mission_id (required for mission-scoped active revision filter).
-// Without mission_id, returns an empty projection with 400 — operators should
-// always scope findings to a mission to avoid cross-mission leakage of free text.
+// Query:
+//   - mission_id (required) scopes to the mission's active revision
+//   - active_only=true drops stale KnowledgeArtifact reports
+//   - family=<name> keeps only one continuity family (or report kind)
+//
+// Without mission_id, returns 400 — operators should always scope findings to a
+// mission to avoid cross-mission leakage of free text.
 func (a *API) handleContinuityFindings(w http.ResponseWriter, r *http.Request) {
 	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
 	if missionID == "" {
 		writeError(w, http.StatusBadRequest, "missing_mission_id", "mission_id is required")
 		return
 	}
-	proj, err := a.Projector.ContinuityFindingsForMission(r.Context(), missionID)
+	q := r.URL.Query()
+	filter := ContinuityFindingsFilter{
+		Family: strings.TrimSpace(q.Get("family")),
+	}
+	switch strings.ToLower(strings.TrimSpace(q.Get("active_only"))) {
+	case "1", "true", "yes", "on":
+		filter.ActiveOnly = true
+	case "", "0", "false", "no", "off":
+		// default: include stale reports (still preferred lower in Latest ranking)
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_active_only", "active_only must be a boolean")
+		return
+	}
+	proj, err := a.Projector.ContinuityFindingsForMissionFiltered(r.Context(), missionID, filter)
 	if err != nil {
 		writeStoreError(w, err)
 		return

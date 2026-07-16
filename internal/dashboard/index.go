@@ -452,13 +452,32 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
             + " · " + esc(fmtTime(L.verified_at))
             + (fl.length ? (" · " + fl.map(function (line) { return esc(line); }).join("; ")) : "")
             + "</dd>";
+          html += '<dt>latest_audit_links</dt><dd class="ops">';
+          if (L.artifact_id) {
+            html += '<button type="button" data-know-kind="artifacts" data-know-id="' + esc(L.artifact_id) + '">Abrir artifact</button>';
+          }
+          if (L.operation_id) {
+            html += '<button type="button" data-inspect-op="' + esc(L.operation_id) + '">Inspecionar operation</button>';
+          }
+          html += "</dd>";
         }
         if (Array.isArray(cf.latest_by_family) && cf.latest_by_family.length) {
-          html += '<dt>audits_by_family</dt><dd>' + cf.latest_by_family.map(function (row) {
+          html += '<dt>audits_by_family</dt><dd class="list">';
+          cf.latest_by_family.forEach(function (row) {
             const f0 = (Array.isArray(row.findings) && row.findings.length) ? row.findings[0] : "";
-            return esc(row.family || row.kind || "?") + (row.stale ? "(stale)" : "")
-              + (f0 ? (" → " + esc(f0)) : "");
-          }).join("; ") + "</dd>";
+            html += '<div class="card">';
+            html += '<div class="id">' + esc(row.family || row.kind || "?") + (row.stale ? " · stale" : "") + "</div>";
+            if (f0) html += '<div class="muted">' + esc(f0) + "</div>";
+            html += '<div class="ops">';
+            if (row.artifact_id) {
+              html += '<button type="button" data-know-kind="artifacts" data-know-id="' + esc(row.artifact_id) + '">Artifact</button>';
+            }
+            if (row.operation_id) {
+              html += '<button type="button" data-inspect-op="' + esc(row.operation_id) + '">Operation</button>';
+            }
+            html += "</div></div>";
+          });
+          html += "</dd>";
         }
       }
     } else {
@@ -482,6 +501,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         el("inspKind").value = "operation";
         el("inspId").value = btn.getAttribute("data-inspect-op") || "";
         loadInspector();
+      });
+    });
+    el("overview").querySelectorAll("button[data-know-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const kind = btn.getAttribute("data-know-kind") || "artifacts";
+        if (el("knowKind")) el("knowKind").value = kind;
+        if (el("knowId")) el("knowId").value = btn.getAttribute("data-know-id") || "";
+        loadKnowledgeDetail();
       });
     });
     el("clockMeta").textContent = "head=" + (o.event_head_sequence ?? "—");

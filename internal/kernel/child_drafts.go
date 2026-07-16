@@ -191,9 +191,121 @@ func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family doma
 			EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
 		}}, nil
 
+	case domain.FamilyIntegrityAudit:
+		orphanEvidence, orphanObs, conflicted, claimsWithoutEv := integrityStructuralCounts(observations, claims, evidence, fragmentByID)
+		if orphanEvidence == 0 && orphanObs == 0 && conflicted == 0 && claimsWithoutEv == 0 {
+			return nil, nil
+		}
+		return []ChildDraft{{
+			Title:          "audit structural integrity of knowledge graph",
+			Origin:         "decompose:integrity_audit:findings",
+			ExpectedGain:   fmt.Sprintf("integrity orphans_ev=%d orphans_obs=%d conflicted=%d claims_without_ev=%d", orphanEvidence, orphanObs, conflicted, claimsWithoutEv),
+			Novelty:        fmt.Sprintf("integrity inventory at %s", now.UTC().Format(time.RFC3339)),
+			StopCondition:  "integrity inventory persisted or deferred",
+			DedupSignature: "integrity:structural_inventory",
+			Risk:           domain.RiskLow,
+			Priority:       21,
+			EstimatedCost:  domain.Budget{Tokens: 48, Attempts: 1},
+		}}, nil
+
+	case domain.FamilyConflictReview:
+		unopposed, conflicted, claimsWithoutEv := conflictStructuralCounts(claims, evidence)
+		if unopposed == 0 && conflicted == 0 && claimsWithoutEv == 0 {
+			return nil, nil
+		}
+		return []ChildDraft{{
+			Title:          "review unopposed and conflicted claims",
+			Origin:         "decompose:conflict:findings",
+			ExpectedGain:   fmt.Sprintf("conflict candidates unopposed=%d conflicted=%d claims_without_ev=%d", unopposed, conflicted, claimsWithoutEv),
+			Novelty:        fmt.Sprintf("conflict inventory at %s", now.UTC().Format(time.RFC3339)),
+			StopCondition:  "each candidate reviewed or deferred",
+			DedupSignature: "conflict:evidence_inventory",
+			Risk:           domain.RiskMedium,
+			Priority:       24,
+			EstimatedCost:  domain.Budget{Tokens: 64, Attempts: 1},
+		}}, nil
+
 	default:
 		return nil, nil
 	}
+}
+
+func integrityStructuralCounts(
+	observations []domain.Observation,
+	claims []domain.Claim,
+	evidence []domain.EvidenceLink,
+	fragmentByID map[domain.SourceFragmentID]domain.SourceFragment,
+) (orphanEvidence, orphanObs, conflicted, claimsWithoutEv int) {
+	observationByID := map[domain.ObservationID]struct{}{}
+	for _, obs := range observations {
+		observationByID[obs.ID] = struct{}{}
+		if obs.Anchor.SourceFragmentID != "" {
+			if _, ok := fragmentByID[obs.Anchor.SourceFragmentID]; !ok {
+				orphanObs++
+			}
+		}
+	}
+	claimByID := map[domain.ClaimID]struct{}{}
+	for _, claim := range claims {
+		claimByID[claim.ID] = struct{}{}
+	}
+	claimHasEvidence := map[domain.ClaimID]struct{}{}
+	support := map[domain.ClaimID]int{}
+	contradict := map[domain.ClaimID]int{}
+	for _, link := range evidence {
+		claimHasEvidence[link.ClaimID] = struct{}{}
+		if _, ok := observationByID[link.ObservationID]; !ok {
+			orphanEvidence++
+		} else if _, ok := claimByID[link.ClaimID]; !ok {
+			orphanEvidence++
+		}
+		switch link.Relation {
+		case domain.EvidenceSupports:
+			support[link.ClaimID]++
+		case domain.EvidenceContradicts:
+			contradict[link.ClaimID]++
+		}
+	}
+	for id, n := range support {
+		if n > 0 && contradict[id] > 0 {
+			conflicted++
+		}
+	}
+	for _, claim := range claims {
+		if _, ok := claimHasEvidence[claim.ID]; !ok {
+			claimsWithoutEv++
+		}
+	}
+	return orphanEvidence, orphanObs, conflicted, claimsWithoutEv
+}
+
+func conflictStructuralCounts(claims []domain.Claim, evidence []domain.EvidenceLink) (unopposed, conflicted, claimsWithoutEv int) {
+	hasSupport := map[domain.ClaimID]bool{}
+	hasContradict := map[domain.ClaimID]bool{}
+	claimHasEvidence := map[domain.ClaimID]struct{}{}
+	for _, link := range evidence {
+		claimHasEvidence[link.ClaimID] = struct{}{}
+		switch link.Relation {
+		case domain.EvidenceSupports, domain.EvidenceReplicates:
+			hasSupport[link.ClaimID] = true
+		case domain.EvidenceContradicts, domain.EvidenceFailsToReplicate:
+			hasContradict[link.ClaimID] = true
+		}
+	}
+	for _, claim := range claims {
+		if _, ok := claimHasEvidence[claim.ID]; !ok {
+			claimsWithoutEv++
+		}
+		if hasSupport[claim.ID] && !hasContradict[claim.ID] {
+			unopposed++
+		}
+	}
+	for id := range hasSupport {
+		if hasContradict[id] {
+			conflicted++
+		}
+	}
+	return unopposed, conflicted, claimsWithoutEv
 }
 
 // staticChildDrafts keeps a non-empty portfolio when the store has no gap yet,

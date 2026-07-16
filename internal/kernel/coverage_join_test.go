@@ -278,4 +278,85 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 	if len(resolved) != 1 || resolved[0].DedupSignature != "gap:scopes" {
 		t.Fatalf("static fallback = %+v", resolved)
 	}
+
+	// integrity + conflict share a graph with support+contradict on one claim.
+	structStore := memory.New()
+	seedMission(t, structStore)
+	if err := structStore.Update(ctx, func(tx port.Transaction) error {
+		src := domain.Source{SchemaVersion: domain.SchemaVersionV1, ID: "source_c", Kind: "fixture", Locator: "c.txt", ObservedAt: now}
+		ver := domain.SourceVersion{SchemaVersion: domain.SchemaVersionV1, ID: "sv_c", SourceID: src.ID, ContentHash: hash, ContentRef: hash, ObservedAt: now}
+		snap := domain.SourceSnapshot{SchemaVersion: domain.SchemaVersionV1, SourceVersionID: ver.ID, MediaType: "text/plain", Content: body}
+		frag := domain.SourceFragment{SchemaVersion: domain.SchemaVersionV1, ID: "frag_c", SourceVersionID: ver.ID, Location: "bytes:0-4", StartOffset: 0, EndOffset: 4, ContentHash: hash, ContentRef: hash}
+		obs := domain.Observation{
+			SchemaVersion: domain.SchemaVersionV1, ID: "obs_c", Statement: "observed", ExactQuote: "body",
+			Anchor: domain.ObservationAnchor{SourceFragmentID: frag.ID}, Provenance: "test",
+		}
+		claim := domain.Claim{
+			SchemaVersion: domain.SchemaVersionV1, ID: "claim_conflicted", Proposition: "maybe",
+			Qualifiers: map[string]string{"stance": "contested"}, Version: 1,
+		}
+		links := []domain.EvidenceLink{
+			{SchemaVersion: domain.SchemaVersionV1, ID: "ev_support", ClaimID: claim.ID, ObservationID: obs.ID, Relation: domain.EvidenceSupports, Rationale: "s"},
+			{SchemaVersion: domain.SchemaVersionV1, ID: "ev_contra", ClaimID: claim.ID, ObservationID: obs.ID, Relation: domain.EvidenceContradicts, Rationale: "c"},
+		}
+		for _, step := range []error{
+			tx.AppendSource(src, ver, snap),
+			tx.AppendSourceFragments(ver.ID, []domain.SourceFragment{frag}),
+			tx.AppendObservation(obs),
+			tx.AppendClaimWithEvidence(claim, links),
+		} {
+			if step != nil {
+				return step
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("seed structural graph: %v", err)
+	}
+	integrityDrafts, err := PlanChildDraftsFromStore(ctx, structStore, domain.FamilyIntegrityAudit, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(integrityDrafts) != 1 || integrityDrafts[0].DedupSignature != "integrity:structural_inventory" {
+		t.Fatalf("integrity drafts = %+v", integrityDrafts)
+	}
+	if !strings.Contains(integrityDrafts[0].ExpectedGain, "conflicted=1") {
+		t.Fatalf("integrity gain = %q", integrityDrafts[0].ExpectedGain)
+	}
+	conflictDrafts, err := PlanChildDraftsFromStore(ctx, structStore, domain.FamilyConflictReview, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conflictDrafts) != 1 || conflictDrafts[0].DedupSignature != "conflict:evidence_inventory" {
+		t.Fatalf("conflict drafts = %+v", conflictDrafts)
+	}
+	if !strings.Contains(conflictDrafts[0].ExpectedGain, "conflicted=1") {
+		t.Fatalf("conflict gain = %q", conflictDrafts[0].ExpectedGain)
+	}
+
+	// Clean graph: integrity/conflict planners stay silent so static fallback can apply.
+	clean := memory.New()
+	seedMission(t, clean)
+	cleanIntegrity, err := PlanChildDraftsFromStore(ctx, clean, domain.FamilyIntegrityAudit, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cleanIntegrity) != 0 {
+		t.Fatalf("clean integrity drafts = %+v", cleanIntegrity)
+	}
+	cleanConflict, err := PlanChildDraftsFromStore(ctx, clean, domain.FamilyConflictReview, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cleanConflict) != 0 {
+		t.Fatalf("clean conflict drafts = %+v", cleanConflict)
+	}
+	// resolveChildDrafts falls back to static conflict catalogue on clean store.
+	resolvedConflict, err := resolveChildDrafts(ctx, clean, domain.FamilyConflictReview, "revision_1", now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolvedConflict) != 1 || resolvedConflict[0].DedupSignature != "conflict:unopposed" {
+		t.Fatalf("static conflict fallback = %+v", resolvedConflict)
+	}
 }
