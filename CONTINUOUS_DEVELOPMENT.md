@@ -153,9 +153,13 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [x] `DONE` Definir a arquitetura de autonomia supervisionável e do dashboard.
   - Evidência: `CONTROL_PLANE.md` separa UI, Control API, command/event inbox, projeções e kernel; fixa superfícies, segurança, consistência, slices e critérios de aceitação.
 - [ ] `READY` Formalizar schemas de `OperatorCommand`, `CommandReceipt` e `ExternalEvent` e portas do control plane.
+- [ ] `READY` Formalizar `OperatorQuestion`, `UserAnswer`, `QuestionGate`, estados, expiração e escopo bloqueado local.
 - [ ] `READY` Implementar read models e API de inspeção correlacionada sobre estado/event log.
 - [ ] `READY` Implementar command inbox idempotente com pause/resume/shutdown e testes de crash/replay.
 - [ ] `READY` Implementar external event inbox para mensagem, resposta e despertar deduplicados.
+- [ ] `READY` Implementar perguntas/respostas no dashboard com formulário vinculado por `question_id`.
+- [ ] `READY` Implementar adapter Telegram com bot próprio, outbox, inline keyboard, reply correlacionado, allowlist e deduplicação.
+- [ ] `READY` Implementar política antispam: necessidade, deduplicação semântica, rate limit, cooldown, quiet hours e digest.
 - [ ] `READY` Implementar configuração versionada com validação, diff e fronteira segura de aplicação.
 - [ ] `READY` Implementar dashboard web mínimo: overview, timeline SSE, inspetor, interação e configuração.
 - [ ] `READY` Exportar telemetria OpenTelemetry opcional sem torná-la fonte canônica ou autoridade.

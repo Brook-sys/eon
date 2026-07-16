@@ -276,6 +276,30 @@ Dashboard e exportadores de telemetria MUST ser dispensáveis para execução, r
 
 **Evidência de aceitação:** fault injection derruba UI/stream/exportador enquanto o runtime persiste progresso e depois permite reconstrução por event log e read models.
 
+### FR-CTRL-008 — Perguntas estruturadas e não bloqueantes
+
+O runtime MAY propor perguntas ao operador para obter preferência, esclarecimento, confirmação ou informação ausente. Toda pergunta entregue MUST possuir identidade persistida, contexto, impacto, opções estáveis quando aplicáveis, resposta livre ou pedido de contexto quando permitido, escopo bloqueado e política de ausência de resposta. Espera por resposta MUST bloquear somente unidades dependentes e MUST NOT interromper scheduling, replenishment ou execução de outras frentes.
+
+**Evidência de aceitação:** várias perguntas permanecem pendentes enquanto operações independentes progridem; resposta, expiração ou silêncio alteram somente o escopo declarado; reinício preserva perguntas e correlações.
+
+### FR-CTRL-009 — Correlação inequívoca de respostas
+
+Toda resposta MUST referenciar exatamente um `question_id` e MUST ser autenticada, deduplicada e validada contra canal, ator, status e revisão. Dashboard MUST enviar o identificador no formulário. Telegram MUST usar callback de botão ou reply à mensagem correlacionada; texto solto ambíguo MUST NOT ser associado por inferência quando houver múltiplas perguntas candidatas.
+
+**Evidência de aceitação:** testes com respostas fora de ordem, duplicadas, tardias, em chat incorreto e com múltiplas perguntas pendentes não aplicam resposta à pergunta errada.
+
+### FR-CTRL-010 — Canais dashboard e Telegram
+
+O primeiro escopo MUST suportar dashboard e SHOULD suportar Telegram por bot configurado pelo operador, mantendo domínio e estado canônico independentes do transporte. Configuração MUST permitir habilitar, priorizar e limitar canais e destinatários. Credenciais do Telegram MUST ser referências secretas; entregas MUST usar outbox e recebimentos MUST entrar por `ExternalEvent` deduplicado.
+
+**Evidência de aceitação:** a mesma pergunta pode ser entregue em canal configurado sem duplicar seu estado; falha ou ausência de Telegram não paralisa dashboard nem kernel; replay não cria segunda resposta lógica.
+
+### FR-CTRL-011 — Política antispam de perguntas
+
+Perguntas propostas por modelo MUST passar por gate determinístico de necessidade, impacto, alternativas, duplicação, prioridade e budget de interrupção. O runtime MUST limitar perguntas pendentes e taxa por janela, aplicar cooldown, quiet hours e agrupamento quando configurados, e MUST NOT reenviar automaticamente a mesma pergunta em cada ciclo. Perguntar SHOULD ser reservado a informação que possa mudar decisão relevante e não esteja disponível por meio autorizado mais barato.
+
+**Evidência de aceitação:** gerador adversarial de perguntas equivalentes resulta em uma pergunta ou digest limitado; perguntas de baixo impacto são suprimidas; lembretes cessam após resposta, expiração ou substituição.
+
 ## 7. Requisitos não funcionais
 
 ### NFR-PORT-001 — Portabilidade

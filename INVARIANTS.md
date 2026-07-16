@@ -68,6 +68,12 @@ Transições dependentes de tempo usam somente `Clock`; jitter e desempate não 
 
 **Verificação:** mesma entrada e fontes controladas produzem mesma decisão e mesmos instantes lógicos.
 
+### INV-DUR-007 — Resposta humana possui correlação canônica única
+
+Uma `UserAnswer` aceita referencia exatamente um `question_id`; IDs de transporte são apenas evidência de correlação. Callback, reply, replay, resposta tardia ou entrega multicanal não podem aplicar a mesma resposta lógica duas vezes nem associá-la a outra pergunta por inferência ambígua.
+
+**Verificação:** contract tests cobrem callbacks e replies duplicados, fora de ordem, concorrentes, expirados e emitidos por ator/chat não autorizado.
+
 ## 3. Segurança e integridade
 
 ### INV-SAFE-001 — Falha fechada preserva estado anterior
@@ -161,6 +167,18 @@ O kernel inicia replenishment quando o horizonte executável atinge a marca baix
 Toda oportunidade filha referencia sua origem e respeita profundidade, fan-out e budget. Ela deve reduzir escopo, aumentar verificabilidade, revelar dependência real ou declarar outro ganho observável. Paráfrase, renomeação ou duplicação não constituem progresso nem podem renovar artificialmente a lista.
 
 **Verificação:** geradores adversariais de paráfrases e árvores explosivas são deduplicados ou interrompidos deterministicamente, enquanto decomposições válidas permanecem admitíveis.
+
+### INV-PROG-011 — Pergunta humana bloqueia somente dependências declaradas
+
+Uma `OperatorQuestion` pendente pode colocar em `WAITING_EVENT` apenas operações, artifacts ou decisões explicitamente presentes em seu `blocking_scope`. Silêncio, atraso, expiração ou falha do canal não suspendem replenishment nem trabalho independente e não constituem `CONTINUITY_BLOCKED` enquanto outra frente legítima existir.
+
+**Verificação:** cenários com várias perguntas não respondidas continuam despachando famílias independentes antes e depois de restart.
+
+### INV-PROG-012 — Interrupção humana é limitada e deduplicada
+
+Nenhuma saída do modelo entrega diretamente uma pergunta. Toda proposta passa por `QuestionGate` determinístico, e perguntas semanticamente equivalentes não podem consumir repetidamente atenção, canal ou lembretes dentro da janela de deduplicação. Limites, cooldown, quiet hours e budget são aplicados antes da outbox.
+
+**Verificação:** geradores adversariais de paráfrases e retries produzem cardinalidade e taxa dentro da política, sem entregas após resolução ou expiração.
 
 ## 5. Propriedades de liveness condicionais
 

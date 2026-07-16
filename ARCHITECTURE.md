@@ -337,6 +337,8 @@ Requisitos:
 
 O mesmo envelope pode representar timers, conclusão de aquisição web, mudança em arquivo autorizado, disponibilidade de recurso e resposta humana. Mensagens, webhooks e subprocessos só entram quando adapters específicos forem explicitamente autorizados; não fazem parte do MVP básico.
 
+Perguntas ao operador são uma capability do control plane, não uma chamada especial do modelo. O modelo pode propor `OperatorQuestion` estruturada; o kernel aplica necessidade, deduplicação, prioridade e budget antes de persistir e publicar pela outbox. Dashboard e Telegram traduzem a mesma pergunta canônica para formulários, botões ou replies correlacionados. Uma `UserAnswer` retorna como `ExternalEvent` não confiável e só desperta o `blocking_scope` validado. Perguntas pendentes nunca suspendem globalmente uma missão ativa.
+
 ## Entrega e efeitos colaterais
 
 Não é realista prometer execução exatamente uma vez em todos os sistemas externos. O alvo deve ser:

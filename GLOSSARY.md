@@ -175,6 +175,22 @@ Fato imutável de execução ou domínio registrado no log. Um evento informa qu
 
 Intenção durável de publicar ou entregar um evento após commit local. É confirmada na mesma transação que a mudança de estado correspondente.
 
+### OperatorQuestion
+
+Pergunta persistida que o runtime deseja apresentar ao operador para reduzir ambiguidade, obter preferência, confirmar interpretação ou receber informação ausente. Possui opções e ações estruturadas quando aplicáveis, escopo local potencialmente bloqueado, validade, política de fallback, prioridade, assinatura de deduplicação e correlação independente do canal. Criá-la ou não é decisão do kernel; a saída do modelo é apenas proposta.
+
+### UserAnswer
+
+Resposta externa tipada e correlacionada a exatamente um `OperatorQuestion` por `question_id`. Pode selecionar opções, fornecer texto livre, indicar `OTHER`, pedir contexto, declarar ausência de preferência ou pular quando permitido. É entrada não confiável até autenticação, deduplicação, validação de revisão e aplicação pelo kernel.
+
+### CommunicationChannel
+
+Adapter de transporte usado para entregar perguntas e receber respostas sem possuir autoridade canônica. O primeiro escopo suporta dashboard e Telegram; ambos convertem mensagens para os mesmos objetos de domínio e eventos externos.
+
+### QuestionGate
+
+Política determinística que admite, agrupa, adia ou rejeita perguntas propostas com base em necessidade, impacto decisório, alternativas, prioridade, duplicação, quiet hours, taxa e budget de interrupção humana.
+
 ### EvidenceReceipt
 
 Evidência operacional de uma ação determinística: resposta HTTP, hash, resultado de validação, transição persistida ou outro recibo auditável. Não é sinônimo de `EvidenceLink`, embora possa originar observações.

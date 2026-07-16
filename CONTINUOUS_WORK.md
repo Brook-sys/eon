@@ -240,6 +240,8 @@ A política deve evitar fixação usando:
 
 Rate limit, budget de uma capability, espera humana ou provider indisponível bloqueiam somente operações que dependem deles. O supervisor procura trabalho local ou outra capability.
 
+Perguntar ao operador é uma capability legítima de aquisição de informação. O modelo pode propor uma pergunta estruturada quando preferência, esclarecimento ou conhecimento privado puder alterar uma decisão relevante. A entrega passa por política determinística de necessidade e antispam. A pergunta cria `WAITING_EVENT` somente nas unidades explicitamente dependentes; silêncio do operador nunca suspende outras famílias nem impede replenishment. Dashboard e Telegram são os primeiros canais previstos, ambos correlacionados ao mesmo objeto canônico de pergunta.
+
 Exemplos de trabalho possível sem modelo ou rede:
 
 - auditoria de integridade;
