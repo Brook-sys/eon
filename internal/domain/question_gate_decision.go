@@ -36,13 +36,17 @@ const (
 	PersistedQuestionGatePriorityLow              PersistedQuestionGateReason = "PRIORITY_TOO_LOW"
 	PersistedQuestionGateSafeDefault              PersistedQuestionGateReason = "SAFE_REVERSIBLE_DEFAULT"
 	PersistedQuestionGateInsufficientAlternatives PersistedQuestionGateReason = "INSUFFICIENT_ALTERNATIVES"
+	PersistedQuestionGateDuplicateTopic           PersistedQuestionGateReason = "DUPLICATE_TOPIC"
+	PersistedQuestionGateBudgetExhausted          PersistedQuestionGateReason = "BUDGET_EXHAUSTED"
+	PersistedQuestionGateDigestFull               PersistedQuestionGateReason = "DIGEST_FULL"
 )
 
 func (r PersistedQuestionGateReason) valid() bool {
 	switch r {
 	case PersistedQuestionGateAllowed, PersistedQuestionGateDuplicatePending, PersistedQuestionGateCooldown,
 		PersistedQuestionGatePendingLimit, PersistedQuestionGateRateLimit, PersistedQuestionGateQuietHours,
-		PersistedQuestionGatePriorityLow, PersistedQuestionGateSafeDefault, PersistedQuestionGateInsufficientAlternatives:
+		PersistedQuestionGatePriorityLow, PersistedQuestionGateSafeDefault, PersistedQuestionGateInsufficientAlternatives,
+		PersistedQuestionGateDuplicateTopic, PersistedQuestionGateBudgetExhausted, PersistedQuestionGateDigestFull:
 		return true
 	default:
 		return false

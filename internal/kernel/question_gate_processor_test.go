@@ -116,6 +116,38 @@ func TestQuestionGateProcessorRollsBackDecisionQuestionAndOutboxTogether(t *test
 	}
 }
 
+func TestQuestionGateProcessorDigestDefersOutboxAvailability(t *testing.T) {
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	store := memory.New()
+	installGateMission(t, store, now)
+	policy := gatePolicy()
+	policy.Digest = domain.DigestPolicy{Hold: 90 * time.Minute, MaxItems: 4, MinPriorityImmediate: 80}
+	processor, err := NewQuestionGateProcessor(store, source.NewManualClock(now), source.NewSequenceIDGenerator(30), policy, "default@1", []QuestionRoute{{Channel: "dashboard", DestinationRef: "operator_primary", MaxAttempts: 3}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal := gateProposal(now)
+	decision, err := processor.Process(context.Background(), proposal)
+	if err != nil || decision.Decision != domain.PersistedQuestionAdmit {
+		t.Fatalf("decision = %#v err=%v", decision, err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		deliveries, err := r.QuestionDeliveries(proposal.Question.ID)
+		if err != nil {
+			return err
+		}
+		if len(deliveries) != 1 || !deliveries[0].AvailableAt.Equal(now.Add(90*time.Minute)) {
+			t.Fatalf("digest deliveries = %#v", deliveries)
+		}
+		if deliveries[0].Due(now) {
+			t.Fatal("digest delivery should not be due immediately")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestQuestionGateProcessorPersistsSuppressionWithoutCanonicalQuestion(t *testing.T) {
 	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
 	store := memory.New()

@@ -90,3 +90,76 @@ func TestEvaluateQuestionUrgentBypassesQuietAndAlternativeSuppression(t *testing
 		t.Fatalf("urgent result = %+v, err = %v", result, err)
 	}
 }
+
+func TestEvaluateQuestionNormalizesDuplicateSignatures(t *testing.T) {
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	proposal := gateProposal(now)
+	proposal.Question.DedupSignature = "Choice: Artifact_1"
+	history := []QuestionGateRecord{{
+		QuestionID: "ask_old", MissionID: proposal.Question.MissionID,
+		DedupSignature: "choice:artifact_1", Status: domain.OperatorQuestionPending, DeliveredAt: now.Add(-time.Minute),
+	}}
+	result, err := EvaluateQuestion(gatePolicy(), now, proposal, history)
+	if err != nil || result.Decision != QuestionSuppress || result.Reason != QuestionGateDuplicatePending {
+		t.Fatalf("normalized duplicate = %+v, err = %v", result, err)
+	}
+}
+
+func TestEvaluateQuestionTopicCooldownAndBudget(t *testing.T) {
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	policy := gatePolicy()
+	policy.TopicCooldown = 4 * time.Hour
+	policy.MaxAdmittedPerWindow = 1
+	policy.MaxDeliveredPerWindow = 0
+	proposal := gateProposal(now)
+	proposal.Question.DedupSignature = "choice:other_artifact"
+	topicHistory := []QuestionGateRecord{{
+		QuestionID: "ask_old", MissionID: "mission_1", DedupSignature: "choice:previous",
+		Status: domain.OperatorQuestionAnswered, DeliveredAt: now.Add(-2 * time.Hour), ClosedAt: now.Add(-time.Hour),
+	}}
+	result, err := EvaluateQuestion(policy, now, proposal, topicHistory)
+	if err != nil || result.Decision != QuestionDefer || result.Reason != QuestionGateDuplicateTopic {
+		t.Fatalf("topic cooldown = %+v, err = %v", result, err)
+	}
+	pendingTopic := []QuestionGateRecord{{
+		QuestionID: "ask_open", MissionID: "mission_1", DedupSignature: "choice:still_open",
+		Status: domain.OperatorQuestionPending, DeliveredAt: now.Add(-time.Minute),
+	}}
+	result, err = EvaluateQuestion(policy, now, proposal, pendingTopic)
+	if err != nil || result.Decision != QuestionSuppress || result.Reason != QuestionGateDuplicateTopic {
+		t.Fatalf("pending topic = %+v, err = %v", result, err)
+	}
+	budgetHistory := []QuestionGateRecord{{
+		QuestionID: "ask_budget", MissionID: "mission_1", DedupSignature: "other:topic",
+		Status: domain.OperatorQuestionPending, AdmittedAt: now.Add(-10 * time.Minute),
+	}}
+	result, err = EvaluateQuestion(policy, now, proposal, budgetHistory)
+	if err != nil || result.Decision != QuestionDefer || result.Reason != QuestionGateBudgetExhausted {
+		t.Fatalf("budget = %+v, err = %v", result, err)
+	}
+}
+
+func TestEvaluateQuestionDigestHoldAndCapacity(t *testing.T) {
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	policy := gatePolicy()
+	policy.Digest = domain.DigestPolicy{Hold: time.Hour, MaxItems: 1, MinPriorityImmediate: 80, AlignToHoldBoundaries: false}
+	proposal := gateProposal(now)
+	result, err := EvaluateQuestion(policy, now, proposal, nil)
+	if err != nil || result.Decision != QuestionAdmit || !result.DigestHeld || !result.DeliveryAvailable.Equal(now.Add(time.Hour)) {
+		t.Fatalf("digest hold = %+v, err = %v", result, err)
+	}
+	full := []QuestionGateRecord{{
+		QuestionID: "ask_held", MissionID: "mission_1", DedupSignature: "other:held",
+		Status: domain.OperatorQuestionPending,
+	}}
+	result, err = EvaluateQuestion(policy, now, proposal, full)
+	if err != nil || result.Decision != QuestionDefer || result.Reason != QuestionGateDigestFull {
+		t.Fatalf("digest full = %+v, err = %v", result, err)
+	}
+	urgent := gateProposal(now)
+	urgent.Question.Priority = 85
+	result, err = EvaluateQuestion(policy, now, urgent, nil)
+	if err != nil || result.Decision != QuestionAdmit || result.DigestHeld || !result.DeliveryAvailable.Equal(now) {
+		t.Fatalf("immediate priority = %+v, err = %v", result, err)
+	}
+}

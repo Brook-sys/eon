@@ -223,7 +223,14 @@ O gate rejeita ou agrupa perguntas quando:
 
 Controles versionados incluem máximo de perguntas pendentes, taxa por janela, cooldown por assinatura e tópico, horário silencioso, agrupamento em digest, prioridade mínima, canais permitidos e política de lembrete. O padrão é sem lembretes; quando autorizados, são poucos, deduplicados e cessam após resposta, expiração ou substituição.
 
-O núcleo inicial retorna `ADMIT`, `SUPPRESS` ou `DEFER`. Admissão não equivale a entrega: persistência da decisão, criação canônica da pergunta e publicação na outbox pertencem à fronteira transacional seguinte. Agrupamento em digest, budget persistido e lembretes continuam como incrementos posteriores.
+O núcleo retorna `ADMIT`, `SUPPRESS` ou `DEFER`. Admissão não equivale a entrega: persistência da decisão, criação canônica da pergunta e publicação na outbox pertencem à fronteira transacional seguinte.
+
+Controles implementados no gate determinístico (`QuestionGatePolicy` + `QuestionGateProcessor`):
+
+- **deduplicação semântica assistida:** `NormalizeDedupSignature` e `SemanticTopicKey` comparam assinaturas sem invocar modelo; duplicata pendente por assinatura ou tópico suprime; `TopicCooldown` adia reabertura de tópico recente;
+- **budget versionado de interrupção:** `MaxPending`, `MaxDeliveredPerWindow` e `MaxAdmittedPerWindow` sob `Window`, projetados por `InterruptionBudgetPolicy` e `PolicyVersion` auditável;
+- **digest:** `DigestPolicy` atrasa `AvailableAt` da outbox para não-urgentes, alinha janelas quando configurado e defere novas admissões quando o hold está cheio (`DIGEST_FULL`);
+- **lembretes:** desligados por padrão; `ReminderPolicy` + `QuestionReminderProcessor` autorizam reentregas limitadas com destino `#reminder:N`, cessando após resposta, expiração, substituição ou `MaxCount`.
 
 ## 5. Superfícies do dashboard
 

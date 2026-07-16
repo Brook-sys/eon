@@ -111,6 +111,10 @@ func (p *QuestionGateProcessor) Process(ctx context.Context, proposal domain.Ope
 			if err := tx.CreateOperatorQuestion(proposal.Question); err != nil {
 				return err
 			}
+			availableAt := result.DeliveryAvailable
+			if availableAt.IsZero() || availableAt.Before(now) {
+				availableAt = now
+			}
 			for _, route := range p.Routes {
 				deliveryID, err := p.IDs.NewID("question_delivery")
 				if err != nil {
@@ -121,7 +125,7 @@ func (p *QuestionGateProcessor) Process(ctx context.Context, proposal domain.Ope
 					QuestionID: proposal.Question.ID, QuestionRevision: proposal.Question.Revision,
 					Channel: route.Channel, DestinationRef: route.DestinationRef,
 					Status: domain.QuestionDeliveryPending, MaxAttempts: route.MaxAttempts,
-					AvailableAt: now, CreatedAt: now, UpdatedAt: now,
+					AvailableAt: availableAt, CreatedAt: now, UpdatedAt: now,
 				}
 				if err := tx.CreateQuestionDelivery(delivery); err != nil {
 					return err
@@ -173,7 +177,10 @@ func questionGateHistory(r port.Reader, missionID domain.MissionID) ([]QuestionG
 				closedAt = question.CreatedAt
 			}
 		}
-		history = append(history, QuestionGateRecord{QuestionID: question.ID, MissionID: question.MissionID, DedupSignature: question.DedupSignature, Status: question.Status, DeliveredAt: deliveredAt, ClosedAt: closedAt})
+		history = append(history, QuestionGateRecord{
+			QuestionID: question.ID, MissionID: question.MissionID, DedupSignature: question.DedupSignature,
+			Status: question.Status, DeliveredAt: deliveredAt, ClosedAt: closedAt, AdmittedAt: question.CreatedAt,
+		})
 	}
 	return history, nil
 }
