@@ -746,3 +746,112 @@ func TestOpenWithoutModelKeepsNilExecutor(t *testing.T) {
 		t.Fatalf("model must stay nil without options: rt=%v exec=%v", rt.Model != nil, rt.Executor.Model != nil)
 	}
 }
+
+func TestOpenWiresFallbackProviderWhenEnabled(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_primary","object":"chat.completion","created":1,"model":"primary","choices":[{"index":0,"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	t.Cleanup(primary.Close)
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_fallback","object":"chat.completion","created":1,"model":"fallback","choices":[{"index":0,"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	t.Cleanup(fallback.Close)
+
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:     "127.0.0.1:0",
+		StoreBackend:   bootstrap.StorageMemory,
+		RuntimeName:    "test-model-fallback-wire",
+		RuntimeVersion: "test",
+		Model: &bootstrap.ModelOptions{
+			Enabled:       true,
+			BaseURL:       primary.URL,
+			Model:         "primary-model",
+			ContextTokens: 4096,
+			PolicyVersion: "policy@fallback-wire",
+			LeaseTTL:      time.Minute,
+			Fallback: &bootstrap.ModelFallbackOptions{
+				Enabled: true,
+				BaseURL: fallback.URL,
+				Model:   "fallback-model",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("open with fallback model: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Model == nil {
+		t.Fatal("Runtime.Model must be set")
+	}
+	if rt.Model.FallbackProvider == nil {
+		t.Fatal("ModelExecutor.FallbackProvider must be wired when fallback options are enabled")
+	}
+	if rt.Executor.Model == nil || rt.Executor.Model.FallbackProvider == nil {
+		t.Fatal("DispatchExecutor.Model.FallbackProvider must be wired")
+	}
+}
+
+func TestOpenModelFallbackRequiresURLAndName(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"x","object":"chat.completion","created":1,"model":"p","choices":[{"index":0,"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}]}`))
+	}))
+	t.Cleanup(primary.Close)
+
+	_, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		Model: &bootstrap.ModelOptions{
+			Enabled:       true,
+			BaseURL:       primary.URL,
+			Model:         "primary-model",
+			ContextTokens: 2048,
+			Fallback: &bootstrap.ModelFallbackOptions{
+				Enabled: true,
+				// Missing BaseURL and Model — Validate must reject.
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected validation error for incomplete fallback options")
+	}
+}
+
+func TestOpenWithoutFallbackKeepsNilFallbackProvider(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_test","object":"chat.completion","created":1,"model":"fixture","choices":[{"index":0,"message":{"role":"assistant","content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`))
+	}))
+	t.Cleanup(server.Close)
+
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		Model: &bootstrap.ModelOptions{
+			Enabled:       true,
+			BaseURL:       server.URL,
+			Model:         "fixture-model",
+			ContextTokens: 4096,
+			PolicyVersion: "policy@wire-test",
+			LeaseTTL:      time.Minute,
+		},
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Model == nil {
+		t.Fatal("expected model")
+	}
+	if rt.Model.FallbackProvider != nil {
+		t.Fatal("FallbackProvider must stay nil without fallback options")
+	}
+}

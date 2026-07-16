@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
+	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -27,6 +29,45 @@ type OperationDetail struct {
 	Events         []domain.Event             `json:"events"`
 	Idempotency    *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
 	HeadCommit     *domain.Commit             `json:"head_commit,omitempty"`
+	// ModelRecovery is a derived, read-only summary of FR-MODEL-004 ladder
+	// decisions for this operation (parsed from official event PayloadRefs).
+	// Empty when no recovery/model events are present.
+	ModelRecovery *ModelRecoverySummary `json:"model_recovery,omitempty"`
+}
+
+// ModelRecoverySummary is a presentation projection of model recovery events.
+// It never invents state: every field is derived from durable event kinds and
+// PayloadRef tags already written by the kernel.
+type ModelRecoverySummary struct {
+	// Decisions are operation.model_recovery_decision events in occurred order.
+	Decisions []ModelRecoveryDecisionView `json:"decisions"`
+	// Invocations count operation.model_invoked events (including recovery calls).
+	Invocations int `json:"invocations"`
+	// FallbackInvocations counts invocations tagged fallback=1.
+	FallbackInvocations int `json:"fallback_invocations"`
+	// RecoveryInvocations counts invocations tagged recovery=1.
+	RecoveryInvocations int `json:"recovery_invocations"`
+	// Exhausted is true when an operation.model_exhausted event exists.
+	Exhausted bool `json:"exhausted"`
+	// LastDisposition is the disposition of the latest recovery decision, if any.
+	LastDisposition string `json:"last_disposition,omitempty"`
+	// LastStage is the stage of the latest recovery decision, if any.
+	LastStage string `json:"last_stage,omitempty"`
+	// StagesTried lists unique recovery stages seen (stable first-seen order).
+	StagesTried []string `json:"stages_tried,omitempty"`
+}
+
+// ModelRecoveryDecisionView is one parsed recovery decision event.
+type ModelRecoveryDecisionView struct {
+	EventID     domain.EventID `json:"event_id"`
+	OccurredAt  string         `json:"occurred_at"`
+	Disposition string         `json:"disposition,omitempty"`
+	Stage       string         `json:"stage,omitempty"`
+	Reason      string         `json:"reason,omitempty"`
+	// Calls is the model_calls counter embedded in the payload (when present).
+	Calls string `json:"calls,omitempty"`
+	// PayloadRef is the original compact audit string (no free-text model body).
+	PayloadRef string `json:"payload_ref,omitempty"`
 }
 
 // CommitDetail correlates a commit with its proposal and validation receipts.
@@ -203,12 +244,113 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 		sort.Slice(detail.Commits, func(i, j int) bool {
 			return detail.Commits[i].Version < detail.Commits[j].Version
 		})
+		detail.ModelRecovery = deriveModelRecoverySummary(detail.Events)
 		return nil
 	})
 	if err != nil {
 		return OperationDetail{}, err
 	}
 	return detail, nil
+}
+
+// deriveModelRecoverySummary projects FR-MODEL-004 audit events into a compact
+// operator view. Returns nil when the operation never contacted the model path
+// for recovery (no recovery decision, exhaust, or recovery-tagged invoke).
+func deriveModelRecoverySummary(events []domain.Event) *ModelRecoverySummary {
+	if len(events) == 0 {
+		return nil
+	}
+	var (
+		sum        ModelRecoverySummary
+		hasSignal  bool
+		seenStages = map[string]struct{}{}
+		stageOrder []string
+	)
+	// Events from collectMatchingEvents are already chronological for a page;
+	// still sort by OccurredAt for multi-source safety.
+	sorted := append([]domain.Event(nil), events...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].OccurredAt.Equal(sorted[j].OccurredAt) {
+			return string(sorted[i].ID) < string(sorted[j].ID)
+		}
+		return sorted[i].OccurredAt.Before(sorted[j].OccurredAt)
+	})
+	for _, event := range sorted {
+		switch event.Kind {
+		case "operation.model_invoked":
+			sum.Invocations++
+			tags := parsePayloadTags(event.PayloadRef)
+			if tags["fallback"] == "1" {
+				sum.FallbackInvocations++
+				hasSignal = true
+			}
+			if tags["recovery"] == "1" {
+				sum.RecoveryInvocations++
+				hasSignal = true
+			}
+		case "operation.model_recovery_decision":
+			hasSignal = true
+			tags := parsePayloadTags(event.PayloadRef)
+			view := ModelRecoveryDecisionView{
+				EventID:     event.ID,
+				OccurredAt:  event.OccurredAt.UTC().Format(time.RFC3339Nano),
+				Disposition: tags["disposition"],
+				Stage:       tags["stage"],
+				Reason:      tags["reason"],
+				Calls:       tags["calls"],
+				PayloadRef:  event.PayloadRef,
+			}
+			sum.Decisions = append(sum.Decisions, view)
+			if view.Stage != "" {
+				if _, ok := seenStages[view.Stage]; !ok {
+					seenStages[view.Stage] = struct{}{}
+					stageOrder = append(stageOrder, view.Stage)
+				}
+			}
+			sum.LastDisposition = view.Disposition
+			sum.LastStage = view.Stage
+		case "operation.model_exhausted":
+			hasSignal = true
+			sum.Exhausted = true
+			tags := parsePayloadTags(event.PayloadRef)
+			if d := tags["disposition"]; d != "" {
+				sum.LastDisposition = d
+			}
+		}
+	}
+	if !hasSignal {
+		return nil
+	}
+	sum.StagesTried = stageOrder
+	if sum.Decisions == nil {
+		sum.Decisions = []ModelRecoveryDecisionView{}
+	}
+	return &sum
+}
+
+// parsePayloadTags splits compact audit refs of the form
+// "lease...;key=value;flag=1" into a map. Values never contain free-text bodies.
+func parsePayloadTags(payload string) map[string]string {
+	out := map[string]string{}
+	if payload == "" {
+		return out
+	}
+	for _, part := range strings.Split(payload, ";") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(part, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		out[key] = strings.TrimSpace(value)
+	}
+	return out
 }
 
 // CommitInspector loads a commit and its official supporting records.

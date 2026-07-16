@@ -48,6 +48,13 @@ func main() {
 		modelContext   = flag.Int("model-context-tokens", 8000, "provider context window for prompt budget")
 		modelPolicy    = flag.String("model-policy-version", "policy@runtime", "changeset policy version stamp")
 		modelLeaseTTL  = flag.Duration("model-lease-ttl", 15*time.Minute, "lease TTL for model-backed operations")
+		// Optional FR-MODEL-004 step-7 alternate provider (one Complete only).
+		modelFallbackEnabled   = flag.Bool("model-fallback", false, "enable alternate OpenAI-compatible fallback provider")
+		modelFallbackBaseURL   = flag.String("model-fallback-base-url", "", "fallback OpenAI-compatible base URL")
+		modelFallbackName      = flag.String("model-fallback-name", "", "fallback provider model name")
+		modelFallbackAPIKeyEnv = flag.String("model-fallback-api-key-env", "", "env var name for fallback API key")
+		modelFallbackMaxField  = flag.String("model-fallback-max-output-field", "", "fallback max_tokens dialect (empty = primary)")
+		modelFallbackContext   = flag.Int("model-fallback-context-tokens", 0, "fallback context window (0 = primary)")
 		// Telegram adapter/ingress remain opt-in through bootstrap.Options.Telegram
 		// (token/allowlists/ingress mode). cmd/runtime stays free of secrets and chat IDs.
 	)
@@ -75,7 +82,7 @@ func main() {
 		},
 	}
 	if *modelEnabled {
-		opts.Model = &bootstrap.ModelOptions{
+		mopts := &bootstrap.ModelOptions{
 			Enabled:        true,
 			BaseURL:        *modelBaseURL,
 			Model:          *modelName,
@@ -85,6 +92,17 @@ func main() {
 			PolicyVersion:  *modelPolicy,
 			LeaseTTL:       *modelLeaseTTL,
 		}
+		if *modelFallbackEnabled {
+			mopts.Fallback = &bootstrap.ModelFallbackOptions{
+				Enabled:        true,
+				BaseURL:        *modelFallbackBaseURL,
+				Model:          *modelFallbackName,
+				APIKeyEnv:      *modelFallbackAPIKeyEnv,
+				MaxOutputField: bootstrap.ModelMaxOutputField(*modelFallbackMaxField),
+				ContextTokens:  *modelFallbackContext,
+			}
+		}
+		opts.Model = mopts
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

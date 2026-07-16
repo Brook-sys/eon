@@ -101,6 +101,132 @@ func TestProjectorOverviewAndEventPagination(t *testing.T) {
 	}
 }
 
+func TestOperationInspectorProjectsModelRecoverySummary(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	lease := "lease_rec:until=2026-07-16T20:00:00Z"
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		events := []domain.Event{
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_inv_1", Kind: "operation.model_invoked",
+				OccurredAt: now, MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";model=primary;call=1",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_dec_1", Kind: "operation.model_recovery_decision",
+				OccurredAt: now.Add(time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";disposition=SHORT_CORRECT;stage=SHORT_CORRECTION;reason=validation_failed_short_correction_available;calls=1",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_inv_2", Kind: "operation.model_invoked",
+				OccurredAt: now.Add(2 * time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";model=primary;call=2;recovery=1",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_dec_2", Kind: "operation.model_recovery_decision",
+				OccurredAt: now.Add(3 * time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";disposition=FALLBACK_MODEL;stage=FALLBACK_MODEL;reason=validation_failed_fallback_model_available;calls=2",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_inv_3", Kind: "operation.model_invoked",
+				OccurredAt: now.Add(4 * time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";model=fallback;call=3;recovery=1;fallback=1",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_exh", Kind: "operation.model_exhausted",
+				OccurredAt: now.Add(5 * time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";reason=model_recovery_budget_exhausted;disposition=EXHAUST",
+			},
+		}
+		for _, event := range events {
+			if _, err := tx.AppendEvent(event); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.ModelRecovery == nil {
+		t.Fatal("expected model_recovery summary")
+	}
+	sum := detail.ModelRecovery
+	if sum.Invocations != 3 {
+		t.Fatalf("invocations = %d", sum.Invocations)
+	}
+	if sum.RecoveryInvocations != 2 {
+		t.Fatalf("recovery invocations = %d", sum.RecoveryInvocations)
+	}
+	if sum.FallbackInvocations != 1 {
+		t.Fatalf("fallback invocations = %d", sum.FallbackInvocations)
+	}
+	if !sum.Exhausted {
+		t.Fatal("expected exhausted")
+	}
+	if sum.LastDisposition != "EXHAUST" {
+		t.Fatalf("last disposition = %q", sum.LastDisposition)
+	}
+	if len(sum.Decisions) != 2 {
+		t.Fatalf("decisions = %#v", sum.Decisions)
+	}
+	if sum.Decisions[0].Disposition != "SHORT_CORRECT" || sum.Decisions[1].Stage != "FALLBACK_MODEL" {
+		t.Fatalf("decision order/content = %#v", sum.Decisions)
+	}
+	if len(sum.StagesTried) != 2 || sum.StagesTried[0] != "SHORT_CORRECTION" || sum.StagesTried[1] != "FALLBACK_MODEL" {
+		t.Fatalf("stages_tried = %#v", sum.StagesTried)
+	}
+
+	// HTTP surface includes the projection under redaction envelope.
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+	resp, err := http.Get(server.URL + "/operations/" + string(operation.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var body map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	rec, ok := body["model_recovery"].(map[string]any)
+	if !ok || rec == nil {
+		t.Fatalf("http model_recovery missing: %#v", body["model_recovery"])
+	}
+	if rec["exhausted"] != true {
+		t.Fatalf("http exhausted = %#v", rec["exhausted"])
+	}
+}
+
+func TestOperationInspectorOmitsModelRecoveryWithoutSignal(t *testing.T) {
+	store, _, operation, _ := seedRuntime(t)
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.ModelRecovery != nil {
+		t.Fatalf("expected nil model_recovery without recovery events, got %#v", detail.ModelRecovery)
+	}
+}
+
 func TestOperationInspectorCorrelatesCommitChain(t *testing.T) {
 	store, mission, operation, now := seedRuntime(t)
 	commit := domain.Commit{

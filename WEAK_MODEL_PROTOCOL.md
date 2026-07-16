@@ -386,11 +386,17 @@ O kernel materializa a escada **sem reenviar o prompt completo** e **sem loop** 
 Política pura (`domain.ModelRecoveryBudget` / `DecideNextRecovery`):
 
 - contadores derivados de `OperationSpec.Budget.ModelCalls` e `Attempts` + tentativas já gastas no `Execute`;
-- ordem fixa: short correction → simpler format → replan (só se `Attempts` ainda autoriza outro Dispatch) → **exhaust**;
+- ordem fixa: short correction → simpler format → **fallback model** (só se `FallbackAvailable`) → replan (só se `Attempts` ainda autoriza outro Dispatch) → **exhaust**;
 - zero `model_calls` ou modelo sempre inválido com budget 1 → `EXHAUSTED` (aceitação FR-MODEL-004);
-- eventos de auditoria: `operation.model_recovery_decision` com disposition/stage/reason/calls.
+- eventos de auditoria: `operation.model_recovery_decision` com disposition/stage/reason/calls; invokes com tags `recovery=1` / `fallback=1`.
 
-Testes offline usam `openai/fakeserver` multi-exchange; não exigem endpoint pago.
+Wiring de processo (opcional):
+
+- `bootstrap.ModelOptions.Fallback` + flags `-model-fallback*` em `cmd/runtime` (URL/nome/env de chave; sem secrets em flags);
+- sem fallback configurado, `FallbackAvailable=false` e a política **nunca inventa** provider alternativo;
+- projeção somente-leitura: `inspect.OperationDetail.model_recovery` deriva decisions/invocations/exhausted dos eventos oficiais.
+
+Testes offline usam `openai/fakeserver` multi-exchange e bootstrap com dois httptest; não exigem endpoint pago.
 
 ## Perfil adaptativo de modelo e provider
 

@@ -95,6 +95,28 @@ type ModelOptions struct {
 	LeaseTTL time.Duration
 	// MaxResponseBytes caps raw provider HTTP body size (0 = adapter default).
 	MaxResponseBytes int64
+	// Fallback is the optional FR-MODEL-004 step-7 alternate provider. When
+	// Enabled with BaseURL+Model, bootstrap wires ModelExecutor.FallbackProvider.
+	// Empty/nil leaves FallbackAvailable=false (policy never invents a provider).
+	Fallback *ModelFallbackOptions
+}
+
+// ModelFallbackOptions configures one alternate OpenAI-compatible endpoint for
+// recovery step 7. Same secret discipline as ModelOptions (env names only).
+type ModelFallbackOptions struct {
+	Enabled bool
+	// BaseURL is an absolute HTTP(S) root for the alternate endpoint.
+	BaseURL string
+	// Model is the alternate provider model name.
+	Model string
+	// APIKeyEnv names the env var for the alternate bearer token (may differ).
+	APIKeyEnv string
+	// MaxOutputField selects dialect; empty inherits primary ModelOptions field.
+	MaxOutputField ModelMaxOutputField
+	// ContextTokens is the alternate context window; 0 inherits primary.
+	ContextTokens int
+	// MaxResponseBytes caps alternate HTTP body size (0 = adapter default).
+	MaxResponseBytes int64
 }
 
 // TelegramIngressMode is the process-local inbound update collection mode.
@@ -241,6 +263,38 @@ func (o *Options) Validate() error {
 		}
 		if o.Model.MaxResponseBytes < 0 {
 			return errors.New("model max response bytes must not be negative")
+		}
+		if fb := o.Model.Fallback; fb != nil && fb.Enabled {
+			if strings.TrimSpace(fb.BaseURL) == "" {
+				return errors.New("model fallback requires base URL")
+			}
+			if strings.TrimSpace(fb.Model) == "" {
+				return errors.New("model fallback requires model name")
+			}
+			fbField := ModelMaxOutputField(strings.TrimSpace(string(fb.MaxOutputField)))
+			if fbField == "" {
+				fbField = o.Model.MaxOutputField
+			}
+			switch fbField {
+			case ModelMaxOutputTokensLegacy, ModelMaxOutputTokensCompletion:
+				fb.MaxOutputField = fbField
+			default:
+				return fmt.Errorf("unknown model fallback max-output field %q", fb.MaxOutputField)
+			}
+			if fb.ContextTokens < 0 {
+				return errors.New("model fallback context tokens must not be negative")
+			}
+			if fb.ContextTokens == 0 {
+				fb.ContextTokens = o.Model.ContextTokens
+			}
+			if fb.ContextTokens > 1_000_000 {
+				return errors.New("model fallback context tokens is capped at 1000000")
+			}
+			if fb.MaxResponseBytes < 0 {
+				return errors.New("model fallback max response bytes must not be negative")
+			}
+			// Write back defaults onto the nested pointer so buildModel sees them.
+			o.Model.Fallback = fb
 		}
 	}
 	if o.Telegram != nil && o.Telegram.Enabled {

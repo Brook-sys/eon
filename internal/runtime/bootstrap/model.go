@@ -26,35 +26,25 @@ func buildModel(
 	if opts.Model == nil || !opts.Model.Enabled {
 		return nil, nil
 	}
-	apiKey := ""
-	if env := strings.TrimSpace(opts.Model.APIKeyEnv); env != "" {
-		apiKey = strings.TrimSpace(os.Getenv(env))
-		// Empty key is allowed: some local OpenAI-compatible servers ignore auth.
-		// We only refuse when the env name was set but we cannot read it at all —
-		// getenv of missing var is empty, which is intentional for open endpoints.
-	}
-	maxField := openai.MaxOutputTokensLegacy
-	switch opts.Model.MaxOutputField {
-	case ModelMaxOutputTokensCompletion:
-		maxField = openai.MaxOutputTokensCompletion
-	case ModelMaxOutputTokensLegacy, "":
-		maxField = openai.MaxOutputTokensLegacy
-	default:
-		return nil, fmt.Errorf("unsupported model max-output field %q", opts.Model.MaxOutputField)
-	}
-	provider, err := openai.New(openai.Config{
-		BaseURL:          opts.Model.BaseURL,
-		APIKey:           apiKey,
-		Model:            opts.Model.Model,
-		MaxOutputField:   maxField,
-		MaxResponseBytes: opts.Model.MaxResponseBytes,
-	}, openai.WithContextTokens(opts.Model.ContextTokens), openai.WithProfileName("openai-compatible"))
+	modelProvider, err := openModelProvider(opts.Model.BaseURL, opts.Model.Model, opts.Model.APIKeyEnv, opts.Model.MaxOutputField, opts.Model.ContextTokens, opts.Model.MaxResponseBytes, "openai-compatible", telemetry)
 	if err != nil {
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
-	var modelProvider port.ModelProvider = provider
-	if telemetry != nil {
-		modelProvider = observability.InstrumentModel(provider, telemetry, opts.Model.Model)
+	var fallbackProvider port.ModelProvider
+	if fb := opts.Model.Fallback; fb != nil && fb.Enabled {
+		// Context/field defaults are filled by Options.Validate; still defend here.
+		field := fb.MaxOutputField
+		if field == "" {
+			field = opts.Model.MaxOutputField
+		}
+		ctxTokens := fb.ContextTokens
+		if ctxTokens <= 0 {
+			ctxTokens = opts.Model.ContextTokens
+		}
+		fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, "openai-compatible-fallback", telemetry)
+		if err != nil {
+			return nil, fmt.Errorf("model fallback provider: %w", err)
+		}
 	}
 	processor, err := changeset.New(changeset.Config{
 		Store:         store,
@@ -66,11 +56,12 @@ func buildModel(
 		return nil, fmt.Errorf("changeset processor: %w", err)
 	}
 	exec := &kernel.ModelExecutor{
-		Store:    store,
-		Clock:    clock,
-		IDs:      ids,
-		Provider: modelProvider,
-		Changes:  processor,
+		Store:            store,
+		Clock:            clock,
+		IDs:              ids,
+		Provider:         modelProvider,
+		FallbackProvider: fallbackProvider,
+		Changes:          processor,
 		Compiler: prompt.Compiler{
 			Estimator:             prompt.ConservativeEstimator{},
 			ProviderContextTokens: opts.Model.ContextTokens,
@@ -79,4 +70,53 @@ func buildModel(
 		LeaseTTL:      opts.Model.LeaseTTL,
 	}
 	return exec, nil
+}
+
+// openModelProvider builds one OpenAI-compatible provider (+ optional OTel).
+// apiKeyEnv is the env var name only — secrets never land in flags or durable config.
+func openModelProvider(
+	baseURL, modelName, apiKeyEnv string,
+	maxField ModelMaxOutputField,
+	contextTokens int,
+	maxResponseBytes int64,
+	profileName string,
+	telemetry *observability.Runtime,
+) (port.ModelProvider, error) {
+	apiKey := ""
+	if env := strings.TrimSpace(apiKeyEnv); env != "" {
+		apiKey = strings.TrimSpace(os.Getenv(env))
+		// Empty key is allowed: some local OpenAI-compatible servers ignore auth.
+	}
+	field := openai.MaxOutputTokensLegacy
+	switch maxField {
+	case ModelMaxOutputTokensCompletion:
+		field = openai.MaxOutputTokensCompletion
+	case ModelMaxOutputTokensLegacy, "":
+		field = openai.MaxOutputTokensLegacy
+	default:
+		return nil, fmt.Errorf("unsupported model max-output field %q", maxField)
+	}
+	if strings.TrimSpace(profileName) == "" {
+		profileName = "openai-compatible"
+	}
+	provider, err := openai.New(openai.Config{
+		BaseURL:          baseURL,
+		APIKey:           apiKey,
+		Model:            modelName,
+		MaxOutputField:   field,
+		MaxResponseBytes: maxResponseBytes,
+	}, openai.WithContextTokens(contextTokens), openai.WithProfileName(profileName))
+	if err != nil {
+		return nil, err
+	}
+	var modelProvider port.ModelProvider = provider
+	if telemetry != nil {
+		// Instrument under the model name so traces distinguish primary vs fallback.
+		label := modelName
+		if profileName != "" && profileName != "openai-compatible" {
+			label = profileName + ":" + modelName
+		}
+		modelProvider = observability.InstrumentModel(provider, telemetry, label)
+	}
+	return modelProvider, nil
 }
