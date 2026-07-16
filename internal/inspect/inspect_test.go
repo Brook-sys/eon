@@ -44,6 +44,27 @@ func TestProjectorOverviewAndEventPagination(t *testing.T) {
 	if len(overview.Mission.Operations) != 1 || overview.Mission.Operations[0].ID != operation.ID {
 		t.Fatalf("operations = %#v", overview.Mission.Operations)
 	}
+	if overview.Mission.Horizon == nil {
+		t.Fatal("expected executable horizon projection")
+	}
+	if overview.Mission.Horizon.ReadyCount != 1 || overview.Mission.Horizon.TargetReady <= 0 {
+		t.Fatalf("horizon = %#v", overview.Mission.Horizon)
+	}
+	if overview.Mission.Horizon.OpenCandidates != 1 {
+		t.Fatalf("open candidates = %d", overview.Mission.Horizon.OpenCandidates)
+	}
+	if overview.Mission.Frontier == nil {
+		t.Fatal("expected frontier projection")
+	}
+	if overview.Mission.Frontier.Total != 1 || overview.Mission.Frontier.Open != 1 {
+		t.Fatalf("frontier = %#v", overview.Mission.Frontier)
+	}
+	if len(overview.Mission.Frontier.ByFamily) != 1 || overview.Mission.Frontier.ByFamily[0].Family != domain.FamilyGapScan {
+		t.Fatalf("by_family = %#v", overview.Mission.Frontier.ByFamily)
+	}
+	if overview.Mission.LatestDiagnosis == nil || overview.Mission.LatestDiagnosis.ID != "diag_inspect_1" {
+		t.Fatalf("latest diagnosis = %#v", overview.Mission.LatestDiagnosis)
+	}
 
 	page, err := projector.ListEvents(context.Background(), inspect.EventFilter{Limit: 1})
 	if err != nil {
@@ -325,6 +346,20 @@ func seedRuntime(t *testing.T) (*memory.Store, domain.MissionRevision, domain.Op
 		SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"}, ExpectedOutput: "proposed_change_set",
 		IdempotencyKey: "idem_op_1", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
 	}
+	opp := domain.WorkOpportunity{
+		SchemaVersion: domain.SchemaVersionV1, ID: "opp_inspect_gap", MissionRevision: mission.ID,
+		Family: domain.FamilyGapScan, Status: domain.OpportunityOpen, Title: "inspect frontier seed",
+		Origin: "fixture", ExpectedGain: "visible frontier row", Novelty: "overview frontier projection",
+		StopCondition: "projected", DedupSignature: "inspect:frontier:gap", Depth: 0,
+		EstimatedCost: domain.Budget{Tokens: 10, Attempts: 1}, Risk: domain.RiskLow,
+		Priority: 12, CreatedAt: now, UpdatedAt: now,
+	}
+	diag := domain.ContinuityDiagnosis{
+		SchemaVersion: domain.SchemaVersionV1, ID: "diag_inspect_1", MissionRevision: mission.ID,
+		OccurredAt: now.Add(-time.Minute), StrategiesTried: []string{"gap_scan"},
+		OpenCandidateCount: 1, ReadyCount: 0, RecoveryConditions: []string{"admit open opportunity"},
+		SafeDetail: "no ready work under policy", PolicyVersion: "horizon.v1",
+	}
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.AppendMissionRevision(mission); err != nil {
 			return err
@@ -345,6 +380,12 @@ func seedRuntime(t *testing.T) (*memory.Store, domain.MissionRevision, domain.Op
 			return err
 		}
 		if err := tx.CreateOperation(operation); err != nil {
+			return err
+		}
+		if err := tx.CreateWorkOpportunity(opp); err != nil {
+			return err
+		}
+		if err := tx.CreateContinuityDiagnosis(diag); err != nil {
 			return err
 		}
 		if _, err := tx.AppendEvent(domain.Event{

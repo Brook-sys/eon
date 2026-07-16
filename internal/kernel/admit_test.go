@@ -310,6 +310,102 @@ func TestPreventiveReplenishAndLocalFamilyStrategy(t *testing.T) {
 	}
 }
 
+func TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 50, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	store := memory.New()
+	seedMission(t, store)
+	ids := source.NewSequenceIDGenerator(400)
+	policy := domain.DefaultHorizonPolicy()
+	policy.TargetReady = 3
+	policy.LowWatermark = 1
+	policy.MaxReady = 6
+
+	reg := NewStrategyRegistry()
+	if err := RegisterDefaultContinuityFamilies(reg, store, clock, ids, policy); err != nil {
+		t.Fatal(err)
+	}
+	want := map[domain.WorkFamily]string{
+		domain.FamilyGapScan:           "gap_scan",
+		domain.FamilyConflictReview:    "conflict_evidence_review",
+		domain.FamilyCoverageScan:      "mission_coverage_scan",
+		domain.FamilyArtifactRefresh:   "artifact_refresh",
+		domain.FamilySourceFreshness:   "source_freshness_scan",
+		domain.FamilyIntegrityAudit:    "integrity_audit",
+		domain.FamilyHarnessEvaluation: "harness_evaluation",
+		domain.FamilyFrontierManage:    "frontier_management",
+	}
+	if reg.Len() != len(want) {
+		t.Fatalf("registry len = %d, want %d", reg.Len(), len(want))
+	}
+	got := map[domain.WorkFamily]string{}
+	for _, d := range reg.Descriptors() {
+		got[d.Family] = d.Name
+		if !d.LocalOnly {
+			t.Fatalf("family %s should be local-only", d.Family)
+		}
+	}
+	for family, name := range want {
+		if got[family] != name {
+			t.Fatalf("family %s = %q, want %q (got map %#v)", family, got[family], name, got)
+		}
+	}
+
+	// Residual families must seed + optionally decompose without model calls.
+	for _, family := range []domain.WorkFamily{
+		domain.FamilyCoverageScan, domain.FamilySourceFreshness, domain.FamilyFrontierManage,
+	} {
+		var strategy ContinuityStrategy
+		for _, s := range reg.Strategies() {
+			if s.Name() == want[family] {
+				strategy = s
+				break
+			}
+		}
+		if strategy == nil {
+			t.Fatalf("missing strategy for %s", family)
+		}
+		res, err := strategy.Replenish(context.Background(), "revision_1")
+		if err != nil {
+			t.Fatalf("%s replenish: %v", family, err)
+		}
+		if !res.Changed && res.Admitted == 0 {
+			t.Fatalf("%s expected seed/admit effect, got %+v", family, res)
+		}
+	}
+
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		opps, err := r.WorkOpportunities("revision_1", "")
+		if err != nil {
+			return err
+		}
+		seen := map[domain.WorkFamily]bool{}
+		for _, opp := range opps {
+			seen[opp.Family] = true
+		}
+		for _, family := range []domain.WorkFamily{
+			domain.FamilyCoverageScan, domain.FamilySourceFreshness, domain.FamilyFrontierManage,
+		} {
+			if !seen[family] {
+				t.Fatalf("expected opportunities for residual family %s", family)
+			}
+		}
+		// Catalog specs for residual families must exist after first replenish.
+		for _, id := range []domain.OperationSpecID{
+			DefaultFamilySpecCatalog()[domain.FamilyCoverageScan],
+			DefaultFamilySpecCatalog()[domain.FamilySourceFreshness],
+			DefaultFamilySpecCatalog()[domain.FamilyFrontierManage],
+		} {
+			if _, err := r.OperationSpec(id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSchedulerPreventiveAdmissionBeforeStrategies(t *testing.T) {
 	now := time.Date(2026, 7, 16, 9, 40, 0, 0, time.UTC)
 	clock := source.NewManualClock(now)

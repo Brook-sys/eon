@@ -139,7 +139,9 @@ func TestLongevityMultiCycleDiversityBudgetAndNoEmptyActivity(t *testing.T) {
 	blockedAfterDrain := 0
 
 	// Phase A: multi-cycle dispatch with diversity across families while work remains.
-	for i := 0; i < 12; i++ {
+	// Portfolio has 8 local families (roots + optional children); allow enough
+	// cycles to admit and complete them with target_ready=1 before draining.
+	for i := 0; i < 40; i++ {
 		decision, err := scheduler.Step(context.Background(), "revision_1")
 		if err != nil {
 			t.Fatalf("step %d: %v", i, err)

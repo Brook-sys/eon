@@ -375,6 +375,38 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           + " waiting=" + esc(String(m.agenda.waiting||0))
           + " terminal=" + esc(String(m.agenda.terminal||0)) + "</dd>";
       }
+      if (m.horizon) {
+        const h = m.horizon;
+        const needs = (Number(h.ready_count||0) <= Number(h.low_watermark||0));
+        html += '<dt>horizon</dt><dd>ready=' + esc(String(h.ready_count||0))
+          + " / target=" + esc(String(h.target_ready||0))
+          + " max=" + esc(String(h.max_ready||0))
+          + " low=" + esc(String(h.low_watermark||0))
+          + " open_candidates=" + esc(String(h.open_candidates||0))
+          + " policy=" + esc(h.policy_version||"")
+          + (needs ? ' <span class="status-PAUSED">replenish</span>' : '') + "</dd>";
+      }
+      if (m.frontier) {
+        const f = m.frontier;
+        html += '<dt>frontier</dt><dd>total=' + esc(String(f.total||0))
+          + " open=" + esc(String(f.open||0))
+          + " admitted=" + esc(String(f.admitted||0))
+          + " deferred=" + esc(String(f.deferred||0))
+          + " abandoned=" + esc(String(f.abandoned||0))
+          + " superseded=" + esc(String(f.superseded||0)) + "</dd>";
+        if (Array.isArray(f.by_family) && f.by_family.length) {
+          html += '<dt>frontier_families</dt><dd>' + f.by_family.map(function (row) {
+            return esc(row.family || "?") + " open=" + esc(String(row.open||0)) + "/" + esc(String(row.total||0));
+          }).join("; ") + "</dd>";
+        }
+      }
+      if (m.latest_continuity_diagnosis) {
+        const d = m.latest_continuity_diagnosis;
+        html += '<dt>continuity_blocked</dt><dd class="status-PAUSED">' + esc(d.safe_detail || d.id || "diagnosis")
+          + " · ready=" + esc(String(d.ready_count||0))
+          + " open=" + esc(String(d.open_candidate_count||0))
+          + " · " + esc(fmtTime(d.occurred_at)) + "</dd>";
+      }
     } else {
       html += '<dt>mission</dt><dd class="muted">não selecionada / não encontrada</dd>';
     }

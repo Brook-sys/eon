@@ -210,13 +210,40 @@ func RegisterDefaultContinuityFamilies(reg *StrategyRegistry, store port.Store, 
 			}},
 		},
 		{
+			name: "mission_coverage_scan", family: domain.FamilyCoverageScan, priority: 26, local: true,
+			children: []ChildDraft{{
+				Title: "map mission areas without inquiries", Origin: "decompose:coverage_scan",
+				ExpectedGain: "coverage gaps for mission scopes", Novelty: "mission areas lacking admitted work",
+				StopCondition: "coverage inventory persisted", DedupSignature: "coverage:mission_areas",
+				Risk: domain.RiskLow, Priority: 23, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+			}},
+		},
+		{
 			name: "artifact_refresh", family: domain.FamilyArtifactRefresh, priority: 24, local: true,
+		},
+		{
+			name: "source_freshness_scan", family: domain.FamilySourceFreshness, priority: 22, local: true,
+			children: []ChildDraft{{
+				Title: "review aging or stale sources", Origin: "decompose:source_freshness",
+				ExpectedGain: "candidates for reacquisition or revalidation", Novelty: "sources past freshness window",
+				StopCondition: "stale sources listed or deferred", DedupSignature: "freshness:stale_sources",
+				Risk: domain.RiskLow, Priority: 20, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+			}},
 		},
 		{
 			name: "integrity_audit", family: domain.FamilyIntegrityAudit, priority: 20, local: true,
 		},
 		{
 			name: "harness_evaluation", family: domain.FamilyHarnessEvaluation, priority: 18, local: true,
+		},
+		{
+			name: "frontier_management", family: domain.FamilyFrontierManage, priority: 16, local: true,
+			children: []ChildDraft{{
+				Title: "dedupe and diversify open frontier", Origin: "decompose:frontier_manage",
+				ExpectedGain: "merged duplicates and diversified candidates", Novelty: "frontier hygiene without new model calls",
+				StopCondition: "frontier compact report", DedupSignature: "frontier:hygiene",
+				Risk: domain.RiskLow, Priority: 14, EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1},
+			}},
 		},
 	}
 	for _, item := range families {

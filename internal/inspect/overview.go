@@ -20,12 +20,12 @@ type RuntimeIdentity struct {
 
 // AgendaCounts summarizes operational states for one mission revision.
 type AgendaCounts struct {
-	Total    int                              `json:"total"`
-	ByState  map[domain.OperationalState]int  `json:"by_state"`
-	Ready    int                              `json:"ready"`
-	Running  int                              `json:"running"`
-	Waiting  int                              `json:"waiting"`
-	Terminal int                              `json:"terminal"`
+	Total    int                             `json:"total"`
+	ByState  map[domain.OperationalState]int `json:"by_state"`
+	Ready    int                             `json:"ready"`
+	Running  int                             `json:"running"`
+	Waiting  int                             `json:"waiting"`
+	Terminal int                             `json:"terminal"`
 }
 
 // OperationSummary is a compact agenda row for the overview and mission views.
@@ -40,34 +40,68 @@ type OperationSummary struct {
 	MissionRevision domain.MissionRevisionID     `json:"mission_revision_id"`
 }
 
+// FrontierFamilyCount is a compact per-family opportunity tally for overview.
+type FrontierFamilyCount struct {
+	Family domain.WorkFamily `json:"family"`
+	Open   int               `json:"open"`
+	Total  int               `json:"total"`
+}
+
+// FrontierSummary projects the work-opportunity reservoir for one mission revision.
+type FrontierSummary struct {
+	Total      int                                  `json:"total"`
+	ByStatus   map[domain.WorkOpportunityStatus]int `json:"by_status"`
+	Open       int                                  `json:"open"`
+	Admitted   int                                  `json:"admitted"`
+	Deferred   int                                  `json:"deferred"`
+	Abandoned  int                                  `json:"abandoned"`
+	Superseded int                                  `json:"superseded"`
+	ByFamily   []FrontierFamilyCount                `json:"by_family"`
+}
+
+// ContinuityDiagnosisSummary is a safe, compact diagnosis projection.
+type ContinuityDiagnosisSummary struct {
+	ID                 domain.ContinuityDiagnosisID `json:"id"`
+	OccurredAt         time.Time                    `json:"occurred_at"`
+	ReadyCount         int                          `json:"ready_count"`
+	OpenCandidateCount int                          `json:"open_candidate_count"`
+	PolicyVersion      string                       `json:"policy_version"`
+	SafeDetail         string                       `json:"safe_detail"`
+	StrategiesTried    []string                     `json:"strategies_tried"`
+	RecoveryConditions []string                     `json:"recovery_conditions"`
+}
+
 // MissionOverview is the operator-facing mission projection.
 type MissionOverview struct {
-	MissionID         domain.MissionID         `json:"mission_id"`
-	ActiveRevisionID  domain.MissionRevisionID `json:"active_revision_id"`
-	ActiveRevision    uint64                   `json:"active_revision"`
-	Status            domain.MissionStatus     `json:"status"`
-	Purpose           string                   `json:"purpose"`
-	DispatchMode      domain.MissionDispatchMode `json:"dispatch_mode"`
-	DispatchAllowsNew bool                     `json:"dispatch_allows_new"`
-	ControlReason     string                   `json:"control_reason,omitempty"`
-	ControlUpdatedAt  time.Time                `json:"control_updated_at,omitempty"`
-	Agenda            AgendaCounts             `json:"agenda"`
-	Operations        []OperationSummary       `json:"operations"`
+	MissionID         domain.MissionID            `json:"mission_id"`
+	ActiveRevisionID  domain.MissionRevisionID    `json:"active_revision_id"`
+	ActiveRevision    uint64                      `json:"active_revision"`
+	Status            domain.MissionStatus        `json:"status"`
+	Purpose           string                      `json:"purpose"`
+	DispatchMode      domain.MissionDispatchMode  `json:"dispatch_mode"`
+	DispatchAllowsNew bool                        `json:"dispatch_allows_new"`
+	ControlReason     string                      `json:"control_reason,omitempty"`
+	ControlUpdatedAt  time.Time                   `json:"control_updated_at,omitempty"`
+	Agenda            AgendaCounts                `json:"agenda"`
+	Operations        []OperationSummary          `json:"operations"`
+	Horizon           *domain.ExecutableHorizon   `json:"horizon,omitempty"`
+	Frontier          *FrontierSummary            `json:"frontier,omitempty"`
+	LatestDiagnosis   *ContinuityDiagnosisSummary `json:"latest_continuity_diagnosis,omitempty"`
 }
 
 // Overview is Slice A of the control plane: health, control, mission, agenda.
 type Overview struct {
-	SchemaVersion      int                     `json:"schema_version"`
-	GeneratedAt        time.Time               `json:"generated_at"`
-	Runtime            RuntimeIdentity         `json:"runtime"`
-	ProcessMode        domain.ProcessMode      `json:"process_mode"`
-	ControlRevision    uint64                  `json:"control_revision"`
-	ControlUpdatedAt   time.Time               `json:"control_updated_at,omitempty"`
-	ShutdownCommandID  domain.CommandID        `json:"shutdown_command_id,omitempty"`
-	EventHeadSequence  uint64                  `json:"event_head_sequence"`
-	PendingCommands    int                     `json:"pending_commands"`
-	PendingQuestions   int                     `json:"pending_operator_questions"`
-	Mission            *MissionOverview        `json:"mission,omitempty"`
+	SchemaVersion     int                `json:"schema_version"`
+	GeneratedAt       time.Time          `json:"generated_at"`
+	Runtime           RuntimeIdentity    `json:"runtime"`
+	ProcessMode       domain.ProcessMode `json:"process_mode"`
+	ControlRevision   uint64             `json:"control_revision"`
+	ControlUpdatedAt  time.Time          `json:"control_updated_at,omitempty"`
+	ShutdownCommandID domain.CommandID   `json:"shutdown_command_id,omitempty"`
+	EventHeadSequence uint64             `json:"event_head_sequence"`
+	PendingCommands   int                `json:"pending_commands"`
+	PendingQuestions  int                `json:"pending_operator_questions"`
+	Mission           *MissionOverview   `json:"mission,omitempty"`
 }
 
 // Projector materializes inspectable views from a store reader.
@@ -133,7 +167,7 @@ func (p *Projector) BuildOverview(ctx context.Context, missionID domain.MissionI
 			// Multi-mission discovery is intentionally not invented here.
 			return nil
 		}
-		mission, err := buildMissionOverview(r, control, missionID)
+		mission, err := buildMissionOverview(r, control, missionID, now)
 		if err != nil {
 			return err
 		}
@@ -183,7 +217,7 @@ func (p *Projector) MissionDetail(ctx context.Context, missionID domain.MissionI
 		if errors.Is(err, port.ErrNotFound) {
 			control = domain.DefaultControlState(p.Clock())
 		}
-		mission, err := buildMissionOverview(r, control, missionID)
+		mission, err := buildMissionOverview(r, control, missionID, p.Clock().UTC())
 		if err != nil {
 			return err
 		}
@@ -193,7 +227,7 @@ func (p *Projector) MissionDetail(ctx context.Context, missionID domain.MissionI
 	return out, err
 }
 
-func buildMissionOverview(r port.Reader, control domain.ControlState, missionID domain.MissionID) (MissionOverview, error) {
+func buildMissionOverview(r port.Reader, control domain.ControlState, missionID domain.MissionID, observedAt time.Time) (MissionOverview, error) {
 	if missionID == "" {
 		return MissionOverview{}, errors.New("mission ID is required")
 	}
@@ -222,7 +256,102 @@ func buildMissionOverview(r port.Reader, control domain.ControlState, missionID 
 		out.ControlReason = mission.Reason
 		out.ControlUpdatedAt = mission.UpdatedAt
 	}
+	horizon, frontier, err := projectHorizonAndFrontier(r, active.ID, counts.Ready, observedAt)
+	if err != nil {
+		return MissionOverview{}, err
+	}
+	out.Horizon = &horizon
+	out.Frontier = &frontier
+	if diag, err := r.LatestContinuityDiagnosis(active.ID); err == nil {
+		summary := ContinuityDiagnosisSummary{
+			ID:                 diag.ID,
+			OccurredAt:         diag.OccurredAt,
+			ReadyCount:         diag.ReadyCount,
+			OpenCandidateCount: diag.OpenCandidateCount,
+			PolicyVersion:      diag.PolicyVersion,
+			SafeDetail:         diag.SafeDetail,
+			StrategiesTried:    append([]string(nil), diag.StrategiesTried...),
+			RecoveryConditions: append([]string(nil), diag.RecoveryConditions...),
+		}
+		out.LatestDiagnosis = &summary
+	} else if !errors.Is(err, port.ErrNotFound) {
+		return MissionOverview{}, err
+	}
 	return out, nil
+}
+
+func projectHorizonAndFrontier(r port.Reader, revision domain.MissionRevisionID, readyCount int, observedAt time.Time) (domain.ExecutableHorizon, FrontierSummary, error) {
+	policy := domain.DefaultHorizonPolicy()
+	if rev, err := r.ActiveConfigRevision(domain.ConfigScopeHorizon); err == nil && rev.Horizon != nil {
+		if err := rev.Horizon.Validate(); err == nil {
+			policy = *rev.Horizon
+		}
+	} else if err != nil && !errors.Is(err, port.ErrNotFound) {
+		return domain.ExecutableHorizon{}, FrontierSummary{}, err
+	}
+	opps, err := r.WorkOpportunities(revision, "")
+	if err != nil {
+		return domain.ExecutableHorizon{}, FrontierSummary{}, err
+	}
+	frontier := FrontierSummary{
+		ByStatus: map[domain.WorkOpportunityStatus]int{},
+	}
+	familyTotals := map[domain.WorkFamily]int{}
+	familyOpen := map[domain.WorkFamily]int{}
+	openActive := 0
+	for _, opp := range opps {
+		frontier.Total++
+		frontier.ByStatus[opp.Status]++
+		familyTotals[opp.Family]++
+		switch opp.Status {
+		case domain.OpportunityOpen:
+			frontier.Open++
+			familyOpen[opp.Family]++
+			openActive++
+		case domain.OpportunityAdmitted:
+			frontier.Admitted++
+		case domain.OpportunityDeferred:
+			frontier.Deferred++
+			openActive++
+		case domain.OpportunityAbandoned:
+			frontier.Abandoned++
+		case domain.OpportunitySuperseded:
+			frontier.Superseded++
+		}
+	}
+	families := make([]domain.WorkFamily, 0, len(familyTotals))
+	for family := range familyTotals {
+		families = append(families, family)
+	}
+	sort.Slice(families, func(i, j int) bool {
+		return string(families[i]) < string(families[j])
+	})
+	frontier.ByFamily = make([]FrontierFamilyCount, 0, len(families))
+	for _, family := range families {
+		frontier.ByFamily = append(frontier.ByFamily, FrontierFamilyCount{
+			Family: family,
+			Open:   familyOpen[family],
+			Total:  familyTotals[family],
+		})
+	}
+	if observedAt.IsZero() {
+		observedAt = time.Now().UTC()
+	}
+	horizon := domain.ExecutableHorizon{
+		SchemaVersion:   domain.SchemaVersionV1,
+		MissionRevision: revision,
+		PolicyVersion:   policy.Version,
+		ReadyCount:      readyCount,
+		OpenCandidates:  openActive,
+		TargetReady:     policy.TargetReady,
+		LowWatermark:    policy.LowWatermark,
+		MaxReady:        policy.MaxReady,
+		ObservedAt:      observedAt.UTC(),
+	}
+	if err := horizon.Validate(); err != nil {
+		return domain.ExecutableHorizon{}, FrontierSummary{}, err
+	}
+	return horizon, frontier, nil
 }
 
 func summarizeOperations(operations []domain.Operation) ([]OperationSummary, AgendaCounts) {
@@ -281,4 +410,3 @@ func eventHead(r port.Reader) (uint64, error) {
 		}
 	}
 }
-
