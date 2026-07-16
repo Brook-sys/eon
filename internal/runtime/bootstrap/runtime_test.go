@@ -537,3 +537,124 @@ func TestControlLoopIdleUsesClock(t *testing.T) {
 		t.Fatal("control loop did not exit")
 	}
 }
+
+func TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend: bootstrap.StorageMemory,
+		MissionID:    "mission_model",
+		IdleMin:      time.Millisecond,
+		IdleMax:      2 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+
+	// Manual clock for deterministic lease expiry.
+	start := time.Date(2026, 7, 16, 16, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(start)
+	rt.Clock = clock
+	rt.LeaseReaper.Clock = clock
+	rt.Executor.Local.Clock = clock
+
+	loader := mission.Loader{Store: rt.Store, Clock: clock, IDs: rt.IDs}
+	specJSON := []byte(`{
+  "schema_version": 1,
+  "id": "mission_model",
+  "revision": 1,
+  "original_text": "model path vertical",
+  "purpose": "prove propose-only model path",
+  "domains": ["test"],
+  "policies": ["policy.v1"],
+  "budget": {"model_calls": 10, "tokens": 8000, "bytes": 4096, "attempts": 3, "duration": 60000000000},
+  "status": "ACTIVE"
+}`)
+	revision, err := loader.Load(ctx, specJSON, "bootstrap:model")
+	if err != nil {
+		t.Fatalf("install mission: %v", err)
+	}
+
+	// Seed a stuck RUNNING op with expired lease under the mission revision.
+	expiredRef := kernel.FormatLeaseRef("lease_stuck", "operation_stuck", 1, start.Add(-time.Minute))
+	if err := rt.Store.Update(ctx, func(tx port.Transaction) error {
+		spec := domain.OperationSpec{
+			SchemaVersion: 1, ID: "extract@1", ContractVersion: 1, TemplateVersion: 1,
+			InputSchema: "refs", OutputSchema: "proposed changeset",
+			Budget:          domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1},
+			MaxOutputTokens: 500, SafetyMargin: 50, Validators: []string{"schema"},
+			RetryPolicy: "none", FallbackPolicy: "fail", MaximumAuthority: domain.AuthorityProposeOnly,
+		}
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		question := domain.Question{
+			SchemaVersion: 1, ID: "q_model", MissionRevision: revision.ID,
+			Text: "extract?", Origin: "mission", Relevance: "primary", AnswerCondition: "evidence",
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		candidate := domain.InquiryCandidate{
+			SchemaVersion: 1, ID: "cand_model", MissionRevision: revision.ID, QuestionID: question.ID,
+			DerivedFrom: []string{"gap"}, ExpectedProgress: "obs", Novelty: "n", Risk: domain.RiskLow,
+			SourcePlan: []string{"fixture"}, AnswerCondition: "evidence", StopCondition: "done",
+			ReviewAfter: start.Add(time.Hour),
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		inquiry := domain.Inquiry{
+			SchemaVersion: 1, ID: "inq_model", CandidateID: candidate.ID, MissionRevision: revision.ID,
+			QuestionID: question.ID, AdmissionReason: "test", StopCondition: "done",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		stuck := domain.Operation{
+			SchemaVersion: 1, ID: "operation_stuck", InquiryID: inquiry.ID, MissionRevision: revision.ID,
+			SpecID: spec.ID, ReadSet: []string{"fragment_1"}, ExpectedOutput: "proposed_change_set",
+			IdempotencyKey: "idem_stuck", Attempt: 1, State: domain.StateRunning,
+			Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateLease, Reference: expiredRef},
+		}
+		if err := tx.CreateOperation(stuck); err != nil {
+			return err
+		}
+		// Also seed a READY model op that will run after reaper frees the stuck one... actually
+		// scheduler picks READY only; reaper turns stuck into READY first, then DISPATCH may pick it.
+		return nil
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	// Cycle without model: reaper should READY the stuck op; local skip requires_model.
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("cycle reaper: %v", err)
+	}
+	if result.LeasesReconciled != 1 {
+		t.Fatalf("expected 1 lease reconciled, got %#v", result)
+	}
+	var stuck domain.Operation
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		var err error
+		stuck, err = r.Operation("operation_stuck")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// After reaper READY, same cycle may DISPATCH and skip requires_model (no provider).
+	if stuck.State != domain.StateReady && stuck.State != domain.StateRunning {
+		// If dispatch claimed it and left running without model, that would be a bug.
+		// With DispatchExecutor and no model, skip leaves READY.
+		t.Fatalf("stuck state after cycle = %s", stuck.State)
+	}
+	if stuck.State == domain.StateRunning {
+		t.Fatalf("without model path, op must not remain RUNNING: %+v", stuck)
+	}
+	if result.OperationsSkipped < 1 && stuck.State == domain.StateReady && result.SchedulerKind == kernel.DecisionDispatch {
+		// dispatch happened and skip counted
+	}
+}

@@ -41,9 +41,14 @@ type Runtime struct {
 	EventProcessor   *kernel.ExternalEventProcessor
 	ConfigApplier    *kernel.ConfigApplier
 	Scheduler        kernel.Scheduler
-	Executor         kernel.LocalExecutor
-	Registry         *kernel.StrategyRegistry
-	Cooldowns        *kernel.StrategyCooldownBook
+	// Executor routes local continuity and optional PROPOSE_ONLY model paths.
+	Executor kernel.DispatchExecutor
+	// LeaseReaper reconciles expired RUNNING/VERIFYING leases before dispatch.
+	LeaseReaper kernel.LeaseReaper
+	// Model is optional; nil keeps non-local ops skipped as requires_model.
+	Model     *kernel.ModelExecutor
+	Registry  *kernel.StrategyRegistry
+	Cooldowns *kernel.StrategyCooldownBook
 
 	Inspect   *inspect.API
 	Control   *control.API
@@ -217,6 +222,16 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 	handler = mountTelegramWebhook(handler, telegramBits.Ingress)
 
+	localExec := kernel.LocalExecutor{
+		Store: store,
+		Clock: clock,
+		IDs:   ids,
+	}
+	leaseReaper := kernel.LeaseReaper{
+		Store: store,
+		Clock: clock,
+		IDs:   ids,
+	}
 	return &Runtime{
 		Opts:             opts,
 		Store:            store,
@@ -230,11 +245,12 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		EventProcessor:   eventProcessor,
 		ConfigApplier:    configApplier,
 		Scheduler:        scheduler,
-		Executor: kernel.LocalExecutor{
+		Executor: kernel.DispatchExecutor{
 			Store: store,
-			Clock: clock,
-			IDs:   ids,
+			Local: localExec,
+			// Model stays nil until Options wire a provider (tests inject).
 		},
+		LeaseReaper:     leaseReaper,
 		Registry:        registry,
 		Cooldowns:       cooldowns,
 		Inspect:         inspectAPI,
@@ -247,6 +263,17 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Telemetry:       telemetry,
 		logger:          log.Default(),
 	}, nil
+}
+
+// AttachModel wires a PROPOSE_ONLY ModelExecutor into the dispatch path.
+// Safe to call after Open for tests or process configuration with a free local
+// OpenAI-compatible endpoint. nil clears the model path.
+func (rt *Runtime) AttachModel(model *kernel.ModelExecutor) {
+	if rt == nil {
+		return
+	}
+	rt.Model = model
+	rt.Executor.Model = model
 }
 
 // mountTelegramWebhook layers a validated webhook route over the existing mux
@@ -324,6 +351,7 @@ type CycleResult struct {
 	TelegramAccepted    int
 	TelegramRejected    int
 	TelegramDuplicate   int
+	LeasesReconciled    int
 	SchedulerRan        bool
 	SchedulerKind       kernel.DecisionKind
 	OperationsExecuted  int
@@ -427,6 +455,17 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		return result, fmt.Errorf("resolve active mission: %w", err)
 	}
 
+	// Reconcile expired leases before selecting new work so stuck RUNNING units
+	// re-enter READY without process-local timers.
+	reconcile, recErr := rt.LeaseReaper.Reconcile(ctx, missionRevision)
+	if recErr != nil {
+		return result, fmt.Errorf("lease reaper: %w", recErr)
+	}
+	result.LeasesReconciled = reconcile.Reconciled
+	if reconcile.Reconciled > 0 {
+		result.Worked = true
+	}
+
 	decision, err := rt.Scheduler.Step(ctx, missionRevision)
 	if err != nil {
 		return result, fmt.Errorf("scheduler step: %w", err)
@@ -439,12 +478,12 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		result.Worked = true
 	}
 
-	// After DISPATCH, run the model-free local executor when the operation is
-	// eligible. Non-local specs are skipped without error (model path residual).
+	// After DISPATCH, route to local or optional model executor. Non-local
+	// specs without a wired provider skip with requires_model.
 	if decision.Kind == kernel.DecisionDispatch && decision.Operation != "" {
 		execResult, execErr := rt.Executor.Execute(ctx, decision.Operation)
 		if execErr != nil {
-			return result, fmt.Errorf("local executor: %w", execErr)
+			return result, fmt.Errorf("dispatch executor: %w", execErr)
 		}
 		if execResult.Completed {
 			result.OperationsExecuted++

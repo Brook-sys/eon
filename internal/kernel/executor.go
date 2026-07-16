@@ -114,20 +114,18 @@ func (e LocalExecutor) Execute(ctx context.Context, operationID domain.Operation
 			return nil
 		}
 
-		leaseRef, err := e.IDs.NewID("lease")
+		leaseID, err := e.IDs.NewID("lease")
 		if err != nil {
 			return fmt.Errorf("generate lease id: %w", err)
 		}
-		if strings.TrimSpace(leaseRef) == "" {
+		if strings.TrimSpace(leaseID) == "" {
 			return errors.New("generated lease id must not be empty")
 		}
-		// Bind lease identity to operation attempt for reconcilability (FR-DUR-003).
-		leaseRef = fmt.Sprintf("%s:op=%s:attempt=%d", leaseRef, operation.ID, operation.Attempt+1)
-		result.LeaseRef = leaseRef
-
 		now := e.Clock.Now().UTC()
-		// Lease TTL is recorded in event payload; reevaluation stores the lease ref.
-		_ = now.Add(e.leaseTTL())
+		until := now.Add(e.leaseTTL())
+		// Bind lease identity, attempt, and absolute deadline (FR-DUR-003).
+		leaseRef := FormatLeaseRef(leaseID, operation.ID, operation.Attempt+1, until)
+		result.LeaseRef = leaseRef
 
 		snap := domain.OperationalSnapshot{State: operation.State, Reevaluation: operation.Reevaluation}
 		running, err := domain.Transition(snap, domain.TransitionInput{Event: domain.EventDispatch, Reference: leaseRef})
