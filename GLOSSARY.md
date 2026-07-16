@@ -204,7 +204,7 @@ Termo amplo demais. Substituir por portas explícitas, por exemplo `MissionRepos
 
 ### Capability
 
-Adapter autorizado e tipado para uma interação externa ou operação privilegiada. No MVP, capabilities são estreitas e limitadas a aquisição/leitura de fontes, armazenamento gerenciado, modelo e renderização. `shell.run` e execução arbitrária não fazem parte do produto MVP.
+Adapter autorizado e tipado para uma interação externa ou operação privilegiada. No MVP experimental, capabilities são estreitas e limitadas a aquisição/leitura de fontes, armazenamento gerenciado, modelo e renderização. `shell.run` e execução arbitrária não fazem parte do escopo inicial.
 
 ### ModelDecision
 

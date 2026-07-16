@@ -6,7 +6,21 @@ Status: rascunho v0.1
 
 Projetar e avaliar um runtime epistemológico autônomo contínuo, orientado por missão, capaz de produzir progresso verificável na construção e revisão de conhecimento usando modelos de linguagem fracos, antigos, pequenos, rate-limited e sem tool calling confiável.
 
+O projeto é primariamente um **experimento de engenharia e aprendizado**, não uma iniciativa de productização ou monetização. Seu ganho principal é a experiência acumulada ao investigar como construir um runtime que permaneça ativo por longos períodos com confiança, controle humano, rastreabilidade e baixo custo cognitivo. Facilidade de instalação, configuração, inspeção e operação importam porque tornam os experimentos reproduzíveis e acessíveis, não porque o objetivo seja convertê-lo em produto comercial.
+
+O runtime não impõe finalidade econômica nem antieconômica à missão. Uma implantação pode ser configurada para pesquisa, organização de conhecimento, produção editorial ou atividade com retorno financeiro, desde que permaneça dentro das capabilities, políticas, budgets e responsabilidades definidas pelo operador. O projeto central continua neutro quanto à finalidade da missão e não otimiza por receita como objetivo próprio.
+
 Restrições de implementação já aceitas: núcleo em Go e integração principal de modelos por APIs OpenAI-compatible, preservando contrato mínimo texto-para-texto. A escolha de Dolt continua como hipótese de engenharia a ser avaliada.
+
+Além da correção experimental, o artefato SHOULD buscar:
+
+- execução local simples e reproduzível;
+- configuração explícita, versionada e compreensível;
+- módulos substituíveis com contratos e testes;
+- funcionamento útil com modelos baratos e de baixa capacidade;
+- observabilidade suficiente para estudar cada decisão e falha;
+- continuidade durável sem exigir operação manual constante;
+- ausência de dependências comerciais obrigatórias.
 
 Não assumimos que a solução é inédita. A contribuição potencial só poderá ser formulada depois de uma revisão de literatura e comparação sistemática com planejamento clássico, arquiteturas de agentes, workflows duráveis e harnesses LLM existentes.
 

@@ -9,6 +9,10 @@ Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS
 A inteligência principal deve estar no sistema, não depender exclusivamente do modelo.
 O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com janelas de contexto reduzidas.
 
+Este repositório é um artefato experimental de pesquisa e aprendizado, não um produto em processo de comercialização. Confiabilidade, modularidade, configuração simples, portabilidade e boa experiência operacional são requisitos do experimento: permitem executar estudos longos, reproduzir resultados, trocar componentes e compreender falhas. Eles não pressupõem roadmap comercial, serviço hospedado, suporte empresarial ou objetivo de receita.
+
+O runtime é neutro quanto à finalidade concreta configurada pelo operador. Pode sustentar missões pessoais, científicas, editoriais ou economicamente úteis, mas não possui objetivo econômico próprio e não amplia sua missão para buscar receita.
+
 Seu propósito principal é **continuidade progressiva permanente**: permanecer vivo, preservar estado, sempre ultrapassar o horizonte atual e produzir a próxima frente útil de trabalho. Enquanto a missão estiver ativa e o armazenamento operacional, o motor não possui conclusão global implícita; objetivos, investigações e operações individuais são finitos, mas seu término retorna ao ciclo de manutenção, melhoria e replenishment.
 
 Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime nunca depende de comandos, respostas do usuário ou eventos externos para permanecer vivo e procurar avanço: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas `Inquiry`s derivadas e executa a melhor `Operation` permitida. Eventos externos — inclusive respostas do usuário — alteram fatos, desbloqueiam linhas e repriorizam o trabalho, mas silêncio ou ausência de eventos bloqueiam apenas as unidades dependentes, nunca o motor inteiro.
@@ -467,7 +471,7 @@ Registro de capacidades instaláveis. Cada capability declara:
 - timeout e política de repetição;
 - função opcional de verificação.
 
-Exemplos do MVP: `file.discover`, `file.read`, `web.search`, `web.fetch`, `source.snapshot`, `model.complete` e `artifact.render`. Shell e execução arbitrária de código permanecem fora do produto MVP.
+Exemplos do MVP experimental: `file.discover`, `file.read`, `web.search`, `web.fetch`, `source.snapshot`, `model.complete` e `artifact.render`. Shell e execução arbitrária de código permanecem fora do escopo inicial.
 
 ### 6. Executor
 

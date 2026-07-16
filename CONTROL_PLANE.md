@@ -6,6 +6,8 @@ Status: arquitetura proposta v0.1
 
 O dashboard não é uma visualização decorativa do runtime. Ele é a superfície humana do plano de controle: deve permitir configurar, observar, intervir e auditar o motor sem conceder ao navegador acesso direto ao estado canônico.
 
+Embora deva ser organizado e fácil de operar, o dashboard é antes de tudo um **instrumento experimental**. Sua função é tornar a autonomia estudável: permitir observar ciclos longos, reconstruir decisões, introduzir estímulos controlados, comparar configurações e compreender falhas. Não há requisito de aparência comercial, multi-tenancy, billing, marketplace ou outras características de produto SaaS.
+
 A propriedade desejada é **autonomia supervisionável**:
 
 - o runtime continua sob uma missão ativa sem depender de comandos humanos;

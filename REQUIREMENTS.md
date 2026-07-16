@@ -6,6 +6,8 @@ Os termos normativos em maiúsculas seguem BCP 14, conforme `GLOSSARY.md`. Cada 
 
 ## 1. Escopo e autoridade
 
+O runtime é um artefato experimental. Requisitos de confiabilidade, modularidade, portabilidade, configuração e observabilidade existem para sustentar experimentos reproduzíveis e execução contínua controlada; não implicam objetivo comercial. O núcleo MUST permanecer neutro quanto à finalidade econômica de uma missão autorizada e MUST NOT derivar objetivo próprio de monetização.
+
 ### FR-AUTH-001 — Missão versionada
 
 O runtime MUST operar sob uma `MissionRevision` ativa e MUST preservar o texto original, a revisão e a proveniência da `MissionSpec` correspondente.
