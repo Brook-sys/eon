@@ -24,14 +24,29 @@ func TestDecideNextRecoveryLadderAndExhaustion(t *testing.T) {
 		t.Fatalf("want simpler format, got %+v", d)
 	}
 
-	// Both recovery stages used, no attempt budget for replan → exhaust.
+	// Both local recovery stages used, no fallback → exhaust (Attempts=1).
 	b.SimplerFormatUsed = true
 	d = DecideNextRecovery(b)
 	if d.Disposition != DispositionExhaust {
 		t.Fatalf("want exhaust, got %+v", d)
 	}
 
-	// Replan when Attempts allow another dispatch.
+	// Step 7: fallback when available and a call remains.
+	b = ModelRecoveryBudget{
+		MaxModelCalls: 3, MaxAttempts: 1, ModelCallsUsed: 2, OperationAttempt: 1,
+		ShortCorrectionUsed: true, SimplerFormatUsed: true, FallbackAvailable: true,
+	}
+	d = DecideNextRecovery(b)
+	if d.Disposition != DispositionFallbackModel || d.Stage != RecoveryFallbackModel {
+		t.Fatalf("want fallback model, got %+v", d)
+	}
+	b.FallbackModelUsed = true
+	d = DecideNextRecovery(b)
+	if d.Disposition != DispositionExhaust {
+		t.Fatalf("after fallback used want exhaust, got %+v", d)
+	}
+
+	// Replan when Attempts allow another dispatch (no fallback remaining).
 	b = ModelRecoveryBudget{
 		MaxModelCalls: 1, MaxAttempts: 3, ModelCallsUsed: 1, OperationAttempt: 1,
 		ShortCorrectionUsed: true, SimplerFormatUsed: true, AllowReplan: true,

@@ -19,7 +19,7 @@ const (
 	RecoveryShortCorrection ModelRecoveryStage = "SHORT_CORRECTION"
 	// RecoverySimplerFormat is ladder step 6: re-ask with a reduced output contract.
 	RecoverySimplerFormat ModelRecoveryStage = "SIMPLER_FORMAT"
-	// RecoveryFallbackModel is ladder step 7 (reserved; not wired in MVP path).
+	// RecoveryFallbackModel is ladder step 7: one Complete on a configured alternate provider.
 	RecoveryFallbackModel ModelRecoveryStage = "FALLBACK_MODEL"
 	// RecoveryDefer is ladder step 8: stop contacting the model for this operation.
 	RecoveryDefer ModelRecoveryStage = "DEFER"
@@ -34,6 +34,8 @@ const (
 	DispositionShortCorrect ModelRecoveryDisposition = "SHORT_CORRECT"
 	// DispositionSimplerFormat: recompile/complete with a simpler answer format.
 	DispositionSimplerFormat ModelRecoveryDisposition = "SIMPLER_FORMAT"
+	// DispositionFallbackModel: one Complete on an alternate ModelProvider (step 7).
+	DispositionFallbackModel ModelRecoveryDisposition = "FALLBACK_MODEL"
 	// DispositionReplan: REQUEST_REPLAN + RESUME → READY for a later dispatch
 	// (only when operation Attempt budget still allows another dispatch).
 	DispositionReplan ModelRecoveryDisposition = "REPLAN"
@@ -59,6 +61,11 @@ type ModelRecoveryBudget struct {
 	ShortCorrectionUsed bool `json:"short_correction_used"`
 	// SimplerFormatUsed is true once step 6 has been attempted in this Execute.
 	SimplerFormatUsed bool `json:"simpler_format_used"`
+	// FallbackModelUsed is true once step 7 has been attempted in this Execute.
+	FallbackModelUsed bool `json:"fallback_model_used"`
+	// FallbackAvailable is true when the runtime configured an alternate provider.
+	// Pure policy never invents providers — the kernel sets this flag.
+	FallbackAvailable bool `json:"fallback_available"`
 	// AllowReplan permits READY replan when attempt budget remains. When false,
 	// budget exhaustion always yields EXHAUST (preferred for always-invalid models).
 	AllowReplan bool `json:"allow_replan"`
@@ -103,8 +110,9 @@ func (b ModelRecoveryBudget) RemainingModelCalls() int {
 // DecideNextRecovery chooses the next ladder step after a known non-effect
 // validation/provider failure. Pure: no I/O, no clocks.
 //
-// Order: short correction (step 5) → simpler format (step 6) → replan (if
-// attempt budget remains) → exhaust (explicit terminal; no call loop).
+// Order: short correction (step 5) → simpler format (step 6) → fallback model
+// (step 7, only if FallbackAvailable) → replan (if attempt budget remains) →
+// exhaust (explicit terminal; no call loop).
 func DecideNextRecovery(b ModelRecoveryBudget) ModelRecoveryDecision {
 	remaining := b.RemainingModelCalls()
 	// Step 5: one localized correction when a model call remains.
@@ -122,6 +130,15 @@ func DecideNextRecovery(b ModelRecoveryBudget) ModelRecoveryDecision {
 			Disposition:         DispositionSimplerFormat,
 			Stage:               RecoverySimplerFormat,
 			Reason:              "validation_failed_simpler_format_available",
+			RemainingModelCalls: remaining,
+		}
+	}
+	// Step 7: alternate provider once, when configured and a call remains.
+	if b.FallbackAvailable && !b.FallbackModelUsed && remaining > 0 {
+		return ModelRecoveryDecision{
+			Disposition:         DispositionFallbackModel,
+			Stage:               RecoveryFallbackModel,
+			Reason:              "validation_failed_fallback_model_available",
 			RemainingModelCalls: remaining,
 		}
 	}
@@ -233,7 +250,7 @@ func (f FailureRecord) Validate() error {
 // RetryDispositionForRecovery maps a recovery decision to FailureRecord disposition.
 func RetryDispositionForRecovery(d ModelRecoveryDisposition) RetryDisposition {
 	switch d {
-	case DispositionShortCorrect, DispositionSimplerFormat:
+	case DispositionShortCorrect, DispositionSimplerFormat, DispositionFallbackModel:
 		return RetryNow
 	case DispositionReplan:
 		return Replan

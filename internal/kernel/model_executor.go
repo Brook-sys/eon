@@ -27,15 +27,18 @@ const (
 // dispatch → compile prompt → Complete → process ProposedChangeSet → SUCCEED.
 // Local continuity work remains on LocalExecutor.
 type ModelExecutor struct {
-	Store          port.Store
-	Clock          source.Clock
-	IDs            source.IDGenerator
-	Provider       port.ModelProvider
-	Changes        *changeset.Processor
-	Compiler       prompt.Compiler
-	PolicyVersion  string
-	LeaseTTL       time.Duration
-	MaxOutputBytes int64
+	Store    port.Store
+	Clock    source.Clock
+	IDs      source.IDGenerator
+	Provider port.ModelProvider
+	// FallbackProvider is the optional FR-MODEL-004 step-7 alternate model.
+	// When nil, DecideNextRecovery never selects FALLBACK_MODEL.
+	FallbackProvider port.ModelProvider
+	Changes          *changeset.Processor
+	Compiler         prompt.Compiler
+	PolicyVersion    string
+	LeaseTTL         time.Duration
+	MaxOutputBytes   int64
 }
 
 // ModelExecuteResult summarizes one model-backed Execute call.
@@ -218,7 +221,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return result, e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
 	}
 	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
+	budget.FallbackAvailable = e.FallbackProvider != nil
 	request := compiled.Request
+	activeProvider := e.Provider
+	usingFallback := false
 	var lastCompletion port.CompletionResult
 	var lastErr error
 	var lastRaw string
@@ -227,7 +233,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		if budget.ModelCallsUsed >= maxCalls {
 			break
 		}
-		completion, callErr := e.Provider.Complete(ctx, request)
+		completion, callErr := activeProvider.Complete(ctx, request)
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
@@ -280,7 +286,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					MissionRevision: op.MissionRevision,
 					InquiryID:       op.InquiryID,
 					OperationID:     op.ID,
-					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed),
+					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed) + fallbackTag(usingFallback),
 				}); err != nil {
 					return err
 				}
@@ -308,7 +314,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					MissionRevision: op.MissionRevision,
 					InquiryID:       op.InquiryID,
 					OperationID:     op.ID,
-					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed) + ";recovery=1",
+					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed) + ";recovery=1" + fallbackTag(usingFallback),
 				})
 				return err
 			})
@@ -416,6 +422,21 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			budget.SimplerFormatUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			continue
+		case domain.DispositionFallbackModel:
+			if e.FallbackProvider == nil {
+				// Policy should not select this without FallbackAvailable; fail safe.
+				budget.FallbackModelUsed = true
+				_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+				continue
+			}
+			// One shot on the alternate provider with the original compiled prompt
+			// (different model, not a full multi-retry of the same endpoint).
+			activeProvider = e.FallbackProvider
+			usingFallback = true
+			request = compiled.Request
+			budget.FallbackModelUsed = true
+			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			continue
 		case domain.DispositionReplan:
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			return result, e.failVerifying(ctx, operation, leaseRef, lastErr)
@@ -432,7 +453,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	decision := domain.DecideNextRecovery(budget)
 	// Force replan/exhaust when text recovery cannot run (transport break or empty).
-	if decision.Disposition == domain.DispositionShortCorrect || decision.Disposition == domain.DispositionSimplerFormat {
+	// Intra-loop dispositions that need another Complete are not applicable after break.
+	switch decision.Disposition {
+	case domain.DispositionShortCorrect, domain.DispositionSimplerFormat, domain.DispositionFallbackModel:
 		if budget.AllowReplan {
 			decision = domain.ModelRecoveryDecision{
 				Disposition: domain.DispositionReplan, Stage: domain.RecoveryDefer,
@@ -737,4 +760,11 @@ func safeErrorDetail(err error) string {
 		return "validation failure"
 	}
 	return s
+}
+
+func fallbackTag(usingFallback bool) string {
+	if usingFallback {
+		return ";fallback=1"
+	}
+	return ""
 }

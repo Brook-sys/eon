@@ -499,6 +499,133 @@ func TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop(t *testing.T) {
 	}
 }
 
+func TestModelExecutorFallbackProviderSucceeds(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 17, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	err := store.Update(ctx, func(tx port.Transaction) error {
+		revision := domain.MissionRevision{
+			SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+			OriginalText: "investigate", Purpose: "knowledge", Domains: []string{"science"},
+			Policies: []string{"cite"}, Status: domain.MissionActive, Provenance: "user",
+			AcceptedAt: now, Budget: domain.Budget{ModelCalls: 10, Tokens: 8000, Attempts: 5},
+		}
+		if err := tx.AppendMissionRevision(revision); err != nil {
+			return err
+		}
+		spec := modelTestSpec()
+		// Primary + short + simpler + fallback = up to 4, but we only need 3: primary, short, simpler, then fallback.
+		spec.Budget.ModelCalls = 4
+		spec.Budget.Attempts = 1
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		question := domain.Question{
+			SchemaVersion: 1, ID: "question_1", MissionRevision: revision.ID,
+			Text: "what?", Origin: "mission", Relevance: "primary", AnswerCondition: "evidence",
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		candidate := domain.InquiryCandidate{
+			SchemaVersion: 1, ID: "candidate_1", MissionRevision: revision.ID, QuestionID: question.ID,
+			DerivedFrom: []string{"gap_1"}, ExpectedProgress: "x", Novelty: "new",
+			Risk: domain.RiskLow, SourcePlan: []string{"fixtures"}, AnswerCondition: "evidence",
+			StopCondition: "done", ReviewAfter: now.Add(time.Hour),
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		inquiry := domain.Inquiry{
+			SchemaVersion: 1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: revision.ID,
+			QuestionID: question.ID, AdmissionReason: "priority", StopCondition: "done",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		return tx.CreateOperation(domain.Operation{
+			SchemaVersion: 1, ID: "operation_model", InquiryID: inquiry.ID, MissionRevision: revision.ID,
+			SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"},
+			ExpectedOutput: "proposed_change_set", IdempotencyKey: "idem_model",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fallback", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Primary always returns garbage; fallback returns a valid proposal on first contact.
+	primary := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "bad-primary-1", ResponseModel: "primary"},
+		fakeserver.Exchange{ResponseText: "bad-primary-2", ResponseModel: "primary"},
+		fakeserver.Exchange{ResponseText: "bad-primary-3", ResponseModel: "primary"},
+	)
+	defer primary.Close()
+	fallback := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fallback-model"})
+	defer fallback.Close()
+	primaryProvider, err := openai.New(openai.Config{BaseURL: primary.URL(), Model: "primary", Client: primary.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fallbackProvider, err := openai.New(openai.Config{BaseURL: fallback.URL(), Model: "fallback-model", Client: fallback.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: primaryProvider, FallbackProvider: fallbackProvider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test",
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed {
+		t.Fatalf("want completed via fallback, got %+v", result)
+	}
+	foundFallback := false
+	for _, stage := range result.RecoveryStages {
+		if stage == domain.RecoveryFallbackModel {
+			foundFallback = true
+		}
+	}
+	if !foundFallback {
+		t.Fatalf("expected FALLBACK_MODEL stage, stages=%v", result.RecoveryStages)
+	}
+	if len(fallback.Requests()) != 1 {
+		t.Fatalf("fallback provider must receive exactly one call, got %d", len(fallback.Requests()))
+	}
+	// Primary: initial + short correction + simpler format = 3, then fallback call on other server.
+	if n := len(primary.Requests()); n != 3 {
+		t.Fatalf("primary expected 3 recovery calls, got %d", n)
+	}
+	if result.ModelCalls != 4 {
+		t.Fatalf("total model calls want 4, got %d", result.ModelCalls)
+	}
+}
+
 func TestDispatchExecutorRoutesLocalVsModel(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

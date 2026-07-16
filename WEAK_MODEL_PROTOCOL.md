@@ -380,7 +380,7 @@ O kernel materializa a escada **sem reenviar o prompt completo** e **sem loop** 
 | --- | --- | --- |
 | 5 | `modeltext.BuildShortCorrection` + `ModelExecutor` | Um re-prompt localizado: `ERROR` + `REQUIRED_FORMAT` + snippet truncado do output anterior. Consome 1 `model_calls`. |
 | 6 | `modeltext.BuildSimplerFormatCorrection` | Mesmo padrão com formato JSON mínimo (`SimplerJSONFormat`). |
-| 7 | (reservado) | Fallback de modelo/provider ainda não wired no MVP; perfil `ProviderProfile` já existe (FR-MODEL-005). |
+| 7 | `ModelExecutor.FallbackProvider` + `DispositionFallbackModel` | Um `Complete` no provider alternativo (quando configurado), com o prompt compilado original — não multi-retry do mesmo endpoint. |
 | 8 | `domain.DecideNextRecovery` → `EventExhaust` | Quando `Budget.ModelCalls` e/ou `Budget.Attempts` se esgotam: terminal `EXHAUSTED` + evento `operation.model_exhausted`. |
 
 Política pura (`domain.ModelRecoveryBudget` / `DecideNextRecovery`):
