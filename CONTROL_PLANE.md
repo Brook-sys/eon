@@ -432,7 +432,8 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - SSE ao vivo — implementado (`GET /events/stream` com `after_sequence`/`Last-Event-ID`, poll configurável, eventos `ready`/`event`/`page`/`error` e keep-alive; somente-leitura sobre `Projector.ListEvents`);
 - catálogo e browse de conhecimento — implementado: `GET /knowledge` (contagens), `GET /knowledge/sources|observations|claims|artifacts` (listas offset/limit), e detalhe por ID (`.../sources/{id}`, `.../observations/{id}`, `.../claims/{id}`, `.../artifacts/{id}`); claims aceitam `without_evidence`, artifacts aceitam `stale`; snapshots de bytes não são exportados (apenas hash/ref/tamanho);
 - redaction de apresentação — implementada em `inspect.RedactOperationDetail`/`RedactRawModelOutput` e estendida a knowledge (`RedactObservationDetail`/`RedactClaimDetail`/`RedactArtifactDetail` + listas): substitui padrões secret-shaped (Bearer, API keys, bot tokens, env de secrets), limita bytes de conteúdo bruto/free-text e anexa relatório `redaction` na resposta HTTP; store canônico permanece intacto e `content_hash` é preservado;
-- residual de Slice A: nenhum bloqueador de browse/knowledge; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
+- browse do reservatório de frontier — implementado: `GET /frontier` (lista paginada com filtros `status`/`family`), `GET /frontier/hygiene` (dry-run de `PlanFrontierReservoirHygiene` com contagens/actions capadas, sem mutação), `GET /frontier/opportunities/{id}` (detalhe + lineage/signature peers/can_spawn); overview embute sinais `needs_hygiene`/`unique_signatures`/`over_depth_open`/policy marks; free-text de opportunity redigido na apresentação;
+- residual de Slice A: nenhum bloqueador de browse/knowledge/frontier; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -468,6 +469,8 @@ Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, s
 Inspetor de execução no dashboard experimental: carrega `GET /api/inspect/operations|commits|commands/{id}` com abas de resumo/linhagem/changeset/raw/eventos/JSON, atalhos a partir da agenda e navegação operation↔commit. Redaction fina de raw model outputs é aplicada na Control API antes do browser.
 
 Browse de conhecimento no dashboard experimental: seção **Conhecimento** com catálogo (`GET /api/inspect/knowledge`), listas e detalhe de claims/sources/observations/artifacts via Control API; filtros de claims sem evidência e artifacts stale; sem escrita canônica e sem snapshot bytes. Redaction de free-text de knowledge também é aplicada na API.
+
+Browse de frontier no dashboard experimental: seção **Frontier / higiene** com listagem filtrada (`GET /api/inspect/frontier`), dry-run de higiene (`GET /api/inspect/frontier/hygiene`) e detalhe de opportunity (`GET /api/inspect/frontier/opportunities/{id}`); overview mostra `needs_hygiene` e contagens de assinatura. Compactação real permanece com a família local `frontier_management` — a UI não aplica transições.
 
 Residual de Slice D: polish UX e filtros avançados de knowledge. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
 

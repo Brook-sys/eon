@@ -149,6 +149,36 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
     <section>
+      <h2>Frontier / higiene</h2>
+      <p class="hint">Browse somente-leitura do reservatório de WorkOpportunity e dry-run de PlanFrontierReservoirHygiene. Nenhuma transição de higiene é aplicada da UI; compactação permanece com a família local frontier_management.</p>
+      <div id="frontHygiene" class="muted">carregue hygiene dry-run</div>
+      <div class="row" style="margin-top:10px">
+        <label>status
+          <select id="frontStatus">
+            <option value="">(todos)</option>
+            <option value="OPEN">OPEN</option>
+            <option value="DEFERRED">DEFERRED</option>
+            <option value="ADMITTED">ADMITTED</option>
+            <option value="ABANDONED">ABANDONED</option>
+            <option value="SUPERSEDED">SUPERSEDED</option>
+          </select>
+        </label>
+        <label>family
+          <input id="frontFamily" placeholder="gap_scan / frontier_management / …" spellcheck="false" style="min-width:200px"/>
+        </label>
+        <label>opportunity id
+          <input id="frontOppId" placeholder="opp_..." spellcheck="false" style="min-width:180px"/>
+        </label>
+        <button class="primary" type="button" id="btnFrontList">Listar</button>
+        <button type="button" id="btnFrontHygiene">Dry-run hygiene</button>
+        <button type="button" id="btnFrontDetail">Detalhe</button>
+      </div>
+      <div class="okbox" id="frontOk"></div>
+      <div class="errbox" id="frontErr"></div>
+      <div id="frontList" class="list muted">nenhuma lista carregada</div>
+      <div id="frontDetail" class="prebox muted" hidden></div>
+    </section>
+    <section>
       <h2>Conhecimento</h2>
       <p class="hint">Browse somente-leitura de sources, claims, evidence e artifacts. Conteúdo livre chega redigido pela Control API; snapshot bytes não são exportados. Mutações canônicas não passam por aqui.</p>
       <div id="knowCatalog" class="muted">carregue o catálogo</div>
@@ -432,7 +462,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           + " admitted=" + esc(String(f.admitted||0))
           + " deferred=" + esc(String(f.deferred||0))
           + " abandoned=" + esc(String(f.abandoned||0))
-          + " superseded=" + esc(String(f.superseded||0)) + "</dd>";
+          + " superseded=" + esc(String(f.superseded||0))
+          + (f.policy_version ? (" · policy=" + esc(f.policy_version)) : "")
+          + (f.max_candidates ? (" max_candidates=" + esc(String(f.max_candidates))) : "")
+          + (f.max_depth ? (" max_depth=" + esc(String(f.max_depth))) : "") + "</dd>";
+        if (f.unique_signatures || f.duplicate_signature_groups || f.over_depth_open || f.needs_hygiene) {
+          html += '<dt>frontier_hygiene</dt><dd>'
+            + 'unique_signatures=' + esc(String(f.unique_signatures||0))
+            + " duplicate_groups=" + esc(String(f.duplicate_signature_groups||0))
+            + " over_depth_open=" + esc(String(f.over_depth_open||0))
+            + (f.needs_hygiene ? ' <span class="status-PAUSED">needs_hygiene</span>' : ' · clean')
+            + "</dd>";
+        }
         if (Array.isArray(f.by_family) && f.by_family.length) {
           html += '<dt>frontier_families</dt><dd>' + f.by_family.map(function (row) {
             return esc(row.family || "?") + " open=" + esc(String(row.open||0)) + "/" + esc(String(row.total||0));
@@ -1329,11 +1370,145 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnKnowDetail").addEventListener("click", loadKnowledgeDetail);
   el("btnKnowRefresh").addEventListener("click", refreshKnowledgeCatalog);
 
+  async function loadFrontierHygiene() {
+    el("frontErr").textContent = "";
+    el("frontOk").textContent = "";
+    const missionId = el("missionId").value.trim();
+    if (!missionId) {
+      el("frontErr").textContent = "mission_id é obrigatório";
+      return;
+    }
+    try {
+      const body = await getJSON(inspectBase + "/frontier/hygiene?mission_id=" + encodeURIComponent(missionId));
+      let html = '<dl class="kv">';
+      html += '<dt>policy</dt><dd>' + esc(body.policy_version || "") + " max_candidates=" + esc(String(body.max_candidates||0)) + " max_depth=" + esc(String(body.max_depth||0)) + "</dd>";
+      html += '<dt>before</dt><dd>open=' + esc(String(body.open_before||0)) + " deferred=" + esc(String(body.deferred_before||0))
+        + " unique_signatures=" + esc(String(body.unique_signatures||0))
+        + " duplicate_groups=" + esc(String(body.duplicate_signature_groups||0))
+        + " over_depth_open=" + esc(String(body.over_depth_open||0)) + "</dd>";
+      html += '<dt>needs_compact</dt><dd class="' + (body.needs_compact ? 'status-PAUSED' : '') + '">' + esc(String(!!body.needs_compact))
+        + " actions=" + esc(String(body.action_count||0))
+        + (body.actions_truncated ? (" truncated=" + esc(String(body.actions_truncated))) : "") + "</dd>";
+      html += '<dt>hygiene_counts</dt><dd>deferred=' + esc(String(body.hygiene_deferred_count||0))
+        + " abandoned=" + esc(String(body.hygiene_abandoned_count||0))
+        + " superseded=" + esc(String(body.hygiene_superseded_count||0))
+        + " reopened=" + esc(String(body.hygiene_reopened_count||0)) + "</dd>";
+      if (Array.isArray(body.findings) && body.findings.length) {
+        html += '<dt>findings</dt><dd class="mono">' + esc(body.findings.slice(0, 12).join("; ")) + "</dd>";
+      }
+      html += "</dl>";
+      if (Array.isArray(body.actions) && body.actions.length) {
+        html += '<div class="list" style="margin-top:8px;max-height:220px">';
+        body.actions.slice(0, 24).forEach(function (a) {
+          html += '<div class="card"><div class="id">' + esc(a.opportunity_id || "") + "</div>"
+            + "<div><strong>" + esc(a.event || "") + "</strong> · " + esc(a.family || "?")
+            + " prio=" + esc(String(a.priority||0)) + " depth=" + esc(String(a.depth||0))
+            + (a.status_before ? (" · was " + esc(a.status_before)) : "") + "</div>"
+            + (a.reason ? ('<div class="muted">' + esc(a.reason) + "</div>") : "")
+            + (a.superseded_by ? ('<div class="muted">superseded_by ' + esc(a.superseded_by) + "</div>") : "")
+            + '<div class="ops"><button type="button" data-front-id="' + esc(a.opportunity_id || "") + '">Detalhe</button></div></div>';
+        });
+        html += "</div>";
+      }
+      el("frontHygiene").innerHTML = html;
+      el("frontHygiene").className = "";
+      el("frontHygiene").querySelectorAll("button[data-front-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("frontOppId").value = btn.getAttribute("data-front-id") || "";
+          loadFrontierDetail();
+        });
+      });
+      el("frontOk").textContent = "hygiene dry-run actions=" + String(body.action_count || 0);
+    } catch (err) {
+      el("frontErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function listFrontier() {
+    el("frontErr").textContent = "";
+    el("frontOk").textContent = "";
+    el("frontDetail").hidden = true;
+    const missionId = el("missionId").value.trim();
+    if (!missionId) {
+      el("frontErr").textContent = "mission_id é obrigatório";
+      return;
+    }
+    const params = new URLSearchParams();
+    params.set("mission_id", missionId);
+    params.set("limit", "50");
+    const status = el("frontStatus").value;
+    const family = el("frontFamily").value.trim();
+    if (status) params.set("status", status);
+    if (family) params.set("family", family);
+    try {
+      const body = await getJSON(inspectBase + "/frontier?" + params.toString());
+      const items = body.items || [];
+      if (!items.length) {
+        el("frontList").textContent = "lista vazia (total=" + String(body.total || 0) + ")";
+        el("frontList").className = "list muted";
+        el("frontOk").textContent = "frontier total=" + String(body.total || 0);
+        return;
+      }
+      let html = "";
+      items.forEach(function (item) {
+        const id = item.id || "";
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + (item.over_depth ? " · OVER_DEPTH" : "") + "</div>";
+        html += "<h3>" + esc(item.title || item.family || "opportunity") + "</h3>";
+        html += '<div class="muted">' + esc(item.status || "?") + " · " + esc(item.family || "?")
+          + " prio=" + esc(String(item.priority||0)) + " depth=" + esc(String(item.depth||0))
+          + (item.dedup_signature ? (" · sig=" + esc(item.dedup_signature)) : "") + "</div>";
+        if (item.origin) html += '<div class="muted">origin ' + esc(item.origin) + "</div>";
+        html += '<div class="ops"><button type="button" data-front-id="' + esc(id) + '">Detalhe</button></div>';
+        html += "</div>";
+      });
+      el("frontList").innerHTML = html;
+      el("frontList").className = "list";
+      el("frontList").querySelectorAll("button[data-front-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("frontOppId").value = btn.getAttribute("data-front-id") || "";
+          loadFrontierDetail();
+        });
+      });
+      el("frontOk").textContent = "listado frontier items=" + String(items.length) + " total=" + String(body.total || 0)
+        + " policy=" + String(body.policy_version || "");
+    } catch (err) {
+      el("frontErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadFrontierDetail() {
+    el("frontErr").textContent = "";
+    el("frontOk").textContent = "";
+    const id = el("frontOppId").value.trim();
+    if (!id) {
+      el("frontErr").textContent = "opportunity id é obrigatório";
+      return;
+    }
+    try {
+      const body = await getJSON(inspectBase + "/frontier/opportunities/" + encodeURIComponent(id));
+      el("frontDetail").hidden = false;
+      el("frontDetail").textContent = pretty(body);
+      el("frontDetail").className = "prebox";
+      el("frontOk").textContent = "detalhe opportunity " + id
+        + " children=" + String(body.children_count || 0)
+        + " peers=" + String(body.signature_peers || 0);
+      el("frontDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err) {
+      el("frontErr").textContent = String(err.message || err);
+    }
+  }
+
+  el("btnFrontList").addEventListener("click", listFrontier);
+  el("btnFrontHygiene").addEventListener("click", loadFrontierHygiene);
+  el("btnFrontDetail").addEventListener("click", loadFrontierDetail);
+
   // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
   fillDefaultPayload();
   refreshKnowledgeCatalog();
   if (el("missionId").value.trim()) {
     refresh();
+    loadFrontierHygiene();
   }
 })();
 </script>

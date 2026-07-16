@@ -57,6 +57,16 @@ type FrontierSummary struct {
 	Abandoned  int                                  `json:"abandoned"`
 	Superseded int                                  `json:"superseded"`
 	ByFamily   []FrontierFamilyCount                `json:"by_family"`
+	// Policy marks and hygiene signals (derived; never mutates store).
+	PolicyVersion    string `json:"policy_version,omitempty"`
+	MaxCandidates    int    `json:"max_candidates,omitempty"`
+	MaxDepth         int    `json:"max_depth,omitempty"`
+	UniqueSignatures int    `json:"unique_signatures,omitempty"`
+	DuplicateGroups  int    `json:"duplicate_signature_groups,omitempty"`
+	OverDepthOpen    int    `json:"over_depth_open,omitempty"`
+	// NeedsHygiene is true when pure dry-run would emit at least one action
+	// (signature merge, depth abandon, max_candidates defer, or reopen).
+	NeedsHygiene bool `json:"needs_hygiene,omitempty"`
 }
 
 // ContinuityDiagnosisSummary is a safe, compact diagnosis projection.
@@ -313,11 +323,15 @@ func projectHorizonAndFrontier(r port.Reader, revision domain.MissionRevisionID,
 		return domain.ExecutableHorizon{}, FrontierSummary{}, err
 	}
 	frontier := FrontierSummary{
-		ByStatus: map[domain.WorkOpportunityStatus]int{},
+		ByStatus:      map[domain.WorkOpportunityStatus]int{},
+		PolicyVersion: policy.Version,
+		MaxCandidates: policy.MaxCandidates,
+		MaxDepth:      policy.MaxDepth,
 	}
 	familyTotals := map[domain.WorkFamily]int{}
 	familyOpen := map[domain.WorkFamily]int{}
 	openActive := 0
+	var openList, deferredList []domain.WorkOpportunity
 	for _, opp := range opps {
 		frontier.Total++
 		frontier.ByStatus[opp.Status]++
@@ -327,16 +341,28 @@ func projectHorizonAndFrontier(r port.Reader, revision domain.MissionRevisionID,
 			frontier.Open++
 			familyOpen[opp.Family]++
 			openActive++
+			openList = append(openList, opp)
 		case domain.OpportunityAdmitted:
 			frontier.Admitted++
 		case domain.OpportunityDeferred:
 			frontier.Deferred++
 			openActive++
+			deferredList = append(deferredList, opp)
 		case domain.OpportunityAbandoned:
 			frontier.Abandoned++
 		case domain.OpportunitySuperseded:
 			frontier.Superseded++
 		}
+	}
+	unique, dupGroups, overDepth := reservoirSignatureStats(openList, deferredList, policy.MaxDepth)
+	frontier.UniqueSignatures = unique
+	frontier.DuplicateGroups = dupGroups
+	frontier.OverDepthOpen = overDepth
+	if observedAt.IsZero() {
+		observedAt = time.Now().UTC()
+	}
+	if actions, err := domain.PlanFrontierReservoirHygiene(openList, deferredList, policy, observedAt.UTC()); err == nil {
+		frontier.NeedsHygiene = len(actions) > 0
 	}
 	families := make([]domain.WorkFamily, 0, len(familyTotals))
 	for family := range familyTotals {
@@ -352,9 +378,6 @@ func projectHorizonAndFrontier(r port.Reader, revision domain.MissionRevisionID,
 			Open:   familyOpen[family],
 			Total:  familyTotals[family],
 		})
-	}
-	if observedAt.IsZero() {
-		observedAt = time.Now().UTC()
 	}
 	horizon := domain.ExecutableHorizon{
 		SchemaVersion:   domain.SchemaVersionV1,

@@ -53,6 +53,9 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /knowledge/artifacts/{artifactID}", a.handleKnowledgeArtifact)
 	mux.HandleFunc("GET /continuity/findings", a.handleContinuityFindings)
 	mux.HandleFunc("GET /continuity/catalog", a.handleContinuityCatalog)
+	mux.HandleFunc("GET /frontier", a.handleFrontier)
+	mux.HandleFunc("GET /frontier/hygiene", a.handleFrontierHygiene)
+	mux.HandleFunc("GET /frontier/opportunities/{opportunityID}", a.handleFrontierOpportunity)
 	return mux
 }
 
@@ -333,6 +336,87 @@ func (a *API) handleKnowledgeArtifact(w http.ResponseWriter, r *http.Request) {
 		ArtifactDetail: safe,
 		Redaction:      report,
 	})
+}
+
+// handleFrontier lists work opportunities for a mission's active revision.
+// Query: mission_id (required), status, family, limit, offset.
+func (a *API) handleFrontier(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	if missionID == "" {
+		writeError(w, http.StatusBadRequest, "missing_mission_id", "mission_id is required")
+		return
+	}
+	q := r.URL.Query()
+	status, err := parseWorkOpportunityStatus(q.Get("status"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_status", err.Error())
+		return
+	}
+	family, err := parseWorkFamily(q.Get("family"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_family", err.Error())
+		return
+	}
+	limit, err := parseIntDefault(q.Get("limit"), DefaultFrontierListLimit)
+	if err != nil || limit <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid_limit", "limit must be a positive integer")
+		return
+	}
+	offset, err := parseIntDefault(q.Get("offset"), 0)
+	if err != nil || offset < 0 {
+		writeError(w, http.StatusBadRequest, "invalid_offset", "offset must be a non-negative integer")
+		return
+	}
+	page, err := a.Projector.ListFrontier(r.Context(), missionID, FrontierListFilter{
+		Status: status,
+		Family: family,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "limit must be") || strings.Contains(err.Error(), "offset must be") {
+			writeError(w, http.StatusBadRequest, "invalid_page", err.Error())
+			return
+		}
+		if strings.Contains(err.Error(), "unknown work") {
+			writeError(w, http.StatusBadRequest, "invalid_filter", err.Error())
+			return
+		}
+		writeStoreError(w, err)
+		return
+	}
+	// Presentation redaction of free-text rows.
+	for i := range page.Items {
+		page.Items[i], _ = redactOpportunitySummary(page.Items[i])
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+// handleFrontierHygiene dry-runs PlanFrontierReservoirHygiene without mutation.
+// Query: mission_id (required).
+func (a *API) handleFrontierHygiene(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	if missionID == "" {
+		writeError(w, http.StatusBadRequest, "missing_mission_id", "mission_id is required")
+		return
+	}
+	proj, err := a.Projector.FrontierHygieneForMission(r.Context(), missionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
+}
+
+// handleFrontierOpportunity inspects one opportunity by id.
+func (a *API) handleFrontierOpportunity(w http.ResponseWriter, r *http.Request) {
+	opportunityID := domain.WorkOpportunityID(r.PathValue("opportunityID"))
+	detail, err := a.Projector.OpportunityInspector(r.Context(), opportunityID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
 }
 
 // handleContinuityCatalog returns the process-local versioned strategy portfolio.
