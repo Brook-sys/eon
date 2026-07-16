@@ -83,7 +83,13 @@ func (s LocalFamilyStrategy) Replenish(ctx context.Context, mission domain.Missi
 	}
 
 	// 2. Optional single-level decomposition of the still-open root.
-	if len(s.ChildDrafts) > 0 {
+	// Prefer store-planned drafts (gap/coverage/freshness/refresh findings);
+	// fall back to configured/static drafts so empty missions still fan out once.
+	drafts, err := resolveChildDrafts(ctx, s.Store, s.Family, mission, s.Clock.Now().UTC(), s.ChildDrafts)
+	if err != nil {
+		return ContinuityResult{}, err
+	}
+	if len(drafts) > 0 {
 		decomposer := Decomposer{Store: s.Store, Clock: s.Clock, IDs: s.IDs, Policy: policy}
 		var parentID domain.WorkOpportunityID
 		var shouldSpawn bool
@@ -129,7 +135,7 @@ func (s LocalFamilyStrategy) Replenish(ctx context.Context, mission domain.Missi
 			return ContinuityResult{}, err
 		}
 		if shouldSpawn && parentID != "" {
-			if _, err := decomposer.SpawnChildren(ctx, parentID, s.ChildDrafts); err != nil {
+			if _, err := decomposer.SpawnChildren(ctx, parentID, drafts); err != nil {
 				// Fan-out/dedup conflicts are non-fatal for the strategy; admission may still proceed.
 				if !errors.Is(err, port.ErrConflict) && !strings.Contains(err.Error(), "reached policy max") {
 					return ContinuityResult{}, err

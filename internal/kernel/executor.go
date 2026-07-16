@@ -35,6 +35,7 @@ const defaultSourceFreshnessMaxAge = 7 * 24 * time.Hour
 //   - source_freshness: report sources whose newest version is outside the aging window
 //   - integrity_audit: structural orphan / contradiction inventory (no auto-repair)
 //   - conflict_evidence_review: unopposed and opposed claim inventory
+//   - gap_scan / mission_coverage_scan: formal fragment→version→source coverage joins
 type LocalExecutor struct {
 	Store    port.Store
 	Clock    source.Clock
@@ -246,48 +247,52 @@ func appendOperationEvents(tx port.Transaction, operation domain.Operation, leas
 }
 
 type localAuditBody struct {
-	Schema            string                   `json:"schema"`
-	OperationID       domain.OperationID       `json:"operation_id"`
-	SpecID            domain.OperationSpecID   `json:"spec_id"`
-	Authority         domain.Authority         `json:"authority"`
-	LeaseRef          string                   `json:"lease_ref"`
-	Mission           domain.MissionRevisionID `json:"mission_revision_id"`
-	ReadyCount        int                      `json:"ready_count"`
-	RunningCount      int                      `json:"running_count"`
-	OpenOpps          int                      `json:"open_opportunities"`
-	AdmittedOpps      int                      `json:"admitted_opportunities"`
-	ArtifactCount     int                      `json:"knowledge_artifact_count"`
-	SourceCount       int                      `json:"source_count"`
-	ClaimCount        int                      `json:"claim_count"`
-	ObservationN      int                      `json:"observation_count"`
-	VerifiedAt        time.Time                `json:"verified_at"`
-	Mode              string                   `json:"mode"`
-	Family            string                   `json:"family,omitempty"`
-	DepthMax          int                      `json:"depth_max"`
-	DepthHistogram    map[string]int           `json:"depth_histogram,omitempty"`
-	OpenByFamily      map[string]int           `json:"open_by_family,omitempty"`
-	AdmittedByFamily  map[string]int           `json:"admitted_by_family,omitempty"`
-	SourcesWithoutObs int                      `json:"sources_without_observation_count"`
-	ClaimsWithoutEv   int                      `json:"claims_without_evidence_count"`
-	FrontierDupes     int                      `json:"frontier_duplicate_signature_count"`
-	HeadCommitID      domain.CommitID          `json:"head_commit_id,omitempty"`
-	StaleBefore       int                      `json:"stale_artifacts_before,omitempty"`
-	StaleMarked       int                      `json:"stale_artifacts_marked,omitempty"`
-	OrphanEvidence    int                      `json:"orphan_evidence_links,omitempty"`
-	OrphanObsAnchors  int                      `json:"orphan_observation_anchors,omitempty"`
-	AgingSourceCount  int                      `json:"aging_source_count,omitempty"`
-	FreshnessMaxAgeH  int                      `json:"freshness_max_age_hours,omitempty"`
-	Findings          []string                 `json:"findings,omitempty"`
+	Schema              string                   `json:"schema"`
+	OperationID         domain.OperationID       `json:"operation_id"`
+	SpecID              domain.OperationSpecID   `json:"spec_id"`
+	Authority           domain.Authority         `json:"authority"`
+	LeaseRef            string                   `json:"lease_ref"`
+	Mission             domain.MissionRevisionID `json:"mission_revision_id"`
+	ReadyCount          int                      `json:"ready_count"`
+	RunningCount        int                      `json:"running_count"`
+	OpenOpps            int                      `json:"open_opportunities"`
+	AdmittedOpps        int                      `json:"admitted_opportunities"`
+	ArtifactCount       int                      `json:"knowledge_artifact_count"`
+	SourceCount         int                      `json:"source_count"`
+	ClaimCount          int                      `json:"claim_count"`
+	ObservationN        int                      `json:"observation_count"`
+	VerifiedAt          time.Time                `json:"verified_at"`
+	Mode                string                   `json:"mode"`
+	Family              string                   `json:"family,omitempty"`
+	DepthMax            int                      `json:"depth_max"`
+	DepthHistogram      map[string]int           `json:"depth_histogram,omitempty"`
+	OpenByFamily        map[string]int           `json:"open_by_family,omitempty"`
+	AdmittedByFamily    map[string]int           `json:"admitted_by_family,omitempty"`
+	SourcesWithoutObs   int                      `json:"sources_without_observation_count"`
+	ClaimsWithoutEv     int                      `json:"claims_without_evidence_count"`
+	FrontierDupes       int                      `json:"frontier_duplicate_signature_count"`
+	HeadCommitID        domain.CommitID          `json:"head_commit_id,omitempty"`
+	StaleBefore         int                      `json:"stale_artifacts_before,omitempty"`
+	StaleMarked         int                      `json:"stale_artifacts_marked,omitempty"`
+	OrphanEvidence      int                      `json:"orphan_evidence_links,omitempty"`
+	OrphanObsAnchors    int                      `json:"orphan_observation_anchors,omitempty"`
+	AgingSourceCount    int                      `json:"aging_source_count,omitempty"`
+	FreshnessMaxAgeH    int                      `json:"freshness_max_age_hours,omitempty"`
+	SourcesWithoutFrag  int                      `json:"sources_without_fragment_count,omitempty"`
+	FragmentsWithoutObs int                      `json:"fragments_without_observation_count,omitempty"`
+	Findings            []string                 `json:"findings,omitempty"`
 }
 
 type localFamilyEffects struct {
-	Findings         []string
-	StaleBefore      int
-	StaleMarked      int
-	OrphanEvidence   int
-	OrphanObsAnchors int
-	AgingSourceCount int
-	FreshnessMaxAgeH int
+	Findings            []string
+	StaleBefore         int
+	StaleMarked         int
+	OrphanEvidence      int
+	OrphanObsAnchors    int
+	AgingSourceCount    int
+	FreshnessMaxAgeH    int
+	SourcesWithoutFrag  int
+	FragmentsWithoutObs int
 }
 
 func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.Operation, spec domain.OperationSpec, leaseRef string, now time.Time) (domain.KnowledgeArtifact, error) {
@@ -362,25 +367,6 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 			dupes += n - 1
 		}
 	}
-	observedSources := map[string]struct{}{}
-	for _, obs := range observations {
-		// Count unique fragment anchors as a cheap coverage hint (not a formal join).
-		if obs.Anchor.SourceFragmentID != "" {
-			observedSources[string(obs.Anchor.SourceFragmentID)] = struct{}{}
-		}
-	}
-	// Approximate sources without observation: source count minus distinct fragment anchors
-	// when we cannot join fragments cheaply in the local audit.
-	sourcesWithoutObs := len(sources)
-	if len(observations) > 0 && len(sources) > 0 {
-		// If every source has at least one observation-linked fragment, undercount is ok:
-		// this is an audit hint, not a formal gap proof.
-		if len(observedSources) >= len(sources) {
-			sourcesWithoutObs = 0
-		} else if len(observedSources) > 0 {
-			sourcesWithoutObs = len(sources) - min(len(sources), len(observedSources))
-		}
-	}
 	claimHasEvidence := map[string]struct{}{}
 	for _, link := range evidence {
 		if link.ClaimID != "" {
@@ -394,13 +380,15 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		}
 	}
 
-	// Join observation anchors to fragments for structural integrity checks.
+	// Join observation anchors through fragment → version → source for coverage/gap.
 	fragmentByID := map[domain.SourceFragmentID]domain.SourceFragment{}
+	versionByID := map[domain.SourceVersionID]domain.SourceVersion{}
 	versions, err := tx.SourceVersions("")
 	if err != nil {
 		return domain.KnowledgeArtifact{}, err
 	}
 	for _, ver := range versions {
+		versionByID[ver.ID] = ver
 		frags, fragErr := tx.SourceFragments(ver.ID)
 		if fragErr != nil {
 			return domain.KnowledgeArtifact{}, fragErr
@@ -409,6 +397,10 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 			fragmentByID[frag.ID] = frag
 		}
 	}
+	observedSourceIDs, sourcesWithoutObs, sourcesWithoutFrag, fragsWithoutObs :=
+		coverageJoin(sources, versionByID, fragmentByID, observations)
+	_ = observedSourceIDs
+
 	obsByID := map[domain.ObservationID]domain.Observation{}
 	for _, obs := range observations {
 		obsByID[obs.ID] = obs
@@ -425,45 +417,52 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		headID = head.ID
 	}
 
+	var missionDomains []string
+	if rev, revErr := tx.MissionRevision(operation.MissionRevision); revErr == nil {
+		missionDomains = append([]string(nil), rev.Domains...)
+	}
+
 	// Family-specific local effects (read-mostly; artifact_refresh may mark stale).
-	effects, err := applyLocalFamilyEffects(tx, family, now, headID, artifacts, sources, versions, fragmentByID, observations, obsByID, claims, claimByID, evidence, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
+	effects, err := applyLocalFamilyEffects(tx, family, now, headID, artifacts, sources, versions, versionByID, fragmentByID, observations, obsByID, claims, claimByID, evidence, sourcesWithoutObs, sourcesWithoutFrag, fragsWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily, missionDomains)
 	if err != nil {
 		return domain.KnowledgeArtifact{}, err
 	}
 
 	body := localAuditBody{
-		Schema:            "local-operation-audit-v1",
-		OperationID:       operation.ID,
-		SpecID:            spec.ID,
-		Authority:         spec.MaximumAuthority,
-		LeaseRef:          leaseRef,
-		Mission:           operation.MissionRevision,
-		ReadyCount:        ready,
-		RunningCount:      running,
-		OpenOpps:          len(open),
-		AdmittedOpps:      len(admitted),
-		ArtifactCount:     len(artifacts),
-		SourceCount:       len(sources),
-		ClaimCount:        len(claims),
-		ObservationN:      len(observations),
-		VerifiedAt:        now,
-		Mode:              "model_free_local",
-		Family:            family,
-		DepthMax:          depthMax,
-		DepthHistogram:    depthHist,
-		OpenByFamily:      openByFamily,
-		AdmittedByFamily:  admittedByFamily,
-		SourcesWithoutObs: sourcesWithoutObs,
-		ClaimsWithoutEv:   claimsWithoutEv,
-		FrontierDupes:     dupes,
-		HeadCommitID:      headID,
-		StaleBefore:       effects.StaleBefore,
-		StaleMarked:       effects.StaleMarked,
-		OrphanEvidence:    effects.OrphanEvidence,
-		OrphanObsAnchors:  effects.OrphanObsAnchors,
-		AgingSourceCount:  effects.AgingSourceCount,
-		FreshnessMaxAgeH:  effects.FreshnessMaxAgeH,
-		Findings:          effects.Findings,
+		Schema:              "local-operation-audit-v1",
+		OperationID:         operation.ID,
+		SpecID:              spec.ID,
+		Authority:           spec.MaximumAuthority,
+		LeaseRef:            leaseRef,
+		Mission:             operation.MissionRevision,
+		ReadyCount:          ready,
+		RunningCount:        running,
+		OpenOpps:            len(open),
+		AdmittedOpps:        len(admitted),
+		ArtifactCount:       len(artifacts),
+		SourceCount:         len(sources),
+		ClaimCount:          len(claims),
+		ObservationN:        len(observations),
+		VerifiedAt:          now,
+		Mode:                "model_free_local",
+		Family:              family,
+		DepthMax:            depthMax,
+		DepthHistogram:      depthHist,
+		OpenByFamily:        openByFamily,
+		AdmittedByFamily:    admittedByFamily,
+		SourcesWithoutObs:   sourcesWithoutObs,
+		ClaimsWithoutEv:     claimsWithoutEv,
+		FrontierDupes:       dupes,
+		HeadCommitID:        headID,
+		StaleBefore:         effects.StaleBefore,
+		StaleMarked:         effects.StaleMarked,
+		OrphanEvidence:      effects.OrphanEvidence,
+		OrphanObsAnchors:    effects.OrphanObsAnchors,
+		AgingSourceCount:    effects.AgingSourceCount,
+		FreshnessMaxAgeH:    effects.FreshnessMaxAgeH,
+		SourcesWithoutFrag:  effects.SourcesWithoutFrag,
+		FragmentsWithoutObs: effects.FragmentsWithoutObs,
+		Findings:            effects.Findings,
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -540,6 +539,55 @@ func familyFromSpec(id domain.OperationSpecID) string {
 	}
 }
 
+// coverageJoin resolves observation anchors through fragment → version → source.
+// It returns the set of sources that have at least one observation, sources with
+// no observation, sources with no fragments at all, and fragments with no observation.
+func coverageJoin(
+	sources []domain.Source,
+	versionByID map[domain.SourceVersionID]domain.SourceVersion,
+	fragmentByID map[domain.SourceFragmentID]domain.SourceFragment,
+	observations []domain.Observation,
+) (observed map[domain.SourceID]struct{}, withoutObs, withoutFrag, fragsWithoutObs int) {
+	observed = map[domain.SourceID]struct{}{}
+	observedFrags := map[domain.SourceFragmentID]struct{}{}
+	for _, obs := range observations {
+		fid := obs.Anchor.SourceFragmentID
+		if fid == "" {
+			continue
+		}
+		observedFrags[fid] = struct{}{}
+		frag, ok := fragmentByID[fid]
+		if !ok {
+			continue
+		}
+		ver, ok := versionByID[frag.SourceVersionID]
+		if !ok {
+			continue
+		}
+		observed[ver.SourceID] = struct{}{}
+	}
+	sourceHasFrag := map[domain.SourceID]bool{}
+	for _, frag := range fragmentByID {
+		ver, ok := versionByID[frag.SourceVersionID]
+		if !ok {
+			continue
+		}
+		sourceHasFrag[ver.SourceID] = true
+		if _, hasObs := observedFrags[frag.ID]; !hasObs {
+			fragsWithoutObs++
+		}
+	}
+	for _, src := range sources {
+		if !sourceHasFrag[src.ID] {
+			withoutFrag++
+		}
+		if _, ok := observed[src.ID]; !ok {
+			withoutObs++
+		}
+	}
+	return observed, withoutObs, withoutFrag, fragsWithoutObs
+}
+
 func applyLocalFamilyEffects(
 	tx port.Transaction,
 	family string,
@@ -548,16 +596,20 @@ func applyLocalFamilyEffects(
 	artifacts []domain.KnowledgeArtifact,
 	sources []domain.Source,
 	versions []domain.SourceVersion,
+	versionByID map[domain.SourceVersionID]domain.SourceVersion,
 	fragmentByID map[domain.SourceFragmentID]domain.SourceFragment,
 	observations []domain.Observation,
 	obsByID map[domain.ObservationID]domain.Observation,
 	claims []domain.Claim,
 	claimByID map[domain.ClaimID]domain.Claim,
 	evidence []domain.EvidenceLink,
-	sourcesWithoutObs, claimsWithoutEv, dupes, depthMax int,
+	sourcesWithoutObs, sourcesWithoutFrag, fragsWithoutObs, claimsWithoutEv, dupes, depthMax int,
 	openByFamily map[string]int,
+	missionDomains []string,
 ) (localFamilyEffects, error) {
 	var out localFamilyEffects
+	out.SourcesWithoutFrag = sourcesWithoutFrag
+	out.FragmentsWithoutObs = fragsWithoutObs
 
 	// Shared structural integrity counters.
 	orphanEvidence := 0
@@ -722,6 +774,52 @@ func applyLocalFamilyEffects(
 			out.Findings = append(out.Findings, "conflict:no_review_candidates")
 		}
 
+	case string(domain.FamilyGapScan):
+		// Formal join: sources without observation, sources without fragments,
+		// and fragments without observation. Enumerate up to a small cap so the
+		// audit is actionable without dumping unbounded inventories.
+		const capIDs = 8
+		observed, _, _, _ := coverageJoin(sources, versionByID, fragmentByID, observations)
+		listed := 0
+		for _, src := range sources {
+			if _, ok := observed[src.ID]; ok {
+				continue
+			}
+			if listed < capIDs {
+				out.Findings = append(out.Findings, fmt.Sprintf("gap:source_without_observation=%s", src.ID))
+				listed++
+			}
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("gap:sources_without_observation=%d", sourcesWithoutObs))
+		out.Findings = append(out.Findings, fmt.Sprintf("gap:sources_without_fragment=%d", sourcesWithoutFrag))
+		out.Findings = append(out.Findings, fmt.Sprintf("gap:fragments_without_observation=%d", fragsWithoutObs))
+		if claimsWithoutEv > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("gap:claims_without_evidence=%d", claimsWithoutEv))
+		}
+		if sourcesWithoutObs == 0 && sourcesWithoutFrag == 0 && fragsWithoutObs == 0 && claimsWithoutEv == 0 {
+			out.Findings = append(out.Findings, "gap:no_structural_gaps")
+		}
+
+	case string(domain.FamilyCoverageScan):
+		// Mission-domain tags plus structural coverage via the same join.
+		out.Findings = append(out.Findings, fmt.Sprintf("coverage:mission_domains=%d", len(missionDomains)))
+		for i, d := range missionDomains {
+			if i >= 8 {
+				out.Findings = append(out.Findings, fmt.Sprintf("coverage:mission_domains_truncated=%d", len(missionDomains)-8))
+				break
+			}
+			out.Findings = append(out.Findings, fmt.Sprintf("coverage:mission_domain=%s", d))
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("coverage:sources_without_observation=%d", sourcesWithoutObs))
+		out.Findings = append(out.Findings, fmt.Sprintf("coverage:sources_without_fragment=%d", sourcesWithoutFrag))
+		out.Findings = append(out.Findings, fmt.Sprintf("coverage:fragments_without_observation=%d", fragsWithoutObs))
+		if claimsWithoutEv > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("coverage:claims_without_evidence=%d", claimsWithoutEv))
+		}
+		if sourcesWithoutObs == 0 && sourcesWithoutFrag == 0 && fragsWithoutObs == 0 && claimsWithoutEv == 0 {
+			out.Findings = append(out.Findings, "coverage:no_structural_gap")
+		}
+
 	default:
 		out.Findings = residualFindings(family, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
 	}
@@ -743,14 +841,15 @@ func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, 
 	var out []string
 	switch family {
 	case string(domain.FamilyCoverageScan):
+		// Legacy residual path; applyLocalFamilyEffects owns coverage joins now.
 		if sourcesWithoutObs > 0 {
-			out = append(out, fmt.Sprintf("coverage:hint_sources_without_observation=%d", sourcesWithoutObs))
+			out = append(out, fmt.Sprintf("coverage:sources_without_observation=%d", sourcesWithoutObs))
 		}
 		if claimsWithoutEv > 0 {
 			out = append(out, fmt.Sprintf("coverage:claims_without_evidence=%d", claimsWithoutEv))
 		}
 		if sourcesWithoutObs == 0 && claimsWithoutEv == 0 {
-			out = append(out, "coverage:no_structural_gap_hint")
+			out = append(out, "coverage:no_structural_gap")
 		}
 	case string(domain.FamilySourceFreshness):
 		// Legacy residual path; applyLocalFamilyEffects handles this family now.

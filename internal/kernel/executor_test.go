@@ -715,13 +715,14 @@ func TestApplyLocalFamilyEffectsStructuralOrphans(t *testing.T) {
 		now,
 		domain.GenesisCommitID,
 		nil, nil, nil,
+		map[domain.SourceVersionID]domain.SourceVersion{},
 		map[domain.SourceFragmentID]domain.SourceFragment{},
 		[]domain.Observation{obs},
 		obsByID,
 		[]domain.Claim{claim, bare},
 		claimByID,
 		[]domain.EvidenceLink{linkOrphanObs, linkOK, linkContra},
-		0, 1, 0, 0, nil,
+		0, 0, 0, 1, 0, 0, nil, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
