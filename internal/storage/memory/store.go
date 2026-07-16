@@ -30,6 +30,8 @@ type state struct {
 	answerByTransport         map[string]domain.OperatorAnswerID
 	questionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
 	deliveryByRoute           map[string]domain.QuestionDeliveryID
+	questionGateDecisions     map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
+	gateDecisionByQuestion    map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
 	candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
 	inquiries                 map[domain.InquiryID]domain.Inquiry
 	operations                map[domain.OperationID]domain.Operation
@@ -78,6 +80,8 @@ func newState() state {
 		answerByTransport:         make(map[string]domain.OperatorAnswerID),
 		questionDeliveries:        make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
 		deliveryByRoute:           make(map[string]domain.QuestionDeliveryID),
+		questionGateDecisions:     make(map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord),
+		gateDecisionByQuestion:    make(map[domain.OperatorQuestionID]domain.QuestionGateDecisionID),
 		candidates:                make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
 		inquiries:                 make(map[domain.InquiryID]domain.Inquiry),
 		operations:                make(map[domain.OperationID]domain.Operation),
@@ -171,8 +175,20 @@ func (t transaction) UserAnswerByTransport(channel, transportEventID string) (do
 func (t transaction) QuestionDelivery(id domain.QuestionDeliveryID) (domain.QuestionDelivery, error) {
 	return reader(t).QuestionDelivery(id)
 }
+func (t transaction) QuestionDeliveries(id domain.OperatorQuestionID) ([]domain.QuestionDelivery, error) {
+	return reader(t).QuestionDeliveries(id)
+}
 func (t transaction) DueQuestionDeliveries(now time.Time, limit int) ([]domain.QuestionDelivery, error) {
 	return reader(t).DueQuestionDeliveries(now, limit)
+}
+func (t transaction) QuestionGateDecision(id domain.QuestionGateDecisionID) (domain.QuestionGateDecisionRecord, error) {
+	return reader(t).QuestionGateDecision(id)
+}
+func (t transaction) QuestionGateDecisionByQuestion(id domain.OperatorQuestionID) (domain.QuestionGateDecisionRecord, error) {
+	return reader(t).QuestionGateDecisionByQuestion(id)
+}
+func (t transaction) QuestionGateDecisions(id domain.MissionID) ([]domain.QuestionGateDecisionRecord, error) {
+	return reader(t).QuestionGateDecisions(id)
 }
 func (t transaction) ControlState() (domain.ControlState, error) {
 	return reader(t).ControlState()
@@ -359,6 +375,21 @@ func (r reader) QuestionDelivery(id domain.QuestionDeliveryID) (domain.QuestionD
 	}
 	return v, nil
 }
+func (r reader) QuestionDeliveries(questionID domain.OperatorQuestionID) ([]domain.QuestionDelivery, error) {
+	result := make([]domain.QuestionDelivery, 0)
+	for _, delivery := range r.state.questionDeliveries {
+		if delivery.QuestionID == questionID {
+			result = append(result, delivery)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].CreatedAt.Before(result[j].CreatedAt)
+	})
+	return result, nil
+}
 func (r reader) DueQuestionDeliveries(now time.Time, limit int) ([]domain.QuestionDelivery, error) {
 	if now.IsZero() || limit <= 0 {
 		return nil, fmt.Errorf("question delivery query requires time and positive limit")
@@ -378,6 +409,35 @@ func (r reader) DueQuestionDeliveries(now time.Time, limit int) ([]domain.Questi
 	if len(result) > limit {
 		result = result[:limit]
 	}
+	return result, nil
+}
+func (r reader) QuestionGateDecision(id domain.QuestionGateDecisionID) (domain.QuestionGateDecisionRecord, error) {
+	v, ok := r.state.questionGateDecisions[id]
+	if !ok {
+		return domain.QuestionGateDecisionRecord{}, notFound("question gate decision", id)
+	}
+	return v, nil
+}
+func (r reader) QuestionGateDecisionByQuestion(questionID domain.OperatorQuestionID) (domain.QuestionGateDecisionRecord, error) {
+	id, ok := r.state.gateDecisionByQuestion[questionID]
+	if !ok {
+		return domain.QuestionGateDecisionRecord{}, notFound("question gate decision by question", questionID)
+	}
+	return r.QuestionGateDecision(id)
+}
+func (r reader) QuestionGateDecisions(missionID domain.MissionID) ([]domain.QuestionGateDecisionRecord, error) {
+	result := make([]domain.QuestionGateDecisionRecord, 0)
+	for _, decision := range r.state.questionGateDecisions {
+		if decision.MissionID == missionID {
+			result = append(result, decision)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].EvaluatedAt.Equal(result[j].EvaluatedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].EvaluatedAt.Before(result[j].EvaluatedAt)
+	})
 	return result, nil
 }
 func (r reader) ControlState() (domain.ControlState, error) {
@@ -912,6 +972,21 @@ func (t transaction) SaveQuestionDelivery(v domain.QuestionDelivery, expectedSta
 		}
 	}
 	t.state.questionDeliveries[v.ID] = v
+	return nil
+}
+
+func (t transaction) CreateQuestionGateDecision(v domain.QuestionGateDecisionRecord) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate question gate decision: %w", err)
+	}
+	if _, exists := t.state.questionGateDecisions[v.ID]; exists {
+		return conflict("question gate decision", v.ID)
+	}
+	if _, exists := t.state.gateDecisionByQuestion[v.QuestionID]; exists {
+		return fmt.Errorf("%w: question already has a gate decision", port.ErrConflict)
+	}
+	t.state.questionGateDecisions[v.ID] = v
+	t.state.gateDecisionByQuestion[v.QuestionID] = v.ID
 	return nil
 }
 
@@ -1655,6 +1730,12 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.deliveryByRoute {
 		dst.deliveryByRoute[k] = v
+	}
+	for k, v := range src.questionGateDecisions {
+		dst.questionGateDecisions[k] = v
+	}
+	for k, v := range src.gateDecisionByQuestion {
+		dst.gateDecisionByQuestion[k] = v
 	}
 	for k, v := range src.candidates {
 		dst.candidates[k] = cloneCandidate(v)

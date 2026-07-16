@@ -73,9 +73,6 @@ func (r QuestionGateRecord) Validate() error {
 	if r.QuestionID == "" || r.MissionID == "" || r.DedupSignature == "" || !r.Status.Terminal() && r.Status != domain.OperatorQuestionPending {
 		return errors.New("question gate record is incomplete")
 	}
-	if r.DeliveredAt.IsZero() {
-		return errors.New("question gate record requires delivery time")
-	}
 	if r.Status.Terminal() && r.ClosedAt.IsZero() {
 		return errors.New("closed question gate record requires close time")
 	}
@@ -137,7 +134,7 @@ func EvaluateQuestion(policy QuestionGatePolicy, now time.Time, proposal domain.
 				return QuestionGateResult{Decision: QuestionSuppress, Reason: QuestionGateDuplicatePending}, nil
 			}
 		}
-		if policy.MaxDeliveredPerWindow > 0 && !record.DeliveredAt.Before(windowStart) && !record.DeliveredAt.After(now) {
+		if policy.MaxDeliveredPerWindow > 0 && !record.DeliveredAt.IsZero() && !record.DeliveredAt.Before(windowStart) && !record.DeliveredAt.After(now) {
 			windowDelivered++
 		}
 		if record.DedupSignature == question.DedupSignature {
@@ -145,9 +142,11 @@ func EvaluateQuestion(policy QuestionGatePolicy, now time.Time, proposal domain.
 			if !record.ClosedAt.IsZero() {
 				base = record.ClosedAt
 			}
-			candidate := base.Add(policy.Cooldown)
-			if candidate.After(cooldownUntil) {
-				cooldownUntil = candidate
+			if !base.IsZero() {
+				candidate := base.Add(policy.Cooldown)
+				if candidate.After(cooldownUntil) {
+					cooldownUntil = candidate
+				}
 			}
 		}
 	}

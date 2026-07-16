@@ -57,7 +57,11 @@ type OperatorQuestionReader interface {
 	UserAnswer(domain.OperatorAnswerID) (domain.UserAnswer, error)
 	UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error)
 	QuestionDelivery(domain.QuestionDeliveryID) (domain.QuestionDelivery, error)
+	QuestionDeliveries(domain.OperatorQuestionID) ([]domain.QuestionDelivery, error)
 	DueQuestionDeliveries(time.Time, int) ([]domain.QuestionDelivery, error)
+	QuestionGateDecision(domain.QuestionGateDecisionID) (domain.QuestionGateDecisionRecord, error)
+	QuestionGateDecisionByQuestion(domain.OperatorQuestionID) (domain.QuestionGateDecisionRecord, error)
+	QuestionGateDecisions(domain.MissionID) ([]domain.QuestionGateDecisionRecord, error)
 }
 
 type OperatorQuestionWriter interface {
@@ -66,6 +70,7 @@ type OperatorQuestionWriter interface {
 	AcceptUserAnswer(domain.UserAnswer, domain.OperatorQuestion, uint64) error
 	CreateQuestionDelivery(domain.QuestionDelivery) error
 	SaveQuestionDelivery(domain.QuestionDelivery, domain.QuestionDeliveryStatus, uint32) error
+	CreateQuestionGateDecision(domain.QuestionGateDecisionRecord) error
 }
 
 // EventReader returns immutable events in ascending storage sequence. A zero

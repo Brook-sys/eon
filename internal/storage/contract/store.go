@@ -943,6 +943,59 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("question gate decisions are persisted and retrievable", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+		decision := domain.QuestionGateDecisionRecord{
+			SchemaVersion:  domain.SchemaVersionV1,
+			ID:             "gate_1",
+			QuestionID:     "ask_1",
+			MissionID:      "mission_1",
+			DedupSignature: "presentation:artifact_1",
+			Decision:       domain.PersistedQuestionAdmit,
+			Reason:         domain.PersistedQuestionGateAllowed,
+			PolicyVersion:  "default@1",
+			EvaluatedAt:    now,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateQuestionGateDecision(decision)
+		}); err != nil {
+			t.Fatalf("create gate decision: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.QuestionGateDecision(decision.ID)
+			if err != nil {
+				return err
+			}
+			if got.ID != decision.ID || got.Decision != domain.PersistedQuestionAdmit {
+				t.Fatalf("decision = %#v", got)
+			}
+			byQ, err := r.QuestionGateDecisionByQuestion(decision.QuestionID)
+			if err != nil || byQ.ID != decision.ID {
+				t.Fatalf("by question = %#v, err = %v", byQ, err)
+			}
+			listed, err := r.QuestionGateDecisions(decision.MissionID)
+			if err != nil || len(listed) != 1 || listed[0].ID != decision.ID {
+				t.Fatalf("listed = %#v, err = %v", listed, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateQuestionGateDecision(decision)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("duplicate gate ID error = %v", err)
+		}
+		duplicateQ := decision
+		duplicateQ.ID = "gate_2"
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateQuestionGateDecision(duplicateQ)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("duplicate question error = %v", err)
+		}
+	})
+
 	t.Run("operator commands and control state are durable with optimistic concurrency", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 4, 0, 0, 0, time.UTC)

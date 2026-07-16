@@ -21,6 +21,8 @@ type persistedState struct {
 	AnswerByTransport         map[string]domain.OperatorAnswerID
 	QuestionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
 	DeliveryByRoute           map[string]domain.QuestionDeliveryID
+	QuestionGateDecisions     map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
+	GateDecisionByQuestion    map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
 	Candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
 	Inquiries                 map[domain.InquiryID]domain.Inquiry
 	Operations                map[domain.OperationID]domain.Operation
@@ -65,8 +67,9 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		MissionRevisions: cloned.missionRevisions, ActiveMissions: cloned.activeMissions,
 		OperationSpecs: cloned.operationSpecs, Questions: cloned.questions, OperatorQuestions: cloned.operatorQuestions,
 		OperatorAnswers: cloned.operatorAnswers, AnswerByTransport: cloned.answerByTransport,
-		QuestionDeliveries: cloned.questionDeliveries, DeliveryByRoute: cloned.deliveryByRoute, Candidates: cloned.candidates,
-		Inquiries: cloned.inquiries, Operations: cloned.operations,
+		QuestionDeliveries: cloned.questionDeliveries, DeliveryByRoute: cloned.deliveryByRoute,
+		QuestionGateDecisions: cloned.questionGateDecisions, GateDecisionByQuestion: cloned.gateDecisionByQuestion,
+		Candidates: cloned.candidates, Inquiries: cloned.inquiries, Operations: cloned.operations,
 		Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
 		Sources: cloned.sources, SourceVersions: cloned.sourceVersions, SourceSnapshots: cloned.sourceSnapshots,
 		SourceFragments: cloned.sourceFragments, Observations: cloned.observations, Claims: cloned.claims,
@@ -104,6 +107,8 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.answerByTransport = nonNil(p.AnswerByTransport, base.answerByTransport)
 	base.questionDeliveries = nonNil(p.QuestionDeliveries, base.questionDeliveries)
 	base.deliveryByRoute = nonNil(p.DeliveryByRoute, base.deliveryByRoute)
+	base.questionGateDecisions = nonNil(p.QuestionGateDecisions, base.questionGateDecisions)
+	base.gateDecisionByQuestion = nonNil(p.GateDecisionByQuestion, base.gateDecisionByQuestion)
 	base.candidates = nonNil(p.Candidates, base.candidates)
 	base.inquiries = nonNil(p.Inquiries, base.inquiries)
 	base.operations = nonNil(p.Operations, base.operations)
