@@ -154,6 +154,26 @@ Mudança no próprio protocolo, código ou política continua sujeita à autorid
 - gerar o próximo horizonte curto;
 - registrar por que uma frente foi abandonada e qual a substituiu.
 
+#### Lifecycle executável do reservatório (MVP)
+
+O domínio expõe transições puras de higiene em `WorkOpportunity` (sem autoridade de admissão):
+
+| Evento | De | Para | Efeito |
+|--------|----|------|--------|
+| `DEFER` | OPEN | DEFERRED | parqueia com razão opcional; recuperável |
+| `REOPEN` | DEFERRED | OPEN | reativa; limpa detalhe de estacionamento |
+| `ABANDON` | OPEN/DEFERRED | ABANDONED | elimina com razão obrigatória |
+| `SUPERSEDE` | OPEN/DEFERRED | SUPERSEDED | substitui por id sucessor distinto |
+
+`ADMITTED` não entra na higiene: a saída da agenda permanece com o Admitter/kernel de operações.
+
+`PlanFrontierHygiene` aplica política `HorizonPolicy` de forma determinística sobre OPEN:
+
+1. `ABANDON` unidades com `depth > max_depth` (crescimento residual ilegal);
+2. se o restante OPEN excede `max_candidates`, `DEFER` as de menor prioridade (desempate: `UpdatedAt` mais antigo, depois id).
+
+A família local `frontier_management` (`LocalExecutor`) materializa o plano na mesma transação da operação: `SaveWorkOpportunity`, eventos `continuity.opportunity_*` e resumo `continuity.frontier_compacted`, além do artefato `frontier_manage_report` com contagens/findings. Modelo não escolhe quem deferir/abandonar.
+
 ### 3.10 Decomposição e melhoria recursiva
 
 - decompor missão, objetivo, inquiry, tarefa ou artifact amplo em unidades menores;

@@ -868,9 +868,169 @@ func TestLocalHarnessAndFrontierFamilyEffects(t *testing.T) {
 		"frontier:depth_max=1",
 		"frontier:open_gap_scan=",
 		"frontier:signatures_unique",
+		"frontier:hygiene_noop",
 	} {
 		if !strings.Contains(frontierContent, needle) {
 			t.Fatalf("frontier missing %q in %s", needle, frontierContent)
+		}
+	}
+}
+
+func TestLocalFrontierManageAppliesHygieneTransitions(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 20, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedMission(t, store)
+	if err := EnsureCatalogSpecs(ctx, store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+
+	// Tight reservoir marks so hygiene must park excess and abandon illegal depth.
+	policy := domain.DefaultHorizonPolicy()
+	policy.MaxCandidates = 2
+	policy.MaxDepth = 1
+	policy.Version = "horizon.hygiene.v1"
+	applier, err := NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1, ID: "draft_hz_hygiene", Scope: domain.ConfigScopeHorizon,
+		Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+		ActorType: domain.ActorOperator, ActorID: "op", Reason: "hygiene test",
+		Horizon: &policy, CreatedAt: now,
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(draft)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	if _, _, err := applier.ApplyDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	now = clock.Now()
+
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		mk := func(id string, priority uint8, depth int, parent domain.WorkOpportunityID) domain.WorkOpportunity {
+			opp := domain.WorkOpportunity{
+				SchemaVersion: domain.SchemaVersionV1, ID: domain.WorkOpportunityID(id), MissionRevision: "revision_1",
+				Family: domain.FamilyGapScan, Title: id, Origin: "test",
+				ExpectedGain: "g", Novelty: id, StopCondition: "s", DedupSignature: "gap:" + id,
+				Risk: domain.RiskLow, Priority: priority, EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1},
+				Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now, Depth: depth, ParentID: parent,
+			}
+			return opp
+		}
+		// parent depth 0, children at 1 (ok) and 2 (illegal under MaxDepth=1).
+		// Open after seeding (excluding frontier manager itself): 4 gap units.
+		// Plan: abandon deep (depth 2), then defer lowest priority among remaining 3 to fit MaxCandidates=2.
+		for _, opp := range []domain.WorkOpportunity{
+			mk("opp_p", 9, 0, ""),
+			mk("opp_mid", 5, 1, "opp_p"),
+			mk("opp_low", 1, 1, "opp_p"),
+			mk("opp_deep", 8, 2, "opp_mid"),
+		} {
+			if err := tx.CreateWorkOpportunity(opp); err != nil {
+				return err
+			}
+		}
+		frontier := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_frontier_hygiene", MissionRevision: "revision_1",
+			Family: domain.FamilyFrontierManage, Title: "frontier hygiene", Origin: "test",
+			ExpectedGain: "compact", Novelty: "hygiene", StopCondition: "report", DedupSignature: "frontier:hygiene_root",
+			Risk: domain.RiskLow, Priority: 20, EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		return tx.CreateWorkOpportunity(frontier)
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	admitted, err := admitter.AdmitOne(ctx, "opp_frontier_hygiene")
+	if err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+	res, err := exec.Execute(ctx, admitted.Operation.ID)
+	if err != nil || !res.Completed {
+		t.Fatalf("execute: err=%v result=%+v", err, res)
+	}
+
+	var (
+		deepStatus, lowStatus, midStatus, parentStatus domain.WorkOpportunityStatus
+		content                                        string
+		hasCompact, hasAbandon, hasDefer               bool
+	)
+	if err := store.View(ctx, func(r port.Reader) error {
+		for _, id := range []domain.WorkOpportunityID{"opp_deep", "opp_low", "opp_mid", "opp_p"} {
+			opp, err := r.WorkOpportunity(id)
+			if err != nil {
+				return err
+			}
+			switch id {
+			case "opp_deep":
+				deepStatus = opp.Status
+			case "opp_low":
+				lowStatus = opp.Status
+			case "opp_mid":
+				midStatus = opp.Status
+			case "opp_p":
+				parentStatus = opp.Status
+			}
+		}
+		art, err := r.KnowledgeArtifact(res.ArtifactID)
+		if err != nil {
+			return err
+		}
+		content = art.Content
+		events, err := r.Events(0, 500)
+		if err != nil {
+			return err
+		}
+		for _, ev := range events {
+			switch ev.Kind {
+			case domain.EventContinuityFrontierCompacted:
+				hasCompact = true
+			case domain.EventWorkOpportunityAbandoned:
+				hasAbandon = true
+			case domain.EventWorkOpportunityDeferred:
+				hasDefer = true
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if deepStatus != domain.OpportunityAbandoned {
+		t.Fatalf("deep status = %s, want ABANDONED", deepStatus)
+	}
+	if lowStatus != domain.OpportunityDeferred {
+		t.Fatalf("low status = %s, want DEFERRED", lowStatus)
+	}
+	if midStatus != domain.OpportunityOpen || parentStatus != domain.OpportunityOpen {
+		t.Fatalf("mid/parent = %s/%s, want OPEN/OPEN", midStatus, parentStatus)
+	}
+	if !hasCompact || !hasAbandon || !hasDefer {
+		t.Fatalf("events compact=%v abandon=%v defer=%v", hasCompact, hasAbandon, hasDefer)
+	}
+	for _, needle := range []string{
+		"frontier:abandoned=opp_deep",
+		"frontier:deferred=opp_low",
+		"frontier:hygiene_actions=2",
+		"\"hygiene_action_count\":2",
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("missing %q in %s", needle, content)
 		}
 	}
 }

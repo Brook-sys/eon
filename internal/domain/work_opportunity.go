@@ -354,8 +354,13 @@ func (d ContinuityDiagnosis) Validate() error {
 
 // Event kinds and failure code for continuity degradation.
 const (
-	EventContinuityGapDetected   = "continuity.gap_detected"
-	EventContinuityExpanded      = "continuity.expanded"
-	EventContinuityBlocked       = "continuity.blocked"
-	FailureCodeContinuityBlocked = "CONTINUITY_BLOCKED"
+	EventContinuityGapDetected       = "continuity.gap_detected"
+	EventContinuityExpanded          = "continuity.expanded"
+	EventContinuityBlocked           = "continuity.blocked"
+	EventContinuityFrontierCompacted = "continuity.frontier_compacted"
+	EventWorkOpportunityAbandoned    = "continuity.opportunity_abandoned"
+	EventWorkOpportunitySuperseded   = "continuity.opportunity_superseded"
+	EventWorkOpportunityDeferred     = "continuity.opportunity_deferred"
+	EventWorkOpportunityReopened     = "continuity.opportunity_reopened"
+	FailureCodeContinuityBlocked     = "CONTINUITY_BLOCKED"
 )
