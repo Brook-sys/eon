@@ -146,11 +146,11 @@ Toda unidade não terminal MUST possuir `OperationalState` persistido e condiç�
 
 **Evidência de aceitação:** reinício reconstrói filas e esperas sem depender de contexto conversacional.
 
-### FR-DUR-002 — Repouso sem busy loop
+### FR-DUR-002 — Repouso vivo sem busy loop
 
-Sem trabalho admissível, o runtime MUST persistir `Rest` e próxima condição de reavaliação e MUST bloquear em timer/evento em vez de sondagem contínua.
+Sem trabalho admissível imediato, o runtime MUST persistir `Rest` e uma próxima condição interna de reavaliação temporal; evento externo MAY antecipar o despertar, mas MUST NOT ser sua única causa. `Rest` MUST NOT representar conclusão global enquanto a missão estiver ativa. O processo MUST bloquear em timer/evento em vez de sondagem contínua.
 
-**Evidência de aceitação:** relógio virtual comprova ausência de novos ciclos antes do próximo instante ou evento.
+**Evidência de aceitação:** relógio virtual comprova ausência de ciclos intermediários, despertar no prazo mesmo sem evento externo e retorno ao replenishment sem declarar missão concluída.
 
 ### FR-DUR-003 — Leases recuperáveis
 
@@ -176,17 +176,29 @@ Toda tentativa malsucedida MUST produzir `FailureRecord` tipado com código, cla
 
 **Evidência de aceitação:** contract tests mapeiam falhas de adapters, distinguem timeout antes/depois do envio e impedem segundo efeito sob resposta ambígua.
 
-### FR-DUR-007 — Continuidade com fronteira renovável
+### FR-DUR-007 — Continuidade permanente com fronteira renovável
 
-Após mudança relevante no estado, conclusão, falha ou invalidação, o runtime MUST atualizar uma fronteira limitada de próximos trabalhos derivados da missão. Não havendo trabalho admissível imediato, MUST persistir motivo e condição de reavaliação. Continuidade MUST NOT depender de geração artificial de atividade, retries ilimitados ou recurso opcional de modelo.
+Enquanto a missão estiver ativa e o armazenamento operacional, o runtime MUST preservar uma frontier renovável e MUST NOT alcançar conclusão global implícita. Após mudança relevante no estado, conclusão, falha ou invalidação, MUST atualizar próximos trabalhos, sementes de replenishment ou obrigações recorrentes derivados da missão. Não havendo trabalho admissível imediato, MUST persistir motivo e prazo interno de reavaliação. Continuidade MUST NOT depender de geração artificial de atividade, retries ilimitados, resposta do usuário, evento externo ou recurso opcional de modelo.
 
-**Evidência de aceitação:** cenários de conclusão, bloqueio, degradação de provider e agenda vazia terminam em próximo passo admissível ou `Rest` retomável, sem busy loop nem perda de missão.
+**Evidência de aceitação:** cenários de conclusão de todas as operações atuais, bloqueio, silêncio do usuário, degradação de provider e agenda vazia resultam em outra linha admissível ou `Rest` vivo que desperta e reexecuta replenishment, sem busy loop, perda da missão ou estado global concluído.
 
 ### FR-DUR-008 — Preferência por avanço seguro
 
-Quando estratégias equivalentes estiverem disponíveis, a política SHOULD preferir operações menores, idempotentes, verificáveis e reversíveis, com checkpoint antes de fronteiras frágeis. O runtime MUST degradar qualidade, velocidade ou sofisticação antes de comprometer integridade, auditabilidade ou recuperabilidade.
+Quando estratégias equivalentes estiverem disponíveis, a política SHOULD preferir operações menores, idempotentes, verificáveis e reversíveis, com checkpoint antes de fronteiras frágeis. O runtime MUST degradar qualidade, velocidade, frequência ou sofisticação antes de comprometer integridade, auditabilidade, recuperabilidade ou continuidade global.
 
-**Evidência de aceitação:** fault-injection demonstra que falha de otimização ou capability não essencial preserva estado, fallback e possibilidade de retomada.
+**Evidência de aceitação:** fault-injection demonstra que falha de otimização ou capability não essencial preserva estado, fallback, scheduler vivo e possibilidade de avanço por outra linha.
+
+### FR-DUR-009 — Bloqueio localizado e trabalho independente
+
+Espera por resposta do usuário, aprovação, callback, recurso ou dependência MUST bloquear somente as `Inquiry`s e `Operation`s cuja precondição dependa dela. O scheduler MUST continuar considerando trabalho independente e o replenisher SHOULD derivar manutenção, validação ou investigação não dependente quando alinhada à missão.
+
+**Evidência de aceitação:** uma pergunta ao usuário permanece pendente enquanto outras linhas progridem; ausência indefinida de resposta não paralisa o runtime nem causa repetição da pergunta fora da política.
+
+### FR-DUR-010 — Manutenção e melhoria recorrentes
+
+A missão ativa MUST poder declarar obrigações recorrentes de revisão, revalidação, atualização, auditoria, avaliação do harness e busca de lacunas. Tais obrigações MUST possuir cadência, budget, critério de delta e política anti-repetição, fornecendo continuidade legítima após a conclusão de frentes finitas sem fabricar atividade vazia.
+
+**Evidência de aceitação:** relógio virtual demonstra criação limitada de operações recorrentes, ausência de duplicação antes da cadência e novos increments após mudança de evidência, capacidade ou estado.
 
 ## 6. Recursos, segurança e observabilidade
 

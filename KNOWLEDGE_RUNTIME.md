@@ -384,7 +384,7 @@ Não contam isoladamente como progresso:
 - “refletir” repetidamente sobre o mesmo estado;
 - pesquisar indefinidamente sem critério de suficiência.
 
-## 14. Condições de parada e repouso
+## 14. Condições locais de término e continuidade global
 
 Uma investigação termina quando:
 
@@ -395,12 +395,18 @@ Uma investigação termina quando:
 - ela foi subsumida ou invalidada;
 - requer decisão do usuário.
 
-O runtime repousa quando não existem investigações admissíveis e registra:
+O término de uma investigação é local. Enquanto a missão estiver ativa, não representa conclusão do runtime. O motor retorna à frontier, às obrigações recorrentes e ao replenishment para manter a continuidade permanente.
+
+O runtime entra em `Rest` de baixo consumo quando não existem investigações admissíveis imediatas e registra:
 
 - quais perguntas permanecem abertas;
 - por que não são acionáveis agora;
-- quais eventos, datas ou recursos justificam reavaliação;
-- próxima revisão programada.
+- quais linhas estão bloqueadas por usuário, evento ou recurso;
+- quais linhas independentes foram consideradas;
+- quais eventos, datas ou recursos podem antecipar a reavaliação;
+- a próxima revisão temporal interna obrigatória.
+
+Pergunta ao usuário ou evento externo nunca é a única condição global de despertar. Se a resposta não chegar, a linha permanece pendente sem impedir manutenção, revalidação, pesquisa de outras lacunas ou melhoria autorizada. Ao chegar a revisão programada, o motor reconcilia as esperas e tenta gerar novo horizonte útil mesmo sem qualquer evento externo.
 
 ## 15. Capacidades do MVP
 

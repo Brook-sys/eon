@@ -116,15 +116,15 @@ Toda operação que pode retry ou replanejar possui budget persistido e monotoni
 
 ### INV-PROG-003 — Agenda vazia precede replenishment limitado
 
-Com missão ativa e sem trabalho executável, o kernel executa no máximo o limite configurado de replenishment antes de entrar em `Rest`. Replenishment não pode crescer agenda/frontier sem bound.
+Com missão ativa e sem trabalho executável, o kernel executa no máximo o limite configurado de replenishment antes de entrar em `Rest`. Replenishment não pode crescer agenda/frontier sem bound, mas MUST preservar sementes ou obrigações suficientes para nova tentativa futura enquanto a missão permanecer ativa.
 
-**Verificação:** relógio virtual e gerador adversarial demonstram limite de admissões e memória.
+**Verificação:** relógio virtual e gerador adversarial demonstram limite de admissões e memória, preservação da frontier e nova tentativa na cadência seguinte.
 
-### INV-PROG-004 — Repouso não é conclusão nem polling
+### INV-PROG-004 — Repouso é continuidade em baixo consumo
 
-`Rest` preserva missão ativa, razão, perguntas abertas e próxima condição de reavaliação. Antes de tempo/evento/capacidade elegível, nenhum novo ciclo oficial é executado.
+`Rest` preserva missão ativa, razão, perguntas abertas, frontier e próxima condição interna de reavaliação temporal. Evento ou capacidade MAY antecipar o despertar, mas ausência de evento externo não elimina o próximo ciclo. Antes da condição elegível, nenhum novo ciclo oficial é executado.
 
-**Verificação:** scheduler virtual avança tempo e comprova zero ciclos intermediários e despertar único.
+**Verificação:** scheduler virtual avança tempo, comprova zero ciclos intermediários, despertar único sem evento externo e retorno ao replenishment.
 
 ### INV-PROG-005 — Sucesso corresponde a critério satisfeito
 
@@ -132,11 +132,23 @@ Com missão ativa e sem trabalho executável, o kernel executa no máximo o limi
 
 **Verificação:** testes de máquina de estados separam `SUCCEEDED`, `EXHAUSTED` e `FAILED`.
 
-### INV-PROG-006 — Estagnação é detectável
+### INV-PROG-006 — Estagnação é detectável e localizada
 
-Sequência limitada de operações equivalentes sem novo recibo, evidência, mudança de versão ou redução justificável de incerteza gera `REPETITION_DETECTED` ou `NO_EPISTEMIC_DELTA` e força replanejamento/repouso/intervenção.
+Sequência limitada de operações equivalentes sem novo recibo, evidência, mudança de versão ou redução justificável de incerteza gera `REPETITION_DETECTED` ou `NO_EPISTEMIC_DELTA` e força replanejamento, espera localizada ou intervenção nessa linha. A detecção MUST NOT paralisar linhas independentes nem concluir globalmente uma missão ativa.
 
-**Verificação:** histórico sintético repetitivo aciona o `ProgressMonitor` no limiar configurado.
+**Verificação:** histórico sintético repetitivo aciona o `ProgressMonitor` no limiar configurado enquanto outra linha elegível continua.
+
+### INV-PROG-007 — Bloqueio externo não é bloqueio global
+
+Toda espera por usuário, aprovação, callback ou dependência referencia explicitamente as unidades afetadas. Existindo outra unidade elegível ou candidato independente admissível, o scheduler não pode entrar em estado global dependente daquela espera.
+
+**Verificação:** cenários com pergunta sem resposta mantêm a espera persistida e demonstram seleção de trabalho independente.
+
+### INV-PROG-008 — Missão ativa não conclui implicitamente
+
+A ausência momentânea de agenda, resposta externa, fonte nova ou capacidade disponível não altera a missão para estado concluído. Somente comando autorizado de pausa/cancelamento, revisão que satisfaça condição terminal explícita ou falha fatal do armazenamento pode interromper a obrigação global de reavaliação.
+
+**Verificação:** máquinas de estado rejeitam transição automática de agenda vazia ou `Rest` para conclusão global.
 
 ## 5. Propriedades de liveness condicionais
 
@@ -154,11 +166,19 @@ Se `not_before <= Clock.Now()` e o runtime está operacional, a unidade volta a 
 
 Se o destino volta a responder e a política permite tentativas, todo `OutboxRecord` pendente é entregue ou termina em estado explícito reconciliável/quarentenado; não permanece silenciosamente esquecido.
 
-### LIVE-004 — Agenda vazia eventualmente repousa
+### LIVE-004 — Agenda vazia entra em repouso vivo e reavalia
 
-Se replenishment não encontra candidato admissível e não há trabalho/espera vencida, o ciclo termina em `Rest` em número limitado de passos.
+Se replenishment não encontra candidato admissível e não há trabalho/espera vencida, o ciclo entra em `Rest` em número limitado de passos. Se a missão continuar ativa e o armazenamento operacional, um prazo interno posterior eventualmente desperta o kernel para reconciliar esperas, revisar obrigações recorrentes e executar novo replenishment, mesmo sem evento externo.
 
-**Nota:** essas propriedades não prometem progresso quando dependências permanecem indisponíveis, budgets acabam, a missão é contraditória ou o armazenamento falha. Nesses casos, o estado MUST explicar a condição e preservar a intenção conforme política.
+### LIVE-005 — Linha bloqueada não impede linha independente
+
+Se uma unidade aguarda usuário ou dependência e outra permanece elegível sob recursos e política disponíveis, a unidade independente eventualmente é considerada sem exigir resolução da espera original.
+
+### LIVE-006 — Frentes finitas retornam ao ciclo permanente
+
+Quando todas as unidades do horizonte atual atingem estado terminal, uma missão ativa eventualmente retorna a revisão da frontier, manutenção recorrente ou replenishment. O término do horizonte não é término do runtime.
+
+**Nota:** essas propriedades não prometem efeito externo impossível quando dependências permanecem indisponíveis, budgets acabam, a missão é contraditória ou o armazenamento falha. Elas exigem que o motor permaneça vivo, explique a condição, preserve a intenção e continue qualquer trabalho independente permitido. Somente falha fatal do armazenamento ou comando autorizado pode interromper globalmente o ciclo.
 
 ## 6. Estratégia de verificação
 

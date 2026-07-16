@@ -181,7 +181,7 @@ Isolamento persistido de entrada, artifact ou estado que não pode ser aceito co
 
 ### Rest
 
-Estado global sem trabalho admissível no momento, com próxima condição de reavaliação persistida. Rest não é conclusão da missão nem busy loop.
+Modo global de baixo consumo sem trabalho admissível imediato, com missão, frontier e próxima condição **interna e temporal** de reavaliação persistidas. Evento externo MAY antecipar o despertar, mas não é necessário. `Rest` não é conclusão, pausa da missão nem dependência passiva de entrada externa; é uma fase do ciclo permanente que retorna ao replenishment enquanto a missão estiver ativa.
 
 ## 6. Termos substituídos ou restritos
 

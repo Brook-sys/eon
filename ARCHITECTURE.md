@@ -9,9 +9,9 @@ Decisões técnicas e critérios verificáveis estão em `TECHNICAL_REQUIREMENTS
 A inteligência principal deve estar no sistema, não depender exclusivamente do modelo.
 O motor deve continuar útil com modelos pequenos, antigos, gratuitos e com janelas de contexto reduzidas.
 
-Seu propósito principal é **continuidade progressiva**: permanecer vivo, preservar estado e produzir a próxima frente útil de trabalho sempre que houver capacidade e permissão. O motor é contínuo; objetivos e operações individuais podem ser finitos.
+Seu propósito principal é **continuidade progressiva permanente**: permanecer vivo, preservar estado, sempre ultrapassar o horizonte atual e produzir a próxima frente útil de trabalho. Enquanto a missão estiver ativa e o armazenamento operacional, o motor não possui conclusão global implícita; objetivos, investigações e operações individuais são finitos, mas seu término retorna ao ciclo de manutenção, melhoria e replenishment.
 
-Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime não depende de comandos ou eventos externos para continuar avançando: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas `Inquiry`s derivadas e executa a melhor `Operation` permitida. Eventos externos são sinais opcionais de mudança, interrupção ou repriorização.
+Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime nunca depende de comandos, respostas do usuário ou eventos externos para permanecer vivo e procurar avanço: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas `Inquiry`s derivadas e executa a melhor `Operation` permitida. Eventos externos — inclusive respostas do usuário — alteram fatos, desbloqueiam linhas e repriorizam o trabalho, mas silêncio ou ausência de eventos bloqueiam apenas as unidades dependentes, nunca o motor inteiro.
 
 ## Princípios
 
@@ -117,9 +117,11 @@ Enquanto não houver uma ordem explícita de desligamento ou falha fatal do arma
 3. após reinício, o runtime reconstrói filas, esperas, leases e callbacks pendentes;
 4. nenhuma resposta de modelo é necessária para o motor saber como retomar;
 5. rate limits e dependências indisponíveis adiam trabalho, mas não apagam intenção;
-6. o motor pode permanecer em repouso com consumo mínimo sem interpretar repouso como conclusão definitiva;
-7. uma agenda vazia dispara geração controlada de candidatos antes do repouso;
-8. cada nova tarefa possui proveniência que demonstra de qual missão, objetivo, evidência ou obrigação recorrente ela foi derivada.
+6. o motor pode permanecer em `Rest` com consumo mínimo, mas sempre preserva prazo interno de reavaliação e retorna ao ciclo mesmo sem evento externo;
+7. uma agenda vazia dispara geração controlada de candidatos antes do `Rest`, e a frontier preserva sementes ou obrigações para ciclos futuros;
+8. espera por usuário, aprovação ou dependência bloqueia somente as unidades afetadas; trabalho independente continua;
+9. cada nova tarefa possui proveniência que demonstra de qual missão, objetivo, evidência ou obrigação recorrente ela foi derivada;
+10. término do horizonte atual retorna à manutenção, revisão e replenishment, nunca a conclusão global implícita.
 
 Isso diferencia:
 
@@ -202,7 +204,7 @@ O conceito central é uma **esteira de incrementos epistemológicos**:
 missão → inquiry → operação → evidência/changeset → estado atualizado → próxima inquiry
 ```
 
-O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial. A continuidade termina apenas quando a missão é pausada/cancelada ou uma política determina que não existe ação segura e útil dentro do horizonte atual.
+O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial, obrigações recorrentes e condições de revisão. Se não existe ação segura e útil no horizonte atual, ele persiste `Rest`, agenda nova reavaliação interna e posteriormente tenta ampliar ou renovar o horizonte. A continuidade global termina apenas por pausa/cancelamento autorizado, condição terminal explícita da missão ou falha fatal do armazenamento; nunca apenas porque a agenda atual acabou ou uma resposta externa não chegou.
 
 Para evitar atividade vazia, todo `InquiryCandidate` autogerado deve declarar:
 

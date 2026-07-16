@@ -491,19 +491,28 @@ foram consideradas no preflight; o harness local permanece estreito porque
 precisa exercitar diretamente `OperationSpec`, o compilador e a porta
 `ModelProvider`, sem introduzir um runtime Python paralelo no primeiro slice.
 
-## Continuidade acima de sofisticação
+## Continuidade permanente acima de sofisticação
 
-O runtime deve manter uma fronteira limitada de trabalho futuro derivado da missão, das lacunas e do estado persistido. Concluir uma `Operation` deve normalmente revelar, atualizar ou invalidar próximos candidatos. Agenda vazia dispara replenishment limitado; falta de trabalho admissível produz `Rest` retomável com condição de reavaliação.
+Enquanto a `MissionRevision` estiver ativa e o armazenamento permanecer operacional, o runtime é um processo permanente: não existe conclusão global implícita. Concluir uma `Operation` ou `Inquiry` deve revelar, atualizar ou invalidar próximos candidatos; concluir uma frente deve devolver o controle ao replenisher, à manutenção recorrente e à revisão da missão.
 
-“Continuar” não significa inventar trabalho, fazer busy loop ou insistir numa ação arriscada. Continuidade inclui:
+O runtime mantém uma fronteira limitada, mas renovável, de trabalho futuro derivado da missão, das lacunas, dos riscos, da necessidade de manutenção e do estado persistido. A fronteira não precisa materializar um plano infinito: precisa preservar sementes legítimas e condições determinísticas para gerar o próximo horizonte curto sempre que o atual diminuir.
+
+Perguntas ao usuário, aprovações, callbacks e dependências externas bloqueiam somente as unidades que realmente dependem deles. O scheduler deve procurar outras linhas independentes de investigação, validação, manutenção ou melhoria. Silêncio do usuário nunca encerra a missão nem paralisa trabalho não dependente.
+
+`Rest` é somente o modo de baixo consumo entre ativações de um serviço ainda vivo. Ele deve possuir prazo interno de reavaliação mesmo sem evento externo. Ao despertar, o motor primeiro reconcilia esperas e depois procura novo trabalho útil. Se nenhuma operação imediata for admissível, preserva e revisa a fronteira em cadência limitada; não declara que terminou.
+
+“Continuar sempre” não autoriza busy loop, trabalho fictício, retries ilimitados ou ações arriscadas. A continuidade estável inclui:
 
 - persistir antes de atravessar fronteiras frágeis;
 - preferir ações pequenas, idempotentes, verificáveis e reversíveis;
+- manter mais de uma linha de progresso quando a missão permitir;
 - evitar dependência desnecessária de recursos opcionais do modelo;
 - limitar retries e reconciliar efeitos ambíguos antes de repetir;
-- preservar alternativas e fallback quando uma ação pode bloquear a agenda;
-- degradar qualidade ou velocidade antes de degradar integridade;
-- repousar de forma explícita quando continuar agora aumentaria o risco.
+- preservar alternativas e fallback quando uma ação bloqueia;
+- transformar falha ou estagnação em diagnóstico, replanejamento e novo trabalho preventivo;
+- executar manutenção recorrente, revalidação e busca de melhoria quando frentes finitas terminarem;
+- degradar qualidade, velocidade ou frequência antes de degradar integridade;
+- permanecer vivo em baixo consumo quando agir imediatamente seria inseguro.
 
 ## Critério arquitetural de sucesso
 
@@ -517,4 +526,6 @@ O harness está cumprindo sua proposta quando:
 6. o contexto médio por chamada permanece pequeno e previsível;
 7. o runtime detecta, promove, rebaixa e audita capacidades sem interromper o caminho mínimo;
 8. erros recorrentes se transformam em validadores, templates ou regras melhores;
-9. a agenda mantém próximos passos úteis ou repouso retomável sem loops artificiais.
+9. a agenda e a frontier mantêm próximos passos úteis ou sementes legítimas para produzi-los sem loops artificiais;
+10. espera por usuário ou dependência bloqueia apenas a linha dependente, enquanto linhas independentes continuam;
+11. com missão ativa, término de uma frente sempre retorna a manutenção, replenishment e melhoria, nunca a uma conclusão global implícita.
