@@ -428,9 +428,10 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - estado da missão e scheduler — implementado em `GET /overview` e `GET /missions/{id}` (process mode, dispatch mode, agenda counts);
 - agenda e operação atual — implementado (`GET /missions/{id}/operations`, summaries por estado);
 - consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
-- detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log);
+- detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log; raw model outputs correlacionados por `ValidationReceipt.ArtifactRef`);
 - SSE ao vivo — implementado (`GET /events/stream` com `after_sequence`/`Last-Event-ID`, poll configurável, eventos `ready`/`event`/`page`/`error` e keep-alive; somente-leitura sobre `Projector.ListEvents`);
-- residual: redaction fina de payloads sensíveis; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
+- redaction de apresentação — implementada em `inspect.RedactOperationDetail`/`RedactRawModelOutput`: substitui padrões secret-shaped (Bearer, API keys, bot tokens, env de secrets), limita bytes de conteúdo bruto e anexa relatório `redaction` na resposta HTTP; store canônico permanece intacto e `content_hash` é preservado;
+- residual de Slice A: expansão de redaction para artefatos de conhecimento/exportadores; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -443,7 +444,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - recibos e optimistic concurrency — implementados (`CommandReceipt` monotônico, revisão de missão esperada, `SaveControlState` com revisão monotônica);
 - superfícies HTTP de submit/consulta — implementadas em `control.API`: `POST /commands`, `GET /commands/{id}`, `GET /commands/{id}/receipt`, `POST /external-events`, `GET /external-events/{id}`, `GET /external-events/{id}/disposition`; HTTP 202 distingue aceitação de inbox de efeito confirmado; retries reutilizam identidade por `idempotency_key`/`deduplication_key` sem mintar ID divergente;
 - crash-replay dos processadores — implementado com reopen SQLite real: comando/evento `RECEIVED` sobrevive a restart e aplica uma vez; recibo/disposição terminal é pure replay sem segundo efeito nem eventos extras;
-- residual restante: redaction fina de payloads sensíveis (Slice A).
+- residual restante de Slice B: nenhum bloqueador de submit; redaction fina de payloads de inspeção coberta no Slice A.
 
 ### Slice C — configuração versionada
 
@@ -463,7 +464,9 @@ Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, s
 - caixa de perguntas pendentes (`GET /api/control/questions`) e formulário correlacionado (`POST .../answers`);
 - montagem de inspect/control sob `/api/*` sem escrita canônica direta da UI.
 
-Residual: inspetor rico de operation/commit/command, conhecimento/artifacts e redaction fina. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
+Inspetor de execução no dashboard experimental: carrega `GET /api/inspect/operations|commits|commands/{id}` com abas de resumo/linhagem/changeset/raw/eventos/JSON, atalhos a partir da agenda e navegação operation↔commit. Redaction fina de raw model outputs é aplicada na Control API antes do browser.
+
+Residual: conhecimento/artifacts dedicados na UI e expansão de redaction para outros free-text exports. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
 
 ### Outbox de entrega de perguntas
 

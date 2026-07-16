@@ -13,20 +13,20 @@ import (
 // OperationDetail reconstructs an operation and the official records that
 // explain its outcome without relying on model chain-of-thought.
 type OperationDetail struct {
-	SchemaVersion   int                        `json:"schema_version"`
-	Operation       domain.Operation           `json:"operation"`
-	Spec            *domain.OperationSpec      `json:"spec,omitempty"`
-	Inquiry         *domain.Inquiry            `json:"inquiry,omitempty"`
-	Question        *domain.Question           `json:"question,omitempty"`
-	RawOutputs      []domain.RawModelOutput    `json:"raw_model_outputs"`
-	Proposed        []domain.ProposedChangeSet `json:"proposed_change_sets"`
-	Accepted        []domain.AcceptedChangeSet `json:"accepted_change_sets"`
-	Commits         []domain.Commit            `json:"commits"`
-	CommitReceipts  []domain.CommitReceipt     `json:"commit_receipts"`
-	Validations     []domain.ValidationReceipt `json:"validation_receipts"`
-	Events          []domain.Event             `json:"events"`
-	Idempotency     *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
-	HeadCommit      *domain.Commit             `json:"head_commit,omitempty"`
+	SchemaVersion  int                        `json:"schema_version"`
+	Operation      domain.Operation           `json:"operation"`
+	Spec           *domain.OperationSpec      `json:"spec,omitempty"`
+	Inquiry        *domain.Inquiry            `json:"inquiry,omitempty"`
+	Question       *domain.Question           `json:"question,omitempty"`
+	RawOutputs     []domain.RawModelOutput    `json:"raw_model_outputs"`
+	Proposed       []domain.ProposedChangeSet `json:"proposed_change_sets"`
+	Accepted       []domain.AcceptedChangeSet `json:"accepted_change_sets"`
+	Commits        []domain.Commit            `json:"commits"`
+	CommitReceipts []domain.CommitReceipt     `json:"commit_receipts"`
+	Validations    []domain.ValidationReceipt `json:"validation_receipts"`
+	Events         []domain.Event             `json:"events"`
+	Idempotency    *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
+	HeadCommit     *domain.Commit             `json:"head_commit,omitempty"`
 }
 
 // CommitDetail correlates a commit with its proposal and validation receipts.
@@ -42,7 +42,7 @@ type CommitDetail struct {
 
 // CommandDetail shows an operator command and its receipt without write access.
 type CommandDetail struct {
-	SchemaVersion int                   `json:"schema_version"`
+	SchemaVersion int                    `json:"schema_version"`
 	Command       domain.OperatorCommand `json:"command"`
 	Receipt       domain.CommandReceipt  `json:"receipt"`
 	Events        []domain.Event         `json:"events"`
@@ -60,15 +60,15 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 			return err
 		}
 		detail = OperationDetail{
-			SchemaVersion: domain.SchemaVersionV1,
-			Operation:     operation,
-			RawOutputs:    []domain.RawModelOutput{},
-			Proposed:      []domain.ProposedChangeSet{},
-			Accepted:      []domain.AcceptedChangeSet{},
-			Commits:       []domain.Commit{},
+			SchemaVersion:  domain.SchemaVersionV1,
+			Operation:      operation,
+			RawOutputs:     []domain.RawModelOutput{},
+			Proposed:       []domain.ProposedChangeSet{},
+			Accepted:       []domain.AcceptedChangeSet{},
+			Commits:        []domain.Commit{},
 			CommitReceipts: []domain.CommitReceipt{},
-			Validations:   []domain.ValidationReceipt{},
-			Events:        []domain.Event{},
+			Validations:    []domain.ValidationReceipt{},
+			Events:         []domain.Event{},
 		}
 		if spec, err := r.OperationSpec(operation.SpecID); err == nil {
 			detail.Spec = &spec
@@ -127,16 +127,16 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 				return err
 			}
 			if accepted, err := r.AcceptedChangeSet(commit.AcceptedChangeSetID); err == nil {
-				detail.Accepted = append(detail.Accepted, accepted)
+				detail.Accepted = appendUniqueAccepted(detail.Accepted, accepted)
 				for _, receiptID := range accepted.ValidationReceiptIDs {
 					if receipt, err := r.ValidationReceipt(receiptID); err == nil {
-						detail.Validations = append(detail.Validations, receipt)
+						detail.Validations = appendUniqueValidation(detail.Validations, receipt)
 					} else if !errors.Is(err, port.ErrNotFound) {
 						return err
 					}
 				}
 				if proposed, err := r.ProposedChangeSet(accepted.ProposedChangeSetID); err == nil {
-					detail.Proposed = append(detail.Proposed, proposed)
+					detail.Proposed = appendUniqueProposed(detail.Proposed, proposed)
 				} else if !errors.Is(err, port.ErrNotFound) {
 					return err
 				}
@@ -149,10 +149,56 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 		if commit, err := r.CommitByIdempotencyKey(operation.IdempotencyKey); err == nil {
 			if _, ok := seenCommits[commit.ID]; !ok {
 				detail.Commits = append(detail.Commits, commit)
+				if receipt, err := r.CommitReceipt(commit.ReceiptID); err == nil {
+					detail.CommitReceipts = append(detail.CommitReceipts, receipt)
+				} else if !errors.Is(err, port.ErrNotFound) {
+					return err
+				}
+				if accepted, err := r.AcceptedChangeSet(commit.AcceptedChangeSetID); err == nil {
+					detail.Accepted = appendUniqueAccepted(detail.Accepted, accepted)
+					for _, receiptID := range accepted.ValidationReceiptIDs {
+						if receipt, err := r.ValidationReceipt(receiptID); err == nil {
+							detail.Validations = appendUniqueValidation(detail.Validations, receipt)
+						} else if !errors.Is(err, port.ErrNotFound) {
+							return err
+						}
+					}
+					if proposed, err := r.ProposedChangeSet(accepted.ProposedChangeSetID); err == nil {
+						detail.Proposed = appendUniqueProposed(detail.Proposed, proposed)
+					} else if !errors.Is(err, port.ErrNotFound) {
+						return err
+					}
+				} else if !errors.Is(err, port.ErrNotFound) {
+					return err
+				}
 			}
 		} else if !errors.Is(err, port.ErrNotFound) {
 			return err
 		}
+
+		// Raw model outputs are evidence addressed by validation artifact refs.
+		// There is no list-by-operation port; correlation stays receipt-driven.
+		seenRaw := map[domain.ArtifactID]struct{}{}
+		for _, receipt := range detail.Validations {
+			if receipt.ArtifactRef == "" {
+				continue
+			}
+			if _, ok := seenRaw[receipt.ArtifactRef]; ok {
+				continue
+			}
+			raw, err := r.RawModelOutput(receipt.ArtifactRef)
+			if err != nil {
+				if errors.Is(err, port.ErrNotFound) {
+					continue
+				}
+				return err
+			}
+			seenRaw[receipt.ArtifactRef] = struct{}{}
+			detail.RawOutputs = append(detail.RawOutputs, raw)
+		}
+		sort.Slice(detail.RawOutputs, func(i, j int) bool {
+			return detail.RawOutputs[i].CreatedAt.Before(detail.RawOutputs[j].CreatedAt)
+		})
 
 		sort.Slice(detail.Commits, func(i, j int) bool {
 			return detail.Commits[i].Version < detail.Commits[j].Version
@@ -264,6 +310,33 @@ func (p *Projector) CommandInspector(ctx context.Context, commandID domain.Comma
 	return detail, err
 }
 
+func appendUniqueProposed(items []domain.ProposedChangeSet, item domain.ProposedChangeSet) []domain.ProposedChangeSet {
+	for _, existing := range items {
+		if existing.ID == item.ID {
+			return items
+		}
+	}
+	return append(items, item)
+}
+
+func appendUniqueAccepted(items []domain.AcceptedChangeSet, item domain.AcceptedChangeSet) []domain.AcceptedChangeSet {
+	for _, existing := range items {
+		if existing.ID == item.ID {
+			return items
+		}
+	}
+	return append(items, item)
+}
+
+func appendUniqueValidation(items []domain.ValidationReceipt, item domain.ValidationReceipt) []domain.ValidationReceipt {
+	for _, existing := range items {
+		if existing.ID == item.ID {
+			return items
+		}
+	}
+	return append(items, item)
+}
+
 func collectMatchingEvents(r port.Reader, filter EventFilter) ([]domain.Event, error) {
 	limit := filter.Limit
 	if limit <= 0 {
@@ -301,12 +374,12 @@ func collectMatchingEvents(r port.Reader, filter EventFilter) ([]domain.Event, e
 
 // Health is a process liveness projection independent of mission detail.
 type Health struct {
-	Status            string              `json:"status"`
-	Runtime           RuntimeIdentity     `json:"runtime"`
-	ProcessMode       domain.ProcessMode  `json:"process_mode"`
-	ControlRevision   uint64              `json:"control_revision"`
-	EventHeadSequence uint64              `json:"event_head_sequence"`
-	StoreReachable    bool                `json:"store_reachable"`
+	Status            string             `json:"status"`
+	Runtime           RuntimeIdentity    `json:"runtime"`
+	ProcessMode       domain.ProcessMode `json:"process_mode"`
+	ControlRevision   uint64             `json:"control_revision"`
+	EventHeadSequence uint64             `json:"event_head_sequence"`
+	StoreReachable    bool               `json:"store_reachable"`
 }
 
 // HealthProbe performs a read-only store touch for liveness.

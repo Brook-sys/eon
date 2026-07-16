@@ -153,6 +153,12 @@ func TestOperationInspectorCorrelatesCommitChain(t *testing.T) {
 	if len(detail.Proposed) != 1 || detail.Proposed[0].ID != proposed.ID {
 		t.Fatalf("proposed = %#v", detail.Proposed)
 	}
+	if len(detail.RawOutputs) != 1 || detail.RawOutputs[0].ID != raw.ID {
+		t.Fatalf("raw outputs = %#v", detail.RawOutputs)
+	}
+	if len(detail.Validations) != 1 || detail.Validations[0].ID != validation.ID {
+		t.Fatalf("validations = %#v", detail.Validations)
+	}
 	if len(detail.Events) == 0 {
 		t.Fatal("expected correlated events")
 	}

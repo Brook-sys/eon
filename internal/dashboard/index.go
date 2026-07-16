@@ -148,6 +148,39 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <h2>Perguntas pendentes</h2>
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
+    <section>
+      <h2>Inspetor de execução</h2>
+      <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem.</p>
+      <div class="row">
+        <label>tipo
+          <select id="inspKind">
+            <option value="operation">operation</option>
+            <option value="commit">commit</option>
+            <option value="command">command</option>
+          </select>
+        </label>
+        <label>id
+          <input id="inspId" placeholder="operation_... / commit_... / cmd_..." spellcheck="false" style="min-width:240px"/>
+        </label>
+        <button class="primary" type="button" id="btnInspLoad">Inspecionar</button>
+      </div>
+      <div class="tabs" id="inspTabs" hidden>
+        <button type="button" class="active" data-panel="summary">Resumo</button>
+        <button type="button" data-panel="lineage">Linhagem</button>
+        <button type="button" data-panel="changeset">ChangeSet</button>
+        <button type="button" data-panel="raw">Raw / validação</button>
+        <button type="button" data-panel="events">Eventos</button>
+        <button type="button" data-panel="json">JSON</button>
+      </div>
+      <div id="inspSummary" class="muted">informe um id e carregue</div>
+      <div id="inspLineage" class="prebox muted" hidden></div>
+      <div id="inspChangeset" class="prebox muted" hidden></div>
+      <div id="inspRaw" class="prebox muted" hidden></div>
+      <div id="inspEvents" class="prebox muted" hidden></div>
+      <div id="inspJSON" class="prebox muted" hidden></div>
+      <div class="okbox" id="inspOk"></div>
+      <div class="errbox" id="inspErr"></div>
+    </section>
   </div>
   <div>
     <section>
@@ -349,13 +382,22 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     if (m && Array.isArray(m.operations) && m.operations.length) {
       html += '<div class="list" style="margin-top:10px">';
       m.operations.slice(0, 20).forEach(function (op) {
-        html += '<div class="card"><div class="id">' + esc(op.operation_id) + "</div>"
+        const opId = op.operation_id || op.id || "";
+        html += '<div class="card"><div class="id">' + esc(opId) + "</div>"
           + "<div>state <strong>" + esc(op.state) + "</strong> attempt=" + esc(String(op.attempt||0)) + "</div>"
-          + '<div class="muted">inquiry ' + esc(op.inquiry_id||"") + " · spec " + esc(op.spec_id||"") + "</div></div>";
+          + '<div class="muted">inquiry ' + esc(op.inquiry_id||"") + " · spec " + esc(op.spec_id||"") + "</div>"
+          + '<div class="ops"><button type="button" data-inspect-op="' + esc(opId) + '">Inspecionar</button></div></div>';
       });
       html += "</div>";
     }
     el("overview").innerHTML = html;
+    el("overview").querySelectorAll("button[data-inspect-op]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        el("inspKind").value = "operation";
+        el("inspId").value = btn.getAttribute("data-inspect-op") || "";
+        loadInspector();
+      });
+    });
     el("clockMeta").textContent = "head=" + (o.event_head_sequence ?? "—");
   }
 
@@ -755,6 +797,196 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   }
 
+  function showInspPanel(name) {
+    const panels = {
+      summary: "inspSummary",
+      lineage: "inspLineage",
+      changeset: "inspChangeset",
+      raw: "inspRaw",
+      events: "inspEvents",
+      json: "inspJSON"
+    };
+    Object.keys(panels).forEach(function (key) {
+      const node = el(panels[key]);
+      if (!node) return;
+      node.hidden = key !== name;
+      if (key === "summary" && name !== "summary") {
+        // keep summary block visible only for summary tab; for others hide
+      }
+    });
+    // summary is a div, not always prebox; ensure visibility toggles work
+    el("inspSummary").hidden = name !== "summary";
+    el("inspTabs").querySelectorAll("button[data-panel]").forEach(function (btn) {
+      btn.className = btn.getAttribute("data-panel") === name ? "active" : "";
+    });
+  }
+
+  function renderInspector(kind, body) {
+    el("inspTabs").hidden = false;
+    el("inspJSON").textContent = pretty(body);
+    el("inspJSON").className = "prebox";
+
+    if (kind === "operation") {
+      const op = body.operation || {};
+      let sum = '<dl class="kv">';
+      sum += '<dt>operation</dt><dd>' + esc(op.id || op.operation_id || "") + "</dd>";
+      sum += '<dt>state</dt><dd class="status-' + esc(op.state || "") + '">' + esc(op.state || "—") + "</dd>";
+      sum += '<dt>attempt</dt><dd>' + esc(String(op.attempt || 0)) + "</dd>";
+      sum += '<dt>spec</dt><dd>' + esc(op.spec_id || (body.spec && body.spec.id) || "") + "</dd>";
+      sum += '<dt>inquiry</dt><dd>' + esc(op.inquiry_id || (body.inquiry && body.inquiry.id) || "") + "</dd>";
+      sum += '<dt>idempotency</dt><dd>' + esc(op.idempotency_key || "") + "</dd>";
+      sum += '<dt>commits</dt><dd>' + esc(String((body.commits || []).length)) + "</dd>";
+      sum += '<dt>raw_outputs</dt><dd>' + esc(String((body.raw_model_outputs || []).length)) + "</dd>";
+      sum += '<dt>validations</dt><dd>' + esc(String((body.validation_receipts || []).length)) + "</dd>";
+      if (body.redaction) {
+        sum += '<dt>redaction</dt><dd>applied=' + esc(String(!!body.redaction.applied))
+          + " secrets=" + esc(String(body.redaction.secret_matches || 0))
+          + " truncated_bytes=" + esc(String(body.redaction.truncated_bytes || 0)) + "</dd>";
+      }
+      sum += "</dl>";
+      if (Array.isArray(body.commits) && body.commits.length) {
+        sum += '<div class="ops" style="margin-top:8px">';
+        body.commits.forEach(function (c) {
+          sum += '<button type="button" data-inspect-commit="' + esc(c.id) + '">commit ' + esc(c.id) + "</button>";
+        });
+        sum += "</div>";
+      }
+      el("inspSummary").innerHTML = sum;
+      el("inspSummary").className = "";
+
+      let lineage = {
+        operation: op,
+        spec: body.spec || null,
+        inquiry: body.inquiry || null,
+        question: body.question || null,
+        idempotency: body.idempotency || null,
+        head_commit: body.head_commit || null
+      };
+      el("inspLineage").textContent = pretty(lineage);
+      el("inspLineage").className = "prebox";
+
+      el("inspChangeset").textContent = pretty({
+        proposed_change_sets: body.proposed_change_sets || [],
+        accepted_change_sets: body.accepted_change_sets || [],
+        commits: body.commits || [],
+        commit_receipts: body.commit_receipts || []
+      });
+      el("inspChangeset").className = "prebox";
+
+      el("inspRaw").textContent = pretty({
+        raw_model_outputs: body.raw_model_outputs || [],
+        validation_receipts: body.validation_receipts || [],
+        redaction: body.redaction || null
+      });
+      el("inspRaw").className = "prebox";
+
+      el("inspEvents").textContent = pretty(body.events || []);
+      el("inspEvents").className = "prebox";
+
+      el("inspSummary").querySelectorAll("button[data-inspect-commit]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("inspKind").value = "commit";
+          el("inspId").value = btn.getAttribute("data-inspect-commit") || "";
+          loadInspector();
+        });
+      });
+    } else if (kind === "commit") {
+      const c = body.commit || {};
+      let sum = '<dl class="kv">';
+      sum += '<dt>commit</dt><dd>' + esc(c.id || "") + "</dd>";
+      sum += '<dt>version</dt><dd>' + esc(String(c.version || "")) + "</dd>";
+      sum += '<dt>base</dt><dd>' + esc(c.base_commit_id || "") + "</dd>";
+      sum += '<dt>accepted</dt><dd>' + esc(c.accepted_change_set_id || "") + "</dd>";
+      sum += '<dt>mission_revision</dt><dd>' + esc(c.mission_revision_id || "") + "</dd>";
+      if (body.proposed_change_set && body.proposed_change_set.operation_id) {
+        sum += '<dt>operation</dt><dd>' + esc(body.proposed_change_set.operation_id) + "</dd>";
+      }
+      sum += "</dl>";
+      if (body.proposed_change_set && body.proposed_change_set.operation_id) {
+        sum += '<div class="ops"><button type="button" data-inspect-op="' + esc(body.proposed_change_set.operation_id) + '">Abrir operation</button></div>';
+      }
+      el("inspSummary").innerHTML = sum;
+      el("inspSummary").className = "";
+      el("inspLineage").textContent = pretty({
+        commit: c,
+        commit_receipt: body.commit_receipt || null,
+        accepted_change_set: body.accepted_change_set || null
+      });
+      el("inspLineage").className = "prebox";
+      el("inspChangeset").textContent = pretty({
+        proposed_change_set: body.proposed_change_set || null,
+        accepted_change_set: body.accepted_change_set || null
+      });
+      el("inspChangeset").className = "prebox";
+      el("inspRaw").textContent = pretty({ validation_receipts: body.validation_receipts || [] });
+      el("inspRaw").className = "prebox";
+      el("inspEvents").textContent = pretty(body.events || []);
+      el("inspEvents").className = "prebox";
+      el("inspSummary").querySelectorAll("button[data-inspect-op]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("inspKind").value = "operation";
+          el("inspId").value = btn.getAttribute("data-inspect-op") || "";
+          loadInspector();
+        });
+      });
+    } else {
+      // command
+      const cmd = body.command || {};
+      const receipt = body.receipt || {};
+      let sum = '<dl class="kv">';
+      sum += '<dt>command</dt><dd>' + esc(cmd.id || cmd.command_id || "") + "</dd>";
+      sum += '<dt>kind</dt><dd>' + esc(cmd.kind || "") + "</dd>";
+      sum += '<dt>receipt_state</dt><dd>' + esc(receipt.state || "") + "</dd>";
+      sum += '<dt>result_ref</dt><dd>' + esc(receipt.result_ref || "") + "</dd>";
+      sum += '<dt>failure</dt><dd>' + esc(receipt.failure_code || "—") + "</dd>";
+      sum += "</dl>";
+      el("inspSummary").innerHTML = sum;
+      el("inspSummary").className = "";
+      el("inspLineage").textContent = pretty({ command: cmd, receipt: receipt });
+      el("inspLineage").className = "prebox";
+      el("inspChangeset").textContent = pretty({ note: "commands do not produce knowledge changesets" });
+      el("inspChangeset").className = "prebox muted";
+      el("inspRaw").textContent = pretty({ note: "no model raw output on commands" });
+      el("inspRaw").className = "prebox muted";
+      el("inspEvents").textContent = pretty(body.events || []);
+      el("inspEvents").className = "prebox";
+    }
+    showInspPanel("summary");
+  }
+
+  async function loadInspector() {
+    el("inspOk").textContent = "";
+    el("inspErr").textContent = "";
+    const kind = el("inspKind").value;
+    const id = el("inspId").value.trim();
+    if (!id) {
+      el("inspErr").textContent = "id é obrigatório";
+      return;
+    }
+    let path = "";
+    if (kind === "operation") path = "/operations/" + encodeURIComponent(id);
+    else if (kind === "commit") path = "/commits/" + encodeURIComponent(id);
+    else if (kind === "command") path = "/commands/" + encodeURIComponent(id);
+    else {
+      el("inspErr").textContent = "tipo desconhecido";
+      return;
+    }
+    try {
+      const body = await getJSON(inspectBase + path);
+      renderInspector(kind, body);
+      el("inspOk").textContent = "carregado " + kind + " " + id;
+      // scroll inspector into view for operator workflow
+      el("inspSummary").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } catch (err) {
+      el("inspErr").textContent = String(err.message || err);
+    }
+  }
+
+  // Timeline click: if an event line contains known ids, prefill inspector.
+  el("timeline").addEventListener("click", function () {
+    /* selection-based optional; operators use explicit id fields */
+  });
+
   el("btnRefresh").addEventListener("click", refresh);
   el("btnConnect").addEventListener("click", connectStream);
   el("btnAnswer").addEventListener("click", submitAnswer);
@@ -766,6 +998,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnCfgFillDefault").addEventListener("click", fillDefaultPayload);
   el("cfgScope").addEventListener("change", function () { refreshConfig(true); });
   el("cfgStatus").addEventListener("change", function () { refreshConfig(true); });
+  el("btnInspLoad").addEventListener("click", loadInspector);
+  el("inspTabs").querySelectorAll("button[data-panel]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      showInspPanel(btn.getAttribute("data-panel") || "summary");
+    });
+  });
+  // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
   fillDefaultPayload();
   if (el("missionId").value.trim()) {
     refresh();

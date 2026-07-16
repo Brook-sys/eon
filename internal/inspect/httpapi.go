@@ -105,7 +105,11 @@ func (a *API) handleOperation(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, detail)
+	safe, report := RedactOperationDetail(detail)
+	writeJSON(w, http.StatusOK, OperationDetailResponse{
+		OperationDetail: safe,
+		Redaction:       report,
+	})
 }
 
 func (a *API) handleCommit(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +119,11 @@ func (a *API) handleCommit(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, detail)
+	safe, report := RedactCommitDetail(detail)
+	writeJSON(w, http.StatusOK, CommitDetailResponse{
+		CommitDetail: safe,
+		Redaction:    report,
+	})
 }
 
 func (a *API) handleCommand(w http.ResponseWriter, r *http.Request) {
