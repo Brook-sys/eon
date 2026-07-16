@@ -79,6 +79,8 @@ button {
 }
 button:hover { border-color: var(--accent); }
 button.primary { background: #1e4d73; border-color: var(--accent); }
+button.warn { background: #4a3a12; border-color: var(--warn); }
+button.danger { background: #4a2020; border-color: var(--err); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 10px; font-size: 13px; }
@@ -92,17 +94,22 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .card h3 { margin: 0 0 6px; font-size: 13px; }
 .card .id { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .ops { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.timeline {
+.timeline, .prebox {
   font-family: var(--mono); font-size: 11px; max-height: 420px;
   overflow: auto; white-space: pre-wrap; background: #0d1218;
   border: 1px solid var(--border); border-radius: 8px; padding: 8px;
 }
+.prebox { max-height: 220px; }
 .errbox { color: var(--err); font-size: 12px; margin-top: 8px; white-space: pre-wrap; }
-.okbox { color: var(--ok); font-size: 12px; margin-top: 8px; }
+.okbox { color: var(--ok); font-size: 12px; margin-top: 8px; white-space: pre-wrap; }
 .muted { color: var(--muted); }
-.status-RUNNING, .status-ACTIVE { color: var(--ok); }
-.status-PAUSED { color: var(--warn); }
-.status-STOPPED, .status-FAILED { color: var(--err); }
+.status-RUNNING, .status-ACTIVE, .status-VALIDATED, .status-APPLIED { color: var(--ok); }
+.status-PAUSED, .status-OPEN { color: var(--warn); }
+.status-STOPPED, .status-FAILED, .status-REJECTED { color: var(--err); }
+.full { grid-column: 1 / -1; }
+.hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tabs button.active { border-color: var(--accent); background: #1e4d73; }
 </style>
 </head>
 <body>
@@ -123,12 +130,19 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <button class="primary" id="btnRefresh" type="button">Atualizar</button>
         <button id="btnConnect" type="button">Conectar timeline</button>
       </div>
-      <p class="muted">Leituras via Control API. Mutações só por comandos/eventos tipados. Tokens e segredos nunca aparecem aqui.</p>
+      <p class="muted">Leituras via Control API. Mutações só por comandos/eventos tipados e drafts versionados. Tokens e segredos nunca aparecem aqui.</p>
       <div class="errbox" id="globalError"></div>
     </section>
     <section>
       <h2>Overview</h2>
       <div id="overview" class="muted">carregue uma missão</div>
+      <div class="ops" id="missionOps" style="margin-top:10px">
+        <button type="button" id="btnPause" class="warn">Pause dispatch</button>
+        <button type="button" id="btnResume" class="primary">Resume dispatch</button>
+        <button type="button" id="btnCancel" class="danger">Cancel mission</button>
+      </div>
+      <div class="okbox" id="cmdOk"></div>
+      <div class="errbox" id="cmdErr"></div>
     </section>
     <section>
       <h2>Perguntas pendentes</h2>
@@ -180,6 +194,69 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="answerErr"></div>
     </section>
   </div>
+  <section class="full">
+    <h2>Configuração versionada</h2>
+    <p class="hint">Draft → validate (preview/diff) → apply com recibo. Active revision por escopo. Segredos só por referência (não colar tokens).</p>
+    <div class="row">
+      <label>scope
+        <select id="cfgScope">
+          <option value="INTERRUPTION">INTERRUPTION</option>
+          <option value="HORIZON">HORIZON</option>
+          <option value="RUNTIME">RUNTIME</option>
+          <option value="SCHEDULER">SCHEDULER</option>
+          <option value="CHANNELS">CHANNELS</option>
+        </select>
+      </label>
+      <label>draft status filter
+        <select id="cfgStatus">
+          <option value="">(todos)</option>
+          <option value="OPEN">OPEN</option>
+          <option value="VALIDATED">VALIDATED</option>
+          <option value="APPLIED">APPLIED</option>
+          <option value="REJECTED">REJECTED</option>
+        </select>
+      </label>
+      <button type="button" id="btnCfgRefresh">Atualizar config</button>
+    </div>
+    <div class="grid2">
+      <div>
+        <h3 class="muted" style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Revisão ativa</h3>
+        <div id="cfgActive" class="prebox muted">não carregada</div>
+        <h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Drafts</h3>
+        <div id="cfgDrafts" class="list muted">nenhum</div>
+      </div>
+      <div>
+        <h3 class="muted" style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Novo draft</h3>
+        <div class="row">
+          <label>based_on_revision
+            <input id="cfgBasedOn" type="number" min="0" value="0"/>
+          </label>
+          <label>applicability
+            <select id="cfgApplicability">
+              <option value="">(default do escopo)</option>
+              <option value="HOT">HOT</option>
+              <option value="NEXT_CYCLE">NEXT_CYCLE</option>
+              <option value="RESTART_REQUIRED">RESTART_REQUIRED</option>
+            </select>
+          </label>
+        </div>
+        <label>reason
+          <input id="cfgReason" style="min-width:100%" placeholder="motivo do operador" spellcheck="true"/>
+        </label>
+        <label style="margin-top:8px">payload JSON do escopo (sem envelope)
+          <textarea id="cfgPayload" style="min-height:140px" placeholder='ex. INTERRUPTION: {"version":"interruption.v1","min_priority":20,...}'></textarea>
+        </label>
+        <div class="ops">
+          <button class="primary" type="button" id="btnCfgCreate">Criar draft</button>
+          <button type="button" id="btnCfgFillDefault">Preencher default</button>
+        </div>
+        <div class="okbox" id="cfgOk"></div>
+        <div class="errbox" id="cfgErr"></div>
+        <h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Detalhe / preview</h3>
+        <div id="cfgDetail" class="prebox muted">selecione um draft</div>
+      </div>
+    </div>
+  </section>
 </main>
 <script>
 (function () {
@@ -190,6 +267,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   const el = (id) => document.getElementById(id);
   let es = null;
   let lastSeq = 0;
+  let lastMissionRevision = null;
 
   function setError(msg) {
     el("globalError").textContent = msg || "";
@@ -198,6 +276,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     if (!v) return "—";
     try { return new Date(v).toISOString(); } catch { return String(v); }
   }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c];
+    });
+  }
+  function idem() {
+    return "dash_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+  function pretty(v) {
+    try { return JSON.stringify(v, null, 2); } catch { return String(v); }
+  }
+
   async function getJSON(url) {
     const res = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
     const text = await res.text();
@@ -230,6 +320,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   function renderOverview(o) {
     const m = o.mission;
+    lastMissionRevision = m && m.active_revision != null ? Number(m.active_revision) : null;
     let html = '<dl class="kv">';
     html += '<dt>runtime</dt><dd>' + esc((o.runtime && o.runtime.name) || "") + " " + esc((o.runtime && o.runtime.version) || "") + "</dd>";
     html += '<dt>process_mode</dt><dd class="status-' + esc(o.process_mode || "") + '">' + esc(o.process_mode || "—") + "</dd>";
@@ -268,12 +359,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     el("clockMeta").textContent = "head=" + (o.event_head_sequence ?? "—");
   }
 
-  function esc(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[c];
-    });
-  }
-
   function renderQuestions(items) {
     if (!items || !items.length) {
       el("questions").innerHTML = '<span class="muted">nenhuma pergunta no filtro atual</span>';
@@ -296,7 +381,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       btn.addEventListener("click", function () {
         el("answerQuestionId").value = btn.getAttribute("data-fill") || "";
         el("answerRevision").value = btn.getAttribute("data-rev") || "1";
-        el("answerIdem").value = "dash_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+        el("answerIdem").value = idem();
         el("answerBody").focus();
       });
     });
@@ -317,6 +402,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       } else {
         el("questions").innerHTML = '<span class="muted">informe mission_id</span>';
       }
+      await refreshConfig(false);
     } catch (err) {
       setError(String(err.message || err));
     }
@@ -378,7 +464,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     const qid = el("answerQuestionId").value.trim();
     const rev = Number(el("answerRevision").value || "0");
     const kind = el("answerKind").value;
-    const idem = el("answerIdem").value.trim() || ("dash_" + Date.now().toString(36));
+    const idk = el("answerIdem").value.trim() || idem();
     const bodyRaw = el("answerBody").value.trim();
     if (!qid || !rev) {
       el("answerErr").textContent = "question_id e expected_revision são obrigatórios";
@@ -386,7 +472,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
     const payload = {
       schema_version: 1,
-      idempotency_key: idem,
+      idempotency_key: idk,
       expected_question_revision: rev,
       kind: kind
     };
@@ -404,9 +490,283 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   }
 
+  async function submitMissionCommand(kind) {
+    el("cmdOk").textContent = "";
+    el("cmdErr").textContent = "";
+    const missionId = el("missionId").value.trim();
+    if (!missionId) {
+      el("cmdErr").textContent = "mission_id é obrigatório";
+      return;
+    }
+    if (lastMissionRevision == null || !(lastMissionRevision > 0)) {
+      el("cmdErr").textContent = "carregue o overview para obter active_revision";
+      return;
+    }
+    const reason = window.prompt("Motivo do comando " + kind + ":", kind.toLowerCase() + " via dashboard");
+    if (reason == null || !String(reason).trim()) {
+      el("cmdErr").textContent = "motivo cancelado";
+      return;
+    }
+    if (kind === "CANCEL_MISSION") {
+      const ok = window.confirm("Confirma CANCEL_MISSION para " + missionId + "?");
+      if (!ok) return;
+    }
+    try {
+      const res = await postJSON(controlBase + "/commands", {
+        schema_version: 1,
+        idempotency_key: idem(),
+        kind: kind,
+        target: { mission_id: missionId },
+        expected_revision: lastMissionRevision,
+        reason: String(reason).trim()
+      });
+      el("cmdOk").textContent = "command accepted id=" + (res.command_id||"") + " receipt=" + JSON.stringify(res.receipt||{});
+      await refresh();
+    } catch (err) {
+      el("cmdErr").textContent = String(err.message || err);
+    }
+  }
+
+  function defaultPayload(scope) {
+    switch (scope) {
+      case "INTERRUPTION":
+        return {
+          version: "interruption.v1",
+          min_priority: 20,
+          max_pending: 3,
+          max_delivered_per_window: 2,
+          max_admitted_per_window: 4,
+          window: 3600000000000,
+          cooldown: 21600000000000,
+          topic_cooldown: 86400000000000,
+          quiet_start_hour: 23,
+          quiet_end_hour: 7,
+          urgent_priority: 90,
+          min_alternatives_tried: 1,
+          suppress_safe_reversible_default: true
+        };
+      case "HORIZON":
+        return {
+          schema_version: 1,
+          version: "horizon.v1",
+          target_ready: 4,
+          low_watermark: 2,
+          max_ready: 8,
+          max_candidates: 64,
+          max_children: 4,
+          max_depth: 3,
+          strategy_cooldown: 300000000000
+        };
+      case "RUNTIME":
+        return {
+          version: "runtime.v1",
+          log_level: "info",
+          metrics_enabled: false,
+          trace_sample_per_mille: 0
+        };
+      case "SCHEDULER":
+        return {
+          version: "scheduler.v1",
+          min_idle_sleep: 50000000,
+          max_idle_sleep: 1000000000,
+          max_cycle_duration: 0,
+          max_dispatches_per_cycle: 4
+        };
+      case "CHANNELS":
+        return {
+          version: "channels.v1",
+          routes: [{
+            channel: "dashboard",
+            destination_ref: "operator_local",
+            enabled: true,
+            priority: 10,
+            credential_ref: { kind: "env", name: "NONE" },
+            max_deliveries_per_hour: 60
+          }]
+        };
+      default:
+        return {};
+    }
+  }
+
+  function fillDefaultPayload() {
+    const scope = el("cfgScope").value;
+    el("cfgPayload").value = pretty(defaultPayload(scope));
+    el("cfgReason").value = "operator draft for " + scope;
+  }
+
+  function renderDrafts(drafts) {
+    if (!drafts || !drafts.length) {
+      el("cfgDrafts").innerHTML = '<span class="muted">nenhum draft neste filtro</span>';
+      return;
+    }
+    let html = "";
+    drafts.forEach(function (d) {
+      html += '<div class="card">';
+      html += '<div class="id">' + esc(d.draft_id) + '</div>';
+      html += '<div><strong class="status-' + esc(d.status||"") + '">' + esc(d.status||"") + '</strong> · ' + esc(d.scope||"") + ' · app=' + esc(d.applicability||"") + '</div>';
+      html += '<div class="muted">based_on=' + esc(String(d.based_on_revision??0)) + ' · ' + esc(d.reason||"") + '</div>';
+      html += '<div class="ops">';
+      html += '<button type="button" data-draft="' + esc(d.draft_id) + '" data-act="detail">Detalhe</button>';
+      if (d.status === "OPEN") {
+        html += '<button type="button" data-draft="' + esc(d.draft_id) + '" data-act="validate">Validate</button>';
+      }
+      if (d.status === "VALIDATED") {
+        html += '<button class="primary" type="button" data-draft="' + esc(d.draft_id) + '" data-act="apply">Apply</button>';
+      }
+      if (d.status === "APPLIED") {
+        html += '<button type="button" data-draft="' + esc(d.draft_id) + '" data-act="receipt">Receipt</button>';
+      }
+      html += '</div></div>';
+    });
+    el("cfgDrafts").innerHTML = html;
+    el("cfgDrafts").querySelectorAll("button[data-draft]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const id = btn.getAttribute("data-draft");
+        const act = btn.getAttribute("data-act");
+        if (act === "detail") loadDraftDetail(id);
+        else if (act === "validate") validateDraft(id);
+        else if (act === "apply") applyDraft(id);
+        else if (act === "receipt") loadReceipt(id);
+      });
+    });
+  }
+
+  async function refreshConfig(showErrors) {
+    el("cfgOk").textContent = "";
+    if (showErrors) el("cfgErr").textContent = "";
+    const scope = el("cfgScope").value;
+    const status = el("cfgStatus").value;
+    try {
+      try {
+        const active = await getJSON(controlBase + "/config/revisions/active?scope=" + encodeURIComponent(scope));
+        el("cfgActive").textContent = pretty(active.revision || active);
+        el("cfgActive").className = "prebox";
+        if (active.revision && active.revision.revision != null) {
+          el("cfgBasedOn").value = String(active.revision.revision);
+        }
+      } catch (err) {
+        el("cfgActive").textContent = "sem revisão ativa: " + String(err.message || err);
+        el("cfgActive").className = "prebox muted";
+      }
+      let listURL = controlBase + "/config/drafts?scope=" + encodeURIComponent(scope);
+      if (status) listURL += "&status=" + encodeURIComponent(status);
+      const listed = await getJSON(listURL);
+      renderDrafts(listed.drafts || []);
+    } catch (err) {
+      if (showErrors !== false) el("cfgErr").textContent = String(err.message || err);
+      else el("cfgDrafts").innerHTML = '<span class="muted">config indisponível: ' + esc(String(err.message || err)) + '</span>';
+    }
+  }
+
+  async function loadDraftDetail(id) {
+    el("cfgErr").textContent = "";
+    try {
+      const body = await getJSON(controlBase + "/config/drafts/" + encodeURIComponent(id));
+      el("cfgDetail").textContent = pretty(body);
+      el("cfgDetail").className = "prebox";
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function validateDraft(id) {
+    el("cfgOk").textContent = "";
+    el("cfgErr").textContent = "";
+    try {
+      const body = await postJSON(controlBase + "/config/drafts/" + encodeURIComponent(id) + "/validate", {});
+      el("cfgDetail").textContent = pretty(body);
+      el("cfgDetail").className = "prebox";
+      el("cfgOk").textContent = "validated draft=" + id + " blocked=" + String(!!(body.preview && body.preview.blocked));
+      await refreshConfig(true);
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function applyDraft(id) {
+    el("cfgOk").textContent = "";
+    el("cfgErr").textContent = "";
+    if (!window.confirm("Aplicar draft " + id + " como revisão imutável?")) return;
+    try {
+      const body = await postJSON(controlBase + "/config/drafts/" + encodeURIComponent(id) + "/apply", {});
+      el("cfgDetail").textContent = pretty(body);
+      el("cfgDetail").className = "prebox";
+      el("cfgOk").textContent = "applied revision=" + ((body.revision && body.revision.revision_id) || "") + " receipt=" + ((body.receipt && body.receipt.state) || "");
+      await refreshConfig(true);
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadReceipt(id) {
+    el("cfgErr").textContent = "";
+    try {
+      const body = await getJSON(controlBase + "/config/drafts/" + encodeURIComponent(id) + "/receipt");
+      el("cfgDetail").textContent = pretty(body);
+      el("cfgDetail").className = "prebox";
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function createDraft() {
+    el("cfgOk").textContent = "";
+    el("cfgErr").textContent = "";
+    const scope = el("cfgScope").value;
+    const reason = el("cfgReason").value.trim();
+    const basedOn = Number(el("cfgBasedOn").value || "0");
+    const applicability = el("cfgApplicability").value;
+    let payload;
+    try {
+      payload = JSON.parse(el("cfgPayload").value || "{}");
+    } catch (err) {
+      el("cfgErr").textContent = "payload JSON inválido: " + String(err.message || err);
+      return;
+    }
+    if (!reason) {
+      el("cfgErr").textContent = "reason é obrigatório";
+      return;
+    }
+    const body = {
+      schema_version: 1,
+      scope: scope,
+      based_on_revision: basedOn,
+      reason: reason
+    };
+    if (applicability) body.applicability = applicability;
+    if (scope === "INTERRUPTION") body.interruption = payload;
+    else if (scope === "HORIZON") body.horizon = payload;
+    else if (scope === "RUNTIME") body.runtime = payload;
+    else if (scope === "SCHEDULER") body.scheduler = payload;
+    else if (scope === "CHANNELS") body.channels = payload;
+    else {
+      el("cfgErr").textContent = "escopo desconhecido";
+      return;
+    }
+    try {
+      const res = await postJSON(controlBase + "/config/drafts", body);
+      el("cfgOk").textContent = "draft criado " + ((res.draft && res.draft.draft_id) || "") + " status=" + ((res.draft && res.draft.status) || "");
+      el("cfgDetail").textContent = pretty(res);
+      el("cfgDetail").className = "prebox";
+      await refreshConfig(true);
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    }
+  }
+
   el("btnRefresh").addEventListener("click", refresh);
   el("btnConnect").addEventListener("click", connectStream);
   el("btnAnswer").addEventListener("click", submitAnswer);
+  el("btnPause").addEventListener("click", function () { submitMissionCommand("PAUSE_MISSION"); });
+  el("btnResume").addEventListener("click", function () { submitMissionCommand("RESUME_MISSION"); });
+  el("btnCancel").addEventListener("click", function () { submitMissionCommand("CANCEL_MISSION"); });
+  el("btnCfgRefresh").addEventListener("click", function () { refreshConfig(true); });
+  el("btnCfgCreate").addEventListener("click", createDraft);
+  el("btnCfgFillDefault").addEventListener("click", fillDefaultPayload);
+  el("cfgScope").addEventListener("change", function () { refreshConfig(true); });
+  el("cfgStatus").addEventListener("change", function () { refreshConfig(true); });
+  fillDefaultPayload();
   if (el("missionId").value.trim()) {
     refresh();
   }

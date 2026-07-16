@@ -451,7 +451,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - pipeline `draft → validate → impact preview → apply → receipt` com aplicabilidade `HOT|NEXT_CYCLE|RESTART_REQUIRED|IMMUTABLE` — implementado em `domain` e `kernel.ConfigApplier`;
 - validação, diff determinístico (redação de secret refs) e preview de impacto — implementados;
 - portas `ConfigReader`/`ConfigWriter`, store em memória + checkpoint gob (SQLite/Dolt via payload), receipts monotônicos e ponteiro ativo por escopo — implementados;
-- residual: projeção no scheduler/question-gate a partir do active revision, HTTP admin de drafts, rollback semântico (re-apply de revisão ancestral) e UI.
+- residual: rollback semântico (re-apply de revisão ancestral). Projeção no scheduler/question-gate, HTTP admin de drafts e UI experimental de drafts já implementados.
 
 ### Slice D — dashboard web
 
@@ -463,7 +463,7 @@ Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, s
 - caixa de perguntas pendentes (`GET /api/control/questions`) e formulário correlacionado (`POST .../answers`);
 - montagem de inspect/control sob `/api/*` sem escrita canônica direta da UI.
 
-Residual: inspetor rico de operation/commit/command, tela de configuração (drafts), conhecimento/artifacts e redaction fina.
+Residual: inspetor rico de operation/commit/command, conhecimento/artifacts e redaction fina. Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental.
 
 ### Outbox de entrega de perguntas
 

@@ -14,6 +14,7 @@ import (
 	"motor-autonomo/internal/dashboard"
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/inspect"
+	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
@@ -66,6 +67,12 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	applier, err := kernel.NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlAPI.ConfigValidate = applier
+	controlAPI.ConfigApply = applier
 	ui, err := dashboard.New(inspectAPI.Handler(), controlAPI.Handler())
 	if err != nil {
 		t.Fatal(err)
@@ -90,6 +97,17 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	}
 	if !strings.Contains(html, "mission_1") {
 		t.Fatal("default mission not prefilled")
+	}
+	for _, marker := range []string{
+		"Configuração versionada",
+		"/config/drafts",
+		"PAUSE_MISSION",
+		"btnCfgCreate",
+		"credential_ref",
+	} {
+		if !strings.Contains(html, marker) {
+			t.Fatalf("index missing marker %q", marker)
+		}
 	}
 
 	// Inspect proxied.
@@ -117,6 +135,51 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	defer q.Body.Close()
 	if q.StatusCode != http.StatusOK {
 		t.Fatalf("questions status = %d", q.StatusCode)
+	}
+
+	// Config drafts list/create proxied through the dashboard mount.
+	list, err := http.Get(server.URL + "/api/control/config/drafts?scope=INTERRUPTION")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer list.Body.Close()
+	if list.StatusCode != http.StatusOK {
+		t.Fatalf("config drafts status = %d", list.StatusCode)
+	}
+	policy := domain.DefaultInterruptionRuntimePolicy()
+	policy.MaxPending = 7
+	createBody, _ := json.Marshal(map[string]any{
+		"schema_version": 1,
+		"scope":          "INTERRUPTION",
+		"reason":         "dashboard proxy draft",
+		"interruption":   policy,
+	})
+	created, err := http.Post(server.URL+"/api/control/config/drafts", "application/json", strings.NewReader(string(createBody)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer created.Body.Close()
+	if created.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(created.Body)
+		t.Fatalf("create draft status = %d body=%s", created.StatusCode, body)
+	}
+	var createResp struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	if err := json.NewDecoder(created.Body).Decode(&createResp); err != nil {
+		t.Fatal(err)
+	}
+	if createResp.Draft.ID == "" || createResp.Draft.Status != domain.ConfigDraftOpen {
+		t.Fatalf("create draft = %#v", createResp.Draft)
+	}
+	validated, err := http.Post(server.URL+"/api/control/config/drafts/"+string(createResp.Draft.ID)+"/validate", "application/json", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer validated.Body.Close()
+	if validated.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(validated.Body)
+		t.Fatalf("validate draft status = %d body=%s", validated.StatusCode, body)
 	}
 
 	// SSE route is reachable through the dashboard mount.
