@@ -25,5 +25,7 @@ type (
 	FailureID          string
 	EventID            string
 	ReceiptID          string
+	CommandID          string
+	ExternalEventID    string
 	IdempotencyKey     string
 )
