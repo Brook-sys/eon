@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,6 +72,27 @@ func TestSendQuestionUsesOpaqueInlineCallbacksAndDoesNotLeakToken(t *testing.T) 
 	}
 }
 
+func TestSendQuestionResolvesReminderDestinationMarker(t *testing.T) {
+	var gotChat int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req sendMessageRequest
+		_ = json.Unmarshal(body, &req)
+		gotChat = req.ChatID
+		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":99}}`))
+	}))
+	defer server.Close()
+	adapter := testAdapter(t, server)
+	now := time.Date(2026, 7, 16, 7, 0, 0, 0, time.UTC)
+	id, err := adapter.SendQuestion(context.Background(), domain.ReminderDestinationRef("operator_primary", 1), testQuestion(now))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id != "99" || gotChat != 100 {
+		t.Fatalf("id=%s chat=%d", id, gotChat)
+	}
+}
+
 func TestExternalAnswerRequiresAllowlistAndDurableMessageBinding(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	defer server.Close()
@@ -98,6 +120,54 @@ func TestExternalAnswerRequiresAllowlistAndDurableMessageBinding(t *testing.T) {
 	update.CallbackQuery.Message.MessageID, update.CallbackQuery.From.ID = 42, 8
 	if _, err := adapter.ExternalAnswer(update, question, delivery, source.NewSequenceIDGenerator(30), now.Add(time.Minute)); !isKind(err, ErrorUnauthorized) {
 		t.Fatalf("unauthorized error = %v", err)
+	}
+}
+
+func TestIngestUpdateResolvesDeliveryByTransport(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer server.Close()
+	adapter := testAdapter(t, server)
+	now := time.Date(2026, 7, 16, 7, 0, 0, 0, time.UTC)
+	store := memory.New()
+	question := testQuestion(now)
+	delivery := domain.QuestionDelivery{
+		SchemaVersion: 1, ID: "delivery_ingest_1", QuestionID: question.ID, QuestionRevision: 1,
+		Channel: ChannelName, DestinationRef: domain.ReminderDestinationRef("operator_primary", 2),
+		Status: domain.QuestionDeliveryPending, MaxAttempts: 3, AvailableAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		mission := domain.MissionRevision{SchemaVersion: 1, ID: question.MissionRevision, MissionID: question.MissionID, Revision: 1, OriginalText: "test mission", Purpose: "test", Status: domain.MissionActive, Provenance: "test", AcceptedAt: now}
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		if err := tx.CreateOperatorQuestion(question); err != nil {
+			return err
+		}
+		if err := tx.CreateQuestionDelivery(delivery); err != nil {
+			return err
+		}
+		leased, err := domain.LeaseQuestionDelivery(delivery, "worker", now, now.Add(time.Minute))
+		if err != nil {
+			return err
+		}
+		if err := tx.SaveQuestionDelivery(leased, delivery.Status, delivery.Attempt); err != nil {
+			return err
+		}
+		completed, err := domain.CompleteQuestionDelivery(leased, "worker", "42", now.Add(time.Second))
+		if err != nil {
+			return err
+		}
+		return tx.SaveQuestionDelivery(completed, leased.Status, leased.Attempt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	update := Update{UpdateID: 11, CallbackQuery: &CallbackQuery{ID: "cb_ingest", From: User{ID: 7}, Message: &Message{MessageID: 42, Chat: Chat{ID: 100}}, Data: "o:0"}}
+	event, err := adapter.IngestUpdate(context.Background(), store, update, source.NewSequenceIDGenerator(1), now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.CorrelationID != string(question.ID) {
+		t.Fatalf("event = %#v", event)
 	}
 }
 

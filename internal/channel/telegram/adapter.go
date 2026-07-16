@@ -159,7 +159,10 @@ func (a *Adapter) SendQuestion(ctx context.Context, destinationRef string, quest
 	if err := question.Validate(); err != nil {
 		return "", fmt.Errorf("validate Telegram question: %w", err)
 	}
-	chatID, ok := a.destinations[destinationRef]
+	// Reminder outbox routes use DestinationRef "primary#reminder:N"; map them
+	// back to the operator chat without inventing a second destination registry.
+	primary := domain.PrimaryDestinationRef(destinationRef)
+	chatID, ok := a.destinations[primary]
 	if !ok {
 		return "", &Error{Kind: ErrorInvalidConfig}
 	}
@@ -234,6 +237,38 @@ type DeliveryWorker struct {
 	Owner         string
 	LeaseDuration time.Duration
 	RetryDelay    time.Duration
+}
+
+// IngestUpdate binds one decoded update to a durable delivered outbox row via
+// transport message id, then converts it to an untrusted ExternalEvent.
+// The caller owns inbox submission; this method never mutates domain authority.
+func (a *Adapter) IngestUpdate(ctx context.Context, store port.Store, update Update, ids source.IDGenerator, receivedAt time.Time) (domain.ExternalEvent, error) {
+	if a == nil || store == nil || ids == nil {
+		return domain.ExternalEvent{}, errors.New("telegram ingest requires adapter, store, and IDs")
+	}
+	boundID := BoundTransportMessageID(update)
+	if boundID == 0 {
+		return domain.ExternalEvent{}, &Error{Kind: ErrorUncorrelated}
+	}
+	transportKey := strconv.FormatInt(boundID, 10)
+	var delivery domain.QuestionDelivery
+	var question domain.OperatorQuestion
+	err := store.View(ctx, func(r port.Reader) error {
+		var err error
+		delivery, err = r.QuestionDeliveryByTransport(ChannelName, transportKey)
+		if err != nil {
+			return err
+		}
+		question, err = r.OperatorQuestion(delivery.QuestionID)
+		return err
+	})
+	if err != nil {
+		if errors.Is(err, port.ErrNotFound) {
+			return domain.ExternalEvent{}, &Error{Kind: ErrorUncorrelated}
+		}
+		return domain.ExternalEvent{}, err
+	}
+	return a.ExternalAnswer(update, question, delivery, ids, receivedAt)
 }
 
 func (w *DeliveryWorker) ProcessDue(ctx context.Context, limit int) (int, error) {

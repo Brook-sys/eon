@@ -111,3 +111,49 @@ func ResolveHorizonPolicy(ctx context.Context, store port.Store, explicit domain
 	}
 	return ActiveHorizonPolicy(ctx, store)
 }
+
+// ActiveReminderPolicy projects the active interruption policy's reminder
+// section (or the built-in default, which disables reminders).
+func ActiveReminderPolicy(ctx context.Context, store port.Store) (domain.ReminderPolicy, error) {
+	gate, _, err := ActiveQuestionGatePolicy(ctx, store)
+	if err != nil {
+		return domain.ReminderPolicy{}, err
+	}
+	return gate.Reminder, gate.Reminder.Validate()
+}
+
+// ActiveChannelRoutes loads enabled CHANNELS routes as question outbox routes.
+// When no CHANNELS revision exists, returns an empty slice (no channel delivery).
+func ActiveChannelRoutes(ctx context.Context, store port.Store, defaultMaxAttempts uint32) ([]QuestionRoute, error) {
+	if store == nil {
+		return nil, errors.New("active channel routes require store")
+	}
+	if defaultMaxAttempts == 0 {
+		defaultMaxAttempts = 3
+	}
+	var routes []QuestionRoute
+	err := store.View(ctx, func(r port.Reader) error {
+		revision, err := r.ActiveConfigRevision(domain.ConfigScopeChannels)
+		if errors.Is(err, port.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if revision.Channels == nil {
+			return fmt.Errorf("active channels revision %s has no payload", revision.ID)
+		}
+		for _, route := range revision.Channels.Routes {
+			if !route.Enabled {
+				continue
+			}
+			routes = append(routes, QuestionRoute{
+				Channel:        route.Channel,
+				DestinationRef: route.DestinationRef,
+				MaxAttempts:    defaultMaxAttempts,
+			})
+		}
+		return nil
+	})
+	return routes, err
+}

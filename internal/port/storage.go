@@ -58,6 +58,10 @@ type OperatorQuestionReader interface {
 	UserAnswerByTransport(channel, transportEventID string) (domain.UserAnswer, error)
 	QuestionDelivery(domain.QuestionDeliveryID) (domain.QuestionDelivery, error)
 	QuestionDeliveries(domain.OperatorQuestionID) ([]domain.QuestionDelivery, error)
+	// QuestionDeliveryByTransport resolves a delivered outbox row by channel and
+	// transport message id. Used by non-authoritative adapters to bind inbound
+	// replies/callbacks to the durable question delivery without scanning all rows.
+	QuestionDeliveryByTransport(channel, transportMessageID string) (domain.QuestionDelivery, error)
 	DueQuestionDeliveries(time.Time, int) ([]domain.QuestionDelivery, error)
 	QuestionGateDecision(domain.QuestionGateDecisionID) (domain.QuestionGateDecisionRecord, error)
 	QuestionGateDecisionByQuestion(domain.OperatorQuestionID) (domain.QuestionGateDecisionRecord, error)

@@ -140,10 +140,10 @@ func (p ReminderPolicy) Validate() error {
 // QuestionReminderPlan is a pure scheduling result. Adapters create outbox
 // work only when Due is true; the plan never mutates canonical state.
 type QuestionReminderPlan struct {
-	Due          bool      `json:"due"`
-	ReminderIndex uint32   `json:"reminder_index,omitempty"`
-	AvailableAt  time.Time `json:"available_at,omitempty"`
-	StopReason   string    `json:"stop_reason,omitempty"`
+	Due           bool      `json:"due"`
+	ReminderIndex uint32    `json:"reminder_index,omitempty"`
+	AvailableAt   time.Time `json:"available_at,omitempty"`
+	StopReason    string    `json:"stop_reason,omitempty"`
 }
 
 // PlanQuestionReminder decides whether an unanswered delivered question may
@@ -191,4 +191,15 @@ func PlanQuestionReminder(question OperatorQuestion, deliveredAt time.Time, prio
 // colliding with the primary delivery route key.
 func ReminderDestinationRef(primary string, reminderIndex uint32) string {
 	return fmt.Sprintf("%s#reminder:%d", primary, reminderIndex)
+}
+
+// PrimaryDestinationRef strips a trailing #reminder:N marker so channel
+// adapters can resolve the operator destination for both primary and reminder
+// deliveries. Empty input or a bare marker yields an empty string.
+func PrimaryDestinationRef(destination string) string {
+	const marker = "#reminder:"
+	if i := strings.Index(destination, marker); i >= 0 {
+		return destination[:i]
+	}
+	return destination
 }

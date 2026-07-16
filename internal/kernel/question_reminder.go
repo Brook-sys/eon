@@ -39,6 +39,51 @@ func NewQuestionReminderProcessor(store port.Store, clock source.Clock, ids sour
 	return &QuestionReminderProcessor{Store: store, Clock: clock, IDs: ids, Policy: policy, Routes: append([]QuestionRoute(nil), routes...)}, nil
 }
 
+// ScheduleOpenForMission scans non-terminal operator questions for a mission
+// and schedules authorized reminders. Returns how many questions produced a
+// Due plan (not necessarily how many outbox rows were created).
+func (p *QuestionReminderProcessor) ScheduleOpenForMission(ctx context.Context, missionID domain.MissionID, limit int) (int, error) {
+	if p == nil {
+		return 0, errors.New("question reminder processor is nil")
+	}
+	if missionID == "" || limit <= 0 {
+		return 0, errors.New("reminder mission scan requires mission and positive limit")
+	}
+	if !p.Policy.Enabled || len(p.Routes) == 0 {
+		return 0, nil
+	}
+	var open []domain.OperatorQuestion
+	err := p.Store.View(ctx, func(r port.Reader) error {
+		pending, err := r.OperatorQuestions(missionID, domain.OperatorQuestionPending)
+		if err != nil {
+			return err
+		}
+		clarifying, err := r.OperatorQuestions(missionID, domain.OperatorQuestionClarificationRequested)
+		if err != nil {
+			return err
+		}
+		open = append(pending, clarifying...)
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	scheduled := 0
+	for _, question := range open {
+		if scheduled >= limit {
+			break
+		}
+		plan, err := p.ScheduleDue(ctx, question.ID)
+		if err != nil {
+			return scheduled, err
+		}
+		if plan.Due {
+			scheduled++
+		}
+	}
+	return scheduled, nil
+}
+
 // ScheduleDue creates pending reminder deliveries for one question when policy
 // and durable observations authorize them. Returns the plan used; zero or more
 // deliveries may be created (one per route).

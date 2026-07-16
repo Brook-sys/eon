@@ -487,7 +487,7 @@ Implementado no adapter `internal/channel/telegram`:
 - correlação pelo vínculo durável da entrega `chat_id + message_id → question_id/revision`;
 - respostas tardias, expiradas e concorrentes fecham de forma segura na validação canônica do kernel; mensagens sem reply/callback inequívoco são recusadas como não correlacionadas.
 
-Residual operacional: selecionar polling ou webhook validado no bootstrap configurável do runtime e implementar resposta de UX para updates recusados/ambíguos; isso não altera o domínio nem concede autoridade ao canal.
+Residual operacional: o bootstrap do runtime já executa outbox (`DeliveryWorker.ProcessDue`) e lembretes no `ProcessCycle`, e o adapter expõe `IngestUpdate` com lookup por `QuestionDeliveryByTransport` + `PrimaryDestinationRef` para rotas `#reminder:N`. Ainda falta selecionar polling ou webhook validado no processo e implementar resposta de UX para updates recusados/ambíguos; isso não altera o domínio nem concede autoridade ao canal.
 
 ### Slice F — interoperabilidade
 

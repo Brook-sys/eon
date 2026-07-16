@@ -84,4 +84,13 @@ func TestPlanQuestionReminderStopsAndSchedules(t *testing.T) {
 	if ReminderDestinationRef("operator_primary", 1) != "operator_primary#reminder:1" {
 		t.Fatal("reminder destination ref")
 	}
+	if PrimaryDestinationRef("operator_primary#reminder:1") != "operator_primary" {
+		t.Fatal("primary destination strips reminder marker")
+	}
+	if PrimaryDestinationRef("operator_primary") != "operator_primary" {
+		t.Fatal("primary destination preserves plain ref")
+	}
+	if PrimaryDestinationRef("#reminder:2") != "" {
+		t.Fatal("bare reminder marker has empty primary")
+	}
 }

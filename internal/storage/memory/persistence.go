@@ -21,6 +21,7 @@ type persistedState struct {
 	AnswerByTransport         map[string]domain.OperatorAnswerID
 	QuestionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
 	DeliveryByRoute           map[string]domain.QuestionDeliveryID
+	DeliveryByTransport       map[string]domain.QuestionDeliveryID
 	QuestionGateDecisions     map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
 	GateDecisionByQuestion    map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
 	Candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
@@ -72,6 +73,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		OperationSpecs: cloned.operationSpecs, Questions: cloned.questions, OperatorQuestions: cloned.operatorQuestions,
 		OperatorAnswers: cloned.operatorAnswers, AnswerByTransport: cloned.answerByTransport,
 		QuestionDeliveries: cloned.questionDeliveries, DeliveryByRoute: cloned.deliveryByRoute,
+		DeliveryByTransport:   cloned.deliveryByTransport,
 		QuestionGateDecisions: cloned.questionGateDecisions, GateDecisionByQuestion: cloned.gateDecisionByQuestion,
 		Candidates: cloned.candidates, Inquiries: cloned.inquiries, Operations: cloned.operations,
 		Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
@@ -87,8 +89,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ExternalEvents:          cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
 		ExternalEventDispositions: cloned.externalEventDispositions,
 		WorkOpportunities:         cloned.workOpportunities, ContinuityDiagnoses: cloned.continuityDiagnoses,
-		ConfigDrafts:              cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
-		ActiveConfig:              cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
+		ConfigDrafts: cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
+		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
@@ -113,6 +115,16 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.answerByTransport = nonNil(p.AnswerByTransport, base.answerByTransport)
 	base.questionDeliveries = nonNil(p.QuestionDeliveries, base.questionDeliveries)
 	base.deliveryByRoute = nonNil(p.DeliveryByRoute, base.deliveryByRoute)
+	base.deliveryByTransport = nonNil(p.DeliveryByTransport, base.deliveryByTransport)
+	// Older checkpoints may omit the transport index; rebuild from delivered rows.
+	if len(base.deliveryByTransport) == 0 && len(base.questionDeliveries) > 0 {
+		for id, delivery := range base.questionDeliveries {
+			if delivery.TransportMessageID == "" {
+				continue
+			}
+			base.deliveryByTransport[deliveryTransportKey(delivery.Channel, delivery.TransportMessageID)] = id
+		}
+	}
 	base.questionGateDecisions = nonNil(p.QuestionGateDecisions, base.questionGateDecisions)
 	base.gateDecisionByQuestion = nonNil(p.GateDecisionByQuestion, base.gateDecisionByQuestion)
 	base.candidates = nonNil(p.Candidates, base.candidates)

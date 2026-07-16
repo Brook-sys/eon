@@ -62,6 +62,18 @@ func DecodeUpdate(data []byte) (Update, error) {
 	return update, nil
 }
 
+// BoundTransportMessageID returns the durable bot message_id an inbound update
+// claims to answer (callback message or reply_to_message). Zero means unbound.
+func BoundTransportMessageID(update Update) int64 {
+	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
+		return update.CallbackQuery.Message.MessageID
+	}
+	if update.Message != nil && update.Message.ReplyToMessage != nil {
+		return update.Message.ReplyToMessage.MessageID
+	}
+	return 0
+}
+
 // ExternalAnswer converts one allowlisted, explicitly correlated Telegram
 // update into an untrusted USER_ANSWER event. The supplied delivery is the
 // durable server-side message binding; callback_data contains only an action.
@@ -78,7 +90,9 @@ func (a *Adapter) ExternalAnswer(update Update, question domain.OperatorQuestion
 	if delivery.Channel != ChannelName || delivery.Status != domain.QuestionDeliveryDelivered || delivery.QuestionID != question.ID || delivery.QuestionRevision != question.Revision {
 		return domain.ExternalEvent{}, &Error{Kind: ErrorUncorrelated}
 	}
-	expectedChat, ok := a.destinations[delivery.DestinationRef]
+	// Reminder routes use primary#reminder:N; resolve the configured chat via primary.
+	primary := domain.PrimaryDestinationRef(delivery.DestinationRef)
+	expectedChat, ok := a.destinations[primary]
 	if !ok {
 		return domain.ExternalEvent{}, &Error{Kind: ErrorInvalidConfig}
 	}

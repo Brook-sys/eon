@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,7 @@ type state struct {
 	answerByTransport         map[string]domain.OperatorAnswerID
 	questionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
 	deliveryByRoute           map[string]domain.QuestionDeliveryID
+	deliveryByTransport       map[string]domain.QuestionDeliveryID
 	questionGateDecisions     map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
 	gateDecisionByQuestion    map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
 	candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
@@ -84,6 +86,7 @@ func newState() state {
 		answerByTransport:         make(map[string]domain.OperatorAnswerID),
 		questionDeliveries:        make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
 		deliveryByRoute:           make(map[string]domain.QuestionDeliveryID),
+		deliveryByTransport:       make(map[string]domain.QuestionDeliveryID),
 		questionGateDecisions:     make(map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord),
 		gateDecisionByQuestion:    make(map[domain.OperatorQuestionID]domain.QuestionGateDecisionID),
 		candidates:                make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
@@ -185,6 +188,9 @@ func (t transaction) QuestionDelivery(id domain.QuestionDeliveryID) (domain.Ques
 }
 func (t transaction) QuestionDeliveries(id domain.OperatorQuestionID) ([]domain.QuestionDelivery, error) {
 	return reader(t).QuestionDeliveries(id)
+}
+func (t transaction) QuestionDeliveryByTransport(channel, transportMessageID string) (domain.QuestionDelivery, error) {
+	return reader(t).QuestionDeliveryByTransport(channel, transportMessageID)
 }
 func (t transaction) DueQuestionDeliveries(now time.Time, limit int) ([]domain.QuestionDelivery, error) {
 	return reader(t).DueQuestionDeliveries(now, limit)
@@ -415,6 +421,16 @@ func (r reader) QuestionDeliveries(questionID domain.OperatorQuestionID) ([]doma
 		return result[i].CreatedAt.Before(result[j].CreatedAt)
 	})
 	return result, nil
+}
+func (r reader) QuestionDeliveryByTransport(channel, transportMessageID string) (domain.QuestionDelivery, error) {
+	if strings.TrimSpace(channel) == "" || strings.TrimSpace(transportMessageID) == "" {
+		return domain.QuestionDelivery{}, fmt.Errorf("question delivery transport lookup requires channel and message id")
+	}
+	id, ok := r.state.deliveryByTransport[deliveryTransportKey(channel, transportMessageID)]
+	if !ok {
+		return domain.QuestionDelivery{}, notFound("question delivery transport", deliveryTransportKey(channel, transportMessageID))
+	}
+	return r.QuestionDelivery(id)
 }
 func (r reader) DueQuestionDeliveries(now time.Time, limit int) ([]domain.QuestionDelivery, error) {
 	if now.IsZero() || limit <= 0 {
@@ -1067,6 +1083,16 @@ func (t transaction) SaveQuestionDelivery(v domain.QuestionDelivery, expectedSta
 		if question.Revision != v.QuestionRevision || question.Status.Terminal() {
 			return fmt.Errorf("%w: cannot lease delivery for stale or terminal operator question", port.ErrConflict)
 		}
+	}
+	if current.TransportMessageID != "" && current.TransportMessageID != v.TransportMessageID {
+		delete(t.state.deliveryByTransport, deliveryTransportKey(current.Channel, current.TransportMessageID))
+	}
+	if v.TransportMessageID != "" {
+		key := deliveryTransportKey(v.Channel, v.TransportMessageID)
+		if owner, exists := t.state.deliveryByTransport[key]; exists && owner != v.ID {
+			return fmt.Errorf("%w: question delivery transport already bound", port.ErrConflict)
+		}
+		t.state.deliveryByTransport[key] = v.ID
 	}
 	t.state.questionDeliveries[v.ID] = v
 	return nil
@@ -1968,6 +1994,9 @@ func cloneState(src state) state {
 	for k, v := range src.deliveryByRoute {
 		dst.deliveryByRoute[k] = v
 	}
+	for k, v := range src.deliveryByTransport {
+		dst.deliveryByTransport[k] = v
+	}
 	for k, v := range src.questionGateDecisions {
 		dst.questionGateDecisions[k] = v
 	}
@@ -2208,6 +2237,9 @@ func cloneUserAnswer(v domain.UserAnswer) domain.UserAnswer {
 	return v
 }
 func transportAnswerKey(channel, eventID string) string { return channel + "\x00" + eventID }
+func deliveryTransportKey(channel, messageID string) string {
+	return channel + "\x00" + messageID
+}
 func questionDeliveryRouteKey(questionID domain.OperatorQuestionID, revision uint64, channel, destination string) string {
 	return fmt.Sprintf("%s\x00%d\x00%s\x00%s", questionID, revision, channel, destination)
 }

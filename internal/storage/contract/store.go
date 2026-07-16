@@ -884,6 +884,18 @@ func TestStore(t *testing.T, factory Factory) {
 		}); err != nil {
 			t.Fatal(err)
 		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.QuestionDeliveryByTransport(delivery.Channel, "message_1")
+			if err != nil {
+				return err
+			}
+			if got.ID != delivered.ID || got.TransportMessageID != "message_1" {
+				t.Fatalf("transport lookup = %#v", got)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
 		if err := store.Update(context.Background(), func(tx port.Transaction) error {
 			return tx.SaveQuestionDelivery(delivered, leased.Status, leased.Attempt)
 		}); !errors.Is(err, port.ErrConflict) {
