@@ -8,11 +8,16 @@ import (
 
 // CompletionRequest is the provider-neutral minimum model contract
 // (FR-MODEL-001). Prompt and response are plain text; richer provider
-// features must remain adapter details.
+// features must remain optional, authority-free adapter details selected by
+// the kernel from a confirmed ProviderProfile (FR-MODEL-006).
 type CompletionRequest struct {
 	Prompt          string
 	MaxOutputTokens int
 	Temperature     float64
+	// ResponseFormat is an optional enrichment (for example json_object).
+	// Empty means baseline text→text. Adapters MUST ignore unknown values
+	// safely or reject without inventing capabilities.
+	ResponseFormat domain.ResponseFormatHint
 }
 
 type CompletionResult struct {
