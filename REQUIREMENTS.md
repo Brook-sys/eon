@@ -46,11 +46,11 @@ Toda `Operation` MUST instanciar uma `OperationSpec` versionada, declarar inputs
 
 **Evidência de aceitação:** operação sem spec existente ou incompatível não entra em `READY`.
 
-### FR-AGENDA-003 — Replenishment limitado
+### FR-AGENDA-003 — Replenishment diversificado e limitado
 
-Agenda vazia MUST disparar replenishment antes de `Rest`. O replenisher MUST aplicar escopo, deduplicação, budget e limite de admissões por ciclo.
+Agenda vazia MUST disparar imediatamente estratégias diversificadas de continuidade. Cada estratégia e cada ciclo MUST aplicar escopo, deduplicação, budget e limite de admissões, mas o runtime MUST tentar outra família legítima quando uma frente se esgotar.
 
-**Evidência de aceitação:** relógio virtual demonstra replenishment limitado seguido por despacho ou repouso, sem crescimento ilimitado.
+**Evidência de aceitação:** uma agenda vazia produz despacho por outra família ou diagnóstico `CONTINUITY_BLOCKED`, sem crescimento ilimitado, repetição equivalente ou estado global de repouso.
 
 ### FR-AGENDA-004 — Progresso observável
 
@@ -148,11 +148,11 @@ Toda unidade não terminal MUST possuir `OperationalState` persistido e condiç�
 
 **Evidência de aceitação:** reinício reconstrói filas e esperas sem depender de contexto conversacional.
 
-### FR-DUR-002 — Repouso vivo sem busy loop
+### FR-DUR-002 — Ausência de repouso global
 
-Sem trabalho admissível imediato, o runtime MUST persistir `Rest` e uma próxima condição interna de reavaliação temporal; evento externo MAY antecipar o despertar, mas MUST NOT ser sua única causa. `Rest` MUST NOT representar conclusão global enquanto a missão estiver ativa. O processo MUST bloquear em timer/evento em vez de sondagem contínua.
+Enquanto a missão estiver `ACTIVE`, o runtime MUST NOT entrar em `Rest`, `IDLE` ou estado global equivalente. Sem trabalho admissível imediato, MUST executar descoberta de lacunas, revisão, manutenção, verificação, síntese, melhoria ou outra família autorizada de continuidade. Esperas temporais ou por evento MUST permanecer locais às unidades dependentes.
 
-**Evidência de aceitação:** relógio virtual comprova ausência de ciclos intermediários, despertar no prazo mesmo sem evento externo e retorno ao replenishment sem declarar missão concluída.
+**Evidência de aceitação:** cenários com agenda vazia, frente esgotada e linha bloqueada demonstram seleção de outra família ou `CONTINUITY_BLOCKED` explícito, nunca `Rest` global.
 
 ### FR-DUR-003 — Leases recuperáveis
 
@@ -168,7 +168,7 @@ Efeitos externos MUST usar `IdempotencyKey` quando suportado ou reconciliação 
 
 ### FR-DUR-005 — Tempo determinístico
 
-Deadlines, retries, backoff, leases, cadência e repouso MUST depender de `Clock` injetável. Jitter MUST depender de `RandomSource` injetável.
+Deadlines, retries, backoff, leases e cadência MUST depender de `Clock` injetável. Jitter MUST depender de `RandomSource` injetável.
 
 **Evidência de aceitação:** testes não aguardam relógio real e reproduzem a mesma sequência com fontes controladas.
 
@@ -180,9 +180,9 @@ Toda tentativa malsucedida MUST produzir `FailureRecord` tipado com código, cla
 
 ### FR-DUR-007 — Continuidade permanente com fronteira renovável
 
-Enquanto a missão estiver ativa e o armazenamento operacional, o runtime MUST preservar uma frontier renovável e MUST NOT alcançar conclusão global implícita. Após mudança relevante no estado, conclusão, falha ou invalidação, MUST atualizar próximos trabalhos, sementes de replenishment ou obrigações recorrentes derivados da missão. Não havendo trabalho admissível imediato, MUST persistir motivo e prazo interno de reavaliação. Continuidade MUST NOT depender de geração artificial de atividade, retries ilimitados, resposta do usuário, evento externo ou recurso opcional de modelo.
+Enquanto a missão estiver ativa e o armazenamento operacional, o runtime MUST preservar uma frontier renovável e MUST NOT alcançar conclusão global implícita ou repouso global. Após mudança relevante no estado, conclusão, falha ou invalidação, MUST atualizar próximos trabalhos, sementes de replenishment ou obrigações recorrentes derivados da missão. Não havendo trabalho admissível imediato em uma frente, MUST tentar outra família autorizada; incapacidade global MUST produzir `CONTINUITY_BLOCKED` com causas explícitas. Continuidade MUST NOT depender de geração artificial de atividade, retries ilimitados, resposta do usuário, evento externo ou recurso opcional de modelo.
 
-**Evidência de aceitação:** cenários de conclusão de todas as operações atuais, bloqueio, silêncio do usuário, degradação de provider e agenda vazia resultam em outra linha admissível ou `Rest` vivo que desperta e reexecuta replenishment, sem busy loop, perda da missão ou estado global concluído.
+**Evidência de aceitação:** cenários de conclusão de todas as operações atuais, bloqueio, silêncio do usuário, degradação de provider e agenda vazia resultam em outra linha/família admissível ou falha de continuidade diagnosticada, sem repouso, busy loop, perda da missão ou conclusão global.
 
 ### FR-DUR-008 — Preferência por avanço seguro
 
@@ -190,13 +190,19 @@ Quando estratégias equivalentes estiverem disponíveis, a política SHOULD pref
 
 **Evidência de aceitação:** fault-injection demonstra que falha de otimização ou capability não essencial preserva estado, fallback, scheduler vivo e possibilidade de avanço por outra linha.
 
-### FR-DUR-009 — Bloqueio localizado e trabalho independente
+### FR-DUR-009 — Horizonte abastecido e frontier limitada
+
+Enquanto a missão estiver `ACTIVE`, o runtime MUST manter um horizonte executável curto por marcas versionadas de `low_watermark`, alvo e máximo, reabastecendo-o preventivamente a partir de uma frontier persistida. A frontier MUST aceitar decomposição e melhoria recursiva de trabalho e conhecimento anteriores, mas MUST aplicar limites de cardinalidade, profundidade, fan-out e budget. O modelo MAY propor oportunidades; somente lógica determinística validada MAY deduplicar, priorizar, admitir, adiar ou eliminar trabalho.
+
+**Evidência de aceitação:** testes demonstram replenishment antes da agenda vazia, impedem admissão acima dos limites, rejeitam paráfrases sem delta, preservam derivação pai-filho e continuam encontrando trabalho em famílias diferentes.
+
+### FR-DUR-010 — Bloqueio localizado e trabalho independente
 
 Espera por resposta do usuário, aprovação, callback, recurso ou dependência MUST bloquear somente as `Inquiry`s e `Operation`s cuja precondição dependa dela. O scheduler MUST continuar considerando trabalho independente e o replenisher SHOULD derivar manutenção, validação ou investigação não dependente quando alinhada à missão.
 
 **Evidência de aceitação:** uma pergunta ao usuário permanece pendente enquanto outras linhas progridem; ausência indefinida de resposta não paralisa o runtime nem causa repetição da pergunta fora da política.
 
-### FR-DUR-010 — Manutenção e melhoria recorrentes
+### FR-DUR-011 — Manutenção e melhoria recorrentes
 
 A missão ativa MUST poder declarar obrigações recorrentes de revisão, revalidação, atualização, auditoria, avaliação do harness e busca de lacunas. Tais obrigações MUST possuir cadência, budget, critério de delta e política anti-repetição, fornecendo continuidade legítima após a conclusão de frentes finitas sem fabricar atividade vazia.
 

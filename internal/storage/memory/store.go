@@ -27,7 +27,6 @@ type state struct {
 	candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
 	inquiries        map[domain.InquiryID]domain.Inquiry
 	operations       map[domain.OperationID]domain.Operation
-	rests            map[domain.MissionRevisionID]domain.Rest
 	events           []domain.Event
 	eventIDs         map[domain.EventID]uint64
 	idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
@@ -61,7 +60,6 @@ func newState() state {
 		candidates:       make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
 		inquiries:        make(map[domain.InquiryID]domain.Inquiry),
 		operations:       make(map[domain.OperationID]domain.Operation),
-		rests:            make(map[domain.MissionRevisionID]domain.Rest),
 		eventIDs:         make(map[domain.EventID]uint64),
 		idempotency:      make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
 		sources:          make(map[domain.SourceID]domain.Source),
@@ -143,9 +141,6 @@ func (t transaction) Operation(id domain.OperationID) (domain.Operation, error) 
 }
 func (t transaction) Operations(id domain.MissionRevisionID) ([]domain.Operation, error) {
 	return reader(t).Operations(id)
-}
-func (t transaction) Rest(id domain.MissionRevisionID) (domain.Rest, error) {
-	return reader(t).Rest(id)
 }
 func (t transaction) Events(afterSequence uint64, limit int) ([]domain.Event, error) {
 	return reader(t).Events(afterSequence, limit)
@@ -244,13 +239,6 @@ func (r reader) Operations(missionRevision domain.MissionRevisionID) ([]domain.O
 	}
 	sort.Slice(operations, func(i, j int) bool { return operations[i].ID < operations[j].ID })
 	return operations, nil
-}
-func (r reader) Rest(missionRevision domain.MissionRevisionID) (domain.Rest, error) {
-	v, ok := r.state.rests[missionRevision]
-	if !ok {
-		return domain.Rest{}, notFound("rest", missionRevision)
-	}
-	return cloneRest(v), nil
 }
 func (r reader) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	v, ok := r.state.operationSpecs[id]
@@ -585,19 +573,6 @@ func (t transaction) SaveOperation(v domain.Operation) error {
 		return fmt.Errorf("%w: immutable operation fields changed", port.ErrConflict)
 	}
 	t.state.operations[v.ID] = cloneOperation(v)
-	return nil
-}
-func (t transaction) SaveRest(v domain.Rest) error {
-	if err := v.Validate(); err != nil {
-		return fmt.Errorf("validate rest: %w", err)
-	}
-	if _, ok := t.state.missionRevisions[v.MissionRevision]; !ok {
-		return notFound("mission revision", v.MissionRevision)
-	}
-	if existing, ok := t.state.rests[v.MissionRevision]; ok && existing.Active && v.Active && existing.EnteredAt != v.EnteredAt {
-		return fmt.Errorf("%w: active rest cannot be replaced without wake", port.ErrConflict)
-	}
-	t.state.rests[v.MissionRevision] = cloneRest(v)
 	return nil
 }
 func (t transaction) AppendEvent(v domain.Event) (domain.Event, error) {
@@ -1028,9 +1003,6 @@ func cloneState(src state) state {
 	for k, v := range src.operations {
 		dst.operations[k] = cloneOperation(v)
 	}
-	for k, v := range src.rests {
-		dst.rests[k] = cloneRest(v)
-	}
 	dst.events = append([]domain.Event(nil), src.events...)
 	for k, v := range src.eventIDs {
 		dst.eventIDs[k] = v
@@ -1110,18 +1082,6 @@ func cloneOperation(v domain.Operation) domain.Operation {
 	v.InputRefs = append([]string(nil), v.InputRefs...)
 	return v
 }
-func cloneRest(v domain.Rest) domain.Rest {
-	if v.Reevaluation.NotBefore != nil {
-		instant := *v.Reevaluation.NotBefore
-		v.Reevaluation.NotBefore = &instant
-	}
-	if v.WokenAt != nil {
-		instant := *v.WokenAt
-		v.WokenAt = &instant
-	}
-	return v
-}
-
 func cloneSourceSnapshot(v domain.SourceSnapshot) domain.SourceSnapshot {
 	v.Content = append([]byte(nil), v.Content...)
 	return v

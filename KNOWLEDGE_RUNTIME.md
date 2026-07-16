@@ -397,16 +397,16 @@ Uma investigação termina quando:
 
 O término de uma investigação é local. Enquanto a missão estiver ativa, não representa conclusão do runtime. O motor retorna à frontier, às obrigações recorrentes e ao replenishment para manter a continuidade permanente.
 
-O runtime entra em `Rest` de baixo consumo quando não existem investigações admissíveis imediatas e registra:
+Quando não existem investigações admissíveis imediatas numa frente, o runtime não entra em repouso. Ele registra e usa para selecionar outra família:
 
 - quais perguntas permanecem abertas;
 - por que não são acionáveis agora;
 - quais linhas estão bloqueadas por usuário, evento ou recurso;
 - quais linhas independentes foram consideradas;
-- quais eventos, datas ou recursos podem antecipar a reavaliação;
-- a próxima revisão temporal interna obrigatória.
+- quais eventos, datas ou recursos podem tornar essas linhas elegíveis;
+- quais lacunas, auditorias, manutenções, sínteses ou melhorias independentes serão tentadas em seguida.
 
-Pergunta ao usuário ou evento externo nunca é a única condição global de despertar. Se a resposta não chegar, a linha permanece pendente sem impedir manutenção, revalidação, pesquisa de outras lacunas ou melhoria autorizada. Ao chegar a revisão programada, o motor reconcilia as esperas e tenta gerar novo horizonte útil mesmo sem qualquer evento externo.
+Pergunta ao usuário ou evento externo nunca é a única condição global de continuidade. Se a resposta não chegar, a linha permanece pendente sem impedir manutenção, revalidação, pesquisa de outras lacunas ou melhoria autorizada. Revisões temporais continuam sendo operações locais agendadas, não despertadores de um runtime dormente.
 
 ## 15. Capacidades do MVP
 
@@ -486,7 +486,7 @@ uma pergunta
 → evidência vinculada
 → revisão
 → atualização de uma síntese
-→ próxima lacuna ou repouso
+→ próxima lacuna ou outra família de trabalho
 ```
 
 As transformações sobre a base estão detalhadas em `KNOWLEDGE_OPERATIONS.md`. A investigação de Dolt e alternativas está em `STORAGE_VERSIONING.md`.

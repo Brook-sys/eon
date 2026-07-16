@@ -104,8 +104,8 @@ Deve mostrar, sem exigir inspeção manual de logs:
 
 - estado do processo e versão do runtime;
 - missão e revisão ativas;
-- estado global: `RUNNING`, `RESTING`, `PAUSED`, `DEGRADED`, `STOPPING` ou `FAULTED`;
-- próxima condição de despertar;
+- estado global: `RUNNING`, `EXPANDING`, `PAUSED`, `DEGRADED`, `STOPPING` ou `FAULTED`;
+- operação atual ou estratégia de continuidade em execução;
 - operação atual e duração;
 - agenda por estado;
 - bloqueios, aprovações e falhas recentes;
@@ -324,7 +324,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 O primeiro dashboard é funcional quando um operador consegue:
 
 1. iniciar a interface sem conceder acesso direto ao banco;
-2. observar uma missão ativa e seu próximo despertar;
+2. observar uma missão ativa e a operação ou estratégia de continuidade atual;
 3. acompanhar uma operação do despacho ao commit/rejeição;
 4. inspecionar cada chamada de modelo com parâmetros, tokens, latência, output permitido e validação;
 5. enviar uma mensagem externa e ver seu evento, decisão e efeito correlacionados;

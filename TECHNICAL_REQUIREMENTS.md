@@ -217,9 +217,10 @@ O runtime satisfaz continuidade quando:
 2. esperas possuem `not_before` ou condição persistida;
 3. leases expirados são recuperados;
 4. operações interrompidas são repetidas com idempotência ou reconciliadas;
-5. uma agenda vazia dispara replenishment antes do repouso;
-6. repouso não consome CPU em busy loop;
-7. eventos antecipam reavaliação, mas não são necessários para manter a missão ativa.
+5. uma agenda vazia dispara estratégias diversificadas de continuidade;
+6. missão ativa nunca entra em repouso global;
+7. polling vazio e atividade sem delta são detectados, enquanto esperas permanecem locais;
+8. eventos influenciam prioridades, mas não são necessários para manter trabalho ativo.
 
 ## 10. Tolerância a falhas verificável
 
@@ -399,7 +400,7 @@ O primeiro slice estará pronto quando puder:
 6. aplicar o changeset atomicamente;
 7. registrar evento e evidência;
 8. sofrer crash simulado e retomar sem duplicar o efeito;
-9. entrar em repouso sem busy loop;
+9. ao esgotar a agenda, gerar outra operação legítima sem repouso ou polling vazio;
 10. passar unitários, integração, race detector e teste de sistema determinístico.
 
 Pesquisa web real, Dolt e modelos reais entram depois que esse caminho for correto com fakes.

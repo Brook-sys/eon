@@ -499,7 +499,7 @@ O runtime mantém uma fronteira limitada, mas renovável, de trabalho futuro der
 
 Perguntas ao usuário, aprovações, callbacks e dependências externas bloqueiam somente as unidades que realmente dependem deles. O scheduler deve procurar outras linhas independentes de investigação, validação, manutenção ou melhoria. Silêncio do usuário nunca encerra a missão nem paralisa trabalho não dependente.
 
-`Rest` é somente o modo de baixo consumo entre ativações de um serviço ainda vivo. Ele deve possuir prazo interno de reavaliação mesmo sem evento externo. Ao despertar, o motor primeiro reconcilia esperas e depois procura novo trabalho útil. Se nenhuma operação imediata for admissível, preserva e revisa a fronteira em cadência limitada; não declara que terminou.
+Não existe `Rest` global enquanto a missão estiver ativa. Se nenhuma operação imediata for admissível em uma frente, o motor tenta outras famílias de descoberta, verificação, manutenção, síntese, avaliação e melhoria. Esperas permanecem locais. Se nenhuma família puder produzir trabalho útil, o runtime registra uma falha de continuidade diagnosticável, em vez de normalizar inatividade.
 
 “Continuar sempre” não autoriza busy loop, trabalho fictício, retries ilimitados ou ações arriscadas. A continuidade estável inclui:
 
@@ -512,7 +512,7 @@ Perguntas ao usuário, aprovações, callbacks e dependências externas bloqueia
 - transformar falha ou estagnação em diagnóstico, replanejamento e novo trabalho preventivo;
 - executar manutenção recorrente, revalidação e busca de melhoria quando frentes finitas terminarem;
 - degradar qualidade, velocidade ou frequência antes de degradar integridade;
-- permanecer vivo em baixo consumo quando agir imediatamente seria inseguro.
+- trocar de família quando uma ação imediata for insegura ou impossível, registrando `CONTINUITY_BLOCKED` se nenhuma alternativa legítima existir.
 
 ## Critério arquitetural de sucesso
 

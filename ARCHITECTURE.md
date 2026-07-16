@@ -15,7 +15,7 @@ O runtime é neutro quanto à finalidade concreta configurada pelo operador. Pod
 
 Seu propósito principal é **continuidade progressiva permanente**: permanecer vivo, preservar estado, sempre ultrapassar o horizonte atual e produzir a próxima frente útil de trabalho. Enquanto a missão estiver ativa e o armazenamento operacional, o motor não possui conclusão global implícita; objetivos, investigações e operações individuais são finitos, mas seu término retorna ao ciclo de manutenção, melhoria e replenishment.
 
-Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Significa que o runtime nunca depende de comandos, respostas do usuário ou eventos externos para permanecer vivo e procurar avanço: ele reavalia periodicamente sua missão, seu estado e sua capacidade, incrementa a agenda com novas `Inquiry`s derivadas e executa a melhor `Operation` permitida. Eventos externos — inclusive respostas do usuário — alteram fatos, desbloqueiam linhas e repriorizam o trabalho, mas silêncio ou ausência de eventos bloqueiam apenas as unidades dependentes, nunca o motor inteiro.
+Continuidade significa atividade útil permanente enquanto a missão estiver `ACTIVE`. O runtime nunca depende de comandos, respostas do usuário ou eventos externos para procurar avanço: ao esgotar uma frente, ele identifica lacunas, manutenção, verificação, síntese, melhoria do harness ou outra família legítima de trabalho e executa a melhor `Operation` permitida. Eventos externos — inclusive respostas do usuário — alteram fatos, desbloqueiam linhas e repriorizam o trabalho, mas silêncio ou ausência de eventos bloqueiam apenas as unidades dependentes, nunca o motor inteiro.
 
 ## Princípios
 
@@ -27,7 +27,7 @@ Continuidade não significa loop ocupado nem chamadas incessantes ao modelo. Sig
 6. Reinício e retomada sem perda do progresso.
 7. Falha fechada para ações sem permissão ou sem validação.
 8. Um modelo fraco pode exigir mais passos, mas não deve romper o protocolo.
-9. Esperar é trabalho válido: o motor deve dormir sem perder estado e acordar por prazo, disponibilidade ou evento.
+9. Esperas são locais: tempo, disponibilidade, aprovação ou evento podem bloquear uma unidade, nunca colocar uma missão ativa em repouso global.
 10. Limites são entradas do scheduler, não exceções improvisadas.
 11. Toda operação com efeito colateral deve ser idempotente ou possuir chave de deduplicação.
 12. Nenhuma dependência externa, incluindo o modelo, controla a continuidade do kernel.
@@ -99,18 +99,18 @@ O runtime global possui um ciclo diferente:
 ```text
 recover → observe state/capacity/time → ingest optional events
         → replenish agenda → prioritize → dispatch → verify
-        → learn/expand frontier → persist → calculate next cycle → sleep
+        → learn/expand frontier → persist → continue
 ```
 
-O ciclo possui três fontes de ativação:
+O ciclo considera três fontes de mudança:
 
 1. **tempo**: chegou o próximo ciclo periódico ou prazo interno;
 2. **disponibilidade**: um recurso, cota ou capacidade voltou a estar livre;
 3. **evento externo opcional**: chegou informação que pode alterar estado, prioridade ou direção.
 
-Se a fila executável estiver vazia, o motor não conclui que terminou. Primeiro executa `replenish agenda`: examina missão, lacunas, resultados recentes, riscos, oportunidades e tarefas recorrentes para produzir candidatos. Se ainda não houver ação útil e permitida, calcula o próximo ciclo e dorme. Ele pode ser acordado antecipadamente por disponibilidade ou evento.
+Se a fila executável estiver vazia, o motor não conclui que terminou nem entra em repouso. Ele executa estratégias alternativas de continuidade: examina missão, cobertura, lacunas, resultados recentes, conflitos, qualidade, manutenção, artifacts, harness, riscos e oportunidades até produzir o próximo trabalho legítimo. Se nenhuma estratégia encontra ação segura e útil apesar de recursos disponíveis, registra `CONTINUITY_BLOCKED` como degradação explícita a ser diagnosticada, em vez de tratar inatividade como estado normal.
 
-Seu comportamento contínuo é, portanto, **time-and-availability-driven**, com eventos externos como modificadores opcionais.
+Seu comportamento é **work-generating and mission-driven**, com tempo, disponibilidade e eventos como modificadores das opções elegíveis. O portfólio inicial de famílias de trabalho e a política antiatividade artificial estão em `CONTINUOUS_WORK.md`.
 
 ## Invariante de continuidade
 
@@ -121,8 +121,8 @@ Enquanto não houver uma ordem explícita de desligamento ou falha fatal do arma
 3. após reinício, o runtime reconstrói filas, esperas, leases e callbacks pendentes;
 4. nenhuma resposta de modelo é necessária para o motor saber como retomar;
 5. rate limits e dependências indisponíveis adiam trabalho, mas não apagam intenção;
-6. o motor pode permanecer em `Rest` com consumo mínimo, mas sempre preserva prazo interno de reavaliação e retorna ao ciclo mesmo sem evento externo;
-7. uma agenda vazia dispara geração controlada de candidatos antes do `Rest`, e a frontier preserva sementes ou obrigações para ciclos futuros;
+6. o motor não possui `Rest` global enquanto a missão estiver ativa; sem operação pronta, entra imediatamente em geração ou diagnóstico de trabalho;
+7. uma agenda vazia dispara estratégias controladas e diversificadas de continuidade, e a frontier preserva sementes ou obrigações para próximos horizontes;
 8. espera por usuário, aprovação ou dependência bloqueia somente as unidades afetadas; trabalho independente continua;
 9. cada nova tarefa possui proveniência que demonstra de qual missão, objetivo, evidência ou obrigação recorrente ela foi derivada;
 10. término do horizonte atual retorna à manutenção, revisão e replenishment, nunca a conclusão global implícita.
@@ -166,11 +166,11 @@ O dashboard deve expor decisões operacionais registradas — inputs selecionado
 
 ### Agenda
 
-Conjunto priorizado de `Inquiry`s e obrigações operacionais admitidas. Pode esvaziar temporariamente.
+Conjunto priorizado e limitado de `Inquiry`s e obrigações operacionais admitidas. Funciona como horizonte executável curto, mantido entre marcas configuráveis de reabastecimento sempre que houver trabalho legítimo disponível.
 
 ### Work Frontier
 
-Conjunto de lacunas, hipóteses, riscos, oportunidades e próximos passos ainda não transformados em investigações admitidas.
+Reservatório persistido de lacunas, hipóteses, riscos, oportunidades, decomposições, melhorias e próximos passos ainda não transformados em investigações admitidas. Pode ser amplo, mas possui limites, compactação, deduplicação e revisão de valor; não é uma fila infinita de operações materializadas.
 
 ### AgendaReplenisher
 
@@ -195,7 +195,7 @@ mission + current state + evidence + frontier + capacity
     → admit bounded set into agenda
 ```
 
-Isso deve ser incremental. O motor não gera um plano gigantesco; mantém apenas um horizonte curto de tarefas prontas e uma fronteira resumida.
+Isso deve ser incremental. O motor não gera um plano gigantesco; mantém apenas um horizonte curto de tarefas prontas e uma frontier resumida. `low_watermark`, `target_ready`, `max_ready`, limites de candidatos e limites de decomposição pertencem à política versionada. O replenishment pode usar modelo para propor, decompor e melhorar candidatos, mas admissão, deduplicação, budgets, prioridade, autoridade e cardinalidade permanecem determinísticos.
 
 ## Progresso contínuo
 
@@ -210,13 +210,15 @@ resultado
   → criar, atualizar, adiar ou eliminar candidatos
 ```
 
+Essa expansão também pode decompor conhecimento e artifacts anteriores em novas perguntas, verificações e melhorias. A derivação é rastreável e limitada por profundidade, fan-out e budget; paráfrase, renomeação ou geração sem novo critério verificável não abastecem a frontier.
+
 O conceito central é uma **esteira de incrementos epistemológicos**:
 
 ```text
 missão → inquiry → operação → evidência/changeset → estado atualizado → próxima inquiry
 ```
 
-O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial, obrigações recorrentes e condições de revisão. Se não existe ação segura e útil no horizonte atual, ele persiste `Rest`, agenda nova reavaliação interna e posteriormente tenta ampliar ou renovar o horizonte. A continuidade global termina apenas por pausa/cancelamento autorizado, condição terminal explícita da missão ou falha fatal do armazenamento; nunca apenas porque a agenda atual acabou ou uma resposta externa não chegou.
+O motor segue em frente mesmo sem entradas externas porque seu próprio estado contém trabalho potencial, obrigações recorrentes e dimensões de qualidade a investigar. Se uma estratégia não encontra ação segura e útil, o supervisor tenta outra família e registra o diagnóstico. A impossibilidade global de produzir trabalho com missão ativa é `CONTINUITY_BLOCKED`, não repouso normal. A continuidade termina apenas por pausa/cancelamento autorizado, condição terminal explícita da missão ou falha fatal do armazenamento; nunca apenas porque a agenda atual acabou ou uma resposta externa não chegou.
 
 Para evitar atividade vazia, todo `InquiryCandidate` autogerado deve declarar:
 

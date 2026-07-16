@@ -34,7 +34,6 @@ type AgendaReader interface {
 	Inquiry(domain.InquiryID) (domain.Inquiry, error)
 	Operation(domain.OperationID) (domain.Operation, error)
 	Operations(domain.MissionRevisionID) ([]domain.Operation, error)
-	Rest(domain.MissionRevisionID) (domain.Rest, error)
 }
 
 // AgendaWriter creates immutable agenda records and saves mutable execution
@@ -47,7 +46,6 @@ type AgendaWriter interface {
 	CreateOperation(domain.Operation) error
 	SaveInquiry(domain.Inquiry) error
 	SaveOperation(domain.Operation) error
-	SaveRest(domain.Rest) error
 }
 
 // EventReader returns immutable events in ascending storage sequence. A zero

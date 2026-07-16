@@ -100,7 +100,7 @@ Objeto em quarentena pode ser inspecionado e referenciado por diagnóstico, mas 
 
 **Verificação:** consultas e changesets recusam IDs apenas em quarentena.
 
-## 4. Progresso e repouso
+## 4. Progresso e atividade contínua
 
 ### INV-PROG-001 — Admissão exige delta observável
 
@@ -114,17 +114,17 @@ Toda operação que pode retry ou replanejar possui budget persistido e monotoni
 
 **Verificação:** modelo/dependência sempre falhos terminam em `EXHAUSTED`, `WAITING_APPROVAL`, `FAILED` ou espera futura explícita.
 
-### INV-PROG-003 — Agenda vazia precede replenishment limitado
+### INV-PROG-003 — Agenda vazia aciona continuidade diversificada
 
-Com missão ativa e sem trabalho executável, o kernel executa no máximo o limite configurado de replenishment antes de entrar em `Rest`. Replenishment não pode crescer agenda/frontier sem bound, mas MUST preservar sementes ou obrigações suficientes para nova tentativa futura enquanto a missão permanecer ativa.
+Com missão ativa e sem trabalho executável, o kernel tenta estratégias limitadas de replenishment em famílias diferentes até admitir trabalho ou comprovar bloqueio global. Replenishment não pode crescer agenda/frontier sem bound, repetir indefinidamente estratégia sem delta nem converter agenda vazia em repouso.
 
-**Verificação:** relógio virtual e gerador adversarial demonstram limite de admissões e memória, preservação da frontier e nova tentativa na cadência seguinte.
+**Verificação:** gerador adversarial demonstra limites por estratégia, rotação de famílias, preservação da frontier e despacho ou `CONTINUITY_BLOCKED` explícito.
 
-### INV-PROG-004 — Repouso é continuidade em baixo consumo
+### INV-PROG-004 — Missão ativa nunca repousa globalmente
 
-`Rest` preserva missão ativa, razão, perguntas abertas, frontier e próxima condição interna de reavaliação temporal. Evento ou capacidade MAY antecipar o despertar, mas ausência de evento externo não elimina o próximo ciclo. Antes da condição elegível, nenhum novo ciclo oficial é executado.
+`ACTIVE` implica obrigação contínua de executar ou gerar trabalho útil. `WAITING_TIME`, `WAITING_EVENT`, `WAITING_APPROVAL`, `THROTTLED` e `BLOCKED_DEPENDENCY` pertencem a unidades locais; não podem suspender globalmente outras famílias elegíveis. Nenhum estado `Rest` ou `IDLE` é válido para missão ativa.
 
-**Verificação:** scheduler virtual avança tempo, comprova zero ciclos intermediários, despertar único sem evento externo e retorno ao replenishment.
+**Verificação:** testes com todas as operações de uma família em espera demonstram despacho por outra família; máquina global rejeita `ACTIVE → REST/IDLE`.
 
 ### INV-PROG-005 — Sucesso corresponde a critério satisfeito
 
@@ -148,7 +148,19 @@ Toda espera por usuário, aprovação, callback ou dependência referencia expli
 
 A ausência momentânea de agenda, resposta externa, fonte nova ou capacidade disponível não altera a missão para estado concluído. Somente comando autorizado de pausa/cancelamento, revisão que satisfaça condição terminal explícita ou falha fatal do armazenamento pode interromper a obrigação global de reavaliação.
 
-**Verificação:** máquinas de estado rejeitam transição automática de agenda vazia ou `Rest` para conclusão global.
+**Verificação:** máquinas de estado rejeitam transição automática de agenda vazia para conclusão global, `Rest` ou `IDLE`.
+
+### INV-PROG-009 — Horizonte é renovável e limitado
+
+O kernel inicia replenishment quando o horizonte executável atinge a marca baixa e nunca materializa mais trabalho pronto ou candidatos ativos que os limites da política. Conclusões alimentam próximos passos rastreáveis na frontier, salvo quando uma condição de parada justifica não derivar trabalho adicional.
+
+**Verificação:** property tests variam conclusão, fan-out e limites e comprovam `ready <= max_ready`, frontier limitada e replenishment no `low_watermark`.
+
+### INV-PROG-010 — Decomposição recursiva reduz incerteza ou escopo
+
+Toda oportunidade filha referencia sua origem e respeita profundidade, fan-out e budget. Ela deve reduzir escopo, aumentar verificabilidade, revelar dependência real ou declarar outro ganho observável. Paráfrase, renomeação ou duplicação não constituem progresso nem podem renovar artificialmente a lista.
+
+**Verificação:** geradores adversariais de paráfrases e árvores explosivas são deduplicados ou interrompidos deterministicamente, enquanto decomposições válidas permanecem admitíveis.
 
 ## 5. Propriedades de liveness condicionais
 
@@ -166,9 +178,9 @@ Se `not_before <= Clock.Now()` e o runtime está operacional, a unidade volta a 
 
 Se o destino volta a responder e a política permite tentativas, todo `OutboxRecord` pendente é entregue ou termina em estado explícito reconciliável/quarentenado; não permanece silenciosamente esquecido.
 
-### LIVE-004 — Agenda vazia entra em repouso vivo e reavalia
+### LIVE-004 — Agenda vazia produz novo trabalho ou diagnóstico
 
-Se replenishment não encontra candidato admissível e não há trabalho/espera vencida, o ciclo entra em `Rest` em número limitado de passos. Se a missão continuar ativa e o armazenamento operacional, um prazo interno posterior eventualmente desperta o kernel para reconciliar esperas, revisar obrigações recorrentes e executar novo replenishment, mesmo sem evento externo.
+Se uma estratégia de replenishment não encontra candidato admissível, o supervisor tenta outras famílias autorizadas em número limitado de passos por estratégia. Com missão ativa e recursos operacionais, eventualmente admite trabalho útil; caso nenhuma família possa fazê-lo, persiste `CONTINUITY_BLOCKED` com as causas e não apresenta repouso como sucesso operacional.
 
 ### LIVE-005 — Linha bloqueada não impede linha independente
 

@@ -197,48 +197,6 @@ type Operation struct {
 	Reevaluation    ReevaluationCondition `json:"reevaluation"`
 }
 
-// Rest records that an active mission has no currently executable work. It is
-// durable runtime state, not a terminal mission status (FR-DUR-002).
-type Rest struct {
-	SchemaVersion   int                   `json:"schema_version"`
-	MissionRevision MissionRevisionID     `json:"mission_revision_id"`
-	Reason          string                `json:"reason"`
-	EnteredAt       time.Time             `json:"entered_at"`
-	Active          bool                  `json:"active"`
-	Reevaluation    ReevaluationCondition `json:"reevaluation"`
-	WokenAt         *time.Time            `json:"woken_at,omitempty"`
-}
-
-func (r Rest) Validate() error {
-	if r.SchemaVersion != SchemaVersionV1 || r.MissionRevision == "" || r.Reason == "" || r.EnteredAt.IsZero() {
-		return errors.New("rest is incomplete or has unsupported schema version")
-	}
-	if r.Active {
-		if r.WokenAt != nil {
-			return errors.New("active rest must not have a wake instant")
-		}
-		switch r.Reevaluation.Kind {
-		case ReevaluateNotBefore:
-			if r.Reevaluation.NotBefore == nil {
-				return errors.New("temporal rest requires not_before")
-			}
-		case ReevaluateEvent:
-			if r.Reevaluation.EventType == "" {
-				return errors.New("event rest requires an event type")
-			}
-		default:
-			return errors.New("active rest requires temporal or event reevaluation")
-		}
-		return nil
-	}
-	if r.WokenAt == nil || !r.ReevaluationIsZero() {
-		return errors.New("inactive rest requires woken_at and no reevaluation condition")
-	}
-	return nil
-}
-
-func (r Rest) ReevaluationIsZero() bool { return r.Reevaluation == (ReevaluationCondition{}) }
-
 func (o Operation) Validate() error {
 	if o.SchemaVersion != SchemaVersionV1 || o.ID == "" || o.InquiryID == "" || o.MissionRevision == "" || o.SpecID == "" || o.ExpectedOutput == "" || o.IdempotencyKey == "" {
 		return errors.New("operation is incomplete or has unsupported schema version")

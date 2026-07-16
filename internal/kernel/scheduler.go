@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -15,69 +14,67 @@ import (
 type DecisionKind string
 
 const (
-	DecisionDispatch DecisionKind = "DISPATCH"
-	DecisionRest     DecisionKind = "REST"
+	DecisionDispatch          DecisionKind = "DISPATCH"
+	DecisionContinuityBlocked DecisionKind = "CONTINUITY_BLOCKED"
 )
 
 type Decision struct {
-	Kind      DecisionKind
-	Operation domain.OperationID
-	Rest      domain.Rest
+	Kind              DecisionKind
+	Operation         domain.OperationID
+	StrategiesTried   []string
+	ContinuityFailure string
 }
 
-type Replenisher interface {
-	Replenish(context.Context, domain.MissionRevisionID) (admitted bool, err error)
+type ContinuityResult struct {
+	Admitted int
+	Changed  bool
+}
+
+// ContinuityStrategy derives a bounded family of useful work from mission
+// state. It must not poll, retry without budget, or report admission without
+// persisting the corresponding units.
+type ContinuityStrategy interface {
+	Name() string
+	Replenish(context.Context, domain.MissionRevisionID) (ContinuityResult, error)
 }
 
 type Scheduler struct {
-	Store            port.Store
-	Clock            source.Clock
-	Replenisher      Replenisher
-	MaxReplenishment int
-	RestInterval     time.Duration
+	Store      port.Store
+	Clock      source.Clock
+	Strategies []ContinuityStrategy
 }
 
 func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevisionID) (Decision, error) {
-	if s.Store == nil || s.Clock == nil || missionRevision == "" || s.MaxReplenishment < 0 || s.RestInterval <= 0 {
+	if s.Store == nil || s.Clock == nil || missionRevision == "" {
 		return Decision{}, errors.New("invalid scheduler configuration")
 	}
 	if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
 		return decision, err
 	}
-	for attempt := 0; attempt < s.MaxReplenishment && s.Replenisher != nil; attempt++ {
-		admitted, err := s.Replenisher.Replenish(ctx, missionRevision)
-		if err != nil {
-			return Decision{}, fmt.Errorf("replenish agenda: %w", err)
+
+	tried := make([]string, 0, len(s.Strategies))
+	for _, strategy := range s.Strategies {
+		if strategy == nil || strategy.Name() == "" {
+			return Decision{}, errors.New("continuity strategy must have a name")
 		}
-		if !admitted {
-			break
+		tried = append(tried, strategy.Name())
+		result, err := strategy.Replenish(ctx, missionRevision)
+		if err != nil {
+			return Decision{}, fmt.Errorf("continuity strategy %s: %w", strategy.Name(), err)
+		}
+		if result.Admitted < 0 {
+			return Decision{}, fmt.Errorf("continuity strategy %s returned negative admission count", strategy.Name())
 		}
 		if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
 			return decision, err
 		}
 	}
 
-	now := s.Clock.Now().UTC()
-	notBefore := now.Add(s.RestInterval)
-	rest := domain.Rest{SchemaVersion: 1, MissionRevision: missionRevision, Reason: "no executable work after bounded replenishment", EnteredAt: now, Active: true, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateNotBefore, NotBefore: &notBefore}}
-	if err := s.Store.Update(ctx, func(tx port.Transaction) error { return tx.SaveRest(rest) }); err != nil {
-		return Decision{}, fmt.Errorf("persist rest: %w", err)
-	}
-	return Decision{Kind: DecisionRest, Rest: rest}, nil
-}
-
-func (s Scheduler) Wait(ctx context.Context, rest domain.Rest) error {
-	if err := rest.Validate(); err != nil || !rest.Active || rest.Reevaluation.NotBefore == nil {
-		return errors.New("scheduler can only wait on active temporal rest")
-	}
-	if err := s.Clock.WaitUntil(ctx, *rest.Reevaluation.NotBefore); err != nil {
-		return err
-	}
-	wokenAt := s.Clock.Now().UTC()
-	rest.Active = false
-	rest.Reevaluation = domain.ReevaluationCondition{}
-	rest.WokenAt = &wokenAt
-	return s.Store.Update(ctx, func(tx port.Transaction) error { return tx.SaveRest(rest) })
+	return Decision{
+		Kind:              DecisionContinuityBlocked,
+		StrategiesTried:   tried,
+		ContinuityFailure: "no executable work after all configured continuity strategies",
+	}, nil
 }
 
 func (s Scheduler) selectOrResume(ctx context.Context, missionRevision domain.MissionRevisionID) (Decision, bool, error) {

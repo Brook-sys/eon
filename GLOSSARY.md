@@ -53,11 +53,19 @@ Uma `Inquiry` MUST:
 
 ### Agenda
 
-Conjunto priorizado de `Inquiry`s e obrigações operacionais admitidas. A agenda pode ficar vazia temporariamente sem encerrar a missão.
+Horizonte curto, priorizado e limitado de `Inquiry`s e obrigações operacionais admitidas. Deve ser reabastecido preventivamente ao atingir a marca baixa, sem crescimento ilimitado.
 
 ### WorkFrontier
 
-Conjunto persistido de perguntas, lacunas, conflitos, riscos e oportunidades ainda não admitidos como `Inquiry`.
+Reservatório persistido de perguntas, lacunas, conflitos, riscos, decomposições, melhorias e oportunidades ainda não admitidos como `Inquiry`. Possui deduplicação, limites, compactação e rastreabilidade de derivação.
+
+### WorkOpportunity
+
+Unidade persistida da `WorkFrontier` que descreve trabalho potencial antes da admissão. Registra origem, família, ganho esperado, novidade, dependências, custo, risco, condição de parada e, quando derivada recursivamente, pai e profundidade.
+
+### ExecutableHorizon
+
+Faixa limitada de trabalho admitido que o scheduler consegue considerar no curto prazo. É mantida por marcas de reabastecimento definidas em política, sem materializar toda a frontier como operações.
 
 ### OperationSpec
 
@@ -179,9 +187,13 @@ Registro imutável e tipado de uma tentativa malsucedida. Separa código estáve
 
 Isolamento persistido de entrada, artifact ou estado que não pode ser aceito com segurança. Um objeto em quarentena preserva proveniência e diagnóstico, mas MUST NOT integrar o `KnowledgeState` nem satisfazer precondições até liberação explícita e revalidação.
 
+### ContinuityBlocked
+
+Condição degradada e explicitamente diagnosticada em que uma missão `ACTIVE` não conseguiu encontrar nenhuma operação segura e útil entre as famílias autorizadas, ou todas as capabilities necessárias estão indisponíveis. Não é repouso normal nem conclusão. Deve registrar estratégias tentadas, recursos bloqueados, último delta, alternativas eliminadas e condição concreta de recuperação ou intervenção.
+
 ### Rest
 
-Modo global de baixo consumo sem trabalho admissível imediato, com missão, frontier e próxima condição **interna e temporal** de reavaliação persistidas. Evento externo MAY antecipar o despertar, mas não é necessário. `Rest` não é conclusão, pausa da missão nem dependência passiva de entrada externa; é uma fase do ciclo permanente que retorna ao replenishment enquanto a missão estiver ativa.
+Termo removido do estado global. Uma missão `ACTIVE` não repousa. Usar estados locais `WAITING_TIME`, `WAITING_EVENT`, `WAITING_APPROVAL`, `THROTTLED` ou `BLOCKED_DEPENDENCY` para unidades específicas; usar `PAUSED` somente por comando autorizado e `ContinuityBlocked` para incapacidade global anormal.
 
 ## 6. Termos substituídos ou restritos
 

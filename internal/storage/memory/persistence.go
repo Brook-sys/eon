@@ -19,7 +19,6 @@ type persistedState struct {
 	Candidates       map[domain.InquiryCandidateID]domain.InquiryCandidate
 	Inquiries        map[domain.InquiryID]domain.Inquiry
 	Operations       map[domain.OperationID]domain.Operation
-	Rests            map[domain.MissionRevisionID]domain.Rest
 	Events           []domain.Event
 	EventIDs         map[domain.EventID]uint64
 	Idempotency      map[domain.IdempotencyKey]domain.IdempotencyRecord
@@ -50,7 +49,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 	p := persistedState{
 		MissionRevisions: cloned.missionRevisions, ActiveMissions: cloned.activeMissions,
 		OperationSpecs: cloned.operationSpecs, Questions: cloned.questions, Candidates: cloned.candidates,
-		Inquiries: cloned.inquiries, Operations: cloned.operations, Rests: cloned.rests,
+		Inquiries: cloned.inquiries, Operations: cloned.operations,
 		Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
 		Sources: cloned.sources, SourceVersions: cloned.sourceVersions, SourceSnapshots: cloned.sourceSnapshots,
 		SourceFragments: cloned.sourceFragments, Observations: cloned.observations, Claims: cloned.claims,
@@ -80,7 +79,6 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.candidates = nonNil(p.Candidates, base.candidates)
 	base.inquiries = nonNil(p.Inquiries, base.inquiries)
 	base.operations = nonNil(p.Operations, base.operations)
-	base.rests = nonNil(p.Rests, base.rests)
 	base.events = append([]domain.Event(nil), p.Events...)
 	base.eventIDs = nonNil(p.EventIDs, base.eventIDs)
 	base.idempotency = nonNil(p.Idempotency, base.idempotency)

@@ -313,35 +313,6 @@ func TestStore(t *testing.T, factory Factory) {
 			t.Fatalf("artifact mutation error = %v, want ErrConflict", err)
 		}
 	})
-	t.Run("rest round trips and requires an existing mission revision", func(t *testing.T) {
-		store := factory()
-		now := time.Date(2026, 7, 15, 15, 40, 0, 0, time.UTC)
-		notBefore := now.Add(time.Hour)
-		wantNotBefore := notBefore
-		rest := domain.Rest{SchemaVersion: 1, MissionRevision: "revision_1", Reason: "no executable work", EnteredAt: now, Active: true, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateNotBefore, NotBefore: &notBefore}}
-		err := store.Update(context.Background(), func(tx port.Transaction) error { return tx.SaveRest(rest) })
-		if !errors.Is(err, port.ErrNotFound) {
-			t.Fatalf("rest without mission error = %v, want ErrNotFound", err)
-		}
-		if err := store.Update(context.Background(), func(tx port.Transaction) error {
-			if err := tx.AppendMissionRevision(missionRevision()); err != nil {
-				return err
-			}
-			return tx.SaveRest(rest)
-		}); err != nil {
-			t.Fatalf("save rest: %v", err)
-		}
-		*rest.Reevaluation.NotBefore = now.Add(24 * time.Hour)
-		if err := store.View(context.Background(), func(r port.Reader) error {
-			got, err := r.Rest("revision_1")
-			if err == nil && !got.Reevaluation.NotBefore.Equal(wantNotBefore) {
-				t.Fatalf("stored rest aliased caller: %v", got.Reevaluation.NotBefore)
-			}
-			return err
-		}); err != nil {
-			t.Fatalf("read rest: %v", err)
-		}
-	})
 	t.Run("mission revisions are immutable and activation is explicit", func(t *testing.T) {
 		store := factory()
 		revision := missionRevision()

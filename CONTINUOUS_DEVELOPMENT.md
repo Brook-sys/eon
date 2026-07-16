@@ -89,8 +89,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/changeset` preserva texto bruto antes do parse, rejeita JSON não canônico/duplicado/desconhecido, confere linhagem e validadores do kernel e confirma proposta, recibos, commit, estado canônico e evento em uma transação; store contracts cobrem base obsoleta, rollback e replay idempotente.
 - [x] `DONE` Simular crash e comprovar retomada sem efeito duplicado.
   - Evidência: checkpoints injetáveis cobrem persistência do output bruto, cada fronteira transacional e confirmação pós-commit; teste reinicia o processor em todas as fronteiras e comprova um único commit, evento e efeito canônico.
-- [x] `DONE` Comprovar repouso sem busy loop usando relógio virtual.
-  - Evidência: `internal/kernel` faz seleção determinística, retoma esperas temporais vencidas, limita replenishment e persiste `Rest`; `Clock.WaitUntil` bloqueia até avanço virtual sem polling, com contract/unit tests de durabilidade e despertar único.
+- [x] `SUPERSEDED` Comprovar repouso sem busy loop usando relógio virtual.
+  - Substituído pela decisão de 2026-07-15: missão `ACTIVE` não possui repouso global; o código e os testes de `Rest` devem ser removidos em favor de continuidade por famílias de trabalho.
+  - Evidência histórica: o comportamento anterior foi implementado e testado, mas foi removido após a revisão da semântica de continuidade; esperas temporais continuam locais às operações.
 
 ### Fase 3 — operações epistemológicas mínimas
 
@@ -159,6 +160,19 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [ ] `READY` Implementar dashboard web mínimo: overview, timeline SSE, inspetor, interação e configuração.
 - [ ] `READY` Exportar telemetria OpenTelemetry opcional sem torná-la fonte canônica ou autoridade.
 
+### Fase 7 — atividade contínua sem repouso
+
+- [x] `DONE` Substituir conceitualmente repouso por trabalho contínuo orientado à missão.
+  - Evidência: `CONTINUOUS_WORK.md` define compromisso de liveness, portfólio extensível de famílias, rotação, antiatividade artificial e `CONTINUITY_BLOCKED`.
+- [x] `DONE` Remover `Rest`, `DecisionRest`, portas de persistência e testes associados.
+  - Evidência: domínio e store não contêm estado global de repouso; scheduler tenta `ContinuityStrategy`s e retorna despacho ou diagnóstico `CONTINUITY_BLOCKED`; testes cobrem rotação e despacho por outra família.
+- [ ] `READY` Implementar registro de estratégias de continuidade e decisão `EXPAND/DIAGNOSE`.
+- [ ] `READY` Modelar `WorkOpportunity`, derivação pai-filho e horizonte executável com `low_watermark`, alvo e limites versionados.
+- [ ] `READY` Implementar replenishment preventivo e decomposição recursiva limitada por profundidade, fan-out, budget e novidade.
+- [ ] `READY` Persistir eventos e diagnóstico detalhado de `CONTINUITY_BLOCKED`, incluindo capabilities indisponíveis e condições de recuperação.
+- [ ] `READY` Implementar famílias iniciais de gap scan, conflict/evidence review, artifact refresh, integrity audit e harness evaluation.
+- [ ] `READY` Testar longevidade sem repouso, diversidade entre famílias, budgets e ausência de atividade sem delta.
+
 ## Política de seleção
 
 Entre itens `READY`, escolher nesta ordem:
@@ -223,3 +237,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-15 20:43 — Fase 5/harness cognitivo — benchmark reproduzível 2k/4k/8k implementado com fixtures de extração, síntese, conflito e reparo; formatos estritos, métricas e artefatos atômicos integrados a provider OpenAI-compatible — verificação: testes de corpus/parser/matriz/artefatos e CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: executar modelos pequeno/local e baseline superior, comparar formato/operação e registrar avaliação.
 2026-07-15 23:40 — Fase 5/análise comparável — relatório passou a agregar acerto, falhas e fatos omitidos por operação, formato e contexto; execução real permanece pronta mas sem endpoint local disponível — verificação: `go test ./...`, `go vet ./...`, `git diff --check`, descoberta de nodes e probe Ollama — próximo: executar dois baselines quando houver provider OpenAI-compatible local.
+2026-07-16 00:00 — Fase 7/continuidade sem repouso — semântica global de `Rest` removida de domínio, portas e stores; scheduler percorre famílias de continuidade e despacha trabalho admitido ou retorna `CONTINUITY_BLOCKED`; arquitetura, requisitos e invariantes alinhados a horizonte renovável e esperas somente locais — verificação: `go test ./...`, `go vet ./...`, `git diff --check`, grep de resíduos — próximo: registro versionado de estratégias e modelo persistido de `WorkOpportunity`/horizonte.
