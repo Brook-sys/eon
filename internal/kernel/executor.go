@@ -20,10 +20,21 @@ const (
 	EventOperationSucceeded     = "operation.succeeded"
 )
 
+// defaultSourceFreshnessMaxAge is the model-free aging window for source_freshness.
+// Sources whose newest SourceVersion.ObservedAt is older than now-window are
+// reported as aging candidates (no automatic reacquisition in the local path).
+const defaultSourceFreshnessMaxAge = 7 * 24 * time.Hour
+
 // LocalExecutor runs continuity/local operations without a model provider.
 // It is the first vertical of the architecture Executor: pure transitions under
 // a lease reference, optional read-only audit artifact, and append-only events.
 // Model-backed PROPOSE_ONLY paths remain out of scope until a provider is wired.
+//
+// Family-specific local effects (still model-free):
+//   - artifact_refresh: mark non-audit KnowledgeArtifacts stale when BaseCommitID != head
+//   - source_freshness: report sources whose newest version is outside the aging window
+//   - integrity_audit: structural orphan / contradiction inventory (no auto-repair)
+//   - conflict_evidence_review: unopposed and opposed claim inventory
 type LocalExecutor struct {
 	Store    port.Store
 	Clock    source.Clock
@@ -259,7 +270,24 @@ type localAuditBody struct {
 	SourcesWithoutObs int                      `json:"sources_without_observation_count"`
 	ClaimsWithoutEv   int                      `json:"claims_without_evidence_count"`
 	FrontierDupes     int                      `json:"frontier_duplicate_signature_count"`
+	HeadCommitID      domain.CommitID          `json:"head_commit_id,omitempty"`
+	StaleBefore       int                      `json:"stale_artifacts_before,omitempty"`
+	StaleMarked       int                      `json:"stale_artifacts_marked,omitempty"`
+	OrphanEvidence    int                      `json:"orphan_evidence_links,omitempty"`
+	OrphanObsAnchors  int                      `json:"orphan_observation_anchors,omitempty"`
+	AgingSourceCount  int                      `json:"aging_source_count,omitempty"`
+	FreshnessMaxAgeH  int                      `json:"freshness_max_age_hours,omitempty"`
 	Findings          []string                 `json:"findings,omitempty"`
+}
+
+type localFamilyEffects struct {
+	Findings         []string
+	StaleBefore      int
+	StaleMarked      int
+	OrphanEvidence   int
+	OrphanObsAnchors int
+	AgingSourceCount int
+	FreshnessMaxAgeH int
 }
 
 func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.Operation, spec domain.OperationSpec, leaseRef string, now time.Time) (domain.KnowledgeArtifact, error) {
@@ -366,8 +394,42 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		}
 	}
 
+	// Join observation anchors to fragments for structural integrity checks.
+	fragmentByID := map[domain.SourceFragmentID]domain.SourceFragment{}
+	versions, err := tx.SourceVersions("")
+	if err != nil {
+		return domain.KnowledgeArtifact{}, err
+	}
+	for _, ver := range versions {
+		frags, fragErr := tx.SourceFragments(ver.ID)
+		if fragErr != nil {
+			return domain.KnowledgeArtifact{}, fragErr
+		}
+		for _, frag := range frags {
+			fragmentByID[frag.ID] = frag
+		}
+	}
+	obsByID := map[domain.ObservationID]domain.Observation{}
+	for _, obs := range observations {
+		obsByID[obs.ID] = obs
+	}
+	claimByID := map[domain.ClaimID]domain.Claim{}
+	for _, claim := range claims {
+		claimByID[claim.ID] = claim
+	}
+
 	family := familyFromSpec(spec.ID)
-	findings := residualFindings(family, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
+
+	headID := domain.GenesisCommitID
+	if head, headErr := tx.HeadCommit(operation.MissionRevision); headErr == nil {
+		headID = head.ID
+	}
+
+	// Family-specific local effects (read-mostly; artifact_refresh may mark stale).
+	effects, err := applyLocalFamilyEffects(tx, family, now, headID, artifacts, sources, versions, fragmentByID, observations, obsByID, claims, claimByID, evidence, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
+	if err != nil {
+		return domain.KnowledgeArtifact{}, err
+	}
 
 	body := localAuditBody{
 		Schema:            "local-operation-audit-v1",
@@ -394,7 +456,14 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		SourcesWithoutObs: sourcesWithoutObs,
 		ClaimsWithoutEv:   claimsWithoutEv,
 		FrontierDupes:     dupes,
-		Findings:          findings,
+		HeadCommitID:      headID,
+		StaleBefore:       effects.StaleBefore,
+		StaleMarked:       effects.StaleMarked,
+		OrphanEvidence:    effects.OrphanEvidence,
+		OrphanObsAnchors:  effects.OrphanObsAnchors,
+		AgingSourceCount:  effects.AgingSourceCount,
+		FreshnessMaxAgeH:  effects.FreshnessMaxAgeH,
+		Findings:          effects.Findings,
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -407,11 +476,6 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 	}
 	if strings.TrimSpace(artifactID) == "" {
 		return domain.KnowledgeArtifact{}, errors.New("generated artifact id must not be empty")
-	}
-
-	base := domain.GenesisCommitID
-	if head, headErr := tx.HeadCommit(operation.MissionRevision); headErr == nil {
-		base = head.ID
 	}
 
 	deps := []string{
@@ -429,15 +493,19 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		kind = "gap_scan_report"
 	case strings.Contains(string(spec.ID), "coverage"):
 		kind = "coverage_scan_report"
+	case strings.Contains(string(spec.ID), "artifact_refresh"):
+		kind = "artifact_refresh_report"
 	case strings.Contains(string(spec.ID), "source_freshness"):
 		kind = "source_freshness_report"
+	case strings.Contains(string(spec.ID), "conflict"):
+		kind = "conflict_review_report"
 	}
 
 	artifact := domain.KnowledgeArtifact{
 		SchemaVersion: domain.SchemaVersionV1,
 		ID:            domain.ArtifactID(artifactID),
 		Kind:          kind,
-		BaseCommitID:  base,
+		BaseCommitID:  headID,
 		Dependencies:  deps,
 		ContentRef:    "inline:json:local-operation-audit-v1",
 		Content:       string(raw),
@@ -472,6 +540,205 @@ func familyFromSpec(id domain.OperationSpecID) string {
 	}
 }
 
+func applyLocalFamilyEffects(
+	tx port.Transaction,
+	family string,
+	now time.Time,
+	headID domain.CommitID,
+	artifacts []domain.KnowledgeArtifact,
+	sources []domain.Source,
+	versions []domain.SourceVersion,
+	fragmentByID map[domain.SourceFragmentID]domain.SourceFragment,
+	observations []domain.Observation,
+	obsByID map[domain.ObservationID]domain.Observation,
+	claims []domain.Claim,
+	claimByID map[domain.ClaimID]domain.Claim,
+	evidence []domain.EvidenceLink,
+	sourcesWithoutObs, claimsWithoutEv, dupes, depthMax int,
+	openByFamily map[string]int,
+) (localFamilyEffects, error) {
+	var out localFamilyEffects
+
+	// Shared structural integrity counters.
+	orphanEvidence := 0
+	for _, link := range evidence {
+		if _, ok := obsByID[link.ObservationID]; !ok {
+			orphanEvidence++
+			continue
+		}
+		if _, ok := claimByID[link.ClaimID]; !ok {
+			orphanEvidence++
+		}
+	}
+	orphanObs := 0
+	for _, obs := range observations {
+		if obs.Anchor.SourceFragmentID != "" {
+			if _, ok := fragmentByID[obs.Anchor.SourceFragmentID]; !ok {
+				orphanObs++
+			}
+		}
+	}
+	out.OrphanEvidence = orphanEvidence
+	out.OrphanObsAnchors = orphanObs
+
+	// Newest version per source for freshness.
+	newestBySource := map[domain.SourceID]domain.SourceVersion{}
+	for _, ver := range versions {
+		prev, ok := newestBySource[ver.SourceID]
+		if !ok || ver.ObservedAt.After(prev.ObservedAt) || (ver.ObservedAt.Equal(prev.ObservedAt) && string(ver.ID) > string(prev.ID)) {
+			newestBySource[ver.SourceID] = ver
+		}
+	}
+
+	switch family {
+	case string(domain.FamilyArtifactRefresh):
+		staleBefore := 0
+		for _, a := range artifacts {
+			if a.Stale {
+				staleBefore++
+			}
+		}
+		out.StaleBefore = staleBefore
+		// Mark non-stale knowledge artifacts whose BaseCommitID is not the
+		// current mission head. Audit/report artifacts stay fresh so local
+		// scans do not invalidate their own trail.
+		marked := 0
+		for _, a := range artifacts {
+			if a.Stale {
+				continue
+			}
+			if isLocalAuditKind(a.Kind) {
+				continue
+			}
+			if a.BaseCommitID == headID {
+				continue
+			}
+			updated := a
+			updated.Stale = true
+			if err := tx.SaveKnowledgeArtifact(updated); err != nil {
+				return out, fmt.Errorf("mark artifact %s stale: %w", a.ID, err)
+			}
+			marked++
+			out.Findings = append(out.Findings, fmt.Sprintf("refresh:marked_stale=%s base=%s head=%s", a.ID, a.BaseCommitID, headID))
+		}
+		out.StaleMarked = marked
+		if marked == 0 {
+			out.Findings = append(out.Findings, "refresh:no_artifact_required_stale_transition")
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("refresh:stale_before=%d", staleBefore))
+		out.Findings = append(out.Findings, fmt.Sprintf("refresh:stale_marked=%d", marked))
+		out.Findings = append(out.Findings, fmt.Sprintf("refresh:head=%s", headID))
+
+	case string(domain.FamilySourceFreshness):
+		window := defaultSourceFreshnessMaxAge
+		out.FreshnessMaxAgeH = int(window / time.Hour)
+		cutoff := now.Add(-window)
+		aging := 0
+		for _, src := range sources {
+			ver, ok := newestBySource[src.ID]
+			observed := src.ObservedAt
+			if ok {
+				observed = ver.ObservedAt
+			}
+			if observed.Before(cutoff) {
+				aging++
+				out.Findings = append(out.Findings, fmt.Sprintf("freshness:aging_source=%s observed_at=%s", src.ID, observed.UTC().Format(time.RFC3339)))
+			}
+		}
+		out.AgingSourceCount = aging
+		if aging == 0 {
+			out.Findings = append(out.Findings, "freshness:no_aging_sources_in_window")
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("freshness:window_hours=%d", out.FreshnessMaxAgeH))
+		out.Findings = append(out.Findings, fmt.Sprintf("freshness:aging_count=%d", aging))
+		if sourcesWithoutObs > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("freshness:sources_lacking_observation_anchor=%d", sourcesWithoutObs))
+		}
+
+	case string(domain.FamilyIntegrityAudit):
+		// Structural referential checks only (no model, no auto-repair).
+		if orphanEvidence > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("integrity:orphan_evidence_links=%d", orphanEvidence))
+		}
+		if orphanObs > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("integrity:orphan_observation_fragment_anchors=%d", orphanObs))
+		}
+		// Contradiction pairs: claims with both SUPPORTS and CONTRADICTS evidence.
+		support := map[domain.ClaimID]int{}
+		contradict := map[domain.ClaimID]int{}
+		for _, link := range evidence {
+			switch link.Relation {
+			case domain.EvidenceSupports:
+				support[link.ClaimID]++
+			case domain.EvidenceContradicts:
+				contradict[link.ClaimID]++
+			}
+		}
+		conflicted := 0
+		for id, n := range support {
+			if contradict[id] > 0 {
+				conflicted++
+				out.Findings = append(out.Findings, fmt.Sprintf("integrity:claim_with_support_and_contradict=%s support=%d contradict=%d", id, n, contradict[id]))
+			}
+		}
+		if claimsWithoutEv > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("integrity:claims_without_evidence=%d", claimsWithoutEv))
+		}
+		if orphanEvidence == 0 && orphanObs == 0 && conflicted == 0 && claimsWithoutEv == 0 {
+			out.Findings = append(out.Findings, "integrity:no_structural_issues")
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("integrity:conflicted_claims=%d", conflicted))
+
+	case string(domain.FamilyConflictReview):
+		// Inventory unopposed claims and explicit contradiction pairs (read-only).
+		hasSupport := map[domain.ClaimID]bool{}
+		hasContradict := map[domain.ClaimID]bool{}
+		for _, link := range evidence {
+			switch link.Relation {
+			case domain.EvidenceSupports, domain.EvidenceReplicates:
+				hasSupport[link.ClaimID] = true
+			case domain.EvidenceContradicts, domain.EvidenceFailsToReplicate:
+				hasContradict[link.ClaimID] = true
+			}
+		}
+		unopposed := 0
+		for _, claim := range claims {
+			if hasSupport[claim.ID] && !hasContradict[claim.ID] {
+				unopposed++
+			}
+		}
+		conflicted := 0
+		for id := range hasSupport {
+			if hasContradict[id] {
+				conflicted++
+			}
+		}
+		out.Findings = append(out.Findings, fmt.Sprintf("conflict:unopposed_supported_claims=%d", unopposed))
+		out.Findings = append(out.Findings, fmt.Sprintf("conflict:claims_with_support_and_opposition=%d", conflicted))
+		if claimsWithoutEv > 0 {
+			out.Findings = append(out.Findings, fmt.Sprintf("conflict:claims_without_evidence=%d", claimsWithoutEv))
+		}
+		if unopposed == 0 && conflicted == 0 && claimsWithoutEv == 0 {
+			out.Findings = append(out.Findings, "conflict:no_review_candidates")
+		}
+
+	default:
+		out.Findings = residualFindings(family, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
+	}
+	return out, nil
+}
+
+func isLocalAuditKind(kind string) bool {
+	switch kind {
+	case "local_operation_audit", "integrity_audit_report", "frontier_manage_report",
+		"gap_scan_report", "coverage_scan_report", "source_freshness_report",
+		"artifact_refresh_report", "conflict_review_report":
+		return true
+	default:
+		return false
+	}
+}
+
 func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax int, openByFamily map[string]int) []string {
 	var out []string
 	switch family {
@@ -486,6 +753,7 @@ func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, 
 			out = append(out, "coverage:no_structural_gap_hint")
 		}
 	case string(domain.FamilySourceFreshness):
+		// Legacy residual path; applyLocalFamilyEffects handles this family now.
 		if sourcesWithoutObs > 0 {
 			out = append(out, fmt.Sprintf("freshness:sources_lacking_observation_anchor=%d", sourcesWithoutObs))
 		} else {
