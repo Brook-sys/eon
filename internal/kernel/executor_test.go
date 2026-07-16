@@ -746,6 +746,135 @@ func TestApplyLocalFamilyEffectsStructuralOrphans(t *testing.T) {
 	}
 }
 
+func TestLocalHarnessAndFrontierFamilyEffects(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 19, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedMission(t, store)
+	if err := EnsureCatalogSpecs(ctx, store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		// Store enforces unique active semantic signatures; seed a parent + child to
+		// exercise depth/family hygiene without inventing illegal duplicates.
+		parent := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_parent_gap", MissionRevision: "revision_1",
+			Family: domain.FamilyGapScan, Title: "parent gap", Origin: "test",
+			ExpectedGain: "g", Novelty: "parent", StopCondition: "s", DedupSignature: "gap:parent",
+			Risk: domain.RiskLow, Priority: 2, EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now, Depth: 0,
+		}
+		child := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_child_gap", MissionRevision: "revision_1",
+			Family: domain.FamilyGapScan, Title: "child gap", Origin: "test",
+			ExpectedGain: "g", Novelty: "child", StopCondition: "s", DedupSignature: "gap:child",
+			ParentID: parent.ID, Depth: 1, Risk: domain.RiskLow, Priority: 2,
+			EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1}, Status: domain.OpportunityOpen,
+			CreatedAt: now, UpdatedAt: now,
+		}
+		if err := tx.CreateWorkOpportunity(parent); err != nil {
+			return err
+		}
+		if err := tx.CreateWorkOpportunity(child); err != nil {
+			return err
+		}
+		harness := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_harness_local", MissionRevision: "revision_1",
+			Family: domain.FamilyHarnessEvaluation, Title: "harness", Origin: "test",
+			ExpectedGain: "compile", Novelty: "h1", StopCondition: "report", DedupSignature: "harness:root",
+			Risk: domain.RiskLow, Priority: 8, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		frontier := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_frontier_local", MissionRevision: "revision_1",
+			Family: domain.FamilyFrontierManage, Title: "frontier", Origin: "test",
+			ExpectedGain: "hygiene", Novelty: "f1", StopCondition: "report", DedupSignature: "frontier:root",
+			Risk: domain.RiskLow, Priority: 7, EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := tx.CreateWorkOpportunity(harness); err != nil {
+			return err
+		}
+		return tx.CreateWorkOpportunity(frontier)
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+
+	admittedH, err := admitter.AdmitOne(ctx, "opp_harness_local")
+	if err != nil {
+		t.Fatalf("admit harness: %v", err)
+	}
+	resH, err := exec.Execute(ctx, admittedH.Operation.ID)
+	if err != nil || !resH.Completed {
+		t.Fatalf("harness execute: err=%v result=%+v", err, resH)
+	}
+	var harnessContent string
+	if err := store.View(ctx, func(r port.Reader) error {
+		a, err := r.KnowledgeArtifact(resH.ArtifactID)
+		if err != nil {
+			return err
+		}
+		harnessContent = a.Content
+		if a.Kind != "harness_evaluation_report" {
+			t.Fatalf("kind = %q", a.Kind)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		`"family":"harness_evaluation"`,
+		"harness:fixture=cognitive-v1",
+		"harness:model=offline-compile",
+		"harness:offline_compile_all_ok",
+		"harness:operation_EXTRACT",
+	} {
+		if !strings.Contains(harnessContent, needle) {
+			t.Fatalf("harness missing %q in %s", needle, harnessContent)
+		}
+	}
+
+	admittedF, err := admitter.AdmitOne(ctx, "opp_frontier_local")
+	if err != nil {
+		t.Fatalf("admit frontier: %v", err)
+	}
+	resF, err := exec.Execute(ctx, admittedF.Operation.ID)
+	if err != nil || !resF.Completed {
+		t.Fatalf("frontier execute: err=%v result=%+v", err, resF)
+	}
+	var frontierContent string
+	if err := store.View(ctx, func(r port.Reader) error {
+		a, err := r.KnowledgeArtifact(resF.ArtifactID)
+		if err != nil {
+			return err
+		}
+		frontierContent = a.Content
+		if a.Kind != "frontier_manage_report" {
+			t.Fatalf("kind = %q", a.Kind)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{
+		`"family":"frontier_management"`,
+		"frontier:duplicate_signatures=0",
+		"frontier:depth_max=1",
+		"frontier:open_gap_scan=",
+		"frontier:signatures_unique",
+	} {
+		if !strings.Contains(frontierContent, needle) {
+			t.Fatalf("frontier missing %q in %s", needle, frontierContent)
+		}
+	}
+}
+
 // seedHeadCommit advances mission head via the full proposal → accept → apply path.
 func seedHeadCommit(tx port.Transaction, mission domain.MissionRevisionID, commitID domain.CommitID, now time.Time) error {
 	// Need a READY/terminal operation for raw model output binding.

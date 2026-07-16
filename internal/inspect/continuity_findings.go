@@ -88,7 +88,7 @@ func isLocalAuditReportKind(kind string) bool {
 	switch kind {
 	case "local_operation_audit", "integrity_audit_report", "frontier_manage_report",
 		"gap_scan_report", "coverage_scan_report", "source_freshness_report",
-		"artifact_refresh_report", "conflict_review_report":
+		"artifact_refresh_report", "conflict_review_report", "harness_evaluation_report":
 		return true
 	default:
 		return false

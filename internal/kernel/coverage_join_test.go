@@ -359,4 +359,63 @@ func TestPlanChildDraftsFromStoreUsesJoins(t *testing.T) {
 	if len(resolvedConflict) != 1 || resolvedConflict[0].DedupSignature != "conflict:unopposed" {
 		t.Fatalf("static conflict fallback = %+v", resolvedConflict)
 	}
+
+	// harness always plans offline compile; frontier plans from open inventory.
+	harnessDrafts, err := PlanChildDraftsFromStore(ctx, clean, domain.FamilyHarnessEvaluation, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(harnessDrafts) != 1 || harnessDrafts[0].DedupSignature != "harness:offline_compile" {
+		t.Fatalf("harness drafts = %+v", harnessDrafts)
+	}
+	frontierEmpty, err := PlanChildDraftsFromStore(ctx, clean, domain.FamilyFrontierManage, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(frontierEmpty) != 0 {
+		t.Fatalf("empty frontier drafts = %+v", frontierEmpty)
+	}
+	frontierStore := memory.New()
+	seedMission(t, frontierStore)
+	if err := frontierStore.Update(ctx, func(tx port.Transaction) error {
+		parent := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_front_parent", MissionRevision: "revision_1",
+			Family: domain.FamilyGapScan, Title: "parent", Origin: "test", ExpectedGain: "g", Novelty: "p",
+			StopCondition: "s", DedupSignature: "gap:parent", Risk: domain.RiskLow, Priority: 1,
+			EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1}, Status: domain.OpportunityOpen,
+			CreatedAt: now, UpdatedAt: now, Depth: 0,
+		}
+		child := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_front_child", MissionRevision: "revision_1",
+			Family: domain.FamilyGapScan, Title: "child", Origin: "test", ExpectedGain: "g", Novelty: "c",
+			StopCondition: "s", DedupSignature: "gap:child", ParentID: parent.ID, Depth: 1,
+			Risk: domain.RiskLow, Priority: 1, EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := tx.CreateWorkOpportunity(parent); err != nil {
+			return err
+		}
+		return tx.CreateWorkOpportunity(child)
+	}); err != nil {
+		t.Fatalf("seed frontier: %v", err)
+	}
+	frontierDrafts, err := PlanChildDraftsFromStore(ctx, frontierStore, domain.FamilyFrontierManage, "revision_1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(frontierDrafts) != 1 || frontierDrafts[0].DedupSignature != "frontier:hygiene_inventory" {
+		t.Fatalf("frontier drafts = %+v", frontierDrafts)
+	}
+	if !strings.Contains(frontierDrafts[0].ExpectedGain, "open=2") || !strings.Contains(frontierDrafts[0].ExpectedGain, "depth_max=1") {
+		t.Fatalf("frontier gain = %q", frontierDrafts[0].ExpectedGain)
+	}
+	// Pure helper still counts excess signatures when callers pass multi-sig slices.
+	dupes, families, depthMax := frontierHygieneCounts([]domain.WorkOpportunity{
+		{DedupSignature: "s", Family: domain.FamilyGapScan, Depth: 2},
+		{DedupSignature: "s", Family: domain.FamilyGapScan, Depth: 1},
+		{DedupSignature: "t", Family: domain.FamilyCoverageScan, Depth: 0},
+	})
+	if dupes != 1 || families != 2 || depthMax != 2 {
+		t.Fatalf("frontierHygieneCounts = %d %d %d", dupes, families, depthMax)
+	}
 }

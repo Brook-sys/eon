@@ -225,9 +225,80 @@ func PlanChildDraftsFromStore(ctx context.Context, store port.Store, family doma
 			EstimatedCost:  domain.Budget{Tokens: 64, Attempts: 1},
 		}}, nil
 
+	case domain.FamilyHarnessEvaluation:
+		// Offline compile inventory is always actionable without a provider.
+		return []ChildDraft{{
+			Title:          "compile cognitive fixture matrix offline",
+			Origin:         "decompose:harness_evaluation:offline",
+			ExpectedGain:   "compile-only 2k/4k/8k matrix over cognitive-v1",
+			Novelty:        fmt.Sprintf("offline harness plan at %s", now.UTC().Format(time.RFC3339)),
+			StopCondition:  "offline compile report persisted",
+			DedupSignature: "harness:offline_compile",
+			Risk:           domain.RiskLow,
+			Priority:       18,
+			EstimatedCost:  domain.Budget{Tokens: 96, Attempts: 1},
+		}}, nil
+
+	case domain.FamilyFrontierManage:
+		open, err := listOpenAndAdmitted(ctx, store, mission)
+		if err != nil {
+			return nil, err
+		}
+		dupes, families, depthMax := frontierHygieneCounts(open)
+		if len(open) == 0 && dupes == 0 {
+			return nil, nil
+		}
+		return []ChildDraft{{
+			Title:          "hygiene open frontier signatures and depth",
+			Origin:         "decompose:frontier_manage:findings",
+			ExpectedGain:   fmt.Sprintf("frontier open=%d dupes=%d families=%d depth_max=%d", len(open), dupes, families, depthMax),
+			Novelty:        fmt.Sprintf("frontier hygiene inventory at %s", now.UTC().Format(time.RFC3339)),
+			StopCondition:  "frontier compact report persisted",
+			DedupSignature: "frontier:hygiene_inventory",
+			Risk:           domain.RiskLow,
+			Priority:       14,
+			EstimatedCost:  domain.Budget{Tokens: 32, Attempts: 1},
+		}}, nil
+
 	default:
 		return nil, nil
 	}
+}
+
+func listOpenAndAdmitted(ctx context.Context, store port.Store, mission domain.MissionRevisionID) ([]domain.WorkOpportunity, error) {
+	var items []domain.WorkOpportunity
+	err := store.View(ctx, func(r port.Reader) error {
+		open, err := r.WorkOpportunities(mission, domain.OpportunityOpen)
+		if err != nil {
+			return err
+		}
+		admitted, err := r.WorkOpportunities(mission, domain.OpportunityAdmitted)
+		if err != nil {
+			return err
+		}
+		items = append(items, open...)
+		items = append(items, admitted...)
+		return nil
+	})
+	return items, err
+}
+
+func frontierHygieneCounts(items []domain.WorkOpportunity) (dupes, familyCount, depthMax int) {
+	sigCount := map[string]int{}
+	families := map[domain.WorkFamily]struct{}{}
+	for _, opp := range items {
+		sigCount[opp.DedupSignature]++
+		families[opp.Family] = struct{}{}
+		if opp.Depth > depthMax {
+			depthMax = opp.Depth
+		}
+	}
+	for _, n := range sigCount {
+		if n > 1 {
+			dupes += n - 1
+		}
+	}
+	return dupes, len(families), depthMax
 }
 
 func integrityStructuralCounts(
@@ -339,6 +410,13 @@ func staticChildDrafts(family domain.WorkFamily) []ChildDraft {
 			ExpectedGain: "candidates for reacquisition or revalidation", Novelty: "sources past freshness window",
 			StopCondition: "stale sources listed or deferred", DedupSignature: "freshness:stale_sources",
 			Risk: domain.RiskLow, Priority: 20, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+		}}
+	case domain.FamilyHarnessEvaluation:
+		return []ChildDraft{{
+			Title: "compile cognitive fixture matrix offline", Origin: "decompose:harness_evaluation",
+			ExpectedGain: "compile-only matrix without provider", Novelty: "offline harness seed",
+			StopCondition: "offline compile report", DedupSignature: "harness:offline_compile",
+			Risk: domain.RiskLow, Priority: 18, EstimatedCost: domain.Budget{Tokens: 96, Attempts: 1},
 		}}
 	case domain.FamilyFrontierManage:
 		return []ChildDraft{{

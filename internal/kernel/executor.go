@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/evaluation"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/runtime/source"
 )
 
@@ -36,6 +39,8 @@ const defaultSourceFreshnessMaxAge = 7 * 24 * time.Hour
 //   - integrity_audit: structural orphan / contradiction inventory (no auto-repair)
 //   - conflict_evidence_review: unopposed and opposed claim inventory
 //   - gap_scan / mission_coverage_scan: formal fragment→version→source coverage joins
+//   - harness_evaluation: offline compile of cognitive-v1 matrix (no provider)
+//   - frontier_management: signature/depth/family hygiene inventory
 type LocalExecutor struct {
 	Store    port.Store
 	Clock    source.Clock
@@ -498,6 +503,8 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		kind = "source_freshness_report"
 	case strings.Contains(string(spec.ID), "conflict"):
 		kind = "conflict_review_report"
+	case strings.Contains(string(spec.ID), "harness"):
+		kind = "harness_evaluation_report"
 	}
 
 	artifact := domain.KnowledgeArtifact{
@@ -820,6 +827,21 @@ func applyLocalFamilyEffects(
 			out.Findings = append(out.Findings, "coverage:no_structural_gap")
 		}
 
+	case string(domain.FamilyHarnessEvaluation):
+		// Provider-free compile of the embedded cognitive fixture matrix.
+		fixtures, err := evaluation.LoadEmbeddedCognitiveV1()
+		if err != nil {
+			return out, fmt.Errorf("load embedded cognitive fixtures: %w", err)
+		}
+		report, err := evaluation.CompileMatrix(fixtures, evaluation.DefaultCognitiveMatrix(), prompt.ConservativeEstimator{}, evaluation.DefaultOperationSpec())
+		if err != nil {
+			return out, fmt.Errorf("offline harness compile: %w", err)
+		}
+		out.Findings = append(out.Findings, evaluation.OfflineFindings(report)...)
+
+	case string(domain.FamilyFrontierManage):
+		out.Findings = append(out.Findings, frontierHygieneFindings(dupes, depthMax, openByFamily)...)
+
 	default:
 		out.Findings = residualFindings(family, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax, openByFamily)
 	}
@@ -830,11 +852,44 @@ func isLocalAuditKind(kind string) bool {
 	switch kind {
 	case "local_operation_audit", "integrity_audit_report", "frontier_manage_report",
 		"gap_scan_report", "coverage_scan_report", "source_freshness_report",
-		"artifact_refresh_report", "conflict_review_report":
+		"artifact_refresh_report", "conflict_review_report", "harness_evaluation_report":
 		return true
 	default:
 		return false
 	}
+}
+
+func frontierHygieneFindings(dupes, depthMax int, openByFamily map[string]int) []string {
+	out := []string{
+		fmt.Sprintf("frontier:duplicate_signatures=%d", dupes),
+		fmt.Sprintf("frontier:depth_max=%d", depthMax),
+		fmt.Sprintf("frontier:open_family_count=%d", len(openByFamily)),
+	}
+	openTotal := 0
+	families := make([]string, 0, len(openByFamily))
+	for fam := range openByFamily {
+		families = append(families, fam)
+	}
+	sort.Strings(families)
+	for i, fam := range families {
+		n := openByFamily[fam]
+		openTotal += n
+		if i < 12 {
+			out = append(out, fmt.Sprintf("frontier:open_%s=%d", fam, n))
+		}
+	}
+	if len(families) > 12 {
+		out = append(out, fmt.Sprintf("frontier:open_families_truncated=%d", len(families)-12))
+	}
+	out = append(out, fmt.Sprintf("frontier:open_total=%d", openTotal))
+	if openTotal == 0 {
+		out = append(out, "frontier:no_open_opportunities")
+	} else if dupes == 0 {
+		out = append(out, "frontier:signatures_unique")
+	} else {
+		out = append(out, "frontier:signature_dedupe_candidates")
+	}
+	return out
 }
 
 func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, depthMax int, openByFamily map[string]int) []string {
@@ -859,16 +914,8 @@ func residualFindings(family string, sourcesWithoutObs, claimsWithoutEv, dupes, 
 			out = append(out, "freshness:all_sources_have_observation_hint_or_none")
 		}
 	case string(domain.FamilyFrontierManage):
-		if dupes > 0 {
-			out = append(out, fmt.Sprintf("frontier:duplicate_signatures=%d", dupes))
-		}
-		out = append(out, fmt.Sprintf("frontier:depth_max=%d", depthMax))
-		for fam, n := range openByFamily {
-			out = append(out, fmt.Sprintf("frontier:open_%s=%d", fam, n))
-		}
-		if len(out) == 1 {
-			out = append(out, "frontier:no_open_opportunities")
-		}
+		// Legacy residual path; applyLocalFamilyEffects owns frontier hygiene now.
+		out = append(out, frontierHygieneFindings(dupes, depthMax, openByFamily)...)
 	default:
 		if depthMax > 0 {
 			out = append(out, fmt.Sprintf("depth_max=%d", depthMax))
