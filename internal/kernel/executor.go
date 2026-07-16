@@ -14,6 +14,7 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/view"
 )
 
 // Event kinds emitted by the model-free local executor.
@@ -34,7 +35,8 @@ const defaultSourceFreshnessMaxAge = 7 * 24 * time.Hour
 // Model-backed PROPOSE_ONLY paths remain out of scope until a provider is wired.
 //
 // Family-specific local effects (still model-free):
-//   - artifact_refresh: mark non-audit KnowledgeArtifacts stale when BaseCommitID != head
+//   - artifact_refresh: mark non-audit KnowledgeArtifacts stale when BaseCommitID != head,
+//     then regenerate a bounded batch of stale cited_claim_view successors (FR-KNOW-005)
 //   - source_freshness: report sources whose newest version is outside the aging window
 //   - integrity_audit: structural orphan / contradiction inventory (no auto-repair)
 //   - conflict_evidence_review: unopposed and opposed claim inventory
@@ -279,6 +281,7 @@ type localAuditBody struct {
 	HeadCommitID        domain.CommitID          `json:"head_commit_id,omitempty"`
 	StaleBefore         int                      `json:"stale_artifacts_before,omitempty"`
 	StaleMarked         int                      `json:"stale_artifacts_marked,omitempty"`
+	RefreshRegenerated  int                      `json:"refresh_regenerated_count,omitempty"`
 	OrphanEvidence      int                      `json:"orphan_evidence_links,omitempty"`
 	OrphanObsAnchors    int                      `json:"orphan_observation_anchors,omitempty"`
 	AgingSourceCount    int                      `json:"aging_source_count,omitempty"`
@@ -297,6 +300,7 @@ type localFamilyEffects struct {
 	Findings            []string
 	StaleBefore         int
 	StaleMarked         int
+	RefreshRegenerated  int
 	OrphanEvidence      int
 	OrphanObsAnchors    int
 	AgingSourceCount    int
@@ -463,6 +467,22 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 	if err != nil {
 		return domain.KnowledgeArtifact{}, err
 	}
+	// Authorized regeneration after stale-mark (store-retention.v1 / FR-KNOW-005).
+	if family == string(domain.FamilyArtifactRefresh) {
+		created, regenErr := view.RefreshCitedBatchInTx(tx, e.IDs, headID, view.DefaultRefreshBatch)
+		if regenErr != nil {
+			return domain.KnowledgeArtifact{}, fmt.Errorf("artifact_refresh regenerate cited views: %w", regenErr)
+		}
+		effects.RefreshRegenerated = len(created)
+		if len(created) == 0 {
+			effects.Findings = append(effects.Findings, "refresh:no_cited_view_regenerated")
+		} else {
+			for _, art := range created {
+				effects.Findings = append(effects.Findings, fmt.Sprintf("refresh:regenerated=%s base=%s", art.ID, art.BaseCommitID))
+			}
+		}
+		effects.Findings = append(effects.Findings, fmt.Sprintf("refresh:regenerated_count=%d", len(created)))
+	}
 	// Merge hygiene write-path counters/findings produced before inventory.
 	effects.HygieneDeferred = hygieneEffects.HygieneDeferred
 	effects.HygieneAbandoned = hygieneEffects.HygieneAbandoned
@@ -501,6 +521,7 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		HeadCommitID:        headID,
 		StaleBefore:         effects.StaleBefore,
 		StaleMarked:         effects.StaleMarked,
+		RefreshRegenerated:  effects.RefreshRegenerated,
 		OrphanEvidence:      effects.OrphanEvidence,
 		OrphanObsAnchors:    effects.OrphanObsAnchors,
 		AgingSourceCount:    effects.AgingSourceCount,

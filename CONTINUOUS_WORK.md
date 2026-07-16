@@ -133,6 +133,7 @@ Política MVP (`store-retention.v1` em `domain.StoreRetentionPolicy`):
 - ações autorizadas: refresh de artefatos derivados obsoletos (FR-KNOW-005), higiene/compactação de frontier (`WorkOpportunity`), trim de buffers descartáveis de export OTLP (`ExportRetention`);
 - pressão de crescimento do head de eventos e contagem de artefatos stale são **alertas de apresentação** (soft thresholds), nunca gatilhos de exclusão;
 - backup/export (`sqlite.BackupTo`) é o caminho operacional para controle de footprint, não delete seletivo do log.
+- execução autorizada de refresh: `view.Refresher` regenera apenas `cited_claim_view` already-stale sob novo `ArtifactID` (prior permanece stale); `LocalExecutor` family `artifact_refresh` marca base≠head e regenera batch bounded; dry-run operador em `GET /store/retention` (sem mutação).
 
 ### 3.8 Melhoria do harness
 

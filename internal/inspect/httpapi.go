@@ -61,6 +61,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /frontier", a.handleFrontier)
 	mux.HandleFunc("GET /frontier/hygiene", a.handleFrontierHygiene)
 	mux.HandleFunc("GET /frontier/opportunities/{opportunityID}", a.handleFrontierOpportunity)
+	mux.HandleFunc("GET /store/retention", a.handleStoreRetention)
 	return mux
 }
 
@@ -504,6 +505,18 @@ func (a *API) handleFrontier(w http.ResponseWriter, r *http.Request) {
 		page.Items[i], _ = redactOpportunitySummary(page.Items[i])
 	}
 	writeJSON(w, http.StatusOK, page)
+}
+
+// handleStoreRetention dry-runs store-retention.v1 posture (read-only).
+// Query: mission_id (optional; adds active head findings when present).
+func (a *API) handleStoreRetention(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.URL.Query().Get("mission_id")))
+	proj, err := a.Projector.StoreRetention(r.Context(), missionID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
 }
 
 // handleFrontierHygiene dry-runs PlanFrontierReservoirHygiene without mutation.

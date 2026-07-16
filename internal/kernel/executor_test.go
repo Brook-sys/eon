@@ -416,6 +416,8 @@ func TestLocalArtifactRefreshMarksStaleAgainstHead(t *testing.T) {
 		`"stale_artifacts_marked":1`,
 		`refresh:marked_stale=artifact_seed_1`,
 		`"head_commit_id":"commit_head_1"`,
+		`refresh:regenerated_count=0`,
+		`refresh:no_cited_view_regenerated`,
 	} {
 		if !strings.Contains(report.Content, needle) {
 			t.Fatalf("report missing %q in %s", needle, report.Content)
