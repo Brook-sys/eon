@@ -37,8 +37,9 @@ type Runtime struct {
 	Commands *control.CommandInbox
 	Events   *control.ExternalEventInbox
 
-	CommandProcessor *kernel.CommandProcessor
-	EventProcessor   *kernel.ExternalEventProcessor
+	// Command/Event processors may be observability wrappers; they never gain authority.
+	CommandProcessor observability.CommandProcessor
+	EventProcessor   observability.ExternalEventProcessor
 	ConfigApplier    *kernel.ConfigApplier
 	Scheduler        kernel.Scheduler
 	// Executor routes local continuity and optional PROPOSE_ONLY model paths.
@@ -60,7 +61,8 @@ type Runtime struct {
 	TelegramWorker  *telegram.DeliveryWorker
 	TelegramIngress *telegram.Ingress
 
-	Telemetry *observability.Runtime
+	Telemetry      *observability.Runtime
+	cycleTelemetry *observability.CycleInstruments
 
 	logger *log.Logger
 	mu     sync.Mutex
@@ -249,8 +251,8 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Closer:           closer,
 		Commands:         commandInbox,
 		Events:           eventInbox,
-		CommandProcessor: commandProcessor,
-		EventProcessor:   eventProcessor,
+		CommandProcessor: observability.InstrumentCommand(commandProcessor, telemetry),
+		EventProcessor:   observability.InstrumentExternalEvent(eventProcessor, telemetry),
 		ConfigApplier:    configApplier,
 		Scheduler:        scheduler,
 		Executor: kernel.DispatchExecutor{
@@ -270,6 +272,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		TelegramWorker:  telegramBits.Worker,
 		TelegramIngress: telegramBits.Ingress,
 		Telemetry:       telemetry,
+		cycleTelemetry:  observability.NewCycleInstruments(telemetry),
 		logger:          log.Default(),
 	}, nil
 }
@@ -390,6 +393,20 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 			outcome = "stopping"
 		}
 		observability.EndControl(span, outcome, "")
+		if rt.cycleTelemetry != nil {
+			rt.cycleTelemetry.Record(ctx, observability.CycleSnapshot{
+				Outcome:            outcome,
+				CommandsProcessed:  result.CommandsProcessed,
+				EventsProcessed:    result.EventsProcessed,
+				OperationsExecuted: result.OperationsExecuted,
+				OperationsSkipped:  result.OperationsSkipped,
+				LeasesReconciled:   result.LeasesReconciled,
+				SchedulerRan:       result.SchedulerRan,
+				SchedulerKind:      string(result.SchedulerKind),
+				Worked:             result.Worked,
+				Stopping:           result.Stopping,
+			})
+		}
 	}()
 
 	// Operator commands first: pause/shutdown must gate subsequent dispatch.

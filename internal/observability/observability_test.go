@@ -9,6 +9,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
 )
@@ -128,6 +129,133 @@ func TestControlTraceHelper(t *testing.T) {
 func TestConfigValidation(t *testing.T) {
 	if err := (observability.Config{Enabled: true, SampleRatio: 2}).Validate(); err == nil {
 		t.Fatal("expected invalid ratio")
+	}
+}
+
+type stubCommandProcessor struct {
+	next    domain.CommandReceipt
+	ok      bool
+	err     error
+	process domain.CommandReceipt
+	pErr    error
+	seenID  domain.CommandID
+}
+
+func (s *stubCommandProcessor) ProcessNext(context.Context) (domain.CommandReceipt, bool, error) {
+	return s.next, s.ok, s.err
+}
+func (s *stubCommandProcessor) Process(_ context.Context, id domain.CommandID) (domain.CommandReceipt, error) {
+	s.seenID = id
+	return s.process, s.pErr
+}
+
+type stubEventProcessor struct {
+	next    domain.ExternalEventDisposition
+	ok      bool
+	err     error
+	process domain.ExternalEventDisposition
+	pErr    error
+}
+
+func (s *stubEventProcessor) ProcessNext(context.Context) (domain.ExternalEventDisposition, bool, error) {
+	return s.next, s.ok, s.err
+}
+func (s *stubEventProcessor) Process(context.Context, domain.ExternalEventID) (domain.ExternalEventDisposition, error) {
+	return s.process, s.pErr
+}
+
+func TestInstrumentCommandEmitsSpanWithoutBodies(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	rt, err := observability.Setup(context.Background(), observability.Config{Enabled: true, SampleRatio: 1}, observability.WithSpanExporter(exporter))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Shutdown(context.Background()) })
+
+	inner := &stubCommandProcessor{
+		next: domain.CommandReceipt{
+			CommandID:   "cmd_1",
+			State:       domain.CommandApplied,
+			ResultRef:   "mission@1",
+			FailureCode: "",
+		},
+		ok: true,
+	}
+	proc := observability.InstrumentCommand(inner, rt)
+	receipt, ok, err := proc.ProcessNext(context.Background())
+	if err != nil || !ok || receipt.CommandID != "cmd_1" {
+		t.Fatalf("receipt=%#v ok=%v err=%v", receipt, ok, err)
+	}
+	// Idle drain must not export a span.
+	inner.ok = false
+	if _, ok, err := proc.ProcessNext(context.Background()); ok || err != nil {
+		t.Fatalf("idle peek should be empty, ok=%v err=%v", ok, err)
+	}
+	spans := exporter.GetSpans()
+	_ = rt.Shutdown(context.Background())
+	if len(spans) != 1 || spans[0].Name != "control.command.process" {
+		t.Fatalf("spans=%#v", spans)
+	}
+	blob := attributesBlob(spans[0])
+	if strings.Contains(blob, "Bearer ") || !strings.Contains(blob, "motor.telemetry.canonical=false") {
+		t.Fatalf("attrs=%s", blob)
+	}
+	if !strings.Contains(blob, "motor.command.id=cmd_1") {
+		t.Fatalf("missing command id: %s", blob)
+	}
+}
+
+func TestInstrumentExternalEventProcessPath(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	rt, err := observability.Setup(context.Background(), observability.Config{Enabled: true, SampleRatio: 1}, observability.WithSpanExporter(exporter))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Shutdown(context.Background()) })
+	inner := &stubEventProcessor{
+		process: domain.ExternalEventDisposition{
+			EventID: "evt_1", State: domain.ExternalEventRejected, FailureCode: "UNKNOWN_KIND",
+		},
+	}
+	proc := observability.InstrumentExternalEvent(inner, rt)
+	disp, err := proc.Process(context.Background(), "evt_1")
+	if err != nil || disp.State != domain.ExternalEventRejected {
+		t.Fatalf("disp=%#v err=%v", disp, err)
+	}
+	spans := exporter.GetSpans()
+	_ = rt.Shutdown(context.Background())
+	if len(spans) != 1 || spans[0].Name != "control.external_event.process" {
+		t.Fatalf("spans=%#v", spans)
+	}
+	blob := attributesBlob(spans[0])
+	if !strings.Contains(blob, "motor.control.failure_code=UNKNOWN_KIND") {
+		t.Fatalf("attrs=%s", blob)
+	}
+}
+
+func TestCycleInstrumentsDisabledNoop(t *testing.T) {
+	rt, err := observability.Setup(context.Background(), observability.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Shutdown(context.Background()) })
+	ci := observability.NewCycleInstruments(rt)
+	ci.Record(context.Background(), observability.CycleSnapshot{Outcome: "worked", CommandsProcessed: 2, SchedulerRan: true, SchedulerKind: "DISPATCH"})
+}
+
+func TestDisabledProcessorPassthrough(t *testing.T) {
+	rt, err := observability.Setup(context.Background(), observability.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Shutdown(context.Background()) })
+	inner := &stubCommandProcessor{
+		process: domain.CommandReceipt{CommandID: "cmd_x", State: domain.CommandApplied, ResultRef: "r"},
+	}
+	proc := observability.InstrumentCommand(inner, rt)
+	got, err := proc.Process(context.Background(), "cmd_x")
+	if err != nil || got.CommandID != "cmd_x" || inner.seenID != "cmd_x" {
+		t.Fatalf("got=%#v err=%v seen=%q", got, err, inner.seenID)
 	}
 }
 

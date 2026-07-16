@@ -508,9 +508,11 @@ Baseline de telemetria opcional em `internal/observability`:
 
 - runtime OTel (traces + métricas) desligado por default; falha ou ausência do exportador NÃO afeta o kernel;
 - decorator `InstrumentModel` emite spans `model.complete` e contadores de calls/tokens sem prompt, completion body ou secrets;
+- decorators `InstrumentCommand` / `InstrumentExternalEvent` emitem spans de processador e contadores de outcome sem payloads/textos;
+- `CycleInstruments` no bootstrap registra contagens derivadas do ciclo de controle (commands/events/ops/leases/scheduler);
 - helpers de controle (`TraceControl`/`EndControl`) marcam unidades de control plane com `motor.telemetry.canonical=false`;
-- exportador OTLP HTTP opcional; testes usam exporter em memória;
-- residual: alertas, políticas de retenção, wiring no bootstrap do runtime e cobertura de mais processadores.
+- exportadores OTLP HTTP opcionais para traces e métricas; testes usam exporter/reader em memória;
+- residual: alertas e políticas de retenção (não bloqueiam o vertical slice).
 
 ## 10. Critérios de aceitação do primeiro dashboard
 

@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -119,16 +120,16 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 		spanProcessors = append(spanProcessors, sdktrace.NewSimpleSpanProcessor(options.spanExporter))
 	}
 	if strings.TrimSpace(cfg.OTLPEndpoint) != "" {
-		clientOpts := []otlptracehttp.Option{otlptracehttp.WithEndpoint(cfg.OTLPEndpoint)}
+		traceOpts := []otlptracehttp.Option{otlptracehttp.WithEndpoint(cfg.OTLPEndpoint)}
 		if cfg.Insecure {
-			clientOpts = append(clientOpts, otlptracehttp.WithInsecure())
+			traceOpts = append(traceOpts, otlptracehttp.WithInsecure())
 		}
-		otlpExporter, err := otlptracehttp.New(ctx, clientOpts...)
+		otlpTrace, err := otlptracehttp.New(ctx, traceOpts...)
 		if err != nil {
-			return nil, fmt.Errorf("observability otlp exporter: %w", err)
+			return nil, fmt.Errorf("observability otlp trace exporter: %w", err)
 		}
-		spanProcessors = append(spanProcessors, sdktrace.NewBatchSpanProcessor(otlpExporter))
-		rt.shutdowns = append(rt.shutdowns, otlpExporter.Shutdown)
+		spanProcessors = append(spanProcessors, sdktrace.NewBatchSpanProcessor(otlpTrace))
+		rt.shutdowns = append(rt.shutdowns, otlpTrace.Shutdown)
 	}
 	if len(spanProcessors) == 0 {
 		// Enabled without exporter is still useful for local Tracer injection
@@ -148,7 +149,26 @@ func Setup(ctx context.Context, cfg Config, opts ...Option) (*Runtime, error) {
 		tpOpts = append(tpOpts, sdktrace.WithSpanProcessor(sp))
 	}
 	tp := sdktrace.NewTracerProvider(tpOpts...)
-	mp := sdkmetric.NewMeterProvider(sdkmetric.WithResource(res))
+
+	var metricReaders []sdkmetric.Option
+	metricReaders = append(metricReaders, sdkmetric.WithResource(res))
+	if options.metricReader != nil {
+		metricReaders = append(metricReaders, sdkmetric.WithReader(options.metricReader))
+	}
+	if strings.TrimSpace(cfg.OTLPEndpoint) != "" {
+		metricOpts := []otlpmetrichttp.Option{otlpmetrichttp.WithEndpoint(cfg.OTLPEndpoint)}
+		if cfg.Insecure {
+			metricOpts = append(metricOpts, otlpmetrichttp.WithInsecure())
+		}
+		otlpMetric, err := otlpmetrichttp.New(ctx, metricOpts...)
+		if err != nil {
+			_ = tp.Shutdown(ctx)
+			return nil, fmt.Errorf("observability otlp metric exporter: %w", err)
+		}
+		// PeriodicReader owns exporter shutdown via MeterProvider.Shutdown.
+		metricReaders = append(metricReaders, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpMetric)))
+	}
+	mp := sdkmetric.NewMeterProvider(metricReaders...)
 
 	rt.enabled = true
 	rt.tracerProvider = tp
@@ -164,12 +184,20 @@ type Option func(*options)
 
 type options struct {
 	spanExporter sdktrace.SpanExporter
+	metricReader sdkmetric.Reader
 }
 
-// WithSpanExporter installs a process-local exporter (tests).
+// WithSpanExporter installs a process-local span exporter (tests).
 func WithSpanExporter(exporter sdktrace.SpanExporter) Option {
 	return func(o *options) {
 		o.spanExporter = exporter
+	}
+}
+
+// WithMetricReader installs a process-local metric reader (tests).
+func WithMetricReader(reader sdkmetric.Reader) Option {
+	return func(o *options) {
+		o.metricReader = reader
 	}
 }
 
