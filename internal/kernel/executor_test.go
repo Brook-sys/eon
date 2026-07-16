@@ -1035,6 +1035,164 @@ func TestLocalFrontierManageAppliesHygieneTransitions(t *testing.T) {
 	}
 }
 
+func TestLocalFrontierManageReopensDeferredUnderCapacity(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 21, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedMission(t, store)
+	if err := EnsureCatalogSpecs(ctx, store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+
+	// Room for one more OPEN under MaxCandidates; store uniqueness forbids
+	// active signature duplicates, so supersede is covered by pure domain tests.
+	policy := domain.DefaultHorizonPolicy()
+	policy.MaxCandidates = 2
+	policy.MaxDepth = 3
+	policy.Version = "horizon.hygiene.reopen.v1"
+	applier, err := NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1, ID: "draft_hz_reopen", Scope: domain.ConfigScopeHorizon,
+		Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+		ActorType: domain.ActorOperator, ActorID: "op", Reason: "reopen test",
+		Horizon: &policy, CreatedAt: now,
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(draft)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	if _, _, err := applier.ApplyDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	now = clock.Now()
+
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		mk := func(id string, status domain.WorkOpportunityStatus, priority uint8, sig string) domain.WorkOpportunity {
+			opp := domain.WorkOpportunity{
+				SchemaVersion: domain.SchemaVersionV1, ID: domain.WorkOpportunityID(id), MissionRevision: "revision_1",
+				Family: domain.FamilyGapScan, Title: id, Origin: "test",
+				ExpectedGain: "g", Novelty: id, StopCondition: "s", DedupSignature: sig,
+				Risk: domain.RiskLow, Priority: priority, EstimatedCost: domain.Budget{Tokens: 8, Attempts: 1},
+				Status: status, CreatedAt: now, UpdatedAt: now,
+			}
+			if status == domain.OpportunityDeferred {
+				opp.AbandonReason = "parked earlier"
+			}
+			return opp
+		}
+		for _, opp := range []domain.WorkOpportunity{
+			mk("opp_open", domain.OpportunityOpen, 5, "unique:open"),
+			mk("opp_parked_hi", domain.OpportunityDeferred, 9, "unique:parked_hi"),
+			mk("opp_parked_lo", domain.OpportunityDeferred, 1, "unique:parked_lo"),
+		} {
+			if err := tx.CreateWorkOpportunity(opp); err != nil {
+				return err
+			}
+		}
+		frontier := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_frontier_reopen", MissionRevision: "revision_1",
+			Family: domain.FamilyFrontierManage, Title: "frontier reopen", Origin: "test",
+			ExpectedGain: "reopen", Novelty: "hygiene", StopCondition: "report", DedupSignature: "frontier:hygiene_reopen",
+			Risk: domain.RiskLow, Priority: 20, EstimatedCost: domain.Budget{Tokens: 32, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		return tx.CreateWorkOpportunity(frontier)
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	admitted, err := admitter.AdmitOne(ctx, "opp_frontier_reopen")
+	if err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+	// After admit, frontier manager leaves OPEN; still one OPEN gap + free slot for one reopen.
+	// MaxCandidates=2 counts OPEN reservoir units; frontier opp is ADMITTED, not OPEN.
+	res, err := exec.Execute(ctx, admitted.Operation.ID)
+	if err != nil || !res.Completed {
+		t.Fatalf("execute: err=%v result=%+v", err, res)
+	}
+
+	var (
+		open, parkedHi, parkedLo domain.WorkOpportunity
+		content                  string
+		hasReopen, hasCompact    bool
+	)
+	if err := store.View(ctx, func(r port.Reader) error {
+		var err error
+		open, err = r.WorkOpportunity("opp_open")
+		if err != nil {
+			return err
+		}
+		parkedHi, err = r.WorkOpportunity("opp_parked_hi")
+		if err != nil {
+			return err
+		}
+		parkedLo, err = r.WorkOpportunity("opp_parked_lo")
+		if err != nil {
+			return err
+		}
+		art, err := r.KnowledgeArtifact(res.ArtifactID)
+		if err != nil {
+			return err
+		}
+		content = art.Content
+		events, err := r.Events(0, 500)
+		if err != nil {
+			return err
+		}
+		for _, ev := range events {
+			switch ev.Kind {
+			case domain.EventWorkOpportunityReopened:
+				hasReopen = true
+			case domain.EventContinuityFrontierCompacted:
+				hasCompact = true
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if open.Status != domain.OpportunityOpen {
+		t.Fatalf("open = %s", open.Status)
+	}
+	if parkedHi.Status != domain.OpportunityOpen {
+		t.Fatalf("parked_hi = %s want OPEN after reopen", parkedHi.Status)
+	}
+	if parkedHi.AbandonReason != "" {
+		t.Fatalf("parked_hi abandon reason should clear on reopen, got %q", parkedHi.AbandonReason)
+	}
+	if parkedLo.Status != domain.OpportunityDeferred {
+		t.Fatalf("parked_lo = %s want DEFERRED (no free slot)", parkedLo.Status)
+	}
+	if !hasReopen || !hasCompact {
+		t.Fatalf("events reopen=%v compact=%v", hasReopen, hasCompact)
+	}
+	for _, needle := range []string{
+		"frontier:reopened=opp_parked_hi",
+		"frontier:hygiene_reopened=1",
+		"\"hygiene_reopened_count\":1",
+	} {
+		if !strings.Contains(content, needle) {
+			t.Fatalf("missing %q in %s", needle, content)
+		}
+	}
+}
+
 // seedHeadCommit advances mission head via the full proposal → accept → apply path.
 func seedHeadCommit(tx port.Transaction, mission domain.MissionRevisionID, commitID domain.CommitID, now time.Time) error {
 	// Need a READY/terminal operation for raw model output binding.

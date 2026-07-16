@@ -167,12 +167,14 @@ O domínio expõe transições puras de higiene em `WorkOpportunity` (sem autori
 
 `ADMITTED` não entra na higiene: a saída da agenda permanece com o Admitter/kernel de operações.
 
-`PlanFrontierHygiene` aplica política `HorizonPolicy` de forma determinística sobre OPEN:
+`PlanFrontierReservoirHygiene` (e o wrapper `PlanFrontierHygiene` só-OPEN) aplica `HorizonPolicy` de forma determinística sobre OPEN∪DEFERRED:
 
-1. `ABANDON` unidades com `depth > max_depth` (crescimento residual ilegal);
-2. se o restante OPEN excede `max_candidates`, `DEFER` as de menor prioridade (desempate: `UpdatedAt` mais antigo, depois id).
+1. `SUPERSEDE` duplicatas com a mesma `DedupSignature` exata (vencedor: OPEN antes de DEFERRED, maior prioridade, `UpdatedAt` mais novo, id menor);
+2. `ABANDON` unidades OPEN com `depth > max_depth` (crescimento residual ilegal);
+3. se o restante OPEN excede `max_candidates`, `DEFER` as de menor prioridade (desempate: `UpdatedAt` mais antigo, depois id);
+4. enquanto houver vagas sob `max_candidates`, `REOPEN` as DEFERRED de maior prioridade — unidades deferidas no mesmo plano **não** reabrem no mesmo ciclo.
 
-A família local `frontier_management` (`LocalExecutor`) materializa o plano na mesma transação da operação: `SaveWorkOpportunity`, eventos `continuity.opportunity_*` e resumo `continuity.frontier_compacted`, além do artefato `frontier_manage_report` com contagens/findings. Modelo não escolhe quem deferir/abandonar.
+A família local `frontier_management` (`LocalExecutor`) materializa o plano na mesma transação da operação: `SaveWorkOpportunity`, eventos `continuity.opportunity_*` e resumo `continuity.frontier_compacted`, além do artefato `frontier_manage_report` com contagens/findings (inclui `hygiene_superseded_count` / `hygiene_reopened_count`). Modelo não escolhe vencedores, reaberturas nem abandons.
 
 ### 3.10 Decomposição e melhoria recursiva
 

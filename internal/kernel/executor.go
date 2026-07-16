@@ -288,6 +288,7 @@ type localAuditBody struct {
 	HygieneDeferred     int                      `json:"hygiene_deferred_count,omitempty"`
 	HygieneAbandoned    int                      `json:"hygiene_abandoned_count,omitempty"`
 	HygieneSuperseded   int                      `json:"hygiene_superseded_count,omitempty"`
+	HygieneReopened     int                      `json:"hygiene_reopened_count,omitempty"`
 	HygieneActions      int                      `json:"hygiene_action_count,omitempty"`
 	Findings            []string                 `json:"findings,omitempty"`
 }
@@ -305,6 +306,7 @@ type localFamilyEffects struct {
 	HygieneDeferred     int
 	HygieneAbandoned    int
 	HygieneSuperseded   int
+	HygieneReopened     int
 	HygieneActions      int
 }
 
@@ -327,12 +329,16 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 	if err != nil {
 		return domain.KnowledgeArtifact{}, err
 	}
-	// frontier_management: apply pure reservoir hygiene (defer/abandon) under
-	// HorizonPolicy before inventory metrics are captured for the audit artifact.
+	// frontier_management: apply pure reservoir hygiene (supersede/defer/abandon/reopen)
+	// under HorizonPolicy before inventory metrics are captured for the audit artifact.
 	familyEarly := familyFromSpec(spec.ID)
 	var hygieneEffects localFamilyEffects
 	if familyEarly == string(domain.FamilyFrontierManage) {
-		hygieneEffects, err = applyFrontierHygieneEffects(tx, operation, open, now)
+		deferred, derr := tx.WorkOpportunities(operation.MissionRevision, domain.OpportunityDeferred)
+		if derr != nil {
+			return domain.KnowledgeArtifact{}, derr
+		}
+		hygieneEffects, err = applyFrontierHygieneEffects(tx, operation, open, deferred, now)
 		if err != nil {
 			return domain.KnowledgeArtifact{}, err
 		}
@@ -461,6 +467,7 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 	effects.HygieneDeferred = hygieneEffects.HygieneDeferred
 	effects.HygieneAbandoned = hygieneEffects.HygieneAbandoned
 	effects.HygieneSuperseded = hygieneEffects.HygieneSuperseded
+	effects.HygieneReopened = hygieneEffects.HygieneReopened
 	effects.HygieneActions = hygieneEffects.HygieneActions
 	if len(hygieneEffects.Findings) > 0 {
 		effects.Findings = append(append([]string(nil), hygieneEffects.Findings...), effects.Findings...)
@@ -503,6 +510,7 @@ func (e LocalExecutor) buildLocalArtifact(tx port.Transaction, operation domain.
 		HygieneDeferred:     effects.HygieneDeferred,
 		HygieneAbandoned:    effects.HygieneAbandoned,
 		HygieneSuperseded:   effects.HygieneSuperseded,
+		HygieneReopened:     effects.HygieneReopened,
 		HygieneActions:      effects.HygieneActions,
 		Findings:            effects.Findings,
 	}
@@ -886,14 +894,15 @@ func applyLocalFamilyEffects(
 }
 
 // applyFrontierHygieneEffects plans and persists pure WorkOpportunity lifecycle
-// transitions for reservoir hygiene. Only OPEN units are deferred/abandoned;
-// ADMITTED stays under Admitter authority. Policy comes from the active HORIZON
-// revision when present, else DefaultHorizonPolicy. Returns counters/findings;
-// does not invent work or grant model admission power.
+// transitions for reservoir hygiene (signature supersede, depth abandon, defer,
+// reopen). ADMITTED stays under Admitter authority. Policy comes from the active
+// HORIZON revision when present, else DefaultHorizonPolicy. Returns counters/
+// findings; does not invent work or grant model admission power.
 func applyFrontierHygieneEffects(
 	tx port.Transaction,
 	operation domain.Operation,
 	open []domain.WorkOpportunity,
+	deferred []domain.WorkOpportunity,
 	now time.Time,
 ) (localFamilyEffects, error) {
 	var out localFamilyEffects
@@ -901,7 +910,7 @@ func applyFrontierHygieneEffects(
 	if err != nil {
 		return out, err
 	}
-	actions, err := domain.PlanFrontierHygiene(open, policy, now)
+	actions, err := domain.PlanFrontierReservoirHygiene(open, deferred, policy, now)
 	if err != nil {
 		return out, fmt.Errorf("plan frontier hygiene: %w", err)
 	}
@@ -910,8 +919,11 @@ func applyFrontierHygieneEffects(
 		return out, nil
 	}
 
-	byID := make(map[domain.WorkOpportunityID]domain.WorkOpportunity, len(open))
+	byID := make(map[domain.WorkOpportunityID]domain.WorkOpportunity, len(open)+len(deferred))
 	for _, opp := range open {
+		byID[opp.ID] = opp
+	}
+	for _, opp := range deferred {
 		byID[opp.ID] = opp
 	}
 
@@ -964,6 +976,7 @@ func applyFrontierHygieneEffects(
 			out.HygieneSuperseded++
 			out.Findings = append(out.Findings, fmt.Sprintf("frontier:superseded=%s", next.ID))
 		case domain.OppEventReopen:
+			out.HygieneReopened++
 			out.Findings = append(out.Findings, fmt.Sprintf("frontier:reopened=%s", next.ID))
 		}
 	}
@@ -978,8 +991,8 @@ func applyFrontierHygieneEffects(
 		InquiryID:       operation.InquiryID,
 		OperationID:     operation.ID,
 		PayloadRef: fmt.Sprintf(
-			"actions=%d deferred=%d abandoned=%d superseded=%d max_candidates=%d max_depth=%d",
-			out.HygieneActions, out.HygieneDeferred, out.HygieneAbandoned, out.HygieneSuperseded,
+			"actions=%d deferred=%d abandoned=%d superseded=%d reopened=%d max_candidates=%d max_depth=%d",
+			out.HygieneActions, out.HygieneDeferred, out.HygieneAbandoned, out.HygieneSuperseded, out.HygieneReopened,
 			policy.MaxCandidates, policy.MaxDepth,
 		),
 	}); err != nil {
@@ -989,6 +1002,8 @@ func applyFrontierHygieneEffects(
 		fmt.Sprintf("frontier:hygiene_actions=%d", out.HygieneActions),
 		fmt.Sprintf("frontier:hygiene_deferred=%d", out.HygieneDeferred),
 		fmt.Sprintf("frontier:hygiene_abandoned=%d", out.HygieneAbandoned),
+		fmt.Sprintf("frontier:hygiene_superseded=%d", out.HygieneSuperseded),
+		fmt.Sprintf("frontier:hygiene_reopened=%d", out.HygieneReopened),
 	)
 	return out, nil
 }

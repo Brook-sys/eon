@@ -150,7 +150,24 @@ func EventKindForOpportunityTransition(event WorkOpportunityTransitionEvent) (st
 //     (then oldest, then id) units until the active open count fits the mark.
 //
 // Deferred units stay recoverable via REOPEN; ADMITTED is never touched here.
+// Prefer PlanFrontierReservoirHygiene when DEFERRED units and signature merge
+// should participate in the same deterministic plan.
 func PlanFrontierHygiene(open []WorkOpportunity, policy HorizonPolicy, now time.Time) ([]FrontierHygieneAction, error) {
+	return PlanFrontierReservoirHygiene(open, nil, policy, now)
+}
+
+// PlanFrontierReservoirHygiene is the full pure hygiene planner for the frontier
+// reservoir. It never mutates input and never touches ADMITTED units.
+//
+// Deterministic order (each step sees simulated residual of prior steps):
+//  1. SUPERSEDE exact DedupSignature duplicates among OPEN∪DEFERRED (keep winner);
+//  2. ABANDON OPEN units whose depth exceeds MaxDepth;
+//  3. DEFER lowest-priority OPEN units when open residual exceeds MaxCandidates;
+//  4. REOPEN highest-priority DEFERRED units while open residual is under MaxCandidates.
+//
+// Winner among a signature group: OPEN before DEFERRED, then higher Priority,
+// then newer UpdatedAt, then smaller ID. Model output never selects winners.
+func PlanFrontierReservoirHygiene(open, deferred []WorkOpportunity, policy HorizonPolicy, now time.Time) ([]FrontierHygieneAction, error) {
 	if err := policy.Validate(); err != nil {
 		return nil, fmt.Errorf("validate horizon policy: %w", err)
 	}
@@ -159,16 +176,38 @@ func PlanFrontierHygiene(open []WorkOpportunity, policy HorizonPolicy, now time.
 	}
 	now = now.UTC()
 
+	openPool, err := filterStatus(open, OpportunityOpen)
+	if err != nil {
+		return nil, err
+	}
+	deferredPool, err := filterStatus(deferred, OpportunityDeferred)
+	if err != nil {
+		return nil, err
+	}
+
 	var actions []FrontierHygieneAction
-	remaining := make([]WorkOpportunity, 0, len(open))
-	for _, opp := range open {
-		if opp.Status != OpportunityOpen {
-			// Plan only OPEN; deferred already parked, admitted is agenda.
-			continue
+
+	// 1) Signature merge / supersede.
+	active := make([]WorkOpportunity, 0, len(openPool)+len(deferredPool))
+	active = append(active, openPool...)
+	active = append(active, deferredPool...)
+	supersedeActions, survivors := planSignatureSupersede(active, now)
+	actions = append(actions, supersedeActions...)
+
+	openPool = openPool[:0]
+	deferredPool = deferredPool[:0]
+	for _, opp := range survivors {
+		switch opp.Status {
+		case OpportunityOpen:
+			openPool = append(openPool, opp)
+		case OpportunityDeferred:
+			deferredPool = append(deferredPool, opp)
 		}
-		if err := opp.Validate(); err != nil {
-			return nil, fmt.Errorf("validate work opportunity %s: %w", opp.ID, err)
-		}
+	}
+
+	// 2) Depth abandon on OPEN.
+	remainingOpen := make([]WorkOpportunity, 0, len(openPool))
+	for _, opp := range openPool {
 		if opp.Depth > policy.MaxDepth {
 			actions = append(actions, FrontierHygieneAction{
 				OpportunityID: opp.ID,
@@ -180,36 +219,154 @@ func PlanFrontierHygiene(open []WorkOpportunity, policy HorizonPolicy, now time.
 			})
 			continue
 		}
-		remaining = append(remaining, opp)
+		remainingOpen = append(remainingOpen, opp)
 	}
 
-	excess := len(remaining) - policy.MaxCandidates
-	if excess <= 0 {
-		return actions, nil
-	}
-
-	// Stable order: lowest priority first, then oldest UpdatedAt, then ID.
-	sort.SliceStable(remaining, func(i, j int) bool {
-		a, b := remaining[i], remaining[j]
-		if a.Priority != b.Priority {
-			return a.Priority < b.Priority
-		}
-		if !a.UpdatedAt.Equal(b.UpdatedAt) {
-			return a.UpdatedAt.Before(b.UpdatedAt)
-		}
-		return string(a.ID) < string(b.ID)
-	})
-
-	for i := 0; i < excess; i++ {
-		opp := remaining[i]
-		actions = append(actions, FrontierHygieneAction{
-			OpportunityID: opp.ID,
-			Transition: WorkOpportunityTransition{
-				Event:      OppEventDefer,
-				OccurredAt: now,
-				Reason:     fmt.Sprintf("max_candidates=%d open_after_depth_trim=%d", policy.MaxCandidates, len(remaining)),
-			},
+	// 3) Defer excess OPEN under MaxCandidates.
+	excess := len(remainingOpen) - policy.MaxCandidates
+	if excess > 0 {
+		sort.SliceStable(remainingOpen, func(i, j int) bool {
+			return opportunityWorseFirst(remainingOpen[i], remainingOpen[j])
 		})
+		for i := 0; i < excess; i++ {
+			opp := remainingOpen[i]
+			actions = append(actions, FrontierHygieneAction{
+				OpportunityID: opp.ID,
+				Transition: WorkOpportunityTransition{
+					Event:      OppEventDefer,
+					OccurredAt: now,
+					Reason:     fmt.Sprintf("max_candidates=%d open_after_depth_trim=%d", policy.MaxCandidates, len(remainingOpen)),
+				},
+			})
+			// Simulate parking for inventory only; same-cycle units are not reopened.
+			deferredPool = append(deferredPool, opp)
+		}
+		remainingOpen = remainingOpen[excess:]
 	}
+
+	// 4) Reopen deferred into free OPEN slots (never above MaxCandidates).
+	if len(deferredPool) > 0 && len(remainingOpen) < policy.MaxCandidates {
+		sort.SliceStable(deferredPool, func(i, j int) bool {
+			return opportunityBetterFirst(deferredPool[i], deferredPool[j])
+		})
+		for _, opp := range deferredPool {
+			if len(remainingOpen) >= policy.MaxCandidates {
+				break
+			}
+			// Units deferred in this same plan stay parked until a later cycle.
+			if justDeferredIn(actions, opp.ID) {
+				continue
+			}
+			actions = append(actions, FrontierHygieneAction{
+				OpportunityID: opp.ID,
+				Transition: WorkOpportunityTransition{
+					Event:      OppEventReopen,
+					OccurredAt: now,
+					Reason:     fmt.Sprintf("reopen_under_max_candidates open=%d max_candidates=%d", len(remainingOpen), policy.MaxCandidates),
+				},
+			})
+			remainingOpen = append(remainingOpen, opp)
+		}
+	}
+
 	return actions, nil
+}
+
+func filterStatus(items []WorkOpportunity, want WorkOpportunityStatus) ([]WorkOpportunity, error) {
+	out := make([]WorkOpportunity, 0, len(items))
+	for _, opp := range items {
+		if opp.Status != want {
+			continue
+		}
+		if err := opp.Validate(); err != nil {
+			return nil, fmt.Errorf("validate work opportunity %s: %w", opp.ID, err)
+		}
+		out = append(out, opp)
+	}
+	return out, nil
+}
+
+// planSignatureSupersede groups by exact DedupSignature and supersedes losers.
+// Survivors retain their original status (OPEN/DEFERRED).
+func planSignatureSupersede(active []WorkOpportunity, now time.Time) ([]FrontierHygieneAction, []WorkOpportunity) {
+	if len(active) == 0 {
+		return nil, nil
+	}
+	groups := map[string][]WorkOpportunity{}
+	order := make([]string, 0)
+	for _, opp := range active {
+		sig := opp.DedupSignature
+		if _, ok := groups[sig]; !ok {
+			order = append(order, sig)
+		}
+		groups[sig] = append(groups[sig], opp)
+	}
+	sort.Strings(order)
+
+	var actions []FrontierHygieneAction
+	survivors := make([]WorkOpportunity, 0, len(active))
+	for _, sig := range order {
+		group := groups[sig]
+		if len(group) == 1 {
+			survivors = append(survivors, group[0])
+			continue
+		}
+		// Winner first: OPEN > DEFERRED, higher priority, newer UpdatedAt, smaller ID.
+		sort.SliceStable(group, func(i, j int) bool {
+			return opportunityBetterFirst(group[i], group[j])
+		})
+		winner := group[0]
+		survivors = append(survivors, winner)
+		for _, loser := range group[1:] {
+			actions = append(actions, FrontierHygieneAction{
+				OpportunityID: loser.ID,
+				Transition: WorkOpportunityTransition{
+					Event:        OppEventSupersede,
+					OccurredAt:   now,
+					SupersededBy: winner.ID,
+					Reason:       fmt.Sprintf("duplicate_signature=%s", sig),
+				},
+			})
+		}
+	}
+	return actions, survivors
+}
+
+// opportunityBetterFirst ranks the preferred survivor / reopen candidate.
+func opportunityBetterFirst(a, b WorkOpportunity) bool {
+	if a.Status != b.Status {
+		if a.Status == OpportunityOpen {
+			return true
+		}
+		if b.Status == OpportunityOpen {
+			return false
+		}
+	}
+	if a.Priority != b.Priority {
+		return a.Priority > b.Priority
+	}
+	if !a.UpdatedAt.Equal(b.UpdatedAt) {
+		return a.UpdatedAt.After(b.UpdatedAt)
+	}
+	return string(a.ID) < string(b.ID)
+}
+
+// opportunityWorseFirst ranks first-to-defer / first-to-lose under pressure.
+func opportunityWorseFirst(a, b WorkOpportunity) bool {
+	if a.Priority != b.Priority {
+		return a.Priority < b.Priority
+	}
+	if !a.UpdatedAt.Equal(b.UpdatedAt) {
+		return a.UpdatedAt.Before(b.UpdatedAt)
+	}
+	return string(a.ID) < string(b.ID)
+}
+
+func justDeferredIn(actions []FrontierHygieneAction, id WorkOpportunityID) bool {
+	for _, action := range actions {
+		if action.OpportunityID == id && action.Transition.Event == OppEventDefer {
+			return true
+		}
+	}
+	return false
 }
