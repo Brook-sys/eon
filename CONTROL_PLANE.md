@@ -487,7 +487,14 @@ Implementado no adapter `internal/channel/telegram`:
 - correlação pelo vínculo durável da entrega `chat_id + message_id → question_id/revision`;
 - respostas tardias, expiradas e concorrentes fecham de forma segura na validação canônica do kernel; mensagens sem reply/callback inequívoco são recusadas como não correlacionadas.
 
-Residual operacional: o bootstrap do runtime já executa outbox (`DeliveryWorker.ProcessDue`) e lembretes no `ProcessCycle`, e o adapter expõe `IngestUpdate` com lookup por `QuestionDeliveryByTransport` + `PrimaryDestinationRef` para rotas `#reminder:N`. Ainda falta selecionar polling ou webhook validado no processo e implementar resposta de UX para updates recusados/ambíguos; isso não altera o domínio nem concede autoridade ao canal.
+Ingress de processo (não autoritativo): `internal/channel/telegram.Ingress` com modos `none|poll|webhook`, montado pelo bootstrap.
+
+- `poll`: um `getUpdates` por `ProcessCycle` (timeout 0 no loop para não bloquear; offset process-local) → `IngestUpdate` → `ExternalEventInbox`;
+- `webhook`: rota HTTP local com comparação constant-time de `X-Telegram-Bot-Api-Secret-Token` (segredo só via env);
+- UX de recusa opcional (`RejectUX`): `answerCallbackQuery` / aviso curto em chat allowlisted; nunca eleva texto a autoridade;
+- rejeiões uncorrelated/unauthorized não entram na inbox; falhas de store no webhook respondem 503 para reentrega.
+
+Residual: persistir offset de poll em checkpoint entre processos e registar webhook remoto (`setWebhook`) fora do kernel.
 
 ### Slice F — interoperabilidade
 

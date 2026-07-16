@@ -38,6 +38,8 @@ func main() {
 		deliveryBatch  = flag.Int("delivery-batch", 8, "max outbox deliveries / reminder scans per control cycle")
 		deliveryLease  = flag.Duration("delivery-lease", 30*time.Second, "telegram outbox lease duration")
 		deliveryRetry  = flag.Duration("delivery-retry", 15*time.Second, "telegram outbox retry delay")
+		// Telegram adapter/ingress remain opt-in through bootstrap.Options.Telegram
+		// (token/allowlists/ingress mode). cmd/runtime stays free of secrets and chat IDs.
 	)
 	flag.Parse()
 

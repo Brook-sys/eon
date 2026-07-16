@@ -52,6 +52,7 @@ type Runtime struct {
 	// Optional non-authoritative Telegram surfaces. Nil when disabled.
 	TelegramAdapter *telegram.Adapter
 	TelegramWorker  *telegram.DeliveryWorker
+	TelegramIngress *telegram.Ingress
 
 	Telemetry *observability.Runtime
 
@@ -181,7 +182,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
 
-	telegramWorker, telegramAdapter, err := buildTelegram(opts, store, clock)
+	telegramBits, err := buildTelegram(opts, store, clock, eventInbox, ids)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
 		if closer != nil {
@@ -213,6 +214,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		})
 		handler = mux
 	}
+	handler = mountTelegramWebhook(handler, telegramBits.Ingress)
 
 	return &Runtime{
 		Opts:             opts,
@@ -233,11 +235,28 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Control:          controlAPI,
 		Dashboard:        dash,
 		Handler:          handler,
-		TelegramAdapter:  telegramAdapter,
-		TelegramWorker:   telegramWorker,
+		TelegramAdapter:  telegramBits.Adapter,
+		TelegramWorker:   telegramBits.Worker,
+		TelegramIngress:  telegramBits.Ingress,
 		Telemetry:        telemetry,
 		logger:           log.Default(),
 	}, nil
+}
+
+// mountTelegramWebhook layers a validated webhook route over the existing mux
+// without altering dashboard/control paths. No-op when ingress is not webhook.
+func mountTelegramWebhook(base http.Handler, ingress *telegram.Ingress) http.Handler {
+	if base == nil || ingress == nil || ingress.Handler() == nil {
+		return base
+	}
+	path := ingress.Config.WebhookPath
+	if path == "" {
+		path = "/telegram/webhook"
+	}
+	mux := http.NewServeMux()
+	mux.Handle(path, ingress.Handler())
+	mux.Handle("/", base)
+	return mux
 }
 
 func openStore(opts Options) (port.Store, io.Closer, error) {
@@ -295,6 +314,10 @@ type CycleResult struct {
 	EventsProcessed     int
 	RemindersScheduled  int
 	DeliveriesProcessed int
+	TelegramFetched     int
+	TelegramAccepted    int
+	TelegramRejected    int
+	TelegramDuplicate   int
 	SchedulerRan        bool
 	SchedulerKind       kernel.DecisionKind
 	Worked              bool
@@ -338,6 +361,11 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.CommandsProcessed++
 		result.Worked = true
+	}
+
+	// Channel ingress before event drain so polled answers apply this cycle.
+	if err := rt.processTelegramIngress(ctx, &result); err != nil {
+		return result, err
 	}
 
 	for i := 0; i < rt.Opts.MaxInboxBatch; i++ {

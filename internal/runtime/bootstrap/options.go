@@ -62,6 +62,15 @@ type Options struct {
 	Telegram *TelegramOptions
 }
 
+// TelegramIngressMode is the process-local inbound update collection mode.
+type TelegramIngressMode string
+
+const (
+	TelegramIngressNone    TelegramIngressMode = "none"
+	TelegramIngressPoll    TelegramIngressMode = "poll"
+	TelegramIngressWebhook TelegramIngressMode = "webhook"
+)
+
 // QuestionRouteConfig is a process-local seed for kernel.QuestionRoute.
 type QuestionRouteConfig struct {
 	Channel        string
@@ -79,6 +88,21 @@ type TelegramOptions struct {
 	AllowedActors map[int64]string
 	AllowedChats  map[int64]struct{}
 	WorkerOwner   string
+
+	// Ingress selects how updates enter the process. Empty/none = delivery only.
+	Ingress TelegramIngressMode
+	// PollLimit/PollTimeout configure getUpdates when Ingress=poll.
+	// PollTimeout is long-poll seconds (0..50). Prefer 0 inside ProcessCycle so
+	// the control loop never blocks on Telegram; use a dedicated poller if long-poll is needed.
+	PollLimit   int
+	PollTimeout int
+	// WebhookPath is mounted on the process HTTP server when Ingress=webhook.
+	WebhookPath string
+	// WebhookSecretEnv names the env var with X-Telegram-Bot-Api-Secret-Token.
+	// Empty disables secret validation (local tests only).
+	WebhookSecretEnv string
+	// RejectUX enables answerCallbackQuery / short notices on rejected updates.
+	RejectUX bool
 }
 
 // Validate fills defaults and rejects unsafe combinations.
@@ -160,6 +184,35 @@ func (o *Options) Validate() error {
 		}
 		if strings.TrimSpace(o.Telegram.WorkerOwner) == "" {
 			o.Telegram.WorkerOwner = "telegram-delivery"
+		}
+		mode := TelegramIngressMode(strings.TrimSpace(string(o.Telegram.Ingress)))
+		if mode == "" {
+			mode = TelegramIngressNone
+		}
+		switch mode {
+		case TelegramIngressNone, TelegramIngressPoll, TelegramIngressWebhook:
+			o.Telegram.Ingress = mode
+		default:
+			return fmt.Errorf("unknown telegram ingress mode %q", o.Telegram.Ingress)
+		}
+		if o.Telegram.PollLimit <= 0 {
+			o.Telegram.PollLimit = 20
+		}
+		if o.Telegram.PollLimit > 100 {
+			return errors.New("telegram poll limit is capped at 100")
+		}
+		if o.Telegram.PollTimeout < 0 || o.Telegram.PollTimeout > 50 {
+			return errors.New("telegram poll timeout must be in [0,50]")
+		}
+		if mode == TelegramIngressWebhook {
+			path := strings.TrimSpace(o.Telegram.WebhookPath)
+			if path == "" {
+				path = "/telegram/webhook"
+			}
+			if !strings.HasPrefix(path, "/") || strings.Contains(path, "..") {
+				return errors.New("telegram webhook path must be an absolute path without ..")
+			}
+			o.Telegram.WebhookPath = path
 		}
 	}
 	return nil

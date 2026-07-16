@@ -38,7 +38,7 @@ type Config struct {
 }
 
 type Adapter struct {
-	endpoint       string
+	apiRoot        string // https://api.telegram.org/bot<token>
 	client         *http.Client
 	maxResponse    int64
 	destinations   map[string]int64
@@ -120,9 +120,20 @@ func New(config Config) (*Adapter, error) {
 		}
 		chats[chatID] = struct{}{}
 	}
-	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/bot" + config.Token + "/sendMessage"
+	// Keep token only in the process-local API root; method paths are appended later.
+	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/bot" + config.Token
 	parsed.RawQuery, parsed.Fragment = "", ""
-	return &Adapter{endpoint: parsed.String(), client: client, maxResponse: limit, destinations: destinations, destinationRef: reverse, actors: actors, chats: chats}, nil
+	return &Adapter{
+		apiRoot: strings.TrimRight(parsed.String(), "/"), client: client, maxResponse: limit,
+		destinations: destinations, destinationRef: reverse, actors: actors, chats: chats,
+	}, nil
+}
+
+func (a *Adapter) methodURL(method string) string {
+	if a == nil {
+		return ""
+	}
+	return a.apiRoot + "/" + strings.TrimPrefix(method, "/")
 }
 
 type inlineButton struct {
@@ -197,7 +208,7 @@ func (a *Adapter) SendQuestion(ctx context.Context, destinationRef string, quest
 	if err != nil {
 		return "", err
 	}
-	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.endpoint, bytes.NewReader(payload))
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.methodURL("sendMessage"), bytes.NewReader(payload))
 	if err != nil {
 		return "", err
 	}
@@ -226,6 +237,170 @@ func (a *Adapter) SendQuestion(ctx context.Context, destinationRef string, quest
 		return "", &Error{Kind: ErrorInvalidReply}
 	}
 	return strconv.FormatInt(decoded.Result.MessageID, 10), nil
+}
+
+type getUpdatesRequest struct {
+	Offset         int64    `json:"offset,omitempty"`
+	Limit          int      `json:"limit,omitempty"`
+	Timeout        int      `json:"timeout,omitempty"`
+	AllowedUpdates []string `json:"allowed_updates,omitempty"`
+}
+
+type getUpdatesResponse struct {
+	OK     bool     `json:"ok"`
+	Result []Update `json:"result"`
+}
+
+// GetUpdates performs one Bot API getUpdates call. Timeout is the long-poll
+// duration requested from Telegram (seconds); the HTTP client must tolerate it.
+func (a *Adapter) GetUpdates(ctx context.Context, offset int64, limit int, timeoutSeconds int) ([]Update, error) {
+	if a == nil {
+		return nil, errors.New("telegram adapter is nil")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if timeoutSeconds < 0 {
+		timeoutSeconds = 0
+	}
+	if timeoutSeconds > 50 {
+		timeoutSeconds = 50
+	}
+	payload, err := json.Marshal(getUpdatesRequest{
+		Offset:         offset,
+		Limit:          limit,
+		Timeout:        timeoutSeconds,
+		AllowedUpdates: []string{"message", "callback_query"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.methodURL("getUpdates"), bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	httpRequest.Header.Set("Content-Type", "application/json")
+	response, err := a.client.Do(httpRequest)
+	if err != nil {
+		return nil, &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, a.maxResponse+1))
+	if err != nil {
+		return nil, &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	if int64(len(body)) > a.maxResponse {
+		return nil, &Error{Kind: ErrorTooLarge}
+	}
+	var decoded getUpdatesResponse
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return nil, &Error{Kind: ErrorInvalidReply}
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 || !decoded.OK {
+		retryable := response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500
+		return nil, &Error{Kind: ErrorHTTP, StatusCode: response.StatusCode, Retryable: retryable}
+	}
+	return decoded.Result, nil
+}
+
+type answerCallbackRequest struct {
+	CallbackQueryID string `json:"callback_query_id"`
+	Text            string `json:"text,omitempty"`
+	ShowAlert       bool   `json:"show_alert,omitempty"`
+}
+
+// AnswerCallbackQuery acknowledges a callback so the client spinner stops and
+// optionally surfaces a short non-authoritative UX string.
+func (a *Adapter) AnswerCallbackQuery(ctx context.Context, callbackQueryID, text string, showAlert bool) error {
+	if a == nil {
+		return errors.New("telegram adapter is nil")
+	}
+	if strings.TrimSpace(callbackQueryID) == "" {
+		return &Error{Kind: ErrorInvalidConfig}
+	}
+	payload, err := json.Marshal(answerCallbackRequest{
+		CallbackQueryID: callbackQueryID,
+		Text:            text,
+		ShowAlert:       showAlert,
+	})
+	if err != nil {
+		return err
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.methodURL("answerCallbackQuery"), bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	httpRequest.Header.Set("Content-Type", "application/json")
+	response, err := a.client.Do(httpRequest)
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, a.maxResponse+1))
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	if int64(len(body)) > a.maxResponse {
+		return &Error{Kind: ErrorTooLarge}
+	}
+	var decoded struct {
+		OK bool `json:"ok"`
+	}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return &Error{Kind: ErrorInvalidReply}
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 || !decoded.OK {
+		retryable := response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500
+		return &Error{Kind: ErrorHTTP, StatusCode: response.StatusCode, Retryable: retryable}
+	}
+	return nil
+}
+
+// NotifyChat sends a bounded, non-authoritative operator notice. Used only for
+// rejection UX on allowlisted chats; never carries domain authority.
+func (a *Adapter) NotifyChat(ctx context.Context, chatID int64, text string) error {
+	if a == nil {
+		return errors.New("telegram adapter is nil")
+	}
+	if chatID == 0 || strings.TrimSpace(text) == "" {
+		return &Error{Kind: ErrorInvalidConfig}
+	}
+	if len(text) > 500 {
+		text = text[:500]
+	}
+	payload, err := json.Marshal(sendMessageRequest{ChatID: chatID, Text: text})
+	if err != nil {
+		return err
+	}
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.methodURL("sendMessage"), bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	httpRequest.Header.Set("Content-Type", "application/json")
+	response, err := a.client.Do(httpRequest)
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, a.maxResponse+1))
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	if int64(len(body)) > a.maxResponse {
+		return &Error{Kind: ErrorTooLarge}
+	}
+	var decoded apiResponse
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return &Error{Kind: ErrorInvalidReply}
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 || !decoded.OK {
+		retryable := response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500
+		return &Error{Kind: ErrorHTTP, StatusCode: response.StatusCode, Retryable: retryable}
+	}
+	return nil
 }
 
 // DeliveryWorker leases durable outbox records before performing the external
