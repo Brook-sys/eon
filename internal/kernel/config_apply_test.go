@@ -165,3 +165,90 @@ func TestConfigApplierRejectsNoopAndStale(t *testing.T) {
 		t.Fatalf("expected stale apply ErrConflict, got %v", err)
 	}
 }
+
+func TestConfigApplierSemanticRollback(t *testing.T) {
+	store := memory.New()
+	clock := source.NewManualClock(time.Date(2026, 7, 16, 17, 0, 0, 0, time.UTC))
+	ids := source.NewSequenceIDGenerator(200)
+	applier, err := NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy := domain.DefaultInterruptionRuntimePolicy()
+	seed := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1, ID: "draft_rb_seed", Scope: domain.ConfigScopeInterruption,
+		Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen, ActorType: domain.ActorOperator,
+		ActorID: "op", Reason: "seed", Interruption: &policy, CreatedAt: clock.Now(),
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(seed)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(context.Background(), seed.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	rev1, _, err := applier.ApplyDraft(context.Background(), seed.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Advance to rev2 with different payload.
+	clock.Advance(time.Second)
+	nextPolicy := policy
+	nextPolicy.MaxPending = 11
+	second := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1, ID: "draft_rb_second", Scope: domain.ConfigScopeInterruption,
+		BasedOnRevision: 1, Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+		ActorType: domain.ActorOperator, ActorID: "op", Reason: "raise pending", Interruption: &nextPolicy, CreatedAt: clock.Now(),
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(second)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(context.Background(), second.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	rev2, _, err := applier.ApplyDraft(context.Background(), second.ID)
+	if err != nil || rev2.Revision != 2 {
+		t.Fatalf("rev2 = %#v err=%v", rev2, err)
+	}
+	// Semantic rollback to rev1 payload → new rev3.
+	clock.Advance(time.Second)
+	draft, rev3, receipt, err := applier.RollbackToRevision(context.Background(), domain.ConfigScopeInterruption, rev1.ID, domain.ActorOperator, "op", "restore seed policy")
+	if err != nil {
+		t.Fatalf("rollback: %v", err)
+	}
+	if rev3.Revision != 3 || rev3.ParentID != rev2.ID || receipt.State != domain.ConfigApplyApplied || draft.Status != domain.ConfigDraftApplied {
+		t.Fatalf("rollback result draft=%#v rev=%#v receipt=%#v", draft, rev3, receipt)
+	}
+	if !domain.ConfigRevisionsEqualPayload(rev3, rev1) || rev3.Interruption == nil || rev3.Interruption.MaxPending != policy.MaxPending {
+		t.Fatalf("rev3 payload mismatch: %#v vs %#v", rev3, rev1)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		active, err := r.ActiveConfigRevision(domain.ConfigScopeInterruption)
+		if err != nil || active.ID != rev3.ID {
+			t.Fatalf("active = %#v err=%v", active, err)
+		}
+		revisions, err := r.ConfigRevisions(domain.ConfigScopeInterruption)
+		if err != nil || len(revisions) != 3 {
+			t.Fatalf("revisions = %#v err=%v", revisions, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// No-op rollback of already-active payload is conflict.
+	clock.Advance(time.Second)
+	if _, _, _, err := applier.RollbackToRevision(context.Background(), domain.ConfigScopeInterruption, rev3.ID, domain.ActorOperator, "op", "noop"); err == nil || !errors.Is(err, port.ErrConflict) {
+		t.Fatalf("expected no-op conflict, got %v", err)
+	}
+	// Rollback to non-ancestor (same or future number without being earlier) fails.
+	// rev2 is earlier than rev3 and has different payload → allowed; trying rev3 target when active is rev3 already covered.
+	// Target with wrong scope fails.
+	if _, _, _, err := applier.RollbackToRevision(context.Background(), domain.ConfigScopeHorizon, rev1.ID, domain.ActorOperator, "op", "wrong scope"); err == nil {
+		t.Fatal("expected scope conflict")
+	}
+}

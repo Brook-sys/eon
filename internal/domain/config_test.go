@@ -172,6 +172,74 @@ func TestChannelsConfigDiffRedactsSecrets(t *testing.T) {
 	}
 }
 
+func TestDraftFromConfigRevisionRollback(t *testing.T) {
+	now := time.Date(2026, 7, 16, 15, 0, 0, 0, time.UTC)
+	draft := interruptionDraft(now)
+	validated, err := MarkConfigDraftValidated(draft, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev1, _, _, err := ApplyConfigDraft(nil, validated, "cfgrev_1", "receipt_cfg_1", now.Add(2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Second revision changes MaxPending.
+	next := validated
+	next.ID = "draft_2"
+	next.BasedOnRevision = 1
+	next.Status = ConfigDraftOpen
+	next.ValidatedAt = time.Time{}
+	next.CreatedAt = now.Add(3 * time.Second)
+	pol := *next.Interruption
+	pol.MaxPending = 9
+	next.Interruption = &pol
+	nextValidated, err := MarkConfigDraftValidated(next, now.Add(4*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev2, _, _, err := ApplyConfigDraft(&rev1, nextValidated, "cfgrev_2", "receipt_cfg_2", now.Add(5*time.Second))
+	if err != nil || rev2.Revision != 2 {
+		t.Fatalf("rev2 = %#v err=%v", rev2, err)
+	}
+	// Pure rollback draft from rev1 against active rev2.
+	rollbackDraft, err := DraftFromConfigRevision(rev1, "draft_rb", 2, ActorOperator, "operator_1", "restore rev1 payload", now.Add(6*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rollbackDraft.Status != ConfigDraftOpen || rollbackDraft.BasedOnRevision != 2 {
+		t.Fatalf("rollback draft = %#v", rollbackDraft)
+	}
+	if ConfigRevisionsEqualPayload(rev1, rev2) {
+		t.Fatal("rev1 and rev2 should differ")
+	}
+	rbValidated, err := MarkConfigDraftValidated(rollbackDraft, now.Add(7*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev3, applied, receipt, err := ApplyConfigDraft(&rev2, rbValidated, "cfgrev_3", "receipt_cfg_3", now.Add(8*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rev3.Revision != 3 || rev3.ParentID != rev2.ID || !ConfigRevisionsEqualPayload(rev3, rev1) {
+		t.Fatalf("rev3 = %#v want payload of rev1", rev3)
+	}
+	if applied.Status != ConfigDraftApplied || receipt.State != ConfigApplyApplied {
+		t.Fatalf("applied=%#v receipt=%#v", applied, receipt)
+	}
+	// No-op restore of active payload is blocked by impact preview.
+	noopDraft, err := DraftFromConfigRevision(rev3, "draft_noop_rb", 3, ActorOperator, "operator_1", "noop", now.Add(9*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	noopValidated, err := MarkConfigDraftValidated(noopDraft, now.Add(10*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, _, err := ApplyConfigDraft(&rev3, noopValidated, "cfgrev_4", "receipt_cfg_4", now.Add(11*time.Second)); err == nil {
+		t.Fatal("expected no-op rollback apply to fail")
+	}
+}
+
 func interruptionDraft(now time.Time) ConfigDraft {
 	policy := DefaultInterruptionRuntimePolicy()
 	return ConfigDraft{

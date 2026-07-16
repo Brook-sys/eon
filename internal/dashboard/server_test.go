@@ -101,6 +101,9 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	for _, marker := range []string{
 		"Configuração versionada",
 		"/config/drafts",
+		"/config/revisions/rollback",
+		"Rollback semântico",
+		"cfgRevisions",
 		"PAUSE_MISSION",
 		"btnCfgCreate",
 		"credential_ref",

@@ -394,6 +394,7 @@ func newControlAPIWithConfig(t *testing.T, store port.Store, clock source.Clock,
 	}
 	api.ConfigValidate = applier
 	api.ConfigApply = applier
+	api.ConfigRollback = applier
 	return api
 }
 
@@ -519,6 +520,73 @@ func TestControlAPIConfigDraftLifecycle(t *testing.T) {
 	if receiptBody.State != domain.ConfigApplyApplied {
 		t.Fatalf("receipt = %#v", receiptBody)
 	}
+
+	// Second revision so rollback has an ancestor distinct from active.
+	clock.Advance(time.Second)
+	policy2 := policy
+	policy2.MaxPending = 9
+	secondBody := map[string]any{
+		"schema_version":    1,
+		"scope":             "INTERRUPTION",
+		"based_on_revision": 1,
+		"reason":            "raise pending again",
+		"interruption":      policy2,
+	}
+	created2 := mustPOSTJSON(t, server.URL+"/config/drafts", secondBody)
+	defer created2.Body.Close()
+	if created2.StatusCode != http.StatusAccepted {
+		t.Fatalf("create2 status = %d body=%s", created2.StatusCode, readBody(t, created2))
+	}
+	var createResp2 struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created2.Body, &createResp2)
+	draftID2 := string(createResp2.Draft.ID)
+	validated2 := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID2+"/validate", map[string]any{})
+	defer validated2.Body.Close()
+	if validated2.StatusCode != http.StatusOK {
+		t.Fatalf("validate2 status = %d body=%s", validated2.StatusCode, readBody(t, validated2))
+	}
+	clock.Advance(time.Second)
+	applied2 := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID2+"/apply", map[string]any{})
+	defer applied2.Body.Close()
+	if applied2.StatusCode != http.StatusOK {
+		t.Fatalf("apply2 status = %d body=%s", applied2.StatusCode, readBody(t, applied2))
+	}
+
+	// Semantic rollback to first revision payload.
+	clock.Advance(time.Second)
+	rb := mustPOSTJSON(t, server.URL+"/config/revisions/rollback", map[string]any{
+		"schema_version":     1,
+		"scope":              "INTERRUPTION",
+		"target_revision_id": string(applyResp.Revision.ID),
+		"reason":             "restore first policy",
+	})
+	defer rb.Body.Close()
+	if rb.StatusCode != http.StatusOK {
+		t.Fatalf("rollback status = %d body=%s", rb.StatusCode, readBody(t, rb))
+	}
+	var rbBody struct {
+		Revision domain.ConfigRevision     `json:"revision"`
+		Receipt  domain.ConfigApplyReceipt `json:"receipt"`
+		Draft    domain.ConfigDraft        `json:"draft"`
+	}
+	decodeJSON(t, rb.Body, &rbBody)
+	if rbBody.Revision.Revision != 3 || rbBody.Receipt.State != domain.ConfigApplyApplied || rbBody.Draft.Status != domain.ConfigDraftApplied {
+		t.Fatalf("rollback body = %#v", rbBody)
+	}
+	if rbBody.Revision.Interruption == nil || rbBody.Revision.Interruption.MaxPending != 5 {
+		t.Fatalf("rollback payload = %#v", rbBody.Revision.Interruption)
+	}
+	active2 := mustGET(t, server.URL+"/config/revisions/active?scope=INTERRUPTION")
+	defer active2.Body.Close()
+	var activeBody2 struct {
+		Revision domain.ConfigRevision `json:"revision"`
+	}
+	decodeJSON(t, active2.Body, &activeBody2)
+	if activeBody2.Revision.ID != rbBody.Revision.ID {
+		t.Fatalf("active after rollback = %#v", activeBody2.Revision)
+	}
 }
 
 func TestControlAPIConfigValidateApplyRequireWiring(t *testing.T) {
@@ -552,6 +620,13 @@ func TestControlAPIConfigValidateApplyRequireWiring(t *testing.T) {
 	defer validated.Body.Close()
 	if validated.StatusCode != http.StatusServiceUnavailable {
 		t.Fatalf("validate without wiring status = %d body=%s", validated.StatusCode, readBody(t, validated))
+	}
+	rb := mustPOSTJSON(t, server.URL+"/config/revisions/rollback", map[string]any{
+		"schema_version": 1, "scope": "INTERRUPTION", "target_revision_id": "cfgrev_missing",
+	})
+	defer rb.Body.Close()
+	if rb.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("rollback without wiring status = %d body=%s", rb.StatusCode, readBody(t, rb))
 	}
 	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+draftID+"/apply", map[string]any{})
 	defer applied.Body.Close()

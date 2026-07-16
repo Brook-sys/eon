@@ -30,6 +30,12 @@ type ConfigDraftApplicator interface {
 	ApplyDraft(context.Context, domain.ConfigDraftID) (domain.ConfigRevision, domain.ConfigApplyReceipt, error)
 }
 
+// ConfigRevisionRollbacker re-applies an ancestral revision payload as a new
+// forward revision (semantic rollback). Optional; without it the route 503s.
+type ConfigRevisionRollbacker interface {
+	RollbackToRevision(context.Context, domain.ConfigScope, domain.ConfigRevisionID, domain.ActorType, string, string) (domain.ConfigDraft, domain.ConfigRevision, domain.ConfigApplyReceipt, error)
+}
+
 // API is the mutable Control API surface for Slice B. It accepts commands and
 // external events into durable inboxes; kernel processors own effects.
 //
@@ -51,6 +57,8 @@ type API struct {
 	// and active-revision reads still work; validate/apply return 503.
 	ConfigValidate ConfigDraftValidator
 	ConfigApply    ConfigDraftApplicator
+	// ConfigRollback is optional. Without it, POST .../revisions/rollback 503s.
+	ConfigRollback ConfigRevisionRollbacker
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -89,6 +97,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /config/drafts/{draftID}/receipt", a.handleGetConfigApplyReceipt)
 	mux.HandleFunc("GET /config/revisions/active", a.handleGetActiveConfigRevision)
 	mux.HandleFunc("GET /config/revisions", a.handleListConfigRevisions)
+	mux.HandleFunc("POST /config/revisions/rollback", a.handleRollbackConfigRevision)
 	return mux
 }
 
@@ -586,6 +595,63 @@ func (a *API) handleListConfigRevisions(w http.ResponseWriter, r *http.Request) 
 		"schema_version": domain.SchemaVersionV1,
 		"scope":          scope,
 		"revisions":      revisions,
+	})
+}
+
+type configRollbackRequest struct {
+	SchemaVersion int                     `json:"schema_version"`
+	Scope         domain.ConfigScope      `json:"scope"`
+	TargetID      domain.ConfigRevisionID `json:"target_revision_id"`
+	ActorType     domain.ActorType        `json:"actor_type,omitempty"`
+	ActorID       string                  `json:"actor_id,omitempty"`
+	Reason        string                  `json:"reason,omitempty"`
+}
+
+func (a *API) handleRollbackConfigRevision(w http.ResponseWriter, r *http.Request) {
+	if a.ConfigRollback == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "not_configured", message: "config rollback is not wired"})
+		return
+	}
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req configRollbackRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if req.SchemaVersion == 0 {
+		req.SchemaVersion = domain.SchemaVersionV1
+	}
+	if req.SchemaVersion != domain.SchemaVersionV1 || !req.Scope.Valid() || req.TargetID == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "scope and target_revision_id are required"})
+		return
+	}
+	actorType := req.ActorType
+	if actorType == "" {
+		actorType = a.ActorType
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	if actorID == "" {
+		actorID = a.DefaultActorID
+	}
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		reason = "semantic rollback via control API"
+	}
+	draft, revision, receipt, err := a.ConfigRollback.RollbackToRevision(r.Context(), req.Scope, req.TargetID, actorType, actorID, reason)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"draft":          draft,
+		"revision":       revision,
+		"receipt":        receipt,
+		"rolled_back_to": req.TargetID,
 	})
 }
 

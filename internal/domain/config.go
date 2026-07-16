@@ -84,10 +84,10 @@ func (s SecretRef) Validate() error {
 // RuntimeProcessConfig covers process-level knobs that do not belong to a
 // mission revision. Secrets stay referenced, never embedded.
 type RuntimeProcessConfig struct {
-	Version           string `json:"version"`
-	LogLevel          string `json:"log_level"`
-	MetricsEnabled    bool   `json:"metrics_enabled"`
-	TraceSamplePerMille int  `json:"trace_sample_per_mille"`
+	Version             string `json:"version"`
+	LogLevel            string `json:"log_level"`
+	MetricsEnabled      bool   `json:"metrics_enabled"`
+	TraceSamplePerMille int    `json:"trace_sample_per_mille"`
 }
 
 func (c RuntimeProcessConfig) Validate() error {
@@ -108,11 +108,11 @@ func (c RuntimeProcessConfig) Validate() error {
 // SchedulerCadenceConfig is the durable cadence policy for the control loop.
 // Zero MaxCycleDuration disables the soft deadline.
 type SchedulerCadenceConfig struct {
-	Version           string        `json:"version"`
-	MinIdleSleep      time.Duration `json:"min_idle_sleep"`
-	MaxIdleSleep      time.Duration `json:"max_idle_sleep"`
-	MaxCycleDuration  time.Duration `json:"max_cycle_duration"`
-	MaxDispatches     int           `json:"max_dispatches_per_cycle"`
+	Version          string        `json:"version"`
+	MinIdleSleep     time.Duration `json:"min_idle_sleep"`
+	MaxIdleSleep     time.Duration `json:"max_idle_sleep"`
+	MaxCycleDuration time.Duration `json:"max_cycle_duration"`
+	MaxDispatches    int           `json:"max_dispatches_per_cycle"`
 }
 
 func (c SchedulerCadenceConfig) Validate() error {
@@ -135,20 +135,20 @@ func (c SchedulerCadenceConfig) Validate() error {
 // projects into the pure QuestionGate evaluation surface. It never embeds
 // model authority.
 type InterruptionRuntimePolicy struct {
-	Version                       string        `json:"version"`
-	MinPriority                   uint8         `json:"min_priority"`
-	MaxPending                    int           `json:"max_pending"`
-	MaxDeliveredPerWindow         int           `json:"max_delivered_per_window"`
-	MaxAdmittedPerWindow          int           `json:"max_admitted_per_window"`
-	Window                        time.Duration `json:"window"`
-	Cooldown                      time.Duration `json:"cooldown"`
-	TopicCooldown                 time.Duration `json:"topic_cooldown"`
-	QuietStartHour                int           `json:"quiet_start_hour"`
-	QuietEndHour                  int           `json:"quiet_end_hour"`
-	UrgentPriority                uint8         `json:"urgent_priority"`
-	MinAlternativesTried          int           `json:"min_alternatives_tried"`
-	SuppressSafeReversibleDefault bool          `json:"suppress_safe_reversible_default"`
-	Digest                        DigestPolicy  `json:"digest"`
+	Version                       string         `json:"version"`
+	MinPriority                   uint8          `json:"min_priority"`
+	MaxPending                    int            `json:"max_pending"`
+	MaxDeliveredPerWindow         int            `json:"max_delivered_per_window"`
+	MaxAdmittedPerWindow          int            `json:"max_admitted_per_window"`
+	Window                        time.Duration  `json:"window"`
+	Cooldown                      time.Duration  `json:"cooldown"`
+	TopicCooldown                 time.Duration  `json:"topic_cooldown"`
+	QuietStartHour                int            `json:"quiet_start_hour"`
+	QuietEndHour                  int            `json:"quiet_end_hour"`
+	UrgentPriority                uint8          `json:"urgent_priority"`
+	MinAlternativesTried          int            `json:"min_alternatives_tried"`
+	SuppressSafeReversibleDefault bool           `json:"suppress_safe_reversible_default"`
+	Digest                        DigestPolicy   `json:"digest"`
 	Reminder                      ReminderPolicy `json:"reminder"`
 }
 
@@ -177,18 +177,18 @@ func (p InterruptionRuntimePolicy) Validate() error {
 // DefaultInterruptionRuntimePolicy returns conservative MVP interruption marks.
 func DefaultInterruptionRuntimePolicy() InterruptionRuntimePolicy {
 	return InterruptionRuntimePolicy{
-		Version:               "interruption.v1",
-		MinPriority:           20,
-		MaxPending:            3,
-		MaxDeliveredPerWindow: 2,
-		MaxAdmittedPerWindow:  4,
-		Window:                time.Hour,
-		Cooldown:              6 * time.Hour,
-		TopicCooldown:         24 * time.Hour,
-		QuietStartHour:        23,
-		QuietEndHour:          7,
-		UrgentPriority:        90,
-		MinAlternativesTried:  1,
+		Version:                       "interruption.v1",
+		MinPriority:                   20,
+		MaxPending:                    3,
+		MaxDeliveredPerWindow:         2,
+		MaxAdmittedPerWindow:          4,
+		Window:                        time.Hour,
+		Cooldown:                      6 * time.Hour,
+		TopicCooldown:                 24 * time.Hour,
+		QuietStartHour:                23,
+		QuietEndHour:                  7,
+		UrgentPriority:                90,
+		MinAlternativesTried:          1,
 		SuppressSafeReversibleDefault: true,
 	}
 }
@@ -273,22 +273,22 @@ func (s ConfigDraftStatus) Terminal() bool {
 // ConfigDraft is an operator-authored change proposal. Payload fields are
 // mutually exclusive by Scope: exactly one concrete body must be set.
 type ConfigDraft struct {
-	SchemaVersion    int                      `json:"schema_version"`
-	ID               ConfigDraftID            `json:"draft_id"`
-	Scope            ConfigScope              `json:"scope"`
-	BasedOnRevision  uint64                   `json:"based_on_revision"`
-	Applicability    ConfigApplicability      `json:"applicability"`
-	Status           ConfigDraftStatus        `json:"status"`
-	ActorType        ActorType                `json:"actor_type"`
-	ActorID          string                   `json:"actor_id"`
-	Reason           string                   `json:"reason"`
-	Runtime          *RuntimeProcessConfig    `json:"runtime,omitempty"`
-	Scheduler        *SchedulerCadenceConfig  `json:"scheduler,omitempty"`
-	Horizon          *HorizonPolicy           `json:"horizon,omitempty"`
-	Interruption     *InterruptionRuntimePolicy `json:"interruption,omitempty"`
-	Channels         *ChannelsConfig          `json:"channels,omitempty"`
-	CreatedAt        time.Time                `json:"created_at"`
-	ValidatedAt      time.Time                `json:"validated_at,omitempty"`
+	SchemaVersion   int                        `json:"schema_version"`
+	ID              ConfigDraftID              `json:"draft_id"`
+	Scope           ConfigScope                `json:"scope"`
+	BasedOnRevision uint64                     `json:"based_on_revision"`
+	Applicability   ConfigApplicability        `json:"applicability"`
+	Status          ConfigDraftStatus          `json:"status"`
+	ActorType       ActorType                  `json:"actor_type"`
+	ActorID         string                     `json:"actor_id"`
+	Reason          string                     `json:"reason"`
+	Runtime         *RuntimeProcessConfig      `json:"runtime,omitempty"`
+	Scheduler       *SchedulerCadenceConfig    `json:"scheduler,omitempty"`
+	Horizon         *HorizonPolicy             `json:"horizon,omitempty"`
+	Interruption    *InterruptionRuntimePolicy `json:"interruption,omitempty"`
+	Channels        *ChannelsConfig            `json:"channels,omitempty"`
+	CreatedAt       time.Time                  `json:"created_at"`
+	ValidatedAt     time.Time                  `json:"validated_at,omitempty"`
 }
 
 func (d ConfigDraft) Validate() error {
@@ -371,23 +371,23 @@ func (d ConfigDraft) Validate() error {
 
 // ConfigRevision is an immutable accepted configuration for one scope.
 type ConfigRevision struct {
-	SchemaVersion   int                        `json:"schema_version"`
-	ID              ConfigRevisionID           `json:"revision_id"`
-	Scope           ConfigScope                `json:"scope"`
-	Revision        uint64                     `json:"revision"`
-	Applicability   ConfigApplicability        `json:"applicability"`
-	ParentID        ConfigRevisionID           `json:"parent_id,omitempty"`
-	ContentHash     string                     `json:"content_hash"`
-	ActorType       ActorType                  `json:"actor_type"`
-	ActorID         string                     `json:"actor_id"`
-	Reason          string                     `json:"reason"`
-	DraftID         ConfigDraftID              `json:"draft_id"`
-	Runtime         *RuntimeProcessConfig      `json:"runtime,omitempty"`
-	Scheduler       *SchedulerCadenceConfig    `json:"scheduler,omitempty"`
-	Horizon         *HorizonPolicy             `json:"horizon,omitempty"`
-	Interruption    *InterruptionRuntimePolicy `json:"interruption,omitempty"`
-	Channels        *ChannelsConfig            `json:"channels,omitempty"`
-	AcceptedAt      time.Time                  `json:"accepted_at"`
+	SchemaVersion int                        `json:"schema_version"`
+	ID            ConfigRevisionID           `json:"revision_id"`
+	Scope         ConfigScope                `json:"scope"`
+	Revision      uint64                     `json:"revision"`
+	Applicability ConfigApplicability        `json:"applicability"`
+	ParentID      ConfigRevisionID           `json:"parent_id,omitempty"`
+	ContentHash   string                     `json:"content_hash"`
+	ActorType     ActorType                  `json:"actor_type"`
+	ActorID       string                     `json:"actor_id"`
+	Reason        string                     `json:"reason"`
+	DraftID       ConfigDraftID              `json:"draft_id"`
+	Runtime       *RuntimeProcessConfig      `json:"runtime,omitempty"`
+	Scheduler     *SchedulerCadenceConfig    `json:"scheduler,omitempty"`
+	Horizon       *HorizonPolicy             `json:"horizon,omitempty"`
+	Interruption  *InterruptionRuntimePolicy `json:"interruption,omitempty"`
+	Channels      *ChannelsConfig            `json:"channels,omitempty"`
+	AcceptedAt    time.Time                  `json:"accepted_at"`
 }
 
 func (r ConfigRevision) Validate() error {
@@ -499,14 +499,14 @@ func (s ConfigApplyState) Terminal() bool {
 
 // ConfigApplyReceipt records the apply pipeline for one draft.
 type ConfigApplyReceipt struct {
-	SchemaVersion int             `json:"schema_version"`
-	ID            ReceiptID       `json:"receipt_id"`
-	DraftID       ConfigDraftID   `json:"draft_id"`
+	SchemaVersion int              `json:"schema_version"`
+	ID            ReceiptID        `json:"receipt_id"`
+	DraftID       ConfigDraftID    `json:"draft_id"`
 	RevisionID    ConfigRevisionID `json:"revision_id,omitempty"`
 	State         ConfigApplyState `json:"state"`
-	ResultRef     string          `json:"result_ref,omitempty"`
-	FailureCode   string          `json:"failure_code,omitempty"`
-	RecordedAt    time.Time       `json:"recorded_at"`
+	ResultRef     string           `json:"result_ref,omitempty"`
+	FailureCode   string           `json:"failure_code,omitempty"`
+	RecordedAt    time.Time        `json:"recorded_at"`
 }
 
 func (r ConfigApplyReceipt) Validate() error {
@@ -541,18 +541,18 @@ func (r ConfigApplyReceipt) Validate() error {
 
 // ConfigFieldChange is one path in a deterministic config diff.
 type ConfigFieldChange struct {
-	Path     string `json:"path"`
-	Before   string `json:"before,omitempty"`
-	After    string `json:"after,omitempty"`
-	Secret   bool   `json:"secret,omitempty"`
+	Path   string `json:"path"`
+	Before string `json:"before,omitempty"`
+	After  string `json:"after,omitempty"`
+	Secret bool   `json:"secret,omitempty"`
 }
 
 // ConfigDiff is a sorted, deterministic field-level comparison.
 type ConfigDiff struct {
-	Scope         ConfigScope         `json:"scope"`
-	BaseRevision  uint64              `json:"base_revision"`
-	Changes       []ConfigFieldChange `json:"changes"`
-	Empty         bool                `json:"empty"`
+	Scope        ConfigScope         `json:"scope"`
+	BaseRevision uint64              `json:"base_revision"`
+	Changes      []ConfigFieldChange `json:"changes"`
+	Empty        bool                `json:"empty"`
 }
 
 func (d ConfigDiff) Validate() error {
@@ -575,13 +575,13 @@ func (d ConfigDiff) Validate() error {
 
 // ConfigImpactPreview is the pure impact analysis before apply.
 type ConfigImpactPreview struct {
-	Scope           ConfigScope          `json:"scope"`
-	Applicability   ConfigApplicability  `json:"applicability"`
-	FieldsChanged   []string             `json:"fields_changed"`
-	RestartRequired bool                 `json:"restart_required"`
-	NextCycleOnly   bool                 `json:"next_cycle_only"`
-	Blocked         bool                 `json:"blocked"`
-	Notes           []string             `json:"notes,omitempty"`
+	Scope           ConfigScope         `json:"scope"`
+	Applicability   ConfigApplicability `json:"applicability"`
+	FieldsChanged   []string            `json:"fields_changed"`
+	RestartRequired bool                `json:"restart_required"`
+	NextCycleOnly   bool                `json:"next_cycle_only"`
+	Blocked         bool                `json:"blocked"`
+	Notes           []string            `json:"notes,omitempty"`
 }
 
 func (p ConfigImpactPreview) Validate() error {
@@ -600,12 +600,12 @@ func (p ConfigImpactPreview) Validate() error {
 // ConfigPayloadHash produces a stable content hash for one scoped payload.
 func ConfigPayloadHash(scope ConfigScope, runtime *RuntimeProcessConfig, scheduler *SchedulerCadenceConfig, horizon *HorizonPolicy, interruption *InterruptionRuntimePolicy, channels *ChannelsConfig) (string, error) {
 	body := struct {
-		Scope         ConfigScope                `json:"scope"`
-		Runtime       *RuntimeProcessConfig      `json:"runtime,omitempty"`
-		Scheduler     *SchedulerCadenceConfig    `json:"scheduler,omitempty"`
-		Horizon       *HorizonPolicy             `json:"horizon,omitempty"`
-		Interruption  *InterruptionRuntimePolicy `json:"interruption,omitempty"`
-		Channels      *ChannelsConfig            `json:"channels,omitempty"`
+		Scope        ConfigScope                `json:"scope"`
+		Runtime      *RuntimeProcessConfig      `json:"runtime,omitempty"`
+		Scheduler    *SchedulerCadenceConfig    `json:"scheduler,omitempty"`
+		Horizon      *HorizonPolicy             `json:"horizon,omitempty"`
+		Interruption *InterruptionRuntimePolicy `json:"interruption,omitempty"`
+		Channels     *ChannelsConfig            `json:"channels,omitempty"`
 	}{Scope: scope, Runtime: runtime, Scheduler: scheduler, Horizon: horizon, Interruption: interruption, Channels: channels}
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -717,6 +717,48 @@ func PreviewConfigImpact(draft ConfigDraft, diff ConfigDiff) (ConfigImpactPrevie
 		return ConfigImpactPreview{}, err
 	}
 	return preview, nil
+}
+
+// DraftFromConfigRevision builds an OPEN draft that re-proposes an existing
+// revision payload. Semantic rollback uses this against the current active
+// base so the lineage still advances (no pointer rewind).
+func DraftFromConfigRevision(source ConfigRevision, draftID ConfigDraftID, basedOn uint64, actorType ActorType, actorID, reason string, now time.Time) (ConfigDraft, error) {
+	if err := source.Validate(); err != nil {
+		return ConfigDraft{}, err
+	}
+	if draftID == "" || actorID == "" || strings.TrimSpace(reason) == "" || now.IsZero() {
+		return ConfigDraft{}, errors.New("rollback draft requires id, actor, reason, and time")
+	}
+	if !actorType.valid() {
+		return ConfigDraft{}, fmt.Errorf("unknown rollback actor type %q", actorType)
+	}
+	draft := ConfigDraft{
+		SchemaVersion:   SchemaVersionV1,
+		ID:              draftID,
+		Scope:           source.Scope,
+		BasedOnRevision: basedOn,
+		Applicability:   source.Applicability,
+		Status:          ConfigDraftOpen,
+		ActorType:       actorType,
+		ActorID:         actorID,
+		Reason:          strings.TrimSpace(reason),
+		Runtime:         cloneRuntimeConfig(source.Runtime),
+		Scheduler:       cloneSchedulerConfig(source.Scheduler),
+		Horizon:         cloneHorizonPolicy(source.Horizon),
+		Interruption:    cloneInterruptionPolicy(source.Interruption),
+		Channels:        cloneChannelsConfig(source.Channels),
+		CreatedAt:       now.UTC(),
+	}
+	if err := draft.Validate(); err != nil {
+		return ConfigDraft{}, err
+	}
+	return draft, nil
+}
+
+// ConfigRevisionsEqualPayload reports whether two revisions carry the same
+// scoped content hash (identity of config body, not revision metadata).
+func ConfigRevisionsEqualPayload(a, b ConfigRevision) bool {
+	return a.Scope == b.Scope && a.ContentHash != "" && a.ContentHash == b.ContentHash
 }
 
 // MarkConfigDraftValidated is a pure status advance after validation succeeds.

@@ -453,7 +453,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - pipeline `draft → validate → impact preview → apply → receipt` com aplicabilidade `HOT|NEXT_CYCLE|RESTART_REQUIRED|IMMUTABLE` — implementado em `domain` e `kernel.ConfigApplier`;
 - validação, diff determinístico (redação de secret refs) e preview de impacto — implementados;
 - portas `ConfigReader`/`ConfigWriter`, store em memória + checkpoint gob (SQLite/Dolt via payload), receipts monotônicos e ponteiro ativo por escopo — implementados;
-- residual: rollback semântico (re-apply de revisão ancestral). Projeção no scheduler/question-gate, HTTP admin de drafts e UI experimental de drafts já implementados.
+- residual: nenhum bloqueador de Slice C. Rollback semântico implementado (`domain.DraftFromConfigRevision` + `kernel.ConfigApplier.RollbackToRevision` + `POST /config/revisions/rollback` + UI de histórico): re-aplica payload ancestral como nova revisão monotônica (ponteiro ativo só avança; no-op e escopo divergente conflitam). Projeção no scheduler/question-gate, HTTP admin de drafts e UI experimental de drafts já implementados.
 
 ### Slice D — dashboard web
 

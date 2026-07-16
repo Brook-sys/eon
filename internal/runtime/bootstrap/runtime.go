@@ -189,6 +189,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
+	controlAPI.ConfigRollback = configApplier
 
 	telegramBits, err := buildTelegram(opts, store, clock, eventInbox, ids)
 	if err != nil {

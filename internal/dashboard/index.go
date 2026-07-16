@@ -258,7 +258,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   </div>
   <section class="full">
     <h2>Configuração versionada</h2>
-    <p class="hint">Draft → validate (preview/diff) → apply com recibo. Active revision por escopo. Segredos só por referência (não colar tokens).</p>
+    <p class="hint">Draft → validate (preview/diff) → apply com recibo. Rollback semântico re-aplica payload ancestral como nova revisão (ponteiro só avança). Segredos só por referência.</p>
     <div class="row">
       <label>scope
         <select id="cfgScope">
@@ -284,6 +284,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div>
         <h3 class="muted" style="margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Revisão ativa</h3>
         <div id="cfgActive" class="prebox muted">não carregada</div>
+        <h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Histórico de revisões</h3>
+        <div id="cfgRevisions" class="list muted">nenhum</div>
         <h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Drafts</h3>
         <div id="cfgDrafts" class="list muted">nenhum</div>
       </div>
@@ -735,11 +737,46 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
   }
 
+  function renderRevisions(revisions, activeID) {
+    const list = Array.isArray(revisions) ? revisions.slice() : [];
+    list.sort(function (a, b) { return (b.revision || 0) - (a.revision || 0); });
+    if (!list.length) {
+      el("cfgRevisions").innerHTML = '<span class="muted">nenhuma revisão</span>';
+      return;
+    }
+    let html = "";
+    list.forEach(function (rev) {
+      const id = rev.revision_id || "";
+      const isActive = activeID && id === activeID;
+      html += '<div class="item">';
+      html += '<div><strong>#' + esc(String(rev.revision || "?")) + '</strong> ' + esc(id);
+      if (isActive) html += ' <span class="muted">(ativa)</span>';
+      html += '</div>';
+      html += '<div class="muted">' + esc(rev.reason || "") + '</div>';
+      html += '<div class="ops">';
+      html += '<button type="button" data-revid="' + esc(id) + '" data-act="detail">Detalhe</button>';
+      if (!isActive) {
+        html += '<button type="button" data-revid="' + esc(id) + '" data-act="rollback">Rollback semântico</button>';
+      }
+      html += '</div></div>';
+    });
+    el("cfgRevisions").innerHTML = html;
+    el("cfgRevisions").querySelectorAll("button[data-revid]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const id = btn.getAttribute("data-revid");
+        const act = btn.getAttribute("data-act");
+        if (act === "detail") loadRevisionDetail(id);
+        else if (act === "rollback") rollbackRevision(id);
+      });
+    });
+  }
+
   async function refreshConfig(showErrors) {
     el("cfgOk").textContent = "";
     if (showErrors) el("cfgErr").textContent = "";
     const scope = el("cfgScope").value;
     const status = el("cfgStatus").value;
+    let activeID = "";
     try {
       try {
         const active = await getJSON(controlBase + "/config/revisions/active?scope=" + encodeURIComponent(scope));
@@ -748,9 +785,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         if (active.revision && active.revision.revision != null) {
           el("cfgBasedOn").value = String(active.revision.revision);
         }
+        if (active.revision && active.revision.revision_id) activeID = active.revision.revision_id;
       } catch (err) {
         el("cfgActive").textContent = "sem revisão ativa: " + String(err.message || err);
         el("cfgActive").className = "prebox muted";
+      }
+      try {
+        const revs = await getJSON(controlBase + "/config/revisions?scope=" + encodeURIComponent(scope));
+        renderRevisions(revs.revisions || [], activeID);
+      } catch (err) {
+        el("cfgRevisions").innerHTML = '<span class="muted">histórico indisponível: ' + esc(String(err.message || err)) + '</span>';
       }
       let listURL = controlBase + "/config/drafts?scope=" + encodeURIComponent(scope);
       if (status) listURL += "&status=" + encodeURIComponent(status);
@@ -759,6 +803,39 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     } catch (err) {
       if (showErrors !== false) el("cfgErr").textContent = String(err.message || err);
       else el("cfgDrafts").innerHTML = '<span class="muted">config indisponível: ' + esc(String(err.message || err)) + '</span>';
+    }
+  }
+
+  function loadRevisionDetail(id) {
+    const scope = el("cfgScope").value;
+    getJSON(controlBase + "/config/revisions?scope=" + encodeURIComponent(scope)).then(function (body) {
+      const list = body.revisions || [];
+      const found = list.find(function (r) { return r.revision_id === id; });
+      el("cfgDetail").textContent = pretty(found || { error: "revision not in list", id: id });
+      el("cfgDetail").className = "prebox";
+    }).catch(function (err) {
+      el("cfgErr").textContent = String(err.message || err);
+    });
+  }
+
+  async function rollbackRevision(id) {
+    el("cfgOk").textContent = "";
+    el("cfgErr").textContent = "";
+    const scope = el("cfgScope").value;
+    if (!window.confirm("Rollback semântico: re-aplicar payload de " + id + " como NOVA revisão (histórico preservado)?")) return;
+    try {
+      const body = await postJSON(controlBase + "/config/revisions/rollback", {
+        schema_version: 1,
+        scope: scope,
+        target_revision_id: id,
+        reason: "dashboard semantic rollback"
+      });
+      el("cfgDetail").textContent = pretty(body);
+      el("cfgDetail").className = "prebox";
+      el("cfgOk").textContent = "rollback → revision=" + ((body.revision && body.revision.revision_id) || "") + " receipt=" + ((body.receipt && body.receipt.state) || "");
+      await refreshConfig(true);
+    } catch (err) {
+      el("cfgErr").textContent = String(err.message || err);
     }
   }
 

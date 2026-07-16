@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -12,9 +13,10 @@ import (
 )
 
 const (
-	EventConfigDraftValidated = "config.draft.validated"
-	EventConfigRevisionApplied = "config.revision.applied"
-	EventConfigDraftRejected  = "config.draft.rejected"
+	EventConfigDraftValidated     = "config.draft.validated"
+	EventConfigRevisionApplied    = "config.revision.applied"
+	EventConfigDraftRejected      = "config.draft.rejected"
+	EventConfigRevisionRolledBack = "config.revision.rolled_back"
 )
 
 // ConfigApplier validates and applies configuration drafts through durable
@@ -179,6 +181,146 @@ func (a *ConfigApplier) ApplyDraft(ctx context.Context, draftID domain.ConfigDra
 		return nil
 	})
 	return final, receipt, err
+}
+
+// RollbackToRevision re-applies an ancestral revision's payload as a new
+// forward revision (semantic rollback). The active pointer only moves forward;
+// history is never rewritten. No-op when the target payload already matches
+// the active revision.
+func (a *ConfigApplier) RollbackToRevision(ctx context.Context, scope domain.ConfigScope, targetID domain.ConfigRevisionID, actorType domain.ActorType, actorID, reason string) (domain.ConfigDraft, domain.ConfigRevision, domain.ConfigApplyReceipt, error) {
+	if !scope.Valid() || targetID == "" {
+		return domain.ConfigDraft{}, domain.ConfigRevision{}, domain.ConfigApplyReceipt{}, errors.New("rollback requires scope and target revision")
+	}
+	if actorType == "" {
+		actorType = domain.ActorOperator
+	}
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" {
+		return domain.ConfigDraft{}, domain.ConfigRevision{}, domain.ConfigApplyReceipt{}, errors.New("rollback requires actor id")
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		reason = "semantic rollback to ancestral revision"
+	}
+	var draft domain.ConfigDraft
+	var final domain.ConfigRevision
+	var receipt domain.ConfigApplyReceipt
+	err := a.Store.Update(ctx, func(tx port.Transaction) error {
+		target, err := tx.ConfigRevision(targetID)
+		if err != nil {
+			return err
+		}
+		if target.Scope != scope {
+			return fmt.Errorf("%w: target revision scope disagrees", port.ErrConflict)
+		}
+		active, err := tx.ActiveConfigRevision(scope)
+		if err != nil {
+			return err
+		}
+		if domain.ConfigRevisionsEqualPayload(active, target) {
+			return fmt.Errorf("%w: target payload already active (no-op rollback)", port.ErrConflict)
+		}
+		if target.Revision >= active.Revision {
+			// Equal payload handled above; higher/equal revision with different
+			// payload is not an ancestor restore path.
+			return fmt.Errorf("%w: rollback target must be an earlier revision", port.ErrConflict)
+		}
+		now := a.Clock.Now().UTC()
+		draftID, err := a.IDs.NewID("cfgdraft")
+		if err != nil {
+			return err
+		}
+		draft, err = domain.DraftFromConfigRevision(target, domain.ConfigDraftID(draftID), active.Revision, actorType, actorID, reason, now)
+		if err != nil {
+			return err
+		}
+		if err := tx.CreateConfigDraft(draft); err != nil {
+			return err
+		}
+		// Mini validate trail: RECEIVED → VALIDATING → ACCEPTED, then apply.
+		if err := a.ensureReceipt(tx, draft.ID, domain.ConfigApplyReceived, now, "", "", ""); err != nil {
+			return err
+		}
+		if err := a.ensureReceipt(tx, draft.ID, domain.ConfigApplyValidating, now.Add(time.Nanosecond), "", "", ""); err != nil {
+			return err
+		}
+		diff, err := domain.DiffConfig(&active, draft)
+		if err != nil {
+			return err
+		}
+		preview, err := domain.PreviewConfigImpact(draft, diff)
+		if err != nil {
+			return err
+		}
+		if preview.Blocked {
+			if err := a.ensureReceipt(tx, draft.ID, domain.ConfigApplyRejected, now.Add(2*time.Nanosecond), "", "IMPACT_BLOCKED", ""); err != nil {
+				return err
+			}
+			rejected := draft
+			rejected.Status = domain.ConfigDraftRejected
+			if err := tx.SaveConfigDraft(rejected); err != nil {
+				return err
+			}
+			return fmt.Errorf("%w: rollback impact blocked", port.ErrConflict)
+		}
+		validated, err := domain.MarkConfigDraftValidated(draft, now.Add(2*time.Nanosecond))
+		if err != nil {
+			return err
+		}
+		if err := tx.SaveConfigDraft(validated); err != nil {
+			return err
+		}
+		if err := a.ensureReceipt(tx, draft.ID, domain.ConfigApplyAccepted, now.Add(3*time.Nanosecond), "", "", ""); err != nil {
+			return err
+		}
+		if err := a.appendConfigEvent(tx, EventConfigDraftValidated, string(draft.ID)+":"+string(draft.Scope)+":rollback", now); err != nil {
+			return err
+		}
+		if err := a.ensureReceipt(tx, draft.ID, domain.ConfigApplyApplying, now.Add(4*time.Nanosecond), "", "", ""); err != nil {
+			return err
+		}
+		revisionID, err := a.IDs.NewID("cfgrev")
+		if err != nil {
+			return err
+		}
+		existingReceipt, err := tx.ConfigApplyReceipt(draft.ID)
+		if err != nil {
+			return err
+		}
+		revision, appliedDraft, appliedReceipt, err := domain.ApplyConfigDraft(&active, validated, domain.ConfigRevisionID(revisionID), existingReceipt.ID, now.Add(5*time.Nanosecond))
+		if err != nil {
+			code := "APPLY_FAILED"
+			if errors.Is(err, domain.ErrConflict) {
+				code = "STALE_BASE"
+			}
+			_ = a.ensureReceipt(tx, draft.ID, domain.ConfigApplyFailed, now.Add(6*time.Nanosecond), "", code, "")
+			return err
+		}
+		if err := tx.AppendConfigRevision(revision); err != nil {
+			return err
+		}
+		if err := tx.ActivateConfigRevision(revision.Scope, revision.ID); err != nil {
+			return err
+		}
+		if err := tx.SaveConfigDraft(appliedDraft); err != nil {
+			return err
+		}
+		if err := tx.SaveConfigApplyReceipt(appliedReceipt); err != nil {
+			return err
+		}
+		payload := fmt.Sprintf("%s@%d<-%s@%d", revision.Scope, revision.Revision, target.Scope, target.Revision)
+		if err := a.appendConfigEvent(tx, EventConfigRevisionRolledBack, payload, now); err != nil {
+			return err
+		}
+		if err := a.appendConfigEvent(tx, EventConfigRevisionApplied, appliedReceipt.ResultRef, now); err != nil {
+			return err
+		}
+		draft = appliedDraft
+		final = revision
+		receipt = appliedReceipt
+		return nil
+	})
+	return draft, final, receipt, err
 }
 
 func (a *ConfigApplier) ensureReceipt(tx port.Transaction, draftID domain.ConfigDraftID, state domain.ConfigApplyState, at time.Time, resultRef, failureCode, revisionID string) error {
