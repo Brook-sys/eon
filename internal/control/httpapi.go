@@ -36,12 +36,39 @@ type ConfigRevisionRollbacker interface {
 	RollbackToRevision(context.Context, domain.ConfigScope, domain.ConfigRevisionID, domain.ActorType, string, string) (domain.ConfigDraft, domain.ConfigRevision, domain.ConfigApplyReceipt, error)
 }
 
+// MissionAmendmentAcceptance is the durable outcome of FR-AUTH-004 accept.
+// Mirrors mission.AmendmentAcceptance without forcing control clients to
+// import the mission package for response decoding.
+type MissionAmendmentAcceptance struct {
+	Previous domain.MissionRevision            `json:"previous"`
+	Accepted domain.MissionRevision            `json:"accepted"`
+	Diff     domain.MissionDiff                `json:"diff"`
+	Impact   domain.MissionImpactPreview       `json:"impact"`
+	Report   domain.AgendaReconciliationReport `json:"report"`
+}
+
+// MissionAmendmentAcceptor installs an accepted UserAmendment (FR-AUTH-004).
+// Implemented by mission.Acceptor via a thin adapter in bootstrap. Optional;
+// without it POST .../accept 503s. Preview is pure and always available when
+// the event store is wired.
+type MissionAmendmentAcceptor interface {
+	Accept(context.Context, domain.UserAmendment, string) (MissionAmendmentAcceptance, error)
+}
+
+// MissionAmendmentAcceptorFunc adapts a function to MissionAmendmentAcceptor.
+type MissionAmendmentAcceptorFunc func(context.Context, domain.UserAmendment, string) (MissionAmendmentAcceptance, error)
+
+func (f MissionAmendmentAcceptorFunc) Accept(ctx context.Context, amendment domain.UserAmendment, provenance string) (MissionAmendmentAcceptance, error) {
+	return f(ctx, amendment, provenance)
+}
+
 // API is the mutable Control API surface for Slice B. It accepts commands and
 // external events into durable inboxes; kernel processors own effects.
 //
 // Auth and local bind remain deployment concerns. This package never elevates
 // untrusted content into policy and never mutates canonical domain state
-// beyond inbox persistence and operator-authored config drafts.
+// beyond inbox persistence, operator-authored config drafts, and explicit
+// FR-AUTH-004 mission amendment acceptance through the wired acceptor.
 type API struct {
 	Commands  *CommandInbox
 	Events    *ExternalEventInbox
@@ -59,6 +86,9 @@ type API struct {
 	ConfigApply    ConfigDraftApplicator
 	// ConfigRollback is optional. Without it, POST .../revisions/rollback 503s.
 	ConfigRollback ConfigRevisionRollbacker
+	// MissionAccept is optional. Without it, POST /missions/amendments/accept 503s.
+	// Preview remains available whenever the event store is wired.
+	MissionAccept MissionAmendmentAcceptor
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -98,7 +128,198 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /config/revisions/active", a.handleGetActiveConfigRevision)
 	mux.HandleFunc("GET /config/revisions", a.handleListConfigRevisions)
 	mux.HandleFunc("POST /config/revisions/rollback", a.handleRollbackConfigRevision)
+	mux.HandleFunc("GET /missions/{missionID}/active", a.handleGetActiveMission)
+	mux.HandleFunc("POST /missions/amendments/preview", a.handlePreviewMissionAmendment)
+	mux.HandleFunc("POST /missions/amendments/accept", a.handleAcceptMissionAmendment)
 	return mux
+}
+
+type missionAmendmentRequest struct {
+	SchemaVersion     int                  `json:"schema_version"`
+	MissionID         domain.MissionID     `json:"mission_id"`
+	BaseRevision      uint64               `json:"base_revision"`
+	CandidateRevision uint64               `json:"candidate_revision"`
+	OriginalText      string               `json:"original_text"`
+	Purpose           string               `json:"purpose"`
+	Domains           []string             `json:"domains"`
+	Policies          []string             `json:"policies"`
+	Budget            domain.Budget        `json:"budget"`
+	Status            domain.MissionStatus `json:"status"`
+	Reason            string               `json:"reason"`
+	// Provenance is accept-only; ignored on preview. Defaults to control actor.
+	Provenance string `json:"provenance,omitempty"`
+}
+
+func (a *API) amendmentFromRequest(req missionAmendmentRequest) (domain.UserAmendment, error) {
+	if req.SchemaVersion == 0 {
+		req.SchemaVersion = domain.SchemaVersionV1
+	}
+	amendment := domain.UserAmendment{
+		SchemaVersion:     req.SchemaVersion,
+		MissionID:         req.MissionID,
+		BaseRevision:      req.BaseRevision,
+		CandidateRevision: req.CandidateRevision,
+		OriginalText:      req.OriginalText,
+		Purpose:           req.Purpose,
+		Domains:           append([]string(nil), req.Domains...),
+		Policies:          append([]string(nil), req.Policies...),
+		Budget:            req.Budget,
+		Status:            req.Status,
+		Reason:            req.Reason,
+	}
+	if err := amendment.Validate(); err != nil {
+		return domain.UserAmendment{}, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)}
+	}
+	return amendment, nil
+}
+
+func (a *API) loadActiveMission(ctx context.Context, missionID domain.MissionID) (domain.MissionRevision, error) {
+	if missionID == "" {
+		return domain.MissionRevision{}, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "mission_id is required"}
+	}
+	if a.Events == nil || a.Events.Store == nil {
+		return domain.MissionRevision{}, apiError{status: http.StatusServiceUnavailable, code: "not_configured", message: "mission store is not wired"}
+	}
+	var active domain.MissionRevision
+	err := a.Events.Store.View(ctx, func(reader port.Reader) error {
+		var err error
+		active, err = reader.ActiveMissionRevision(missionID)
+		return err
+	})
+	if err != nil {
+		return domain.MissionRevision{}, mapStoreError(err, "mission")
+	}
+	return active, nil
+}
+
+func (a *API) handleGetActiveMission(w http.ResponseWriter, r *http.Request) {
+	missionID := domain.MissionID(strings.TrimSpace(r.PathValue("missionID")))
+	active, err := a.loadActiveMission(r.Context(), missionID)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"mission":        active,
+	})
+}
+
+func (a *API) purePreviewAmendment(ctx context.Context, amendment domain.UserAmendment) (domain.MissionRevision, domain.MissionRevision, domain.MissionDiff, domain.MissionImpactPreview, error) {
+	active, err := a.loadActiveMission(ctx, amendment.MissionID)
+	if err != nil {
+		return domain.MissionRevision{}, domain.MissionRevision{}, domain.MissionDiff{}, domain.MissionImpactPreview{}, err
+	}
+	if amendment.BaseRevision != active.Revision {
+		return domain.MissionRevision{}, domain.MissionRevision{}, domain.MissionDiff{}, domain.MissionImpactPreview{}, apiError{
+			status:  http.StatusConflict,
+			code:    "conflict",
+			message: fmt.Sprintf("base_revision %d disagrees with active revision %d", amendment.BaseRevision, active.Revision),
+		}
+	}
+	candidate, err := domain.CandidateFromAmendment(active, amendment)
+	if err != nil {
+		return domain.MissionRevision{}, domain.MissionRevision{}, domain.MissionDiff{}, domain.MissionImpactPreview{}, mapStoreError(err, "mission_amendment")
+	}
+	diff, err := domain.DiffMissionRevisions(active, candidate)
+	if err != nil {
+		return domain.MissionRevision{}, domain.MissionRevision{}, domain.MissionDiff{}, domain.MissionImpactPreview{}, mapStoreError(err, "mission_amendment")
+	}
+	impact, err := domain.PreviewMissionImpact(active, candidate, diff)
+	if err != nil {
+		return domain.MissionRevision{}, domain.MissionRevision{}, domain.MissionDiff{}, domain.MissionImpactPreview{}, mapStoreError(err, "mission_amendment")
+	}
+	return active, candidate, diff, impact, nil
+}
+
+func (a *API) handlePreviewMissionAmendment(w http.ResponseWriter, r *http.Request) {
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req missionAmendmentRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	amendment, err := a.amendmentFromRequest(req)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	previous, candidate, diff, impact, err := a.purePreviewAmendment(r.Context(), amendment)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"previous":       previous,
+		"candidate":      candidate,
+		"diff":           diff,
+		"impact":         impact,
+		// accepted is always false for preview; no write occurred.
+		"accepted": false,
+	})
+}
+
+func (a *API) handleAcceptMissionAmendment(w http.ResponseWriter, r *http.Request) {
+	if a.MissionAccept == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "not_configured", message: "mission amendment acceptance is not wired"})
+		return
+	}
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req missionAmendmentRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	amendment, err := a.amendmentFromRequest(req)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	// Fail closed on pure no-op/blocked before invoking the acceptor.
+	_, _, _, impact, err := a.purePreviewAmendment(r.Context(), amendment)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if impact.Blocked || !impact.RequiresAcceptance {
+		writeAPIError(w, apiError{
+			status:  http.StatusConflict,
+			code:    "conflict",
+			message: "mission amendment is blocked or does not require acceptance",
+		})
+		return
+	}
+	provenance := strings.TrimSpace(req.Provenance)
+	if provenance == "" {
+		actor := strings.TrimSpace(a.DefaultActorID)
+		if actor == "" {
+			actor = "operator_local"
+		}
+		provenance = "user:" + actor
+	}
+	result, err := a.MissionAccept.Accept(r.Context(), amendment, provenance)
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "mission_amendment"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"schema_version": domain.SchemaVersionV1,
+		"previous":       result.Previous,
+		"accepted":       result.Accepted,
+		"diff":           result.Diff,
+		"impact":         result.Impact,
+		"report":         result.Report,
+		"installed":      true,
+	})
 }
 
 type commandSubmitRequest struct {
@@ -922,7 +1143,10 @@ func isValidationError(err error) bool {
 		strings.Contains(msg, "must not") ||
 		strings.Contains(msg, "must be") ||
 		strings.Contains(msg, "exceeds") ||
-		strings.Contains(msg, "unsupported")
+		strings.Contains(msg, "unsupported") ||
+		strings.Contains(msg, "disagrees") ||
+		strings.Contains(msg, "blocked") ||
+		strings.Contains(msg, "does not require")
 }
 
 func sanitizeValidationMessage(err error) string {

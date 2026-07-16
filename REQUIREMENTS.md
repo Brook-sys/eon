@@ -34,6 +34,8 @@ Uma `UserAmendment` MUST produzir candidata a nova revisão, diff semântico e a
 
 **Implementação (2026-07-16):** `domain.UserAmendment` / `DiffMissionRevisions` / `PreviewMissionImpact` (puro) e `mission.Acceptor.Accept` (append+activate da nova `MissionRevision`, cancelamento de operations/inquiries não-terminais da revisão anterior via `EventCancel`, abandono de work opportunities OPEN/DEFERRED, eventos de auditoria). Testes em `internal/domain/mission_amendment_test.go` e `internal/mission/amend_test.go` (memory + reopen SQLite).
 
+**Superfície HTTP/UI (2026-07-16):** Control API `GET /missions/{missionID}/active`, `POST /missions/amendments/preview` (puro, sem escrita) e `POST /missions/amendments/accept` (fail-closed em no-op/bloqueado; acceptor opcional → 503 se não wired). Bootstrap adapta `mission.Acceptor` em `control.MissionAmendmentAcceptor`. Dashboard experimental: seção **Emenda de missão (FR-AUTH-004)** com carregar ativa / preview / accept append-only.
+
 ## 2. Investigação e agenda
 
 ### FR-AGENDA-001 — Admissão rastreável

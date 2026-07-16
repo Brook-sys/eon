@@ -17,6 +17,7 @@ import (
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/inspect"
 	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/mission"
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
@@ -194,6 +195,20 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
 	controlAPI.ConfigRollback = configApplier
+	missionAcceptor := mission.Acceptor{Store: store, Clock: clock, IDs: ids}
+	controlAPI.MissionAccept = control.MissionAmendmentAcceptorFunc(func(ctx context.Context, amendment domain.UserAmendment, provenance string) (control.MissionAmendmentAcceptance, error) {
+		result, err := missionAcceptor.Accept(ctx, amendment, provenance)
+		if err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		return control.MissionAmendmentAcceptance{
+			Previous: result.Previous,
+			Accepted: result.Accepted,
+			Diff:     result.Diff,
+			Impact:   result.Impact,
+			Report:   result.Report,
+		}, nil
+	})
 
 	telegramBits, err := buildTelegram(opts, store, clock, eventInbox, ids)
 	if err != nil {

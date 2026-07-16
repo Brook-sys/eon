@@ -145,6 +145,58 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="cmdErr"></div>
     </section>
     <section>
+      <h2>Emenda de missão (FR-AUTH-004)</h2>
+      <p class="hint">Preview puro (diff + impacto) e accept append-only. Nunca muta a revisão ativa in-place; candidate_revision = base+1. No-op e impacto bloqueado falham fechados. Agenda só reconcilia após accept.</p>
+      <div class="row">
+        <label>base_revision
+          <input id="amendBase" type="number" min="1" value="1"/>
+        </label>
+        <label>candidate_revision
+          <input id="amendCandidate" type="number" min="2" value="2"/>
+        </label>
+        <label>status
+          <select id="amendStatus">
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="PAUSED">PAUSED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+        </label>
+      </div>
+      <label>purpose
+        <input id="amendPurpose" style="min-width:100%" placeholder="propósito da revisão candidata" spellcheck="true"/>
+      </label>
+      <label style="margin-top:8px">original_text
+        <textarea id="amendText" style="min-height:80px" placeholder="texto original da missão (candidata)"></textarea>
+      </label>
+      <div class="row" style="margin-top:8px">
+        <label>domains (CSV)
+          <input id="amendDomains" placeholder="epistemology,runtime" spellcheck="false"/>
+        </label>
+        <label>policies (CSV)
+          <input id="amendPolicies" placeholder="fail_closed" spellcheck="false"/>
+        </label>
+      </div>
+      <div class="row">
+        <label>budget.model_calls
+          <input id="amendBudgetCalls" type="number" min="0" value="0" style="width:90px"/>
+        </label>
+        <label>budget.tokens
+          <input id="amendBudgetTokens" type="number" min="0" value="0" style="width:90px"/>
+        </label>
+        <label>reason
+          <input id="amendReason" style="min-width:220px" placeholder="motivo explícito do operador" spellcheck="true"/>
+        </label>
+      </div>
+      <div class="ops">
+        <button type="button" id="btnAmendLoad">Carregar ativa</button>
+        <button type="button" id="btnAmendPreview" class="primary">Preview</button>
+        <button type="button" id="btnAmendAccept" class="warn">Accept (append)</button>
+      </div>
+      <div class="okbox" id="amendOk"></div>
+      <div class="errbox" id="amendErr"></div>
+      <div id="amendDetail" class="prebox muted" style="margin-top:8px">sem preview</div>
+    </section>
+    <section>
       <h2>Alertas / telemetria</h2>
       <p class="hint">Sinais derivados e postura OTel (FR-CTRL-007). Nunca canônicos, nunca autoritativos para o kernel. Retention limita buffers de export descartáveis, não retenção de store.</p>
       <div id="alertsBox" class="muted">carregue overview ou /alerts</div>
@@ -464,6 +516,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   function renderOverview(o) {
     const m = o.mission;
     lastMissionRevision = m && m.active_revision != null ? Number(m.active_revision) : null;
+    if (lastMissionRevision != null && lastMissionRevision > 0) {
+      el("amendBase").value = String(lastMissionRevision);
+      el("amendCandidate").value = String(lastMissionRevision + 1);
+    }
     let html = '<dl class="kv">';
     html += '<dt>runtime</dt><dd>' + esc((o.runtime && o.runtime.name) || "") + " " + esc((o.runtime && o.runtime.version) || "") + "</dd>";
     html += '<dt>process_mode</dt><dd class="status-' + esc(o.process_mode || "") + '">' + esc(o.process_mode || "—") + "</dd>";
@@ -1365,6 +1421,109 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnPause").addEventListener("click", function () { submitMissionCommand("PAUSE_MISSION"); });
   el("btnResume").addEventListener("click", function () { submitMissionCommand("RESUME_MISSION"); });
   el("btnCancel").addEventListener("click", function () { submitMissionCommand("CANCEL_MISSION"); });
+
+  function splitCSV(v) {
+    return String(v || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function amendmentPayload() {
+    const missionId = el("missionId").value.trim();
+    const base = Number(el("amendBase").value);
+    const candidate = Number(el("amendCandidate").value);
+    return {
+      schema_version: 1,
+      mission_id: missionId,
+      base_revision: base,
+      candidate_revision: candidate,
+      original_text: el("amendText").value,
+      purpose: el("amendPurpose").value.trim(),
+      domains: splitCSV(el("amendDomains").value),
+      policies: splitCSV(el("amendPolicies").value),
+      budget: {
+        model_calls: Number(el("amendBudgetCalls").value) || 0,
+        tokens: Number(el("amendBudgetTokens").value) || 0
+      },
+      status: el("amendStatus").value,
+      reason: el("amendReason").value.trim()
+    };
+  }
+  async function loadActiveMissionForAmend() {
+    el("amendOk").textContent = "";
+    el("amendErr").textContent = "";
+    const missionId = el("missionId").value.trim();
+    if (!missionId) {
+      el("amendErr").textContent = "mission_id é obrigatório";
+      return;
+    }
+    try {
+      const body = await getJSON(controlBase + "/missions/" + encodeURIComponent(missionId) + "/active");
+      const m = body.mission || {};
+      el("amendBase").value = String(m.revision || 1);
+      el("amendCandidate").value = String((Number(m.revision) || 1) + 1);
+      el("amendPurpose").value = m.purpose || "";
+      el("amendText").value = m.original_text || "";
+      el("amendDomains").value = Array.isArray(m.domains) ? m.domains.join(",") : "";
+      el("amendPolicies").value = Array.isArray(m.policies) ? m.policies.join(",") : "";
+      el("amendStatus").value = m.status || "ACTIVE";
+      if (m.budget) {
+        el("amendBudgetCalls").value = String(m.budget.model_calls || 0);
+        el("amendBudgetTokens").value = String(m.budget.tokens || 0);
+      }
+      el("amendDetail").textContent = pretty(m);
+      el("amendDetail").className = "prebox";
+      el("amendOk").textContent = "ativa revision=" + String(m.revision || "?") + " id=" + String(m.id || "");
+      lastMissionRevision = Number(m.revision) || lastMissionRevision;
+    } catch (err) {
+      el("amendErr").textContent = String(err.message || err);
+    }
+  }
+  async function previewMissionAmendment() {
+    el("amendOk").textContent = "";
+    el("amendErr").textContent = "";
+    try {
+      const payload = amendmentPayload();
+      if (!payload.mission_id) throw new Error("mission_id é obrigatório");
+      if (!payload.reason) throw new Error("reason é obrigatório");
+      const body = await postJSON(controlBase + "/missions/amendments/preview", payload);
+      el("amendDetail").textContent = pretty(body);
+      el("amendDetail").className = "prebox";
+      const impact = body.impact || {};
+      el("amendOk").textContent = "preview pure accepted=false blocked=" + String(!!impact.blocked)
+        + " requires_acceptance=" + String(!!impact.requires_acceptance)
+        + " changes=" + String(((body.diff && body.diff.changes) || []).length);
+    } catch (err) {
+      el("amendErr").textContent = String(err.message || err);
+    }
+  }
+  async function acceptMissionAmendment() {
+    el("amendOk").textContent = "";
+    el("amendErr").textContent = "";
+    const ok = window.confirm("Confirma ACCEPT append-only da emenda? Revisão anterior permanece imutável.");
+    if (!ok) return;
+    try {
+      const payload = amendmentPayload();
+      if (!payload.mission_id) throw new Error("mission_id é obrigatório");
+      if (!payload.reason) throw new Error("reason é obrigatório");
+      const body = await postJSON(controlBase + "/missions/amendments/accept", payload);
+      el("amendDetail").textContent = pretty(body);
+      el("amendDetail").className = "prebox";
+      const accepted = body.accepted || {};
+      el("amendOk").textContent = "installed revision=" + String(accepted.revision || "?")
+        + " id=" + String(accepted.id || "")
+        + " provenance=" + String(accepted.provenance || "");
+      if (accepted.revision) {
+        el("amendBase").value = String(accepted.revision);
+        el("amendCandidate").value = String(Number(accepted.revision) + 1);
+        lastMissionRevision = Number(accepted.revision);
+      }
+      await refresh();
+    } catch (err) {
+      el("amendErr").textContent = String(err.message || err);
+    }
+  }
+  el("btnAmendLoad").addEventListener("click", loadActiveMissionForAmend);
+  el("btnAmendPreview").addEventListener("click", previewMissionAmendment);
+  el("btnAmendAccept").addEventListener("click", acceptMissionAmendment);
+
   el("btnCfgRefresh").addEventListener("click", function () { refreshConfig(true); });
   el("btnCfgCreate").addEventListener("click", createDraft);
   el("btnCfgFillDefault").addEventListener("click", fillDefaultPayload);

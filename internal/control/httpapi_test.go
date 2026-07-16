@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -396,6 +397,252 @@ func newControlAPIWithConfig(t *testing.T, store port.Store, clock source.Clock,
 	api.ConfigApply = applier
 	api.ConfigRollback = applier
 	return api
+}
+
+func newControlAPIWithMissionAccept(t *testing.T, store port.Store, clock source.Clock, ids source.IDGenerator) *control.API {
+	t.Helper()
+	api := newControlAPI(t, store, clock, ids)
+	api.MissionAccept = control.MissionAmendmentAcceptorFunc(func(ctx context.Context, amendment domain.UserAmendment, provenance string) (control.MissionAmendmentAcceptance, error) {
+		// Minimal durable stub mirroring mission.Acceptor for HTTP contract tests:
+		// pure preview + append/activate candidate revision in one Update.
+		var previous domain.MissionRevision
+		if err := store.View(ctx, func(r port.Reader) error {
+			active, err := r.ActiveMissionRevision(amendment.MissionID)
+			if err != nil {
+				return err
+			}
+			previous = active
+			return nil
+		}); err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		candidate, err := domain.CandidateFromAmendment(previous, amendment)
+		if err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		diff, err := domain.DiffMissionRevisions(previous, candidate)
+		if err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		impact, err := domain.PreviewMissionImpact(previous, candidate, diff)
+		if err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		if impact.Blocked || !impact.RequiresAcceptance {
+			return control.MissionAmendmentAcceptance{}, errors.New("mission amendment is blocked or does not require acceptance")
+		}
+		revisionID, err := ids.NewID("mission_revision")
+		if err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		now := clock.Now().UTC()
+		accepted := domain.MissionRevision{
+			SchemaVersion: domain.SchemaVersionV1,
+			ID:            domain.MissionRevisionID(revisionID),
+			MissionID:     amendment.MissionID,
+			Revision:      amendment.CandidateRevision,
+			OriginalText:  amendment.OriginalText,
+			Purpose:       amendment.Purpose,
+			Domains:       append([]string(nil), amendment.Domains...),
+			Policies:      append([]string(nil), amendment.Policies...),
+			Budget:        amendment.Budget,
+			Status:        amendment.Status,
+			Provenance:    provenance,
+			AcceptedAt:    now,
+		}
+		if err := store.Update(ctx, func(tx port.Transaction) error {
+			if err := tx.AppendMissionRevision(accepted); err != nil {
+				return err
+			}
+			return tx.ActivateMissionRevision(accepted.MissionID, accepted.ID)
+		}); err != nil {
+			return control.MissionAmendmentAcceptance{}, err
+		}
+		return control.MissionAmendmentAcceptance{
+			Previous: previous,
+			Accepted: accepted,
+			Diff:     diff,
+			Impact:   impact,
+			Report: domain.AgendaReconciliationReport{
+				PreviousRevision: previous.ID,
+				NewRevision:      accepted.ID,
+			},
+		}, nil
+	})
+	return api
+}
+
+func TestControlAPIMissionAmendmentPreviewAndAccept(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 16, 22, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(200)
+	seedMissionRich(t, store, now)
+	api := newControlAPIWithMissionAccept(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	active := mustGET(t, server.URL+"/missions/mission_1/active")
+	defer active.Body.Close()
+	if active.StatusCode != http.StatusOK {
+		t.Fatalf("active status = %d body=%s", active.StatusCode, readBody(t, active))
+	}
+	var activeBody struct {
+		Mission domain.MissionRevision `json:"mission"`
+	}
+	decodeJSON(t, active.Body, &activeBody)
+	if activeBody.Mission.Revision != 1 || activeBody.Mission.Purpose != "test purpose" {
+		t.Fatalf("active mission = %#v", activeBody.Mission)
+	}
+
+	previewBody := map[string]any{
+		"schema_version":     1,
+		"mission_id":         "mission_1",
+		"base_revision":      1,
+		"candidate_revision": 2,
+		"original_text":      "amended mission text",
+		"purpose":            "amended purpose",
+		"domains":            []string{"epistemology"},
+		"policies":           []string{"fail_closed"},
+		"budget":             map[string]any{"model_calls": 3, "tokens": 1000},
+		"status":             "ACTIVE",
+		"reason":             "operator narrows purpose via HTTP",
+	}
+	preview := mustPOSTJSON(t, server.URL+"/missions/amendments/preview", previewBody)
+	defer preview.Body.Close()
+	if preview.StatusCode != http.StatusOK {
+		t.Fatalf("preview status = %d body=%s", preview.StatusCode, readBody(t, preview))
+	}
+	var previewResp map[string]any
+	decodeJSON(t, preview.Body, &previewResp)
+	if previewResp["accepted"] != false {
+		t.Fatalf("preview must not accept: %#v", previewResp["accepted"])
+	}
+	impact, _ := previewResp["impact"].(map[string]any)
+	if impact["requires_acceptance"] != true || impact["blocked"] != false {
+		t.Fatalf("impact = %#v", impact)
+	}
+	// Preview is pure: active revision remains 1.
+	still := mustGET(t, server.URL+"/missions/mission_1/active")
+	defer still.Body.Close()
+	var stillBody struct {
+		Mission domain.MissionRevision `json:"mission"`
+	}
+	decodeJSON(t, still.Body, &stillBody)
+	if stillBody.Mission.Revision != 1 {
+		t.Fatalf("preview mutated revision to %d", stillBody.Mission.Revision)
+	}
+
+	// No-op is conflict (blocked).
+	noop := mustPOSTJSON(t, server.URL+"/missions/amendments/preview", map[string]any{
+		"schema_version": 1, "mission_id": "mission_1", "base_revision": 1, "candidate_revision": 2,
+		"original_text": "control api mission", "purpose": "test purpose",
+		"domains": []string{"epistemology"}, "policies": []string{"fail_closed"},
+		"budget": map[string]any{}, "status": "ACTIVE", "reason": "no change",
+	})
+	defer noop.Body.Close()
+	// No-op is a valid pure preview that returns blocked=true, not HTTP error.
+	if noop.StatusCode != http.StatusOK {
+		t.Fatalf("noop preview status = %d body=%s", noop.StatusCode, readBody(t, noop))
+	}
+	var noopResp map[string]any
+	decodeJSON(t, noop.Body, &noopResp)
+	noopImpact := noopResp["impact"].(map[string]any)
+	if noopImpact["blocked"] != true {
+		t.Fatalf("noop impact = %#v", noopImpact)
+	}
+
+	// Stale base revision is conflict.
+	stale := mustPOSTJSON(t, server.URL+"/missions/amendments/preview", map[string]any{
+		"schema_version": 1, "mission_id": "mission_1", "base_revision": 99, "candidate_revision": 100,
+		"original_text": "x", "purpose": "y", "domains": []string{"d"}, "policies": []string{"p"},
+		"status": "ACTIVE", "reason": "stale",
+	})
+	defer stale.Body.Close()
+	if stale.StatusCode != http.StatusConflict {
+		t.Fatalf("stale status = %d body=%s", stale.StatusCode, readBody(t, stale))
+	}
+
+	// Accept without acceptor wiring → 503.
+	unwired := newControlAPI(t, store, clock, ids)
+	unwiredServer := httptest.NewServer(unwired.Handler())
+	t.Cleanup(unwiredServer.Close)
+	unwiredAccept := mustPOSTJSON(t, unwiredServer.URL+"/missions/amendments/accept", previewBody)
+	defer unwiredAccept.Body.Close()
+	if unwiredAccept.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("unwired accept status = %d body=%s", unwiredAccept.StatusCode, readBody(t, unwiredAccept))
+	}
+
+	// Accept no-op fails closed without write.
+	acceptNoop := mustPOSTJSON(t, server.URL+"/missions/amendments/accept", map[string]any{
+		"schema_version": 1, "mission_id": "mission_1", "base_revision": 1, "candidate_revision": 2,
+		"original_text": "control api mission", "purpose": "test purpose",
+		"domains": []string{"epistemology"}, "policies": []string{"fail_closed"},
+		"budget": map[string]any{}, "status": "ACTIVE", "reason": "no change",
+	})
+	defer acceptNoop.Body.Close()
+	if acceptNoop.StatusCode != http.StatusConflict {
+		t.Fatalf("accept noop status = %d body=%s", acceptNoop.StatusCode, readBody(t, acceptNoop))
+	}
+
+	accept := mustPOSTJSON(t, server.URL+"/missions/amendments/accept", previewBody)
+	defer accept.Body.Close()
+	if accept.StatusCode != http.StatusOK {
+		t.Fatalf("accept status = %d body=%s", accept.StatusCode, readBody(t, accept))
+	}
+	var acceptResp map[string]any
+	decodeJSON(t, accept.Body, &acceptResp)
+	if acceptResp["installed"] != true {
+		t.Fatalf("accept resp = %#v", acceptResp)
+	}
+	accepted, _ := acceptResp["accepted"].(map[string]any)
+	if accepted["revision"] != float64(2) || accepted["purpose"] != "amended purpose" {
+		t.Fatalf("accepted revision = %#v", accepted)
+	}
+	if accepted["provenance"] != "user:operator_local" {
+		t.Fatalf("provenance = %#v", accepted["provenance"])
+	}
+
+	after := mustGET(t, server.URL+"/missions/mission_1/active")
+	defer after.Body.Close()
+	var afterBody struct {
+		Mission domain.MissionRevision `json:"mission"`
+	}
+	decodeJSON(t, after.Body, &afterBody)
+	if afterBody.Mission.Revision != 2 || afterBody.Mission.Purpose != "amended purpose" {
+		t.Fatalf("after accept active = %#v", afterBody.Mission)
+	}
+
+	// Previous revision remains readable and unchanged (append-only).
+	var previous domain.MissionRevision
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		var err error
+		previous, err = r.MissionRevision("revision_1")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if previous.Purpose != "test purpose" || previous.Revision != 1 {
+		t.Fatalf("previous mutated: %#v", previous)
+	}
+}
+
+func seedMissionRich(t *testing.T, store port.Store, now time.Time) {
+	t.Helper()
+	mission := domain.MissionRevision{
+		SchemaVersion: domain.SchemaVersionV1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+		OriginalText: "control api mission", Purpose: "test purpose", Status: domain.MissionActive,
+		Domains: []string{"epistemology"}, Policies: []string{"fail_closed"},
+		Provenance: "fixture", AcceptedAt: now,
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		return tx.ActivateMissionRevision(mission.MissionID, mission.ID)
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestControlAPIConfigDraftLifecycle(t *testing.T) {

@@ -150,6 +150,12 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"/alerts",
 		"/telemetry",
 		"FR-CTRL-007",
+		"Emenda de missão (FR-AUTH-004)",
+		"/missions/amendments/preview",
+		"/missions/amendments/accept",
+		"btnAmendPreview",
+		"btnAmendAccept",
+		"btnAmendLoad",
 	} {
 		if !strings.Contains(html, marker) {
 			t.Fatalf("index missing marker %q", marker)

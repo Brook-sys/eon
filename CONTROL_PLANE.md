@@ -448,7 +448,8 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - recibos e optimistic concurrency — implementados (`CommandReceipt` monotônico, revisão de missão esperada, `SaveControlState` com revisão monotônica);
 - superfícies HTTP de submit/consulta — implementadas em `control.API`: `POST /commands`, `GET /commands/{id}`, `GET /commands/{id}/receipt`, `POST /external-events`, `GET /external-events/{id}`, `GET /external-events/{id}/disposition`; HTTP 202 distingue aceitação de inbox de efeito confirmado; retries reutilizam identidade por `idempotency_key`/`deduplication_key` sem mintar ID divergente;
 - crash-replay dos processadores — implementado com reopen SQLite real: comando/evento `RECEIVED` sobrevive a restart e aplica uma vez; recibo/disposição terminal é pure replay sem segundo efeito nem eventos extras;
-- residual restante de Slice B: nenhum bloqueador de submit; redaction fina de payloads de inspeção coberta no Slice A.
+- residual restante de Slice B: nenhum bloqueador de submit; redaction fina de payloads de inspeção coberta no Slice A;
+- emenda de missão FR-AUTH-004 — implementada na Control API: `GET /missions/{missionID}/active`, `POST /missions/amendments/preview` (puro: candidate/diff/impact, `accepted=false`) e `POST /missions/amendments/accept` (append-only via `MissionAmendmentAcceptor`; no-op/bloqueado → 409; sem wiring → 503). Bootstrap wire `mission.Acceptor`.
 
 ### Slice C — configuração versionada
 
@@ -476,7 +477,7 @@ Browse de frontier no dashboard experimental: seção **Frontier / higiene** com
 
 Browse de commits e provider no dashboard experimental: seção **Commits / provider** lista `GET /api/inspect/commits` (filtros head/revision) com atalho ao inspetor de commit; exibe perfil declarado e probe live via `/provider/profile` e `/provider/profile/probe` sem mutação nem secrets.
 
-Residual de Slice D: polish UX geral residual (se necessário). Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental. Filtros avançados de knowledge fechados em 2026-07-16 14:20. Commits browse + FR-MODEL-005 fechados em 2026-07-16 21:04.
+Residual de Slice D: polish UX geral residual (se necessário). Tela de configuração (drafts/active revision/validate/apply) e comandos tipados pause/resume/cancel estão no dashboard experimental. Filtros avançados de knowledge fechados em 2026-07-16 14:20. Commits browse + FR-MODEL-005 fechados em 2026-07-16 21:04. Emenda de missão FR-AUTH-004 (carregar ativa / preview / accept) no dashboard experimental fechada em 2026-07-16.
 
 ### Outbox de entrega de perguntas
 
