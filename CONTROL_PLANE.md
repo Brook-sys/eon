@@ -489,12 +489,12 @@ Implementado no adapter `internal/channel/telegram`:
 
 Ingress de processo (não autoritativo): `internal/channel/telegram.Ingress` com modos `none|poll|webhook`, montado pelo bootstrap.
 
-- `poll`: um `getUpdates` por `ProcessCycle` (timeout 0 no loop para não bloquear; offset process-local) → `IngestUpdate` → `ExternalEventInbox`;
+- `poll`: um `getUpdates` por `ProcessCycle` (timeout 0 no loop para não bloquear) → `IngestUpdate` → `ExternalEventInbox`;
+- offset de poll: `domain.ChannelCursor` por canal, monotônico e com revisão otimista, persistido no checkpoint (memory gob / SQLite); `Ingress` hidrata o offset no primeiro `Poll` e grava `update_id+1` após batch bem-sucedido — não concede autoridade de modelo/capability;
 - `webhook`: rota HTTP local com comparação constant-time de `X-Telegram-Bot-Api-Secret-Token` (segredo só via env);
+- adapter expõe `SetWebhook`/`DeleteWebhook` para registo remoto fora do kernel (HTTPS obrigatório; secret_token process-local);
 - UX de recusa opcional (`RejectUX`): `answerCallbackQuery` / aviso curto em chat allowlisted; nunca eleva texto a autoridade;
 - rejeiões uncorrelated/unauthorized não entram na inbox; falhas de store no webhook respondem 503 para reentrega.
-
-Residual: persistir offset de poll em checkpoint entre processos e registar webhook remoto (`setWebhook`) fora do kernel.
 
 ### Slice F — interoperabilidade
 

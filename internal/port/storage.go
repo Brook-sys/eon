@@ -148,6 +148,9 @@ type ControlReader interface {
 	ExternalEventByDeduplicationKey(string) (domain.ExternalEvent, error)
 	ExternalEventDisposition(domain.ExternalEventID) (domain.ExternalEventDisposition, error)
 	PendingExternalEvents(limit int) ([]domain.ExternalEvent, error)
+	// ChannelCursor returns the durable non-authoritative transport position for a
+	// channel key (for example Telegram getUpdates offset). Missing keys return ErrNotFound.
+	ChannelCursor(channel string) (domain.ChannelCursor, error)
 }
 
 // ControlWriter persists operator commands, external events, and kernel-applied
@@ -158,6 +161,10 @@ type ControlWriter interface {
 	CreateExternalEvent(domain.ExternalEvent, domain.ExternalEventDisposition) error
 	SaveExternalEventDisposition(domain.ExternalEventDisposition) error
 	SaveControlState(domain.ControlState, uint64) error
+	// SaveChannelCursor persists a transport cursor with optimistic concurrency.
+	// expectedRevision is the revision observed by the writer (0 when creating).
+	// Cursors are non-authoritative and must never grant capability or model power.
+	SaveChannelCursor(domain.ChannelCursor, uint64) error
 }
 
 // ContinuityReader exposes the work frontier and continuity diagnoses.

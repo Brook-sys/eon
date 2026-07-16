@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -367,6 +368,49 @@ func TestDeliveryWorkerParksAmbiguousTransportAsEffectUnknown(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSetWebhookAndDeleteWebhookCallBotAPI(t *testing.T) {
+	var paths []string
+	var setBody setWebhookRequest
+	var deleteBody deleteWebhookRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		body, _ := io.ReadAll(r.Body)
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/setWebhook"):
+			_ = json.Unmarshal(body, &setBody)
+		case strings.HasSuffix(r.URL.Path, "/deleteWebhook"):
+			_ = json.Unmarshal(body, &deleteBody)
+		}
+		_, _ = w.Write([]byte(`{"ok":true,"result":true}`))
+	}))
+	defer server.Close()
+	adapter := testAdapter(t, server)
+	if err := adapter.SetWebhook(context.Background(), WebhookConfig{
+		URL: "https://example.test/telegram/webhook", SecretToken: "hook-secret",
+		MaxConnections: 20, DropPendingUpdates: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := adapter.DeleteWebhook(context.Background(), true); err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 2 || paths[0] != "/botsecret/setWebhook" || paths[1] != "/botsecret/deleteWebhook" {
+		t.Fatalf("paths = %#v", paths)
+	}
+	if setBody.URL != "https://example.test/telegram/webhook" || setBody.SecretToken != "hook-secret" || setBody.MaxConnections != 20 || !setBody.DropPendingUpdates {
+		t.Fatalf("setWebhook body = %#v", setBody)
+	}
+	if len(setBody.AllowedUpdates) != 2 || setBody.AllowedUpdates[0] != "message" || setBody.AllowedUpdates[1] != "callback_query" {
+		t.Fatalf("allowed_updates = %#v", setBody.AllowedUpdates)
+	}
+	if !deleteBody.DropPendingUpdates {
+		t.Fatalf("deleteWebhook body = %#v", deleteBody)
+	}
+	if err := adapter.SetWebhook(context.Background(), WebhookConfig{URL: "http://insecure.example/hook"}); !isKind(err, ErrorInvalidConfig) {
+		t.Fatalf("insecure URL error = %v", err)
 	}
 }
 

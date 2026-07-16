@@ -1105,6 +1105,71 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("channel cursors are durable monotonic and optimistic", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+		initial, err := domain.InitialChannelCursor("telegram", 0, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(initial, 0)
+		}); err != nil {
+			t.Fatalf("create cursor: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ChannelCursor("telegram")
+			if err != nil || got.Cursor != 0 || got.Revision != 0 {
+				t.Fatalf("initial cursor = %#v err=%v", got, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		advanced, err := domain.AdvanceChannelCursor(initial, 56, now.Add(time.Minute))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(advanced, initial.Revision)
+		}); err != nil {
+			t.Fatalf("advance cursor: %v", err)
+		}
+		// Stale expected revision conflicts.
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(advanced, initial.Revision)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("stale cursor revision error = %v", err)
+		}
+		// Rewind is rejected.
+		rewind := advanced
+		rewind.Cursor = 10
+		rewind.Revision = advanced.Revision + 1
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(rewind, advanced.Revision)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("rewind cursor error = %v", err)
+		}
+		// Pure same-revision replay is accepted without mutation.
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(advanced, advanced.Revision)
+		}); err != nil {
+			t.Fatalf("identical revision replay: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ChannelCursor("telegram")
+			if err != nil || got.Cursor != 56 || got.Revision != 1 {
+				t.Fatalf("final cursor = %#v err=%v", got, err)
+			}
+			if _, err := r.ChannelCursor("missing"); !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("missing cursor error = %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("config drafts revisions and apply receipts are durable with sequential activation", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC)

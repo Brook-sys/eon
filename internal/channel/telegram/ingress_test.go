@@ -241,6 +241,76 @@ func TestIngressWebhookValidatesSecretAndAcceptsUpdate(t *testing.T) {
 	}
 }
 
+func TestIngressPollPersistsOffsetAcrossProcessRestart(t *testing.T) {
+	now := time.Date(2026, 7, 16, 9, 15, 0, 0, time.UTC)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/getUpdates") {
+			_, _ = w.Write([]byte(`{"ok":true,"result":[{"update_id":55,"callback_query":{"id":"cb_poll","from":{"id":7},"message":{"message_id":42,"chat":{"id":100}},"data":"o:1"}}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":1}}`))
+	}))
+	defer server.Close()
+
+	adapter := testAdapter(t, server)
+	store := memory.New()
+	_ = seedDeliveredQuestion(t, store, now)
+	inbox, err := control.NewExternalEventInbox(store, control.DispositionFactoryFrom(source.NewManualClock(now.Add(time.Minute))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ingress, err := NewIngress(adapter, store, inbox, source.NewSequenceIDGenerator(1), source.NewManualClock(now.Add(time.Minute)), IngressConfig{
+		Mode: IngressPoll, PollLimit: 10, PollTimeout: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ingress.Poll(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		cursor, err := r.ChannelCursor(ChannelName)
+		if err != nil {
+			return err
+		}
+		if cursor.Cursor != 56 || cursor.Revision != 0 {
+			t.Fatalf("durable cursor = %#v", cursor)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Fresh ingress on the same durable store must hydrate offset before polling.
+	var requestedOffset int64 = -1
+	server2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if strings.HasSuffix(r.URL.Path, "/getUpdates") {
+			var req getUpdatesRequest
+			_ = json.Unmarshal(body, &req)
+			requestedOffset = req.Offset
+			_, _ = w.Write([]byte(`{"ok":true,"result":[]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":1}}`))
+	}))
+	defer server2.Close()
+	adapter2 := testAdapter(t, server2)
+	restarted, err := NewIngress(adapter2, store, inbox, source.NewSequenceIDGenerator(100), source.NewManualClock(now.Add(2*time.Minute)), IngressConfig{
+		Mode: IngressPoll, PollLimit: 10, PollTimeout: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := restarted.Poll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestedOffset != 56 || result.NextOffset != 56 || restarted.Offset() != 56 {
+		t.Fatalf("restart poll offset requested=%d result=%#v local=%d", requestedOffset, result, restarted.Offset())
+	}
+}
+
 func TestIngressWebhookRejectsWithoutBindingQuietly(t *testing.T) {
 	now := time.Date(2026, 7, 16, 8, 45, 0, 0, time.UTC)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

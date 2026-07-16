@@ -105,7 +105,8 @@ type IngressResult struct {
 }
 
 // Ingress owns process-local offset state and converts updates into inbox events.
-// It never mutates domain authority beyond durable inbox submission.
+// It never mutates domain authority beyond durable inbox submission and the
+// non-authoritative channel cursor used to resume getUpdates after restart.
 type Ingress struct {
 	Adapter  *Adapter
 	Store    port.Store
@@ -115,12 +116,14 @@ type Ingress struct {
 	Config   IngressConfig
 	RejectUX bool
 
-	mu     sync.Mutex
-	offset int64 // next getUpdates offset (last seen update_id + 1)
+	mu             sync.Mutex
+	offset         int64 // next getUpdates offset (last seen update_id + 1)
+	offsetHydrated bool
 }
 
 // NewIngress validates config and returns a ready ingress. Mode none is valid
-// and yields a no-op Poll/Handler when called.
+// and yields a no-op Poll/Handler when called. Poll mode hydrates the durable
+// ChannelCursor on first Poll so restarts resume without replaying updates.
 func NewIngress(adapter *Adapter, store port.Store, events EventSubmitter, ids source.IDGenerator, clock source.Clock, config IngressConfig) (*Ingress, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
@@ -143,7 +146,8 @@ func NewIngress(adapter *Adapter, store port.Store, events EventSubmitter, ids s
 }
 
 // Poll performs one non-authoritative getUpdates batch and submits accepted
-// answers. Safe no-op when mode is not poll.
+// answers. Safe no-op when mode is not poll. After a successful batch, the
+// next offset is written to ChannelCursor so process restart resumes cleanly.
 func (in *Ingress) Poll(ctx context.Context) (IngressResult, error) {
 	var result IngressResult
 	if in == nil || in.Config.Mode != IngressPoll {
@@ -154,6 +158,9 @@ func (in *Ingress) Poll(ctx context.Context) (IngressResult, error) {
 	}
 	if ctx == nil {
 		return result, errors.New("context is required")
+	}
+	if err := in.hydrateOffset(ctx); err != nil {
+		return result, err
 	}
 	in.mu.Lock()
 	offset := in.offset
@@ -186,10 +193,10 @@ func (in *Ingress) Poll(ctx context.Context) (IngressResult, error) {
 	}
 	if maxID > 0 {
 		next := maxID + 1
-		in.mu.Lock()
-		if next > in.offset {
-			in.offset = next
+		if err := in.persistOffset(ctx, next); err != nil {
+			return result, err
 		}
+		in.mu.Lock()
 		result.NextOffset = in.offset
 		in.mu.Unlock()
 	} else {
@@ -198,6 +205,112 @@ func (in *Ingress) Poll(ctx context.Context) (IngressResult, error) {
 		in.mu.Unlock()
 	}
 	return result, nil
+}
+
+func (in *Ingress) hydrateOffset(ctx context.Context) error {
+	in.mu.Lock()
+	if in.offsetHydrated {
+		in.mu.Unlock()
+		return nil
+	}
+	in.mu.Unlock()
+	var cursor domain.ChannelCursor
+	err := in.Store.View(ctx, func(r port.Reader) error {
+		var loadErr error
+		cursor, loadErr = r.ChannelCursor(ChannelName)
+		return loadErr
+	})
+	if err != nil && !errors.Is(err, port.ErrNotFound) {
+		return fmt.Errorf("load telegram channel cursor: %w", err)
+	}
+	in.mu.Lock()
+	defer in.mu.Unlock()
+	if in.offsetHydrated {
+		return nil
+	}
+	if err == nil && cursor.Cursor > in.offset {
+		in.offset = cursor.Cursor
+	}
+	in.offsetHydrated = true
+	return nil
+}
+
+func (in *Ingress) persistOffset(ctx context.Context, next int64) error {
+	if next <= 0 {
+		return nil
+	}
+	now := in.Clock.Now().UTC()
+	// Retry once on optimistic conflict so concurrent writers converge.
+	for attempt := 0; attempt < 3; attempt++ {
+		var current domain.ChannelCursor
+		var found bool
+		if err := in.Store.View(ctx, func(r port.Reader) error {
+			got, err := r.ChannelCursor(ChannelName)
+			if errors.Is(err, port.ErrNotFound) {
+				found = false
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			current = got
+			found = true
+			return nil
+		}); err != nil {
+			return fmt.Errorf("read telegram channel cursor: %w", err)
+		}
+		var nextCursor domain.ChannelCursor
+		var expected uint64
+		if !found {
+			seed, err := domain.InitialChannelCursor(ChannelName, next, now)
+			if err != nil {
+				return err
+			}
+			nextCursor = seed
+			expected = 0
+		} else {
+			advanced, err := domain.AdvanceChannelCursor(current, next, now)
+			if err != nil {
+				if errors.Is(err, domain.ErrConflict) {
+					// Durable cursor is already ahead; adopt it and stop.
+					in.mu.Lock()
+					if current.Cursor > in.offset {
+						in.offset = current.Cursor
+					}
+					in.offsetHydrated = true
+					in.mu.Unlock()
+					return nil
+				}
+				return err
+			}
+			if advanced.Revision == current.Revision {
+				// Pure replay of the same position.
+				in.mu.Lock()
+				in.offset = advanced.Cursor
+				in.offsetHydrated = true
+				in.mu.Unlock()
+				return nil
+			}
+			nextCursor = advanced
+			expected = current.Revision
+		}
+		err := in.Store.Update(ctx, func(tx port.Transaction) error {
+			return tx.SaveChannelCursor(nextCursor, expected)
+		})
+		if err == nil {
+			in.mu.Lock()
+			if nextCursor.Cursor > in.offset {
+				in.offset = nextCursor.Cursor
+			}
+			in.offsetHydrated = true
+			in.mu.Unlock()
+			return nil
+		}
+		if !errors.Is(err, port.ErrConflict) {
+			return fmt.Errorf("save telegram channel cursor: %w", err)
+		}
+	}
+	return fmt.Errorf("%w: telegram channel cursor write conflict", port.ErrConflict)
 }
 
 // Handler returns an HTTP handler for webhook mode. Nil when not webhook.
@@ -358,12 +471,14 @@ func (in *Ingress) Offset() int64 {
 	return in.offset
 }
 
-// SetOffset seeds the poll offset (tests or restore). Non-positive values are ignored.
+// SetOffset seeds the process-local poll offset (tests). Non-positive values are
+// ignored. Durable persistence still happens on the next successful poll batch.
 func (in *Ingress) SetOffset(offset int64) {
 	if in == nil || offset <= 0 {
 		return
 	}
 	in.mu.Lock()
 	in.offset = offset
+	in.offsetHydrated = true
 	in.mu.Unlock()
 }

@@ -251,6 +251,113 @@ type getUpdatesResponse struct {
 	Result []Update `json:"result"`
 }
 
+// WebhookConfig describes a remote Bot API setWebhook registration. Secrets and
+// URL material stay process-local: the kernel never owns webhook lifecycle.
+type WebhookConfig struct {
+	URL            string
+	SecretToken    string
+	MaxConnections int
+	// DropPendingUpdates asks Telegram to discard queued updates when registering.
+	DropPendingUpdates bool
+	AllowedUpdates     []string
+}
+
+type setWebhookRequest struct {
+	URL                string   `json:"url"`
+	SecretToken        string   `json:"secret_token,omitempty"`
+	MaxConnections     int      `json:"max_connections,omitempty"`
+	DropPendingUpdates bool     `json:"drop_pending_updates,omitempty"`
+	AllowedUpdates     []string `json:"allowed_updates,omitempty"`
+}
+
+type deleteWebhookRequest struct {
+	DropPendingUpdates bool `json:"drop_pending_updates,omitempty"`
+}
+
+type boolAPIResponse struct {
+	OK          bool   `json:"ok"`
+	Result      bool   `json:"result"`
+	Description string `json:"description,omitempty"`
+}
+
+// SetWebhook registers the process webhook URL with Telegram. Non-authoritative:
+// it only configures transport delivery; inbox correlation still applies.
+func (a *Adapter) SetWebhook(ctx context.Context, config WebhookConfig) error {
+	if a == nil {
+		return errors.New("telegram adapter is nil")
+	}
+	urlValue := strings.TrimSpace(config.URL)
+	if urlValue == "" {
+		return &Error{Kind: ErrorInvalidConfig}
+	}
+	if !strings.HasPrefix(urlValue, "https://") {
+		return &Error{Kind: ErrorInvalidConfig}
+	}
+	maxConn := config.MaxConnections
+	if maxConn < 0 {
+		return &Error{Kind: ErrorInvalidConfig}
+	}
+	if maxConn > 100 {
+		maxConn = 100
+	}
+	allowed := config.AllowedUpdates
+	if len(allowed) == 0 {
+		allowed = []string{"message", "callback_query"}
+	}
+	payload, err := json.Marshal(setWebhookRequest{
+		URL:                urlValue,
+		SecretToken:        strings.TrimSpace(config.SecretToken),
+		MaxConnections:     maxConn,
+		DropPendingUpdates: config.DropPendingUpdates,
+		AllowedUpdates:     allowed,
+	})
+	if err != nil {
+		return err
+	}
+	return a.postBoolAPI(ctx, "setWebhook", payload)
+}
+
+// DeleteWebhook removes the remote webhook so getUpdates can be used again.
+func (a *Adapter) DeleteWebhook(ctx context.Context, dropPending bool) error {
+	if a == nil {
+		return errors.New("telegram adapter is nil")
+	}
+	payload, err := json.Marshal(deleteWebhookRequest{DropPendingUpdates: dropPending})
+	if err != nil {
+		return err
+	}
+	return a.postBoolAPI(ctx, "deleteWebhook", payload)
+}
+
+func (a *Adapter) postBoolAPI(ctx context.Context, method string, payload []byte) error {
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, a.methodURL(method), bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	httpRequest.Header.Set("Content-Type", "application/json")
+	response, err := a.client.Do(httpRequest)
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, a.maxResponse+1))
+	if err != nil {
+		return &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	if int64(len(body)) > a.maxResponse {
+		return &Error{Kind: ErrorTooLarge}
+	}
+	var decoded boolAPIResponse
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return &Error{Kind: ErrorInvalidReply}
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 || !decoded.OK || !decoded.Result {
+		retryable := response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500
+		return &Error{Kind: ErrorHTTP, StatusCode: response.StatusCode, Retryable: retryable}
+	}
+	return nil
+}
+
 // GetUpdates performs one Bot API getUpdates call. Timeout is the long-poll
 // duration requested from Telegram (seconds); the HTTP client must tolerate it.
 func (a *Adapter) GetUpdates(ctx context.Context, offset int64, limit int, timeoutSeconds int) ([]Update, error) {

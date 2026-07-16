@@ -71,6 +71,7 @@ type state struct {
 	configRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
 	activeConfig              map[domain.ConfigScope]domain.ConfigRevisionID
 	configApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
+	channelCursors            map[string]domain.ChannelCursor
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -123,6 +124,7 @@ func newState() state {
 		configRevisions:           make(map[domain.ConfigRevisionID]domain.ConfigRevision),
 		activeConfig:              make(map[domain.ConfigScope]domain.ConfigRevisionID),
 		configApplyReceipts:       make(map[domain.ConfigDraftID]domain.ConfigApplyReceipt),
+		channelCursors:            make(map[string]domain.ChannelCursor),
 	}
 }
 
@@ -206,6 +208,9 @@ func (t transaction) QuestionGateDecisions(id domain.MissionID) ([]domain.Questi
 }
 func (t transaction) ControlState() (domain.ControlState, error) {
 	return reader(t).ControlState()
+}
+func (t transaction) ChannelCursor(channel string) (domain.ChannelCursor, error) {
+	return reader(t).ChannelCursor(channel)
 }
 func (t transaction) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	return reader(t).OperatorCommand(id)
@@ -487,6 +492,17 @@ func (r reader) ControlState() (domain.ControlState, error) {
 		return domain.ControlState{}, notFound("control state", "singleton")
 	}
 	return cloneControlState(r.state.controlState), nil
+}
+func (r reader) ChannelCursor(channel string) (domain.ChannelCursor, error) {
+	key := strings.TrimSpace(channel)
+	if key == "" {
+		return domain.ChannelCursor{}, fmt.Errorf("channel cursor requires channel")
+	}
+	v, ok := r.state.channelCursors[key]
+	if !ok {
+		return domain.ChannelCursor{}, notFound("channel cursor", key)
+	}
+	return v, nil
 }
 func (r reader) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	v, ok := r.state.operatorCommands[id]
@@ -1468,6 +1484,49 @@ func (t transaction) SaveControlState(next domain.ControlState, expectedRevision
 	return nil
 }
 
+func (t transaction) SaveChannelCursor(next domain.ChannelCursor, expectedRevision uint64) error {
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate channel cursor: %w", err)
+	}
+	key := strings.TrimSpace(next.Channel)
+	next.Channel = key
+	current, ok := t.state.channelCursors[key]
+	if !ok {
+		if expectedRevision != 0 {
+			return fmt.Errorf("%w: expected existing channel cursor revision %d", port.ErrConflict, expectedRevision)
+		}
+		if next.Revision != 0 {
+			return fmt.Errorf("%w: initial channel cursor must start at revision 0", port.ErrConflict)
+		}
+		t.state.channelCursors[key] = next
+		return nil
+	}
+	if current.Revision != expectedRevision {
+		return fmt.Errorf("%w: stale channel cursor revision", port.ErrConflict)
+	}
+	if next.Revision < current.Revision {
+		return fmt.Errorf("%w: channel cursor revision must not decrease", port.ErrConflict)
+	}
+	if next.Revision == current.Revision {
+		// Pure replay of identical position is allowed without mutation.
+		if next.Cursor != current.Cursor || next.SchemaVersion != current.SchemaVersion {
+			return fmt.Errorf("%w: channel cursor content changed without revision advance", port.ErrConflict)
+		}
+		return nil
+	}
+	if next.Revision != expectedRevision+1 {
+		return fmt.Errorf("%w: channel cursor revision must advance by one", port.ErrConflict)
+	}
+	if next.SchemaVersion != current.SchemaVersion {
+		return fmt.Errorf("%w: channel cursor schema is immutable", port.ErrConflict)
+	}
+	if next.Cursor < current.Cursor {
+		return fmt.Errorf("%w: channel cursor must not decrease", port.ErrConflict)
+	}
+	t.state.channelCursors[key] = next
+	return nil
+}
+
 func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate operation spec: %w", err)
@@ -2109,6 +2168,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.configApplyReceipts {
 		dst.configApplyReceipts[k] = v
+	}
+	for k, v := range src.channelCursors {
+		dst.channelCursors[k] = v
 	}
 	return dst
 }
