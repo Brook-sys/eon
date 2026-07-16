@@ -44,9 +44,16 @@ type ModelExecuteResult struct {
 	Completed   bool
 	Skipped     bool
 	SkipReason  string
-	CommitID    domain.CommitID
-	LeaseRef    string
-	RawArtifact domain.ArtifactID
+	// Exhausted is true when the operation reached terminal EXHAUSTED after
+	// FR-MODEL-004 recovery budget ran out (no further Complete allowed).
+	Exhausted bool
+	CommitID  domain.CommitID
+	LeaseRef  string
+	// ModelCalls counts Complete invocations performed in this Execute.
+	ModelCalls int
+	// RecoveryStages lists ladder stages attempted (for audit assertions).
+	RecoveryStages []domain.ModelRecoveryStage
+	RawArtifact    domain.ArtifactID
 }
 
 func (e ModelExecutor) validateDeps() error {
@@ -185,7 +192,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return result, nil
 	}
 
-	// Phase 2: compile + model call outside the write transaction.
+	// Phase 2: compile + model call(s) outside the write transaction.
+	// FR-MODEL-004: at most Budget.ModelCalls Complete invocations; prefer short
+	// correction / simpler format over full replan loops; exhaust when spent.
 	baseCommit := domain.GenesisCommitID
 	_ = e.Store.View(ctx, func(r port.Reader) error {
 		if head, headErr := r.HeadCommit(operation.MissionRevision); headErr == nil {
@@ -203,137 +212,249 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return result, e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
 	}
 
-	completion, err := e.Provider.Complete(ctx, compiled.Request)
-	if err != nil {
-		return result, e.failRunning(ctx, operation, leaseRef, fmt.Errorf("model complete: %w", err))
+	maxCalls := spec.Budget.ModelCalls
+	if maxCalls <= 0 {
+		// Budget zero means no Complete authorized (domain.Budget semantics).
+		return result, e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
 	}
+	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
+	request := compiled.Request
+	var lastCompletion port.CompletionResult
+	var lastErr error
+	var lastRaw string
 
-	// Annotate provenance if the model returned empty model name.
-	if strings.TrimSpace(completion.Model) == "" {
-		completion.Model = "unknown"
-	}
-
-	// If the model emitted valid JSON that is not yet a full ProposedChangeSet
-	// (missing lineage fields), inject deterministic lineage so the contract
-	// remains model-authority-free for identity fields.
-	completion.Text, err = ensureProposalLineage(completion.Text, operation, baseCommit, e.IDs, completion.Model)
-	if err != nil {
-		// Preserve raw via changeset.Process path when possible; otherwise fail.
-		return result, e.failRunning(ctx, operation, leaseRef, fmt.Errorf("prepare proposal lineage: %w", err))
-	}
-
-	// Phase 3: VERIFYING + process changeset under lease.
-	err = e.Store.Update(ctx, func(tx port.Transaction) error {
-		op, err := tx.Operation(operationID)
+	for {
+		if budget.ModelCallsUsed >= maxCalls {
+			break
+		}
+		completion, callErr := e.Provider.Complete(ctx, request)
+		budget.ModelCallsUsed++
+		result.ModelCalls = budget.ModelCallsUsed
+		if callErr != nil {
+			lastErr = fmt.Errorf("model complete: %w", callErr)
+			// Transport/provider errors: no short-correction of text; exit loop and disposition.
+			break
+		}
+		if strings.TrimSpace(completion.Model) == "" {
+			completion.Model = "unknown"
+		}
+		lastRaw = completion.Text
+		// Preserve exact provider text for Process raw artifact; work on a copy for lineage.
+		working := completion
+		working.Text, err = ensureProposalLineage(completion.Text, operation, baseCommit, e.IDs, completion.Model)
 		if err != nil {
-			return err
+			lastErr = fmt.Errorf("prepare proposal lineage: %w", err)
+			break
 		}
-		if op.State != domain.StateRunning || op.Reevaluation.Reference != leaseRef {
-			return fmt.Errorf("%w: operation lease changed during model call", port.ErrConflict)
-		}
-		verifying, err := domain.Transition(
-			domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
-			domain.TransitionInput{Event: domain.EventBeginVerify, Reference: leaseRef},
-		)
-		if err != nil {
-			return fmt.Errorf("begin verify: %w", err)
-		}
-		op.State = verifying.State
-		op.Reevaluation = verifying.Reevaluation
-		if err := tx.SaveOperation(op); err != nil {
-			return err
-		}
-		if _, err := tx.AppendEvent(domain.Event{
-			SchemaVersion:   domain.SchemaVersionV1,
-			ID:              domain.EventID(fmt.Sprintf("%s:model_invoked:%d", op.ID, op.Attempt)),
-			Kind:            EventOperationModelInvoked,
-			OccurredAt:      e.Clock.Now().UTC(),
-			MissionRevision: op.MissionRevision,
-			InquiryID:       op.InquiryID,
-			OperationID:     op.ID,
-			PayloadRef:      leaseRef + ";model=" + completion.Model,
-		}); err != nil {
-			return err
-		}
-		operation = op
-		return nil
-	})
-	if err != nil {
-		return result, err
-	}
+		// Raw preservation: Process must see original bytes when lineage was not rewritten.
+		// ensureProposalLineage returns original text when it does not rewrite.
+		lastCompletion = working
 
-	commit, err := e.Changes.Process(ctx, operationID, completion)
-	if err != nil {
-		return result, e.failVerifying(ctx, operation, leaseRef, err)
-	}
-	result.CommitID = commit.ID
+		// Transition RUNNING → VERIFYING once before first Process; stay VERIFYING on retries.
+		if operation.State == domain.StateRunning {
+			err = e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if op.State != domain.StateRunning || op.Reevaluation.Reference != leaseRef {
+					return fmt.Errorf("%w: operation lease changed during model call", port.ErrConflict)
+				}
+				verifying, err := domain.Transition(
+					domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
+					domain.TransitionInput{Event: domain.EventBeginVerify, Reference: leaseRef},
+				)
+				if err != nil {
+					return fmt.Errorf("begin verify: %w", err)
+				}
+				op.State = verifying.State
+				op.Reevaluation = verifying.Reevaluation
+				if err := tx.SaveOperation(op); err != nil {
+					return err
+				}
+				if _, err := tx.AppendEvent(domain.Event{
+					SchemaVersion:   domain.SchemaVersionV1,
+					ID:              domain.EventID(fmt.Sprintf("%s:model_invoked:%d:%d", op.ID, op.Attempt, budget.ModelCallsUsed)),
+					Kind:            EventOperationModelInvoked,
+					OccurredAt:      e.Clock.Now().UTC(),
+					MissionRevision: op.MissionRevision,
+					InquiryID:       op.InquiryID,
+					OperationID:     op.ID,
+					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed),
+				}); err != nil {
+					return err
+				}
+				operation = op
+				return nil
+			})
+			if err != nil {
+				return result, err
+			}
+		} else {
+			// Subsequent recovery calls while already VERIFYING — audit only.
+			_ = e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if op.State != domain.StateVerifying || op.Reevaluation.Reference != leaseRef {
+					return fmt.Errorf("%w: operation lease changed during recovery call", port.ErrConflict)
+				}
+				_, err = tx.AppendEvent(domain.Event{
+					SchemaVersion:   domain.SchemaVersionV1,
+					ID:              domain.EventID(fmt.Sprintf("%s:model_recovery:%d:%d", op.ID, op.Attempt, budget.ModelCallsUsed)),
+					Kind:            EventOperationModelInvoked,
+					OccurredAt:      e.Clock.Now().UTC(),
+					MissionRevision: op.MissionRevision,
+					InquiryID:       op.InquiryID,
+					OperationID:     op.ID,
+					PayloadRef:      leaseRef + ";model=" + completion.Model + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed) + ";recovery=1",
+				})
+				return err
+			})
+		}
 
-	// Phase 4: SUCCEED after durable commit.
-	err = e.Store.Update(ctx, func(tx port.Transaction) error {
-		op, err := tx.Operation(operationID)
-		if err != nil {
-			return err
-		}
-		if op.State != domain.StateVerifying || op.Reevaluation.Reference != leaseRef {
-			return fmt.Errorf("%w: operation lease changed during verify", port.ErrConflict)
-		}
-		done, err := domain.Transition(
-			domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
-			domain.TransitionInput{Event: domain.EventSucceed},
-		)
-		if err != nil {
-			return fmt.Errorf("succeed: %w", err)
-		}
-		op.State = done.State
-		op.Reevaluation = done.Reevaluation
-		if err := tx.SaveOperation(op); err != nil {
-			return err
-		}
-		// Parent inquiry lockstep when still READY.
-		if inquiry, inqErr := tx.Inquiry(op.InquiryID); inqErr == nil && inquiry.State == domain.StateReady {
-			inqSnap := domain.OperationalSnapshot{State: inquiry.State, Reevaluation: inquiry.Reevaluation}
-			inqRunning, err := domain.Transition(inqSnap, domain.TransitionInput{Event: domain.EventDispatch, Reference: leaseRef})
-			if err == nil {
-				inqVerifying, err := domain.Transition(inqRunning, domain.TransitionInput{Event: domain.EventBeginVerify, Reference: leaseRef})
-				if err == nil {
-					inqDone, err := domain.Transition(inqVerifying, domain.TransitionInput{Event: domain.EventSucceed})
+		commit, processErr := e.Changes.Process(ctx, operationID, lastCompletion)
+		if processErr == nil {
+			result.CommitID = commit.ID
+			lastErr = nil
+			// Phase 4: SUCCEED after durable commit.
+			err = e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if op.State != domain.StateVerifying || op.Reevaluation.Reference != leaseRef {
+					return fmt.Errorf("%w: operation lease changed during verify", port.ErrConflict)
+				}
+				done, err := domain.Transition(
+					domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
+					domain.TransitionInput{Event: domain.EventSucceed},
+				)
+				if err != nil {
+					return fmt.Errorf("succeed: %w", err)
+				}
+				op.State = done.State
+				op.Reevaluation = done.Reevaluation
+				if err := tx.SaveOperation(op); err != nil {
+					return err
+				}
+				if inquiry, inqErr := tx.Inquiry(op.InquiryID); inqErr == nil && inquiry.State == domain.StateReady {
+					inqSnap := domain.OperationalSnapshot{State: inquiry.State, Reevaluation: inquiry.Reevaluation}
+					inqRunning, err := domain.Transition(inqSnap, domain.TransitionInput{Event: domain.EventDispatch, Reference: leaseRef})
 					if err == nil {
-						inquiry.State = inqDone.State
-						inquiry.Reevaluation = inqDone.Reevaluation
-						_ = tx.SaveInquiry(inquiry)
+						inqVerifying, err := domain.Transition(inqRunning, domain.TransitionInput{Event: domain.EventBeginVerify, Reference: leaseRef})
+						if err == nil {
+							inqDone, err := domain.Transition(inqVerifying, domain.TransitionInput{Event: domain.EventSucceed})
+							if err == nil {
+								inquiry.State = inqDone.State
+								inquiry.Reevaluation = inqDone.Reevaluation
+								_ = tx.SaveInquiry(inquiry)
+							}
+						}
 					}
 				}
+				now = e.Clock.Now().UTC()
+				payload := leaseRef + ";commit=" + string(commit.ID)
+				for _, event := range []domain.Event{
+					{
+						SchemaVersion: domain.SchemaVersionV1,
+						ID:            domain.EventID(fmt.Sprintf("%s:model_verified:%d", op.ID, op.Attempt)),
+						Kind:          EventOperationModelVerified,
+						OccurredAt:    now, MissionRevision: op.MissionRevision, InquiryID: op.InquiryID,
+						OperationID: op.ID, PayloadRef: payload,
+					},
+					{
+						SchemaVersion: domain.SchemaVersionV1,
+						ID:            domain.EventID(fmt.Sprintf("%s:succeeded:%d", op.ID, op.Attempt)),
+						Kind:          EventOperationSucceeded,
+						OccurredAt:    now, MissionRevision: op.MissionRevision, InquiryID: op.InquiryID,
+						OperationID: op.ID, PayloadRef: payload,
+					},
+				} {
+					if _, err := tx.AppendEvent(event); err != nil {
+						return err
+					}
+				}
+				result.Completed = true
+				return nil
+			})
+			if err != nil {
+				return result, err
 			}
+			return result, nil
 		}
-		now = e.Clock.Now().UTC()
-		payload := leaseRef + ";commit=" + string(commit.ID)
-		for _, event := range []domain.Event{
-			{
-				SchemaVersion: domain.SchemaVersionV1,
-				ID:            domain.EventID(fmt.Sprintf("%s:model_verified:%d", op.ID, op.Attempt)),
-				Kind:          EventOperationModelVerified,
-				OccurredAt:    now, MissionRevision: op.MissionRevision, InquiryID: op.InquiryID,
-				OperationID: op.ID, PayloadRef: payload,
-			},
-			{
-				SchemaVersion: domain.SchemaVersionV1,
-				ID:            domain.EventID(fmt.Sprintf("%s:succeeded:%d", op.ID, op.Attempt)),
-				Kind:          EventOperationSucceeded,
-				OccurredAt:    now, MissionRevision: op.MissionRevision, InquiryID: op.InquiryID,
-				OperationID: op.ID, PayloadRef: payload,
-			},
-		} {
-			if _, err := tx.AppendEvent(event); err != nil {
-				return err
+
+		// Process failed with known non-effect: decide recovery (steps 5–8).
+		lastErr = processErr
+		decision := domain.DecideNextRecovery(budget)
+		result.RecoveryStages = append(result.RecoveryStages, decision.Stage)
+		safeDetail := safeErrorDetail(processErr)
+
+		switch decision.Disposition {
+		case domain.DispositionShortCorrect:
+			corr := modeltext.BuildShortCorrection(modeltext.ShortCorrectionInput{
+				PreviousOutput: lastRaw,
+				SafeError:      safeDetail,
+				AnswerFormat:   compileInput.AnswerFormat,
+			})
+			request = port.CompletionRequest{
+				Prompt:          corr.Prompt,
+				MaxOutputTokens: compiled.Request.MaxOutputTokens,
+				Temperature:     0,
 			}
+			budget.ShortCorrectionUsed = true
+			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			continue
+		case domain.DispositionSimplerFormat:
+			corr := modeltext.BuildSimplerFormatCorrection(lastRaw, safeDetail)
+			request = port.CompletionRequest{
+				Prompt:          corr.Prompt,
+				MaxOutputTokens: compiled.Request.MaxOutputTokens,
+				Temperature:     0,
+			}
+			budget.SimplerFormatUsed = true
+			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			continue
+		case domain.DispositionReplan:
+			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			return result, e.failVerifying(ctx, operation, leaseRef, lastErr)
+		default: // Exhaust
+			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			result.Exhausted = true
+			return result, e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
 		}
-		result.Completed = true
-		return nil
-	})
-	if err != nil {
-		return result, err
 	}
-	return result, nil
+
+	// Loop exited without success (provider error or call cap).
+	if lastErr == nil {
+		lastErr = errors.New("model recovery budget exhausted without valid proposal")
+	}
+	decision := domain.DecideNextRecovery(budget)
+	// Force replan/exhaust when text recovery cannot run (transport break or empty).
+	if decision.Disposition == domain.DispositionShortCorrect || decision.Disposition == domain.DispositionSimplerFormat {
+		if budget.AllowReplan {
+			decision = domain.ModelRecoveryDecision{
+				Disposition: domain.DispositionReplan, Stage: domain.RecoveryDefer,
+				Reason: "provider_error_replan", RemainingModelCalls: budget.RemainingModelCalls(),
+			}
+		} else {
+			decision = domain.ModelRecoveryDecision{
+				Disposition: domain.DispositionExhaust, Stage: domain.RecoveryDefer,
+				Reason: "provider_error_exhaust", RemainingModelCalls: budget.RemainingModelCalls(),
+			}
+		}
+	}
+	result.RecoveryStages = append(result.RecoveryStages, decision.Stage)
+	_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+	if decision.Disposition == domain.DispositionExhaust {
+		result.Exhausted = true
+		return result, e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
+	}
+	if operation.State == domain.StateVerifying {
+		return result, e.failVerifying(ctx, operation, leaseRef, lastErr)
+	}
+	return result, e.failRunning(ctx, operation, leaseRef, lastErr)
 }
 
 func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.OperationSpec, baseCommit domain.CommitID) (prompt.Input, error) {
@@ -529,4 +650,91 @@ func (e ModelExecutor) failWith(ctx context.Context, operationID domain.Operatio
 		return fmt.Errorf("%v; also failed to replan operation: %w", cause, failErr)
 	}
 	return cause
+}
+
+// exhaustOperation terminals the operation as EXHAUSTED (FR-MODEL-004 step 8).
+// Used when recovery budget is spent so always-invalid models cannot loop.
+func (e ModelExecutor) exhaustOperation(ctx context.Context, operation domain.Operation, leaseRef string, cause error, decision domain.ModelRecoveryDecision) error {
+	expect := operation.State
+	if expect != domain.StateRunning && expect != domain.StateVerifying {
+		expect = domain.StateVerifying
+	}
+	exhaustErr := e.Store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation(operation.ID)
+		if err != nil {
+			return err
+		}
+		if (op.State != domain.StateRunning && op.State != domain.StateVerifying) || op.Reevaluation.Reference != leaseRef {
+			return nil
+		}
+		done, err := domain.Transition(
+			domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
+			domain.TransitionInput{Event: domain.EventExhaust},
+		)
+		if err != nil {
+			return err
+		}
+		op.State = done.State
+		op.Reevaluation = done.Reevaluation
+		if err := tx.SaveOperation(op); err != nil {
+			return err
+		}
+		_, err = tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:model_exhausted:%d:%d", op.ID, op.Attempt, e.Clock.Now().UnixNano())),
+			Kind:            "operation.model_exhausted",
+			OccurredAt:      e.Clock.Now().UTC(),
+			MissionRevision: op.MissionRevision,
+			InquiryID:       op.InquiryID,
+			OperationID:     op.ID,
+			PayloadRef:      leaseRef + ";reason=" + decision.Reason + ";disposition=" + string(decision.Disposition),
+		})
+		return err
+	})
+	_ = expect
+	if exhaustErr != nil {
+		return fmt.Errorf("%v; also failed to exhaust operation: %w", cause, exhaustErr)
+	}
+	return fmt.Errorf("model recovery exhausted: %w", cause)
+}
+
+func (e ModelExecutor) appendRecoveryEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelRecoveryDecision, callsUsed int) error {
+	return e.Store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation(operation.ID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:model_recovery_decision:%d:%d:%d", op.ID, op.Attempt, callsUsed, e.Clock.Now().UnixNano())),
+			Kind:            "operation.model_recovery_decision",
+			OccurredAt:      e.Clock.Now().UTC(),
+			MissionRevision: op.MissionRevision,
+			InquiryID:       op.InquiryID,
+			OperationID:     op.ID,
+			PayloadRef: fmt.Sprintf("%s;disposition=%s;stage=%s;reason=%s;calls=%d",
+				leaseRef, decision.Disposition, decision.Stage, decision.Reason, callsUsed),
+		})
+		return err
+	})
+}
+
+// safeErrorDetail redacts a validation/provider error to a short operator-safe string.
+func safeErrorDetail(err error) string {
+	if err == nil {
+		return "unknown validation failure"
+	}
+	s := err.Error()
+	// Drop likely JSON body fragments.
+	if i := strings.Index(s, "{"); i >= 0 && i < 80 {
+		s = s[:i] + "(payload omitted)"
+	}
+	s = strings.TrimSpace(s)
+	if len(s) > 240 {
+		s = s[:240]
+	}
+	if s == "" {
+		return "validation failure"
+	}
+	return s
 }

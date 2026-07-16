@@ -372,7 +372,25 @@ Regras firmes:
 - não inventa chaves, não fecha chaves truncadas, não funde múltiplos objetos;
 - se não houver interpretação segura, o caminho falha/replana sem loop de `Complete` (FR-MODEL-004).
 
-Passos 5–8 (correção curta reenviada, formato mais simples, fallback de modelo) permanecem planejados e exigem budget de retry persistido + endpoint; não estão no caminho mínimo offline.
+### Implementação com budget (passos 5–8, provider fake ou real)
+
+O kernel materializa a escada **sem reenviar o prompt completo** e **sem loop** de `Complete`:
+
+| Passo | Componente | Semântica |
+| --- | --- | --- |
+| 5 | `modeltext.BuildShortCorrection` + `ModelExecutor` | Um re-prompt localizado: `ERROR` + `REQUIRED_FORMAT` + snippet truncado do output anterior. Consome 1 `model_calls`. |
+| 6 | `modeltext.BuildSimplerFormatCorrection` | Mesmo padrão com formato JSON mínimo (`SimplerJSONFormat`). |
+| 7 | (reservado) | Fallback de modelo/provider ainda não wired no MVP; perfil `ProviderProfile` já existe (FR-MODEL-005). |
+| 8 | `domain.DecideNextRecovery` → `EventExhaust` | Quando `Budget.ModelCalls` e/ou `Budget.Attempts` se esgotam: terminal `EXHAUSTED` + evento `operation.model_exhausted`. |
+
+Política pura (`domain.ModelRecoveryBudget` / `DecideNextRecovery`):
+
+- contadores derivados de `OperationSpec.Budget.ModelCalls` e `Attempts` + tentativas já gastas no `Execute`;
+- ordem fixa: short correction → simpler format → replan (só se `Attempts` ainda autoriza outro Dispatch) → **exhaust**;
+- zero `model_calls` ou modelo sempre inválido com budget 1 → `EXHAUSTED` (aceitação FR-MODEL-004);
+- eventos de auditoria: `operation.model_recovery_decision` com disposition/stage/reason/calls.
+
+Testes offline usam `openai/fakeserver` multi-exchange; não exigem endpoint pago.
 
 ## Perfil adaptativo de modelo e provider
 

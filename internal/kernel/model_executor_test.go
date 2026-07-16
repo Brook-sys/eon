@@ -220,7 +220,7 @@ func TestModelExecutorAcceptsFencedProposal(t *testing.T) {
 	}
 }
 
-func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
+func TestModelExecutorInvalidJSONExhaustsWhenBudgetOne(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	now := time.Date(2026, 7, 16, 14, 30, 0, 0, time.UTC)
@@ -229,6 +229,8 @@ func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
 	store := memory.New()
 	seedModelAgenda(t, store, now)
 
+	// Always-invalid model: with ModelCalls=1 and Attempts=1 the ladder MUST
+	// terminate EXHAUSTED (FR-MODEL-004), never loop READY replan forever.
 	server := fakeserver.New(fakeserver.Exchange{
 		ResponseText:  "```json\nnot a proposal\n```",
 		ResponseModel: "fixture-model",
@@ -247,9 +249,12 @@ func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
 		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
 		PolicyVersion: "policy@model-test",
 	}
-	_, err = exec.Execute(ctx, "operation_model")
+	result, err := exec.Execute(ctx, "operation_model")
 	if err == nil {
 		t.Fatal("expected validation failure")
+	}
+	if !result.Exhausted || result.ModelCalls != 1 {
+		t.Fatalf("want exhausted after 1 call, got %+v", result)
 	}
 	var op domain.Operation
 	if err := store.View(ctx, func(r port.Reader) error {
@@ -259,8 +264,8 @@ func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if op.State != domain.StateReady {
-		t.Fatalf("invalid model output must replan to READY, got %s", op.State)
+	if op.State != domain.StateExhausted {
+		t.Fatalf("invalid model output with spent budget must EXHAUST, got %s", op.State)
 	}
 	// Head commit must not advance on invalid proposal.
 	if err := store.View(ctx, func(r port.Reader) error {
@@ -272,6 +277,225 @@ func TestModelExecutorInvalidJSONReplansToReady(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+	// No extra Complete after budget.
+	if n := len(server.Requests()); n != 1 {
+		t.Fatalf("expected exactly 1 provider call, got %d", n)
+	}
+}
+
+func TestModelExecutorShortCorrectionThenSucceeds(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 16, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	// Spec with 2 model calls so step 5 can run.
+	err := store.Update(ctx, func(tx port.Transaction) error {
+		revision := domain.MissionRevision{
+			SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+			OriginalText: "investigate", Purpose: "knowledge", Domains: []string{"science"},
+			Policies: []string{"cite"}, Status: domain.MissionActive, Provenance: "user",
+			AcceptedAt: now, Budget: domain.Budget{ModelCalls: 10, Tokens: 8000, Attempts: 5},
+		}
+		if err := tx.AppendMissionRevision(revision); err != nil {
+			return err
+		}
+		spec := modelTestSpec()
+		spec.Budget.ModelCalls = 2
+		spec.Budget.Attempts = 2
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		question := domain.Question{
+			SchemaVersion: 1, ID: "question_1", MissionRevision: revision.ID,
+			Text: "what?", Origin: "mission", Relevance: "primary", AnswerCondition: "evidence",
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		candidate := domain.InquiryCandidate{
+			SchemaVersion: 1, ID: "candidate_1", MissionRevision: revision.ID, QuestionID: question.ID,
+			DerivedFrom: []string{"gap_1"}, ExpectedProgress: "reduce uncertainty", Novelty: "new",
+			Risk: domain.RiskLow, SourcePlan: []string{"fixtures"}, AnswerCondition: "evidence",
+			StopCondition: "done", ReviewAfter: now.Add(time.Hour),
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		inquiry := domain.Inquiry{
+			SchemaVersion: 1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: revision.ID,
+			QuestionID: question.ID, AdmissionReason: "priority", StopCondition: "done",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		operation := domain.Operation{
+			SchemaVersion: 1, ID: "operation_model", InquiryID: inquiry.ID, MissionRevision: revision.ID,
+			SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"},
+			ExpectedOutput: "proposed_change_set", IdempotencyKey: "idem_model",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		return tx.CreateOperation(operation)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "not json at all", ResponseModel: "fixture-model"},
+		fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fixture-model"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test",
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed || result.ModelCalls != 2 {
+		t.Fatalf("want completed after short correction (2 calls), got %+v", result)
+	}
+	if len(result.RecoveryStages) == 0 || result.RecoveryStages[0] != domain.RecoveryShortCorrection {
+		t.Fatalf("expected short correction stage, got %v", result.RecoveryStages)
+	}
+	reqs := server.Requests()
+	if len(reqs) != 2 {
+		t.Fatalf("want 2 requests, got %d", len(reqs))
+	}
+	// Second prompt must be the localized correction, not a full original resend.
+	if !strings.Contains(reqs[1].Prompt, "ERROR:") || !strings.Contains(reqs[1].Prompt, "REQUIRED_FORMAT:") {
+		t.Fatalf("second prompt is not a short correction: %q", reqs[1].Prompt)
+	}
+	if strings.Contains(reqs[1].Prompt, "mission_revision_id") && strings.Contains(reqs[1].Prompt, "validators") {
+		// Full compile facts should not all reappear; snippet may mention them only if prior output did.
+		if len(reqs[1].Prompt) > 1200 {
+			t.Fatalf("correction prompt looks like full resend: len=%d", len(reqs[1].Prompt))
+		}
+	}
+}
+
+func TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 16, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	err := store.Update(ctx, func(tx port.Transaction) error {
+		revision := domain.MissionRevision{
+			SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+			OriginalText: "investigate", Purpose: "knowledge", Domains: []string{"science"},
+			Policies: []string{"cite"}, Status: domain.MissionActive, Provenance: "user",
+			AcceptedAt: now, Budget: domain.Budget{ModelCalls: 10, Tokens: 8000, Attempts: 5},
+		}
+		if err := tx.AppendMissionRevision(revision); err != nil {
+			return err
+		}
+		spec := modelTestSpec()
+		spec.Budget.ModelCalls = 3
+		spec.Budget.Attempts = 1
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		question := domain.Question{
+			SchemaVersion: 1, ID: "question_1", MissionRevision: revision.ID,
+			Text: "what?", Origin: "mission", Relevance: "primary", AnswerCondition: "evidence",
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		candidate := domain.InquiryCandidate{
+			SchemaVersion: 1, ID: "candidate_1", MissionRevision: revision.ID, QuestionID: question.ID,
+			DerivedFrom: []string{"gap_1"}, ExpectedProgress: "x", Novelty: "new",
+			Risk: domain.RiskLow, SourcePlan: []string{"fixtures"}, AnswerCondition: "evidence",
+			StopCondition: "done", ReviewAfter: now.Add(time.Hour),
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		inquiry := domain.Inquiry{
+			SchemaVersion: 1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: revision.ID,
+			QuestionID: question.ID, AdmissionReason: "priority", StopCondition: "done",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		return tx.CreateOperation(domain.Operation{
+			SchemaVersion: 1, ID: "operation_model", InquiryID: inquiry.ID, MissionRevision: revision.ID,
+			SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"},
+			ExpectedOutput: "proposed_change_set", IdempotencyKey: "idem_model",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "bad1", ResponseModel: "m"},
+		fakeserver.Exchange{ResponseText: "bad2", ResponseModel: "m"},
+		fakeserver.Exchange{ResponseText: "bad3", ResponseModel: "m"},
+		fakeserver.Exchange{ResponseText: "should-not-be-called", ResponseModel: "m"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "m", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test",
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err == nil {
+		t.Fatal("expected exhaustion error")
+	}
+	if !result.Exhausted || result.ModelCalls != 3 {
+		t.Fatalf("want 3 calls then exhaust, got %+v", result)
+	}
+	if len(server.Requests()) != 3 {
+		t.Fatalf("provider call loop: got %d requests", len(server.Requests()))
+	}
+	var op domain.Operation
+	_ = store.View(ctx, func(r port.Reader) error {
+		op, _ = r.Operation("operation_model")
+		return nil
+	})
+	if op.State != domain.StateExhausted {
+		t.Fatalf("state=%s", op.State)
 	}
 }
 
