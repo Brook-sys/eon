@@ -739,3 +739,280 @@ func seedModelAgenda(t *testing.T, store port.Store, now time.Time) {
 		t.Fatal(err)
 	}
 }
+
+func TestModelExecutorUsesJSONModeWhenProfileConfirms(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{
+		ExpectedResponseFormat: "json_object",
+		RequireResponseFormat:  true,
+		ResponseText:           string(body),
+		ResponseModel:          "fixture-json",
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture-json", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{
+		Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := domain.BaselineDeclaredProfile("json-capable", "fixture-json", domain.MaxOutputDialectLegacy, 8192, now)
+	profile.SupportsJSONMode = true
+	profile.Source = domain.CapabilityOverride
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test",
+		Profile:       profile,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed {
+		t.Fatalf("want completed: %+v", result)
+	}
+	if len(server.Requests()) != 1 || server.Requests()[0].ResponseFormat != "json_object" {
+		t.Fatalf("requests = %+v failures=%v", server.Requests(), server.Failures())
+	}
+	// Adaptation audit event must exist.
+	var sawAdapt bool
+	_ = store.View(ctx, func(r port.Reader) error {
+		events, err := r.Events(0, 100)
+		if err != nil {
+			return err
+		}
+		for _, ev := range events {
+			if ev.OperationID == "operation_model" && ev.Kind == "operation.model_adaptation" && strings.Contains(ev.PayloadRef, "level=ASSISTED_JSON") {
+				sawAdapt = true
+			}
+		}
+		return nil
+	})
+	if !sawAdapt {
+		t.Fatal("expected operation.model_adaptation with ASSISTED_JSON")
+	}
+}
+
+func TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 18, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// fakeserver fails if response_format is present unexpectedly.
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fixture"})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{
+		Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		// Compiler window larger than effective conservative budget → plan must shrink.
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8192},
+		PolicyVersion: "policy@model-test",
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed {
+		t.Fatalf("want completed: %+v", result)
+	}
+	if n := len(server.Requests()); n != 1 {
+		t.Fatalf("requests = %d failures=%v", n, server.Failures())
+	}
+	if server.Requests()[0].ResponseFormat != "" {
+		t.Fatalf("baseline must omit response_format, got %q", server.Requests()[0].ResponseFormat)
+	}
+	var sawBaseline bool
+	_ = store.View(ctx, func(r port.Reader) error {
+		events, err := r.Events(0, 100)
+		if err != nil {
+			return err
+		}
+		for _, ev := range events {
+			if ev.OperationID == "operation_model" && ev.Kind == "operation.model_adaptation" && strings.Contains(ev.PayloadRef, "level=BASELINE") {
+				// Effective context must be strictly below declared compiler window.
+				if strings.Contains(ev.PayloadRef, "ctx=8192") {
+					t.Fatalf("context not conservative: %s", ev.PayloadRef)
+				}
+				sawBaseline = true
+			}
+		}
+		return nil
+	})
+	if !sawBaseline {
+		t.Fatal("expected baseline adaptation event")
+	}
+}
+
+func TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 16, 19, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	// Seed agenda with ModelCalls=2 so demotion can retry on baseline.
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		revision := domain.MissionRevision{
+			SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+			OriginalText: "investigate", Purpose: "knowledge", Domains: []string{"science"},
+			Policies: []string{"cite"}, Status: domain.MissionActive, Provenance: "user",
+			AcceptedAt: now, Budget: domain.Budget{ModelCalls: 10, Tokens: 8000, Attempts: 5},
+		}
+		if err := tx.AppendMissionRevision(revision); err != nil {
+			return err
+		}
+		spec := modelTestSpec()
+		spec.Budget.ModelCalls = 2
+		if err := tx.AppendOperationSpec(spec); err != nil {
+			return err
+		}
+		question := domain.Question{
+			SchemaVersion: 1, ID: "question_1", MissionRevision: revision.ID,
+			Text: "what?", Origin: "mission", Relevance: "primary", AnswerCondition: "evidence",
+		}
+		if err := tx.CreateQuestion(question); err != nil {
+			return err
+		}
+		candidate := domain.InquiryCandidate{
+			SchemaVersion: 1, ID: "candidate_1", MissionRevision: revision.ID, QuestionID: question.ID,
+			DerivedFrom: []string{"gap_1"}, ExpectedProgress: "x", Novelty: "new",
+			Risk: domain.RiskLow, SourcePlan: []string{"fixtures"}, AnswerCondition: "evidence",
+			StopCondition: "done", ReviewAfter: now.Add(time.Hour),
+		}
+		if err := tx.CreateInquiryCandidate(candidate); err != nil {
+			return err
+		}
+		inquiry := domain.Inquiry{
+			SchemaVersion: 1, ID: "inquiry_1", CandidateID: candidate.ID, MissionRevision: revision.ID,
+			QuestionID: question.ID, AdmissionReason: "priority", StopCondition: "done",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		}
+		if err := tx.CreateInquiry(inquiry); err != nil {
+			return err
+		}
+		return tx.CreateOperation(domain.Operation{
+			SchemaVersion: 1, ID: "operation_model", InquiryID: inquiry.ID, MissionRevision: revision.ID,
+			SpecID: spec.ID, ReadSet: []string{"fragment_1"}, InputRefs: []string{"artifact_1"},
+			ExpectedOutput: "proposed_change_set", IdempotencyKey: "idem_model",
+			State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(
+		// First call: pretend JSON mode is unsupported (HTTP 400 body free of secrets).
+		fakeserver.Exchange{
+			ExpectedResponseFormat: "json_object",
+			RequireResponseFormat:  true,
+			StatusCode:             400,
+			RawBody:                `{"error":{"message":"response_format json_object not supported"}}`,
+		},
+		// Second call: baseline succeeds without response_format.
+		fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fixture"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := domain.BaselineDeclaredProfile("json-capable", "fixture", domain.MaxOutputDialectLegacy, 4096, now)
+	profile.SupportsJSONMode = true
+	profile.Source = domain.CapabilityOverride
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 4096},
+		PolicyVersion: "policy@model-test",
+		Profile:       profile,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed {
+		t.Fatalf("want completed after demotion: %+v", result)
+	}
+	reqs := server.Requests()
+	if len(reqs) != 2 {
+		t.Fatalf("want 2 calls, got %d failures=%v", len(reqs), server.Failures())
+	}
+	if reqs[0].ResponseFormat != "json_object" {
+		t.Fatalf("first call format = %q", reqs[0].ResponseFormat)
+	}
+	if reqs[1].ResponseFormat != "" {
+		t.Fatalf("second call must be baseline, got format %q", reqs[1].ResponseFormat)
+	}
+	if result.ModelCalls != 2 {
+		t.Fatalf("model calls = %d", result.ModelCalls)
+	}
+}

@@ -569,3 +569,54 @@ func strconvFormatUint(v uint64) string {
 	}
 	return string(buf[i:])
 }
+
+func TestOperationInspectorProjectsModelAdaptationSummary(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	lease := "lease_adapt:until=2026-07-16T20:00:00Z"
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		events := []domain.Event{
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_adapt_1", Kind: "operation.model_adaptation",
+				OccurredAt: now, MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";level=ASSISTED_JSON;format=json_object;ctx=7168;reason=json_mode_confirmed;reversible=true",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_adapt_2", Kind: "operation.model_adaptation",
+				OccurredAt: now.Add(time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: lease + ";level=BASELINE;format=;ctx=6272;reason=demote_to_baseline;reversible=true",
+			},
+		}
+		for _, event := range events {
+			if _, err := tx.AppendEvent(event); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.ModelAdaptation == nil {
+		t.Fatal("expected model_adaptation summary")
+	}
+	sum := detail.ModelAdaptation
+	if len(sum.Plans) != 2 {
+		t.Fatalf("plans = %#v", sum.Plans)
+	}
+	if sum.LastLevel != "BASELINE" || sum.Plans[0].Level != "ASSISTED_JSON" {
+		t.Fatalf("levels = last=%q first=%q", sum.LastLevel, sum.Plans[0].Level)
+	}
+	if len(sum.LevelsTried) != 2 || sum.LevelsTried[0] != "ASSISTED_JSON" || sum.LevelsTried[1] != "BASELINE" {
+		t.Fatalf("levels_tried = %#v", sum.LevelsTried)
+	}
+	if sum.LastContextTokens != "6272" {
+		t.Fatalf("last ctx = %q", sum.LastContextTokens)
+	}
+}

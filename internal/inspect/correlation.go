@@ -33,6 +33,10 @@ type OperationDetail struct {
 	// decisions for this operation (parsed from official event PayloadRefs).
 	// Empty when no recovery/model events are present.
 	ModelRecovery *ModelRecoverySummary `json:"model_recovery,omitempty"`
+	// ModelAdaptation is a derived, read-only summary of FR-MODEL-006/007
+	// adaptation plans (level, response_format, context tokens).
+	// Empty when no adaptation events are present.
+	ModelAdaptation *ModelAdaptationSummary `json:"model_adaptation,omitempty"`
 }
 
 // ModelRecoverySummary is a presentation projection of model recovery events.
@@ -68,6 +72,32 @@ type ModelRecoveryDecisionView struct {
 	Calls string `json:"calls,omitempty"`
 	// PayloadRef is the original compact audit string (no free-text model body).
 	PayloadRef string `json:"payload_ref,omitempty"`
+}
+
+// ModelAdaptationSummary projects FR-MODEL-006/007 adaptation audit events.
+type ModelAdaptationSummary struct {
+	// Plans lists adaptation selections/demotions in occurred order.
+	Plans []ModelAdaptationPlanView `json:"plans"`
+	// LastLevel is the level of the latest adaptation event, if any.
+	LastLevel string `json:"last_level,omitempty"`
+	// LastFormat is the response format of the latest adaptation event.
+	LastFormat string `json:"last_format,omitempty"`
+	// LastContextTokens is the effective context window of the latest plan.
+	LastContextTokens string `json:"last_context_tokens,omitempty"`
+	// LevelsTried lists unique adaptation levels in first-seen order.
+	LevelsTried []string `json:"levels_tried,omitempty"`
+}
+
+// ModelAdaptationPlanView is one parsed operation.model_adaptation event.
+type ModelAdaptationPlanView struct {
+	EventID    domain.EventID `json:"event_id"`
+	OccurredAt string         `json:"occurred_at"`
+	Level      string         `json:"level,omitempty"`
+	Format     string         `json:"format,omitempty"`
+	Context    string         `json:"ctx,omitempty"`
+	Reason     string         `json:"reason,omitempty"`
+	Reversible string         `json:"reversible,omitempty"`
+	PayloadRef string         `json:"payload_ref,omitempty"`
 }
 
 // CommitDetail correlates a commit with its proposal and validation receipts.
@@ -245,6 +275,7 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 			return detail.Commits[i].Version < detail.Commits[j].Version
 		})
 		detail.ModelRecovery = deriveModelRecoverySummary(detail.Events)
+		detail.ModelAdaptation = deriveModelAdaptationSummary(detail.Events)
 		return nil
 	})
 	if err != nil {
@@ -324,6 +355,62 @@ func deriveModelRecoverySummary(events []domain.Event) *ModelRecoverySummary {
 	sum.StagesTried = stageOrder
 	if sum.Decisions == nil {
 		sum.Decisions = []ModelRecoveryDecisionView{}
+	}
+	return &sum
+}
+
+// deriveModelAdaptationSummary projects FR-MODEL-006/007 adaptation events.
+// Returns nil when the operation never recorded an adaptation plan.
+func deriveModelAdaptationSummary(events []domain.Event) *ModelAdaptationSummary {
+	if len(events) == 0 {
+		return nil
+	}
+	var (
+		sum        ModelAdaptationSummary
+		hasSignal  bool
+		seenLevels = map[string]struct{}{}
+		levelOrder []string
+	)
+	sorted := append([]domain.Event(nil), events...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].OccurredAt.Equal(sorted[j].OccurredAt) {
+			return string(sorted[i].ID) < string(sorted[j].ID)
+		}
+		return sorted[i].OccurredAt.Before(sorted[j].OccurredAt)
+	})
+	for _, event := range sorted {
+		if event.Kind != "operation.model_adaptation" {
+			continue
+		}
+		hasSignal = true
+		tags := parsePayloadTags(event.PayloadRef)
+		view := ModelAdaptationPlanView{
+			EventID:    event.ID,
+			OccurredAt: event.OccurredAt.UTC().Format(time.RFC3339Nano),
+			Level:      tags["level"],
+			Format:     tags["format"],
+			Context:    tags["ctx"],
+			Reason:     tags["reason"],
+			Reversible: tags["reversible"],
+			PayloadRef: event.PayloadRef,
+		}
+		sum.Plans = append(sum.Plans, view)
+		if view.Level != "" {
+			if _, ok := seenLevels[view.Level]; !ok {
+				seenLevels[view.Level] = struct{}{}
+				levelOrder = append(levelOrder, view.Level)
+			}
+		}
+		sum.LastLevel = view.Level
+		sum.LastFormat = view.Format
+		sum.LastContextTokens = view.Context
+	}
+	if !hasSignal {
+		return nil
+	}
+	sum.LevelsTried = levelOrder
+	if sum.Plans == nil {
+		sum.Plans = []ModelAdaptationPlanView{}
 	}
 	return &sum
 }

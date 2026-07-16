@@ -14,12 +14,17 @@ type Exchange struct {
 	ExpectedPrompt         string
 	ExpectedModel          string
 	ExpectedMaxOutputField string
-	ResponseText           string
-	ResponseModel          string
-	InputTokens            int
-	OutputTokens           int
-	StatusCode             int
-	RawBody                string
+	// ExpectedResponseFormat is the response_format.type value when set
+	// (for example "json_object"). Empty means the field must be absent.
+	ExpectedResponseFormat string
+	// RequireResponseFormat when true fails if response_format is missing.
+	RequireResponseFormat bool
+	ResponseText          string
+	ResponseModel         string
+	InputTokens           int
+	OutputTokens          int
+	StatusCode            int
+	RawBody               string
 }
 
 type Request struct {
@@ -29,6 +34,7 @@ type Request struct {
 	MaxOutputField  string
 	Temperature     float64
 	Authorization   string
+	ResponseFormat  string
 }
 
 type Server struct {
@@ -75,6 +81,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		MaxTokens           int                              `json:"max_tokens"`
 		MaxCompletionTokens int                              `json:"max_completion_tokens"`
 		Temperature         float64                          `json:"temperature"`
+		ResponseFormat      *struct {
+			Type string `json:"type"`
+		} `json:"response_format"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -94,7 +103,15 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		maxOutputField, maxOutputTokens = "max_completion_tokens", body.MaxCompletionTokens
 	}
-	req := Request{Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens, MaxOutputField: maxOutputField, Temperature: body.Temperature, Authorization: r.Header.Get("Authorization")}
+	responseFormat := ""
+	if body.ResponseFormat != nil {
+		responseFormat = body.ResponseFormat.Type
+	}
+	req := Request{
+		Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens,
+		MaxOutputField: maxOutputField, Temperature: body.Temperature,
+		Authorization: r.Header.Get("Authorization"), ResponseFormat: responseFormat,
+	}
 	s.requests = append(s.requests, req)
 	if len(s.script) == 0 {
 		s.failures = append(s.failures, "unexpected extra request")
@@ -111,6 +128,16 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if exchange.ExpectedMaxOutputField != "" && exchange.ExpectedMaxOutputField != req.MaxOutputField {
 		s.failures = append(s.failures, fmt.Sprintf("max output field mismatch: got %q", req.MaxOutputField))
+	}
+	if exchange.RequireResponseFormat && req.ResponseFormat == "" {
+		s.failures = append(s.failures, "expected response_format, got none")
+	}
+	if exchange.ExpectedResponseFormat != "" && exchange.ExpectedResponseFormat != req.ResponseFormat {
+		s.failures = append(s.failures, fmt.Sprintf("response_format mismatch: got %q", req.ResponseFormat))
+	}
+	if exchange.ExpectedResponseFormat == "" && !exchange.RequireResponseFormat && req.ResponseFormat != "" {
+		// Scripts that do not opt into response_format must remain baseline.
+		s.failures = append(s.failures, fmt.Sprintf("unexpected response_format %q", req.ResponseFormat))
 	}
 	status := exchange.StatusCode
 	if status == 0 {

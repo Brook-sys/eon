@@ -39,6 +39,13 @@ type ModelExecutor struct {
 	PolicyVersion    string
 	LeaseTTL         time.Duration
 	MaxOutputBytes   int64
+	// Profile is the FR-MODEL-005 capability snapshot used for progressive
+	// adaptation (FR-MODEL-006) and conservative context (FR-MODEL-007).
+	// Zero-value falls back to a declared baseline using Compiler context.
+	Profile domain.ProviderProfile
+	// PreferExpandedContext allows spending more of the safe window on optional facts.
+	// Default false keeps FR-MODEL-007 conservative.
+	PreferExpandedContext bool
 }
 
 // ModelExecuteResult summarizes one model-backed Execute call.
@@ -210,10 +217,23 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if err != nil {
 		return result, e.failRunning(ctx, operation, leaseRef, err)
 	}
-	compiled, err := e.Compiler.Compile(spec, compileInput)
+	// FR-MODEL-006/007: select reversible enrichment + conservative context.
+	profile := e.resolveProfile()
+	plan := domain.SelectAdaptationPlan(domain.AdaptationSelectionInput{
+		Profile:               profile,
+		PreferJSON:            true, // PROPOSE_ONLY path expects JSON ChangeSet.
+		PreferExpandedContext: e.PreferExpandedContext,
+		AllowNativeTools:      false, // tools not wired in MVP executor path
+	})
+	compiler := e.Compiler
+	if plan.ContextTokens > 0 && (compiler.ProviderContextTokens <= 0 || plan.ContextTokens < compiler.ProviderContextTokens) {
+		compiler.ProviderContextTokens = plan.ContextTokens
+	}
+	compiled, err := compiler.Compile(spec, compileInput)
 	if err != nil {
 		return result, e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
 	}
+	_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, 0)
 
 	maxCalls := spec.Budget.ModelCalls
 	if maxCalls <= 0 {
@@ -223,6 +243,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
 	budget.FallbackAvailable = e.FallbackProvider != nil
 	request := compiled.Request
+	request.ResponseFormat = plan.ResponseFormat
 	activeProvider := e.Provider
 	usingFallback := false
 	var lastCompletion port.CompletionResult
@@ -238,7 +259,17 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
 			lastErr = fmt.Errorf("model complete: %w", callErr)
-			// Transport/provider errors: no short-correction of text; exit loop and disposition.
+			// FR-MODEL-006: enrichment-related transport failures demote and retry
+			// on baseline when budget remains; other provider errors exit the loop.
+			safeDetail := safeErrorDetail(callErr)
+			failClass := domain.ClassifyAdaptationFailure(safeDetail)
+			if domain.ShouldDemote(plan.Level, failClass) && budget.ModelCallsUsed < maxCalls {
+				plan = domain.PlanAfterDemotion(plan, profile)
+				request.ResponseFormat = plan.ResponseFormat
+				_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
+				continue
+			}
+			// Transport/provider errors without recoverable enrichment: disposition after loop.
 			break
 		}
 		if strings.TrimSpace(completion.Model) == "" {
@@ -393,9 +424,16 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 
 		// Process failed with known non-effect: decide recovery (steps 5–8).
 		lastErr = processErr
+		safeDetail := safeErrorDetail(processErr)
+		// FR-MODEL-006: demote enrichment before another Complete when failure
+		// class indicates the enriched transport/format is unsafe.
+		failClass := domain.ClassifyAdaptationFailure(safeDetail)
+		if domain.ShouldDemote(plan.Level, failClass) {
+			plan = domain.PlanAfterDemotion(plan, profile)
+			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
+		}
 		decision := domain.DecideNextRecovery(budget)
 		result.RecoveryStages = append(result.RecoveryStages, decision.Stage)
-		safeDetail := safeErrorDetail(processErr)
 
 		switch decision.Disposition {
 		case domain.DispositionShortCorrect:
@@ -408,16 +446,20 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				Prompt:          corr.Prompt,
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
+				ResponseFormat:  plan.ResponseFormat,
 			}
 			budget.ShortCorrectionUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			continue
 		case domain.DispositionSimplerFormat:
 			corr := modeltext.BuildSimplerFormatCorrection(lastRaw, safeDetail)
+			// Simpler format recovery always drops enrichment (baseline text).
+			plan = domain.PlanAfterDemotion(domain.AdaptationPlan{Level: domain.AdaptationAssistedJSON}, profile)
 			request = port.CompletionRequest{
 				Prompt:          corr.Prompt,
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
+				ResponseFormat:  domain.ResponseFormatNone,
 			}
 			budget.SimplerFormatUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
@@ -431,9 +473,15 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			// One shot on the alternate provider with the original compiled prompt
 			// (different model, not a full multi-retry of the same endpoint).
+			// Baseline text on fallback — do not re-apply failed enrichment.
 			activeProvider = e.FallbackProvider
 			usingFallback = true
+			plan = domain.AdaptationPlan{
+				Level: domain.AdaptationBaseline, ContextTokens: plan.ContextTokens,
+				Reason: "fallback_baseline", Reversible: true,
+			}
 			request = compiled.Request
+			request.ResponseFormat = domain.ResponseFormatNone
 			budget.FallbackModelUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			continue
@@ -737,6 +785,42 @@ func (e ModelExecutor) appendRecoveryEvent(ctx context.Context, operation domain
 			OperationID:     op.ID,
 			PayloadRef: fmt.Sprintf("%s;disposition=%s;stage=%s;reason=%s;calls=%d",
 				leaseRef, decision.Disposition, decision.Stage, decision.Reason, callsUsed),
+		})
+		return err
+	})
+}
+
+// resolveProfile returns the configured capability snapshot or a conservative
+// declared baseline derived from the compiler window (never invents tools/JSON).
+func (e ModelExecutor) resolveProfile() domain.ProviderProfile {
+	if e.Profile.SchemaVersion == domain.SchemaVersionV1 && strings.TrimSpace(e.Profile.Name) != "" {
+		if err := e.Profile.Validate(); err == nil {
+			return e.Profile
+		}
+	}
+	ctxTokens := e.Compiler.ProviderContextTokens
+	now := time.Unix(0, 0).UTC()
+	if e.Clock != nil {
+		now = e.Clock.Now().UTC()
+	}
+	return domain.BaselineDeclaredProfile("model-executor", "", domain.MaxOutputDialectLegacy, ctxTokens, now)
+}
+
+func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation domain.Operation, leaseRef string, plan domain.AdaptationPlan, callsUsed int) error {
+	return e.Store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation(operation.ID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:model_adaptation:%d:%d:%d", op.ID, op.Attempt, callsUsed, e.Clock.Now().UnixNano())),
+			Kind:            "operation.model_adaptation",
+			OccurredAt:      e.Clock.Now().UTC(),
+			MissionRevision: op.MissionRevision,
+			InquiryID:       op.InquiryID,
+			OperationID:     op.ID,
+			PayloadRef:      leaseRef + ";" + domain.FormatAdaptationAudit(plan),
 		})
 		return err
 	})

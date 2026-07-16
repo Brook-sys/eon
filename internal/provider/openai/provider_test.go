@@ -103,3 +103,47 @@ func TestProviderRejectsInvalidConfigurationAndRequest(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestProviderEmitsJSONObjectResponseFormatWhenRequested(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{
+		ExpectedResponseFormat: "json_object",
+		RequireResponseFormat:  true,
+		ResponseText:           `{"ok":true}`,
+		ResponseModel:          "fixture",
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt: "return json", MaxOutputTokens: 16, Temperature: 0,
+		ResponseFormat: "json_object",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Text != `{"ok":true}` {
+		t.Fatalf("text = %q", result.Text)
+	}
+	if len(server.Requests()) != 1 || server.Requests()[0].ResponseFormat != "json_object" {
+		t.Fatalf("requests = %+v", server.Requests())
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("failures: %v", failures)
+	}
+}
+
+func TestProviderRejectsUnknownResponseFormat(t *testing.T) {
+	provider, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt: "x", ResponseFormat: "not-a-real-format",
+	})
+	var providerError *openai.Error
+	if !errors.As(err, &providerError) || providerError.Kind != openai.ErrorInvalidRequest {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

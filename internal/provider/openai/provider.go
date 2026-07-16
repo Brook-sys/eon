@@ -165,11 +165,16 @@ func New(config Config, opts ...Option) (*Provider, error) {
 }
 
 type chatRequest struct {
-	Model               string        `json:"model"`
-	Messages            []chatMessage `json:"messages"`
-	MaxTokens           int           `json:"max_tokens,omitempty"`
-	MaxCompletionTokens int           `json:"max_completion_tokens,omitempty"`
-	Temperature         float64       `json:"temperature"`
+	Model               string          `json:"model"`
+	Messages            []chatMessage   `json:"messages"`
+	MaxTokens           int             `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
+	Temperature         float64         `json:"temperature"`
+	ResponseFormat      *responseFormat `json:"response_format,omitempty"`
+}
+
+type responseFormat struct {
+	Type string `json:"type"`
 }
 
 type chatMessage struct {
@@ -197,6 +202,16 @@ func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest)
 		chatReq.MaxCompletionTokens = request.MaxOutputTokens
 	} else {
 		chatReq.MaxTokens = request.MaxOutputTokens
+	}
+	// Optional FR-MODEL-006 enrichment: only emit response_format when the
+	// kernel selected a known hint. Unknown values fail closed as invalid request.
+	switch request.ResponseFormat {
+	case domain.ResponseFormatNone:
+		// baseline text→text
+	case domain.ResponseFormatJSONObject:
+		chatReq.ResponseFormat = &responseFormat{Type: "json_object"}
+	default:
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
 	payload, err := json.Marshal(chatReq)
 	if err != nil {
