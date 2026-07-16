@@ -422,7 +422,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - agenda e operação atual — implementado (`GET /missions/{id}/operations`, summaries por estado);
 - consulta paginada ao event log — implementado (`GET /events` com `after_sequence`, `limit` e filtros de correlação; `GET /events/{id}`);
 - detalhe correlacionado de operação e commit — implementado (`GET /operations/{id}`, `GET /commits/{id}`, `GET /commands/{id}` via projeções somente-leitura sobre store + event log);
-- residual: SSE ao vivo, redaction fina de payloads sensíveis e submit de comandos via HTTP (Slice B residual).
+- residual: SSE ao vivo e redaction fina de payloads sensíveis; submit mutável de comandos/eventos ficou no Slice B (`control.API`).
 
 ### Slice B — controle seguro
 
@@ -433,7 +433,9 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 - contratos e persistência de `OperatorQuestion`/`UserAnswer`, correlação por identidade/revisão, waits locais e núcleo determinístico do `QuestionGate` — implementados;
 - persistência da decisão do gate e integração com inbox/outbox — residual;
 - recibos e optimistic concurrency — implementados (`CommandReceipt` monotônico, revisão de missão esperada, `SaveControlState` com revisão monotônica);
-- residual explícito: crash-replay subprocessado do processador de comandos e superfícies HTTP de submit/consulta.
+- superfícies HTTP de submit/consulta — implementadas em `control.API`: `POST /commands`, `GET /commands/{id}`, `GET /commands/{id}/receipt`, `POST /external-events`, `GET /external-events/{id}`, `GET /external-events/{id}/disposition`; HTTP 202 distingue aceitação de inbox de efeito confirmado; retries reutilizam identidade por `idempotency_key`/`deduplication_key` sem mintar ID divergente;
+- crash-replay dos processadores — implementado com reopen SQLite real: comando/evento `RECEIVED` sobrevive a restart e aplica uma vez; recibo/disposição terminal é pure replay sem segundo efeito nem eventos extras;
+- residual restante: SSE ao vivo e redaction fina (Slice A), persistência da decisão do `QuestionGate` e integração com outbox.
 
 ### Slice C — configuração versionada
 

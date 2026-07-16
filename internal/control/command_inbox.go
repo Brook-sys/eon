@@ -95,6 +95,23 @@ func (i *CommandInbox) Command(id domain.CommandID) (domain.OperatorCommand, err
 	return command, err
 }
 
+// CommandByIdempotency supports HTTP retries that keep only the client key.
+func (i *CommandInbox) CommandByIdempotency(key domain.IdempotencyKey) (domain.OperatorCommand, error) {
+	if key == "" {
+		return domain.OperatorCommand{}, errors.New("operator command idempotency key is required")
+	}
+	var command domain.OperatorCommand
+	err := i.Store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.OperatorCommandByIdempotency(key)
+		if err != nil {
+			return err
+		}
+		command = got
+		return nil
+	})
+	return command, err
+}
+
 func (i *CommandInbox) CommandReceipt(id domain.CommandID) (domain.CommandReceipt, error) {
 	var receipt domain.CommandReceipt
 	err := i.Store.View(context.Background(), func(r port.Reader) error {
