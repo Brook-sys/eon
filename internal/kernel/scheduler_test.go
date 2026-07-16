@@ -113,6 +113,133 @@ func TestSchedulerResumesDueOperationOnceAndSelectsDeterministically(t *testing.
 	}
 }
 
+func TestSchedulerRegistryExpandPersistsDiagnosisOnBlock(t *testing.T) {
+	now := time.Date(2026, 7, 16, 7, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	store := memory.New()
+	seedMission(t, store)
+	reg := NewStrategyRegistry()
+	if err := reg.Register(StrategyDescriptor{
+		Name: "gap_scan", Family: domain.FamilyGapScan, Version: "v1", Priority: 20,
+	}, continuityStrategy{name: "gap_scan", run: func(context.Context, domain.MissionRevisionID) (ContinuityResult, error) {
+		return ContinuityResult{}, nil
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := reg.Register(StrategyDescriptor{
+		Name: "integrity_audit", Family: domain.FamilyIntegrityAudit, Version: "v1", Priority: 10, LocalOnly: true,
+	}, continuityStrategy{name: "integrity_audit", run: func(context.Context, domain.MissionRevisionID) (ContinuityResult, error) {
+		return ContinuityResult{}, nil
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	scheduler := Scheduler{Store: store, Clock: clock, Registry: reg, IDs: source.NewSequenceIDGenerator(1)}
+	decision, err := scheduler.Step(context.Background(), "revision_1")
+	if err != nil {
+		t.Fatalf("step: %v", err)
+	}
+	if decision.Kind != DecisionContinuityBlocked || decision.Action != domain.ContinuityDiagnose || decision.DiagnosisID == "" {
+		t.Fatalf("decision = %+v", decision)
+	}
+	if len(decision.StrategiesTried) != 2 || decision.StrategiesTried[0] != "gap_scan" {
+		t.Fatalf("strategies tried = %#v", decision.StrategiesTried)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		diag, err := r.LatestContinuityDiagnosis("revision_1")
+		if err != nil {
+			return err
+		}
+		if diag.ID != decision.DiagnosisID || diag.ReadyCount != 0 || diag.PolicyVersion == "" {
+			t.Fatalf("diagnosis = %+v", diag)
+		}
+		opps, err := r.WorkOpportunities("revision_1", "")
+		if err != nil {
+			return err
+		}
+		if len(opps) != 0 {
+			t.Fatalf("unexpected opportunities: %#v", opps)
+		}
+		events, err := r.Events(0, 10)
+		if err != nil {
+			return err
+		}
+		found := false
+		for _, event := range events {
+			if event.Kind == domain.EventContinuityBlocked {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("missing continuity.blocked event")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWorkOpportunityPersistenceAndChildFanout(t *testing.T) {
+	now := time.Date(2026, 7, 16, 8, 0, 0, 0, time.UTC)
+	store := memory.New()
+	seedMission(t, store)
+	root := domain.WorkOpportunity{
+		SchemaVersion: domain.SchemaVersionV1, ID: "opp_root", MissionRevision: "revision_1",
+		Family: domain.FamilyGapScan, Status: domain.OpportunityOpen, Title: "cover gaps", Origin: "mission",
+		ExpectedGain: "new inquiries", Novelty: "uncovered scopes", StopCondition: "coverage target",
+		DedupSignature: "gap:root", Depth: 0, EstimatedCost: domain.Budget{Tokens: 10}, Risk: domain.RiskLow,
+		Priority: 10, CreatedAt: now, UpdatedAt: now,
+	}
+	child, err := root.DeriveChild("opp_child", "define term", "decompose:root", "definition", "undefined term", "definition accepted", "gap:term", domain.RiskLow, 8, now.Add(time.Minute), domain.Budget{Tokens: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.CreateWorkOpportunity(root); err != nil {
+			return err
+		}
+		return tx.CreateWorkOpportunity(child)
+	}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	dup := root
+	dup.ID = "opp_dup"
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.CreateWorkOpportunity(dup)
+	}); err == nil {
+		t.Fatal("expected dedup conflict")
+	}
+	admitted := root
+	admitted.Status = domain.OpportunityAdmitted
+	admitted.AdmittedInquiryID = "inquiry_1"
+	admitted.UpdatedAt = now.Add(2 * time.Minute)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveWorkOpportunity(admitted)
+	}); err != nil {
+		t.Fatalf("admit: %v", err)
+	}
+	blob, err := store.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := memory.NewFromBinary(blob)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := restored.View(context.Background(), func(r port.Reader) error {
+		got, err := r.WorkOpportunity("opp_child")
+		if err != nil || got.ParentID != "opp_root" || got.Depth != 1 {
+			t.Fatalf("child = %+v err=%v", got, err)
+		}
+		open, err := r.WorkOpportunities("revision_1", domain.OpportunityOpen)
+		if err != nil || len(open) != 1 || open[0].ID != "opp_child" {
+			t.Fatalf("open = %#v err=%v", open, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSchedulerPauseBlocksNewDispatchButStillResumesLocalWaits(t *testing.T) {
 	now := time.Date(2026, 7, 16, 3, 0, 0, 0, time.UTC)
 	clock := source.NewManualClock(now)

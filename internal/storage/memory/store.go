@@ -60,50 +60,54 @@ type state struct {
 	operatorCommandReceipts   map[domain.CommandID]domain.CommandReceipt
 	externalEvents            map[domain.ExternalEventID]domain.ExternalEvent
 	externalEventByDedup      map[string]domain.ExternalEventID
-	externalEventDispositions  map[domain.ExternalEventID]domain.ExternalEventDisposition
+	externalEventDispositions map[domain.ExternalEventID]domain.ExternalEventDisposition
+	workOpportunities         map[domain.WorkOpportunityID]domain.WorkOpportunity
+	continuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
 }
 
 func New() *Store { return &Store{state: newState()} }
 
 func newState() state {
 	return state{
-		missionRevisions:        make(map[domain.MissionRevisionID]domain.MissionRevision),
-		activeMissions:          make(map[domain.MissionID]domain.MissionRevisionID),
-		operationSpecs:          make(map[domain.OperationSpecID]domain.OperationSpec),
-		questions:               make(map[domain.QuestionID]domain.Question),
-		operatorQuestions:       make(map[domain.OperatorQuestionID]domain.OperatorQuestion),
-		operatorAnswers:         make(map[domain.OperatorAnswerID]domain.UserAnswer),
-		answerByTransport:       make(map[string]domain.OperatorAnswerID),
-		questionDeliveries:      make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
-		deliveryByRoute:         make(map[string]domain.QuestionDeliveryID),
-		candidates:              make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
-		inquiries:               make(map[domain.InquiryID]domain.Inquiry),
-		operations:              make(map[domain.OperationID]domain.Operation),
-		eventIDs:                make(map[domain.EventID]uint64),
-		idempotency:             make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
-		sources:                 make(map[domain.SourceID]domain.Source),
-		sourceVersions:          make(map[domain.SourceVersionID]domain.SourceVersion),
-		sourceSnapshots:         make(map[domain.SourceVersionID]domain.SourceSnapshot),
-		sourceFragments:         make(map[domain.SourceFragmentID]domain.SourceFragment),
-		observations:            make(map[domain.ObservationID]domain.Observation),
-		claims:                  make(map[domain.ClaimID]domain.Claim),
-		evidenceLinks:           make(map[domain.EvidenceLinkID]domain.EvidenceLink),
-		artifacts:               make(map[domain.ArtifactID]domain.KnowledgeArtifact),
-		rawModelOutputs:         make(map[domain.ArtifactID]domain.RawModelOutput),
-		proposedChanges:         make(map[domain.ChangeSetID]domain.ProposedChangeSet),
-		acceptedChanges:         make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
-		receipts:                make(map[domain.ReceiptID]domain.ValidationReceipt),
-		commitReceipts:          make(map[domain.ReceiptID]domain.CommitReceipt),
-		commits:                 make(map[domain.CommitID]domain.Commit),
-		commitByIntent:          make(map[domain.IdempotencyKey]domain.CommitID),
-		headCommits:             make(map[domain.MissionRevisionID]domain.CommitID),
-		canonical:               make(map[string]domain.CanonicalEntity),
-		operatorCommands:           make(map[domain.CommandID]domain.OperatorCommand),
-		operatorCommandByIdem:      make(map[domain.IdempotencyKey]domain.CommandID),
-		operatorCommandReceipts:    make(map[domain.CommandID]domain.CommandReceipt),
-		externalEvents:             make(map[domain.ExternalEventID]domain.ExternalEvent),
-		externalEventByDedup:       make(map[string]domain.ExternalEventID),
-		externalEventDispositions:  make(map[domain.ExternalEventID]domain.ExternalEventDisposition),
+		missionRevisions:          make(map[domain.MissionRevisionID]domain.MissionRevision),
+		activeMissions:            make(map[domain.MissionID]domain.MissionRevisionID),
+		operationSpecs:            make(map[domain.OperationSpecID]domain.OperationSpec),
+		questions:                 make(map[domain.QuestionID]domain.Question),
+		operatorQuestions:         make(map[domain.OperatorQuestionID]domain.OperatorQuestion),
+		operatorAnswers:           make(map[domain.OperatorAnswerID]domain.UserAnswer),
+		answerByTransport:         make(map[string]domain.OperatorAnswerID),
+		questionDeliveries:        make(map[domain.QuestionDeliveryID]domain.QuestionDelivery),
+		deliveryByRoute:           make(map[string]domain.QuestionDeliveryID),
+		candidates:                make(map[domain.InquiryCandidateID]domain.InquiryCandidate),
+		inquiries:                 make(map[domain.InquiryID]domain.Inquiry),
+		operations:                make(map[domain.OperationID]domain.Operation),
+		eventIDs:                  make(map[domain.EventID]uint64),
+		idempotency:               make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
+		sources:                   make(map[domain.SourceID]domain.Source),
+		sourceVersions:            make(map[domain.SourceVersionID]domain.SourceVersion),
+		sourceSnapshots:           make(map[domain.SourceVersionID]domain.SourceSnapshot),
+		sourceFragments:           make(map[domain.SourceFragmentID]domain.SourceFragment),
+		observations:              make(map[domain.ObservationID]domain.Observation),
+		claims:                    make(map[domain.ClaimID]domain.Claim),
+		evidenceLinks:             make(map[domain.EvidenceLinkID]domain.EvidenceLink),
+		artifacts:                 make(map[domain.ArtifactID]domain.KnowledgeArtifact),
+		rawModelOutputs:           make(map[domain.ArtifactID]domain.RawModelOutput),
+		proposedChanges:           make(map[domain.ChangeSetID]domain.ProposedChangeSet),
+		acceptedChanges:           make(map[domain.ChangeSetID]domain.AcceptedChangeSet),
+		receipts:                  make(map[domain.ReceiptID]domain.ValidationReceipt),
+		commitReceipts:            make(map[domain.ReceiptID]domain.CommitReceipt),
+		commits:                   make(map[domain.CommitID]domain.Commit),
+		commitByIntent:            make(map[domain.IdempotencyKey]domain.CommitID),
+		headCommits:               make(map[domain.MissionRevisionID]domain.CommitID),
+		canonical:                 make(map[string]domain.CanonicalEntity),
+		operatorCommands:          make(map[domain.CommandID]domain.OperatorCommand),
+		operatorCommandByIdem:     make(map[domain.IdempotencyKey]domain.CommandID),
+		operatorCommandReceipts:   make(map[domain.CommandID]domain.CommandReceipt),
+		externalEvents:            make(map[domain.ExternalEventID]domain.ExternalEvent),
+		externalEventByDedup:      make(map[string]domain.ExternalEventID),
+		externalEventDispositions: make(map[domain.ExternalEventID]domain.ExternalEventDisposition),
+		workOpportunities:         make(map[domain.WorkOpportunityID]domain.WorkOpportunity),
+		continuityDiagnoses:       make(map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis),
 	}
 }
 
@@ -196,6 +200,18 @@ func (t transaction) ExternalEventDisposition(id domain.ExternalEventID) (domain
 }
 func (t transaction) PendingExternalEvents(limit int) ([]domain.ExternalEvent, error) {
 	return reader(t).PendingExternalEvents(limit)
+}
+func (t transaction) WorkOpportunity(id domain.WorkOpportunityID) (domain.WorkOpportunity, error) {
+	return reader(t).WorkOpportunity(id)
+}
+func (t transaction) WorkOpportunities(id domain.MissionRevisionID, status domain.WorkOpportunityStatus) ([]domain.WorkOpportunity, error) {
+	return reader(t).WorkOpportunities(id, status)
+}
+func (t transaction) ContinuityDiagnosis(id domain.ContinuityDiagnosisID) (domain.ContinuityDiagnosis, error) {
+	return reader(t).ContinuityDiagnosis(id)
+}
+func (t transaction) LatestContinuityDiagnosis(id domain.MissionRevisionID) (domain.ContinuityDiagnosis, error) {
+	return reader(t).LatestContinuityDiagnosis(id)
 }
 func (t transaction) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	return reader(t).OperationSpec(id)
@@ -470,6 +486,68 @@ func (r reader) Operations(missionRevision domain.MissionRevisionID) ([]domain.O
 	}
 	sort.Slice(operations, func(i, j int) bool { return operations[i].ID < operations[j].ID })
 	return operations, nil
+}
+func (r reader) WorkOpportunity(id domain.WorkOpportunityID) (domain.WorkOpportunity, error) {
+	v, ok := r.state.workOpportunities[id]
+	if !ok {
+		return domain.WorkOpportunity{}, notFound("work opportunity", id)
+	}
+	return cloneWorkOpportunity(v), nil
+}
+func (r reader) WorkOpportunities(missionRevision domain.MissionRevisionID, status domain.WorkOpportunityStatus) ([]domain.WorkOpportunity, error) {
+	if missionRevision == "" {
+		return nil, fmt.Errorf("work opportunity query requires mission revision")
+	}
+	if status != "" && !status.Valid() {
+		return nil, fmt.Errorf("unknown work opportunity status filter %q", status)
+	}
+	result := make([]domain.WorkOpportunity, 0)
+	for _, opportunity := range r.state.workOpportunities {
+		if opportunity.MissionRevision != missionRevision {
+			continue
+		}
+		if status != "" && opportunity.Status != status {
+			continue
+		}
+		result = append(result, cloneWorkOpportunity(opportunity))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Priority == result[j].Priority {
+			if result[i].CreatedAt.Equal(result[j].CreatedAt) {
+				return result[i].ID < result[j].ID
+			}
+			return result[i].CreatedAt.Before(result[j].CreatedAt)
+		}
+		return result[i].Priority > result[j].Priority
+	})
+	return result, nil
+}
+func (r reader) ContinuityDiagnosis(id domain.ContinuityDiagnosisID) (domain.ContinuityDiagnosis, error) {
+	v, ok := r.state.continuityDiagnoses[id]
+	if !ok {
+		return domain.ContinuityDiagnosis{}, notFound("continuity diagnosis", id)
+	}
+	return cloneContinuityDiagnosis(v), nil
+}
+func (r reader) LatestContinuityDiagnosis(missionRevision domain.MissionRevisionID) (domain.ContinuityDiagnosis, error) {
+	if missionRevision == "" {
+		return domain.ContinuityDiagnosis{}, fmt.Errorf("latest continuity diagnosis requires mission revision")
+	}
+	var latest domain.ContinuityDiagnosis
+	found := false
+	for _, diagnosis := range r.state.continuityDiagnoses {
+		if diagnosis.MissionRevision != missionRevision {
+			continue
+		}
+		if !found || diagnosis.OccurredAt.After(latest.OccurredAt) || (diagnosis.OccurredAt.Equal(latest.OccurredAt) && diagnosis.ID > latest.ID) {
+			latest = diagnosis
+			found = true
+		}
+	}
+	if !found {
+		return domain.ContinuityDiagnosis{}, notFound("continuity diagnosis", missionRevision)
+	}
+	return cloneContinuityDiagnosis(latest), nil
 }
 func (r reader) OperationSpec(id domain.OperationSpecID) (domain.OperationSpec, error) {
 	v, ok := r.state.operationSpecs[id]
@@ -948,6 +1026,80 @@ func (t transaction) SaveExternalEventDisposition(disposition domain.ExternalEve
 		return err
 	}
 	t.state.externalEventDispositions[disposition.EventID] = disposition
+	return nil
+}
+
+func (t transaction) CreateWorkOpportunity(v domain.WorkOpportunity) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate work opportunity: %w", err)
+	}
+	if v.Status != domain.OpportunityOpen && v.Status != domain.OpportunityDeferred {
+		return fmt.Errorf("%w: work opportunity must be created open or deferred", port.ErrConflict)
+	}
+	if _, ok := t.state.missionRevisions[v.MissionRevision]; !ok {
+		return notFound("mission revision", v.MissionRevision)
+	}
+	if v.ParentID != "" {
+		parent, ok := t.state.workOpportunities[v.ParentID]
+		if !ok {
+			return notFound("parent work opportunity", v.ParentID)
+		}
+		if parent.MissionRevision != v.MissionRevision {
+			return fmt.Errorf("%w: child work opportunity mission revision diverges", port.ErrConflict)
+		}
+		if v.Depth != parent.Depth+1 {
+			return fmt.Errorf("%w: child work opportunity depth must be parent+1", port.ErrConflict)
+		}
+	}
+	if _, exists := t.state.workOpportunities[v.ID]; exists {
+		return conflict("work opportunity", v.ID)
+	}
+	for _, existing := range t.state.workOpportunities {
+		if existing.MissionRevision == v.MissionRevision && existing.Status.Active() && existing.DedupSignature == v.DedupSignature {
+			return fmt.Errorf("%w: active work opportunity duplicates semantic signature", port.ErrConflict)
+		}
+	}
+	t.state.workOpportunities[v.ID] = cloneWorkOpportunity(v)
+	return nil
+}
+
+func (t transaction) SaveWorkOpportunity(v domain.WorkOpportunity) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate work opportunity: %w", err)
+	}
+	current, ok := t.state.workOpportunities[v.ID]
+	if !ok {
+		return notFound("work opportunity", v.ID)
+	}
+	if current.MissionRevision != v.MissionRevision || current.Family != v.Family || current.DedupSignature != v.DedupSignature || current.ParentID != v.ParentID || current.Depth != v.Depth || !current.CreatedAt.Equal(v.CreatedAt) {
+		return fmt.Errorf("%w: immutable work opportunity fields changed", port.ErrConflict)
+	}
+	if v.UpdatedAt.Before(current.UpdatedAt) {
+		return fmt.Errorf("%w: work opportunity update time must not go backwards", port.ErrConflict)
+	}
+	for _, existing := range t.state.workOpportunities {
+		if existing.ID == v.ID || existing.MissionRevision != v.MissionRevision || !existing.Status.Active() || !v.Status.Active() {
+			continue
+		}
+		if existing.DedupSignature == v.DedupSignature {
+			return fmt.Errorf("%w: active work opportunity duplicates semantic signature", port.ErrConflict)
+		}
+	}
+	t.state.workOpportunities[v.ID] = cloneWorkOpportunity(v)
+	return nil
+}
+
+func (t transaction) CreateContinuityDiagnosis(v domain.ContinuityDiagnosis) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate continuity diagnosis: %w", err)
+	}
+	if _, ok := t.state.missionRevisions[v.MissionRevision]; !ok {
+		return notFound("mission revision", v.MissionRevision)
+	}
+	if _, exists := t.state.continuityDiagnoses[v.ID]; exists {
+		return conflict("continuity diagnosis", v.ID)
+	}
+	t.state.continuityDiagnoses[v.ID] = cloneContinuityDiagnosis(v)
 	return nil
 }
 
@@ -1593,7 +1745,26 @@ func cloneState(src state) state {
 	for k, v := range src.externalEventDispositions {
 		dst.externalEventDispositions[k] = v
 	}
+	for k, v := range src.workOpportunities {
+		dst.workOpportunities[k] = cloneWorkOpportunity(v)
+	}
+	for k, v := range src.continuityDiagnoses {
+		dst.continuityDiagnoses[k] = cloneContinuityDiagnosis(v)
+	}
 	return dst
+}
+
+func cloneWorkOpportunity(v domain.WorkOpportunity) domain.WorkOpportunity {
+	v.Dependencies = append([]string(nil), v.Dependencies...)
+	return v
+}
+
+func cloneContinuityDiagnosis(v domain.ContinuityDiagnosis) domain.ContinuityDiagnosis {
+	v.StrategiesTried = append([]string(nil), v.StrategiesTried...)
+	v.UnavailableCapabilities = append([]string(nil), v.UnavailableCapabilities...)
+	v.EliminatedAlternatives = append([]string(nil), v.EliminatedAlternatives...)
+	v.RecoveryConditions = append([]string(nil), v.RecoveryConditions...)
+	return v
 }
 
 func cloneExternalEvent(event domain.ExternalEvent) domain.ExternalEvent {

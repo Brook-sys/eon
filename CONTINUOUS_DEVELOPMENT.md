@@ -179,10 +179,14 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `CONTINUOUS_WORK.md` define compromisso de liveness, portfólio extensível de famílias, rotação, antiatividade artificial e `CONTINUITY_BLOCKED`.
 - [x] `DONE` Remover `Rest`, `DecisionRest`, portas de persistência e testes associados.
   - Evidência: domínio e store não contêm estado global de repouso; scheduler tenta `ContinuityStrategy`s e retorna despacho ou diagnóstico `CONTINUITY_BLOCKED`; testes cobrem rotação e despacho por outra família.
-- [ ] `READY` Implementar registro de estratégias de continuidade e decisão `EXPAND/DIAGNOSE`.
-- [ ] `READY` Modelar `WorkOpportunity`, derivação pai-filho e horizonte executável com `low_watermark`, alvo e limites versionados.
+- [x] `DONE` Implementar registro de estratégias de continuidade e decisão `EXPAND/DIAGNOSE`.
+  - Evidência: `kernel.StrategyRegistry` ordena famílias por prioridade/nome; `PlanContinuityAction` escolhe `EXPAND` enquanto restam estratégias e `DIAGNOSE` ao esgotá-las; scheduler consome o registry e anexa `StrategiesTried`/horizonte na decisão.
+- [x] `DONE` Modelar `WorkOpportunity`, derivação pai-filho e horizonte executável com `low_watermark`, alvo e limites versionados.
+  - Evidência: `domain.WorkOpportunity`, `HorizonPolicy`/`ExecutableHorizon`, `DeriveChild`/`CanSpawnChild`; portas `ContinuityReader`/`ContinuityWriter`; store memória + checkpoint gob; contract test memory/SQLite.
 - [ ] `READY` Implementar replenishment preventivo e decomposição recursiva limitada por profundidade, fan-out, budget e novidade.
-- [ ] `READY` Persistir eventos e diagnóstico detalhado de `CONTINUITY_BLOCKED`, incluindo capabilities indisponíveis e condições de recuperação.
+  - Preparado: política e validação de fan-out/depth/dedup existem; falta materializar admission `WorkOpportunity → Inquiry/Operation` e reabastecimento preventivo com work ainda ready.
+- [x] `DONE` Persistir eventos e diagnóstico detalhado de `CONTINUITY_BLOCKED`, incluindo capabilities indisponíveis e condições de recuperação.
+  - Evidência: `ContinuityDiagnosis` com strategies tried, recovery conditions e counts; append de `continuity.blocked`; `LatestContinuityDiagnosis` no store; scheduler grava diagnóstico antes de retornar `DecisionContinuityBlocked`.
 - [ ] `READY` Implementar famílias iniciais de gap scan, conflict/evidence review, artifact refresh, integrity audit e harness evaluation.
 - [ ] `READY` Testar longevidade sem repouso, diversidade entre famílias, budgets e ausência de atividade sem delta.
 
@@ -257,3 +261,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-16 01:25 — Fase 6/Slice A inspeção — read models e Control API somente-leitura: overview/health, agenda, timeline paginada e inspetores de operação/commit/comando sobre store + event log; HTTP REST sem mutação — verificação: `go test ./...`, `go vet ./internal/inspect`, `git diff --check` — próximo: external event inbox genérico, HTTP submit de comandos e crash-replay do processador.
 2026-07-16 01:50 — Fase 6/external event durable — inbox store-backed, disposition monotônica, processor de `USER_ANSWER` e wakes tipados sem autoridade textual — verificação: `go test ./...`, `go vet ./...`, `git diff --check` — próximo: HTTP submit de comandos/eventos e crash-replay dos processadores; ou continuidade (`WorkOpportunity`/estratégias).
 2026-07-16 02:00 — Fase 6/Slice B residual — Control API mutável com submit/consulta de comandos e eventos externos; retries reutilizam identidade por chave; crash-replay SQLite dos processadores de comando e evento comprova apply único e pure replay terminal — verificação: `go test ./internal/control ./internal/kernel ./internal/inspect`, `go vet` nos pacotes afetados, `git diff --check` — próximo: dashboard de perguntas/respostas, persistência da decisão do `QuestionGate`/outbox, ou continuidade (`WorkOpportunity`/estratégias).
+2026-07-16 02:25 — Fase 7/horizonte e registry — `WorkOpportunity`/`ExecutableHorizon`/`HorizonPolicy`/`ContinuityDiagnosis` modelados; store+portas+checkpoint gob; `StrategyRegistry` e `EXPAND/DIAGNOSE`; scheduler observa horizonte, tenta famílias e persiste `continuity.blocked` — verificação: `go test ./...`, `go vet` nos pacotes afetados, contract memory/SQLite, `git diff --check` — próximo: replenishment preventivo com admission real e famílias iniciais de gap/conflict/integrity.

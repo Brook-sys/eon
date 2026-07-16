@@ -1040,6 +1040,74 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("work opportunities and continuity diagnoses are durable with dedup and lineage", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.AppendMissionRevision(missionRevision())
+		}); err != nil {
+			t.Fatalf("seed mission: %v", err)
+		}
+		root := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: "opp_root", MissionRevision: "revision_1",
+			Family: domain.FamilyGapScan, Status: domain.OpportunityOpen, Title: "cover gaps", Origin: "mission",
+			ExpectedGain: "new inquiries", Novelty: "uncovered scopes", StopCondition: "coverage target",
+			DedupSignature: "gap:root", Depth: 0, EstimatedCost: domain.Budget{Tokens: 10}, Risk: domain.RiskLow,
+			Priority: 10, CreatedAt: now, UpdatedAt: now,
+		}
+		child, err := root.DeriveChild("opp_child", "define term", "decompose:root", "definition", "undefined", "definition accepted", "gap:term", domain.RiskLow, 8, now.Add(time.Minute), domain.Budget{Tokens: 3})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.CreateWorkOpportunity(root); err != nil {
+				return err
+			}
+			return tx.CreateWorkOpportunity(child)
+		}); err != nil {
+			t.Fatalf("create opportunities: %v", err)
+		}
+		dup := root
+		dup.ID = "opp_dup"
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateWorkOpportunity(dup)
+		}); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("dedup error = %v", err)
+		}
+		admitted := root
+		admitted.Status = domain.OpportunityAdmitted
+		admitted.AdmittedInquiryID = "inquiry_1"
+		admitted.UpdatedAt = now.Add(2 * time.Minute)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveWorkOpportunity(admitted)
+		}); err != nil {
+			t.Fatalf("admit: %v", err)
+		}
+		diagnosis := domain.ContinuityDiagnosis{
+			SchemaVersion: domain.SchemaVersionV1, ID: "diag_1", MissionRevision: "revision_1", OccurredAt: now.Add(3 * time.Minute),
+			StrategiesTried: []string{"gap_scan"}, OpenCandidateCount: 1, ReadyCount: 0,
+			RecoveryConditions: []string{"new source"}, SafeDetail: "blocked", PolicyVersion: "horizon.v1",
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.CreateContinuityDiagnosis(diagnosis)
+		}); err != nil {
+			t.Fatalf("diagnosis: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			open, err := r.WorkOpportunities("revision_1", domain.OpportunityOpen)
+			if err != nil || len(open) != 1 || open[0].ID != "opp_child" {
+				t.Fatalf("open = %#v err=%v", open, err)
+			}
+			got, err := r.LatestContinuityDiagnosis("revision_1")
+			if err != nil || got.ID != diagnosis.ID {
+				t.Fatalf("latest diagnosis = %+v err=%v", got, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("external events are durable with disposition and dedup", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 5, 0, 0, 0, time.UTC)

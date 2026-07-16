@@ -151,11 +151,27 @@ type ControlWriter interface {
 	SaveControlState(domain.ControlState, uint64) error
 }
 
+// ContinuityReader exposes the work frontier and continuity diagnoses.
+type ContinuityReader interface {
+	WorkOpportunity(domain.WorkOpportunityID) (domain.WorkOpportunity, error)
+	WorkOpportunities(domain.MissionRevisionID, domain.WorkOpportunityStatus) ([]domain.WorkOpportunity, error)
+	ContinuityDiagnosis(domain.ContinuityDiagnosisID) (domain.ContinuityDiagnosis, error)
+	LatestContinuityDiagnosis(domain.MissionRevisionID) (domain.ContinuityDiagnosis, error)
+}
+
+// ContinuityWriter persists frontier opportunities and continuity diagnoses.
+type ContinuityWriter interface {
+	CreateWorkOpportunity(domain.WorkOpportunity) error
+	SaveWorkOpportunity(domain.WorkOpportunity) error
+	CreateContinuityDiagnosis(domain.ContinuityDiagnosis) error
+}
+
 type Reader interface {
 	MissionReader
 	AgendaReader
 	OperatorQuestionReader
 	ControlReader
+	ContinuityReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -167,6 +183,7 @@ type Transaction interface {
 	AgendaWriter
 	OperatorQuestionWriter
 	ControlWriter
+	ContinuityWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter
