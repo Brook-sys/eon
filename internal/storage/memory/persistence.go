@@ -62,6 +62,7 @@ type persistedState struct {
 	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
 	ConfigApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
 	ChannelCursors            map[string]domain.ChannelCursor
+	ResourceUsages            map[domain.ResourceID]domain.ResourceUsage
 }
 
 // MarshalBinary returns an isolated checkpoint of the reference store.
@@ -93,6 +94,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ConfigDrafts: cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 		ChannelCursors: cloned.channelCursors,
+		ResourceUsages: cloned.resourceUsages,
 	}
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
@@ -167,6 +169,7 @@ func NewFromBinary(data []byte) (*Store, error) {
 	base.activeConfig = nonNil(p.ActiveConfig, base.activeConfig)
 	base.configApplyReceipts = nonNil(p.ConfigApplyReceipts, base.configApplyReceipts)
 	base.channelCursors = nonNil(p.ChannelCursors, base.channelCursors)
+	base.resourceUsages = nonNil(p.ResourceUsages, base.resourceUsages)
 	return &Store{state: base}, nil
 }
 

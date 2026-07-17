@@ -197,6 +197,20 @@ type ContinuityWriter interface {
 	CreateContinuityDiagnosis(domain.ContinuityDiagnosis) error
 }
 
+// ResourceReader exposes ResourceGate usage snapshots (FR-RES-001).
+// Missing resources return ErrNotFound; zero usage is not auto-created on read.
+type ResourceReader interface {
+	ResourceUsage(domain.ResourceID) (domain.ResourceUsage, error)
+	// ResourceUsages returns all persisted usage rows sorted by ResourceID.
+	ResourceUsages() ([]domain.ResourceUsage, error)
+}
+
+// ResourceWriter persists ResourceGate usage after acquire/report decisions.
+// Full-record replace under the serializable transaction is intentional for MVP.
+type ResourceWriter interface {
+	SaveResourceUsage(domain.ResourceUsage) error
+}
+
 // ConfigReader exposes versioned operator configuration drafts and revisions.
 // Active revision is the last applied pointer per scope.
 type ConfigReader interface {
@@ -227,6 +241,7 @@ type Reader interface {
 	ControlReader
 	ContinuityReader
 	ConfigReader
+	ResourceReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -240,6 +255,7 @@ type Transaction interface {
 	ControlWriter
 	ContinuityWriter
 	ConfigWriter
+	ResourceWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter

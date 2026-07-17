@@ -69,6 +69,13 @@ func buildModel(
 		PolicyVersion: opts.Model.PolicyVersion,
 		LeaseTTL:      opts.Model.LeaseTTL,
 	}
+	// FR-RES-001: opt-in ResourceGate + PolicyEngine for model.complete.
+	// Fail-closed MVP catalog; limits default; usage is durable via store.
+	authorizer, err := kernel.NewMVPCapabilityAuthorizer(store, clock, opts.Model.PolicyVersion)
+	if err != nil {
+		return nil, fmt.Errorf("capability authorizer: %w", err)
+	}
+	exec.Authorizer = authorizer
 	return exec, nil
 }
 

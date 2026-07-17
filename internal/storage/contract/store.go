@@ -1190,6 +1190,63 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("resource usages are durable sorted and replaceable", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 16, 21, 0, 0, 0, time.UTC)
+		first := domain.ResourceUsage{
+			Resource: "model:default", InFlight: 1, MinuteCount: 2,
+			MinuteWindowStart: now.Truncate(time.Minute),
+		}
+		second := domain.ResourceUsage{
+			Resource: "web:http", InFlight: 0, MinuteCount: 1,
+			MinuteWindowStart: now.Truncate(time.Minute),
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			if err := tx.SaveResourceUsage(first); err != nil {
+				return err
+			}
+			return tx.SaveResourceUsage(second)
+		}); err != nil {
+			t.Fatalf("save usage: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ResourceUsage("model:default")
+			if err != nil || got.InFlight != 1 || got.MinuteCount != 2 {
+				t.Fatalf("model usage = %#v err=%v", got, err)
+			}
+			rows, err := r.ResourceUsages()
+			if err != nil || len(rows) != 2 {
+				t.Fatalf("usages = %#v err=%v", rows, err)
+			}
+			if rows[0].Resource != "model:default" || rows[1].Resource != "web:http" {
+				t.Fatalf("sort order = %#v", rows)
+			}
+			if _, err := r.ResourceUsage("missing"); !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("missing usage error = %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		// Full-record replace of the same resource id.
+		released := first
+		released.InFlight = 0
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveResourceUsage(released)
+		}); err != nil {
+			t.Fatalf("replace usage: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ResourceUsage("model:default")
+			if err != nil || got.InFlight != 0 {
+				t.Fatalf("replaced usage = %#v err=%v", got, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("config drafts revisions and apply receipts are durable with sequential activation", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC)

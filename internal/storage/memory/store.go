@@ -72,6 +72,7 @@ type state struct {
 	activeConfig              map[domain.ConfigScope]domain.ConfigRevisionID
 	configApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
 	channelCursors            map[string]domain.ChannelCursor
+	resourceUsages            map[domain.ResourceID]domain.ResourceUsage
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -125,6 +126,7 @@ func newState() state {
 		activeConfig:              make(map[domain.ConfigScope]domain.ConfigRevisionID),
 		configApplyReceipts:       make(map[domain.ConfigDraftID]domain.ConfigApplyReceipt),
 		channelCursors:            make(map[string]domain.ChannelCursor),
+		resourceUsages:            make(map[domain.ResourceID]domain.ResourceUsage),
 	}
 }
 
@@ -211,6 +213,12 @@ func (t transaction) ControlState() (domain.ControlState, error) {
 }
 func (t transaction) ChannelCursor(channel string) (domain.ChannelCursor, error) {
 	return reader(t).ChannelCursor(channel)
+}
+func (t transaction) ResourceUsage(id domain.ResourceID) (domain.ResourceUsage, error) {
+	return reader(t).ResourceUsage(id)
+}
+func (t transaction) ResourceUsages() ([]domain.ResourceUsage, error) {
+	return reader(t).ResourceUsages()
 }
 func (t transaction) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	return reader(t).OperatorCommand(id)
@@ -521,6 +529,27 @@ func (r reader) ChannelCursor(channel string) (domain.ChannelCursor, error) {
 		return domain.ChannelCursor{}, notFound("channel cursor", key)
 	}
 	return v, nil
+}
+func (r reader) ResourceUsage(id domain.ResourceID) (domain.ResourceUsage, error) {
+	key := domain.ResourceID(strings.TrimSpace(string(id)))
+	if key == "" {
+		return domain.ResourceUsage{}, fmt.Errorf("resource usage requires resource id")
+	}
+	v, ok := r.state.resourceUsages[key]
+	if !ok {
+		return domain.ResourceUsage{}, notFound("resource usage", key)
+	}
+	return cloneResourceUsage(v), nil
+}
+func (r reader) ResourceUsages() ([]domain.ResourceUsage, error) {
+	out := make([]domain.ResourceUsage, 0, len(r.state.resourceUsages))
+	for _, v := range r.state.resourceUsages {
+		out = append(out, cloneResourceUsage(v))
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return string(out[i].Resource) < string(out[j].Resource)
+	})
+	return out, nil
 }
 func (r reader) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	v, ok := r.state.operatorCommands[id]
@@ -1622,6 +1651,19 @@ func (t transaction) SaveChannelCursor(next domain.ChannelCursor, expectedRevisi
 	return nil
 }
 
+func (t transaction) SaveResourceUsage(next domain.ResourceUsage) error {
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate resource usage: %w", err)
+	}
+	key := domain.ResourceID(strings.TrimSpace(string(next.Resource)))
+	if key == "" {
+		return fmt.Errorf("resource usage requires resource id")
+	}
+	next.Resource = key
+	t.state.resourceUsages[key] = cloneResourceUsage(next)
+	return nil
+}
+
 func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate operation spec: %w", err)
@@ -2299,7 +2341,23 @@ func cloneState(src state) state {
 	for k, v := range src.channelCursors {
 		dst.channelCursors[k] = v
 	}
+	for k, v := range src.resourceUsages {
+		dst.resourceUsages[k] = cloneResourceUsage(v)
+	}
 	return dst
+}
+
+func cloneResourceUsage(v domain.ResourceUsage) domain.ResourceUsage {
+	out := v
+	if v.CircuitOpenUntil != nil {
+		t := v.CircuitOpenUntil.UTC()
+		out.CircuitOpenUntil = &t
+	}
+	if v.LastFailureAt != nil {
+		t := v.LastFailureAt.UTC()
+		out.LastFailureAt = &t
+	}
+	return out
 }
 
 func cloneWorkOpportunity(v domain.WorkOpportunity) domain.WorkOpportunity {

@@ -62,6 +62,8 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /frontier/hygiene", a.handleFrontierHygiene)
 	mux.HandleFunc("GET /frontier/opportunities/{opportunityID}", a.handleFrontierOpportunity)
 	mux.HandleFunc("GET /store/retention", a.handleStoreRetention)
+	mux.HandleFunc("GET /resources", a.handleResources)
+	mux.HandleFunc("GET /resources/{resourceID}", a.handleResource)
 	return mux
 }
 
@@ -517,6 +519,31 @@ func (a *API) handleStoreRetention(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, proj)
+}
+
+// handleResources lists durable ResourceGate usage snapshots (FR-RES-001).
+func (a *API) handleResources(w http.ResponseWriter, r *http.Request) {
+	proj, err := a.Projector.ListResourceUsages(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
+}
+
+// handleResource returns one resource usage row or 404.
+func (a *API) handleResource(w http.ResponseWriter, r *http.Request) {
+	id := domain.ResourceID(strings.TrimSpace(r.PathValue("resourceID")))
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing_resource_id", "resourceID is required")
+		return
+	}
+	view, err := a.Projector.ResourceUsage(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, view)
 }
 
 // handleFrontierHygiene dry-runs PlanFrontierReservoirHygiene without mutation.

@@ -224,6 +224,8 @@ Calls, tokens, bytes, concorrência, retries e duração de ciclo MUST possuir l
 
 **Evidência de aceitação:** cenários de 429, cota diária e agenda cheia preservam intenção dentro da política e não excedem limites.
 
+**Estado (2026-07-16):** implementado para o path `model.complete` (PROPOSE_ONLY). Domínio: `Budget.Covers`/`Consume`/`Remaining` (zero = nenhuma unidade autorizada, nunca ilimitado); `CapabilityCatalog` + `EvaluateCapability` (ALLOW/DENY/REQUIRE_APPROVAL, TTL, digest de args, permissões, budget); `Acquire`/`ReportSuccess`/`ReportFailure` ResourceGate com cota/min/dia, tokens/min, concorrência + slots reservados, circuit breaker e Retry-After; `ThrottleTransitionInput` → `WAIT_UNTIL`/`THROTTLE`; `NewResourceBudgetFailure`. Kernel: `CapabilityAuthorizer.ReserveModelComplete` + `ReportModelComplete` (eventos `capability.authorized`/`denied`, `resource.throttled`/`released`); `ModelExecutor` reserva antes do lease, aplica throttle sem chamar o provider e libera o slot em todos os exits; bootstrap `buildModel` injeta `NewMVPCapabilityAuthorizer`. Persistência: portas `ResourceUsage(s)`/`SaveResourceUsage` no store memory (+ checkpoint binário SQLite). Inspect read-only: `GET /resources` e `GET /resources/{resourceID}`. Residual: wiring simétrico para capabilities web/file no dispatch genérico se/quando executores existirem.
+
 ### FR-RES-002 — Aquisição hostil por padrão
 
 Conteúdo de fonte MUST ser tratado como dado não confiável. Aquisição MUST impor limites de bytes, timeout, tipos aceitos e separação entre conteúdo e instruções do prompt.

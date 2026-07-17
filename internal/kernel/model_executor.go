@@ -46,6 +46,10 @@ type ModelExecutor struct {
 	// PreferExpandedContext allows spending more of the safe window on optional facts.
 	// Default false keeps FR-MODEL-007 conservative.
 	PreferExpandedContext bool
+	// Authorizer is optional FR-RES-001 PolicyEngine + ResourceGate enforcement.
+	// When nil, Execute keeps historical behavior (no capability/resource gate).
+	// When set, model.complete must ALLOW and acquire before any Complete call.
+	Authorizer *CapabilityAuthorizer
 }
 
 // ModelExecuteResult summarizes one model-backed Execute call.
@@ -92,6 +96,15 @@ func (e ModelExecutor) leaseTTL() time.Duration {
 	return e.LeaseTTL
 }
 
+// releaseResourcePermit reports ResourceGate success/failure when an authorizer
+// reserved a slot. Best-effort: never overrides the primary Execute error path.
+func (e ModelExecutor) releaseResourcePermit(ctx context.Context, operation domain.Operation, permit *domain.ResourcePermit, success bool) {
+	if e.Authorizer == nil || permit == nil {
+		return
+	}
+	_ = e.Authorizer.ReportModelComplete(ctx, operation, permit, success, nil)
+}
+
 // ModelEligible reports whether an OperationSpec should run on the model path.
 // Continuity/local specs stay on LocalExecutor even if PROPOSE_ONLY.
 func ModelEligible(spec domain.OperationSpec) bool {
@@ -120,14 +133,80 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	var result ModelExecuteResult
 	result.OperationID = operationID
 
-	// Phase 1: claim lease under READY → RUNNING (short transaction).
+	// Phase 0: load READY model-eligible operation (read-only) for authorization.
 	var (
 		operation domain.Operation
 		spec      domain.OperationSpec
 		leaseRef  string
 		now       time.Time
+		permit    *domain.ResourcePermit
 	)
-	err := e.Store.Update(ctx, func(tx port.Transaction) error {
+	err := e.Store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation(operationID)
+		if err != nil {
+			return err
+		}
+		if op.State.Terminal() {
+			result.Skipped = true
+			result.SkipReason = "terminal"
+			return nil
+		}
+		if op.State != domain.StateReady {
+			result.Skipped = true
+			result.SkipReason = "not_ready"
+			return nil
+		}
+		loadedSpec, err := r.OperationSpec(op.SpecID)
+		if err != nil {
+			return fmt.Errorf("load operation spec %s: %w", op.SpecID, err)
+		}
+		if !ModelEligible(loadedSpec) {
+			result.Skipped = true
+			if LocalEligible(loadedSpec) {
+				result.SkipReason = "local_path"
+			} else {
+				result.SkipReason = "not_model_eligible"
+			}
+			return nil
+		}
+		operation = op
+		spec = loadedSpec
+		return nil
+	})
+	if err != nil {
+		return result, err
+	}
+	if result.Skipped {
+		return result, nil
+	}
+
+	// Phase 0b: FR-RES-001 authorize model.complete + ResourceGate before lease.
+	if e.Authorizer != nil {
+		auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0)
+		if authErr != nil {
+			return result, authErr
+		}
+		if auth.Throttled {
+			result.Skipped = true
+			result.SkipReason = auth.SkipReason
+			if result.SkipReason == "" {
+				result.SkipReason = "resource_throttled"
+			}
+			return result, nil
+		}
+		if !auth.Allowed {
+			result.Skipped = true
+			result.SkipReason = auth.SkipReason
+			if result.SkipReason == "" {
+				result.SkipReason = "policy_deny"
+			}
+			return result, nil
+		}
+		permit = auth.Permit
+	}
+
+	// Phase 1: claim lease under READY → RUNNING (short transaction).
+	err = e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operationID)
 		if err != nil {
 			return err
@@ -138,6 +217,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			return nil
 		}
 		if op.State != domain.StateReady {
+			// Authorization may have throttled concurrently, or another worker claimed.
 			result.Skipped = true
 			result.SkipReason = "not_ready"
 			return nil
@@ -196,9 +276,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return nil
 	})
 	if err != nil {
+		// Best-effort release of reserved gate slot if dispatch failed after reserve.
+		e.releaseResourcePermit(ctx, operation, permit, false)
 		return result, err
 	}
 	if result.Skipped {
+		// Race: another path changed state after authorize — release reservation.
+		e.releaseResourcePermit(ctx, operation, permit, false)
 		return result, nil
 	}
 
@@ -215,7 +299,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 
 	compileInput, err := e.buildPromptInput(operation, spec, baseCommit)
 	if err != nil {
-		return result, e.failRunning(ctx, operation, leaseRef, err)
+		failErr := e.failRunning(ctx, operation, leaseRef, err)
+		e.releaseResourcePermit(ctx, operation, permit, false)
+		return result, failErr
 	}
 	// FR-MODEL-006/007: select reversible enrichment + conservative context.
 	profile := e.resolveProfile()
@@ -231,14 +317,18 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	compiled, err := compiler.Compile(spec, compileInput)
 	if err != nil {
-		return result, e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
+		failErr := e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
+		e.releaseResourcePermit(ctx, operation, permit, false)
+		return result, failErr
 	}
 	_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, 0)
 
 	maxCalls := spec.Budget.ModelCalls
 	if maxCalls <= 0 {
 		// Budget zero means no Complete authorized (domain.Budget semantics).
-		return result, e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
+		failErr := e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
+		e.releaseResourcePermit(ctx, operation, permit, false)
+		return result, failErr
 	}
 	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
 	budget.FallbackAvailable = e.FallbackProvider != nil
@@ -325,6 +415,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				return nil
 			})
 			if err != nil {
+				e.releaseResourcePermit(ctx, operation, permit, false)
 				return result, err
 			}
 		} else {
@@ -417,8 +508,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				return nil
 			})
 			if err != nil {
+				e.releaseResourcePermit(ctx, operation, permit, false)
 				return result, err
 			}
+			e.releaseResourcePermit(ctx, operation, permit, true)
 			return result, nil
 		}
 
@@ -487,11 +580,15 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			continue
 		case domain.DispositionReplan:
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
-			return result, e.failVerifying(ctx, operation, leaseRef, lastErr)
+			failErr := e.failVerifying(ctx, operation, leaseRef, lastErr)
+			e.releaseResourcePermit(ctx, operation, permit, false)
+			return result, failErr
 		default: // Exhaust
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			result.Exhausted = true
-			return result, e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
+			failErr := e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
+			e.releaseResourcePermit(ctx, operation, permit, false)
+			return result, failErr
 		}
 	}
 
@@ -520,12 +617,18 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 	if decision.Disposition == domain.DispositionExhaust {
 		result.Exhausted = true
-		return result, e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
+		failErr := e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
+		e.releaseResourcePermit(ctx, operation, permit, false)
+		return result, failErr
 	}
 	if operation.State == domain.StateVerifying {
-		return result, e.failVerifying(ctx, operation, leaseRef, lastErr)
+		failErr := e.failVerifying(ctx, operation, leaseRef, lastErr)
+		e.releaseResourcePermit(ctx, operation, permit, false)
+		return result, failErr
 	}
-	return result, e.failRunning(ctx, operation, leaseRef, lastErr)
+	failErr := e.failRunning(ctx, operation, leaseRef, lastErr)
+	e.releaseResourcePermit(ctx, operation, permit, false)
+	return result, failErr
 }
 
 func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.OperationSpec, baseCommit domain.CommitID) (prompt.Input, error) {
