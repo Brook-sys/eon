@@ -141,8 +141,8 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 
 - [x] enriquecer erro OpenAI-compatible com `RetryAfter` padrão parseado sem corpo de erro;
 - [x] configurar timeout HTTP explícito no adapter (default limitado; override por config);
-- [ ] adicionar metadados de rate limit allowlisted/redigidos e propagar `RetryAfter` ao gate;
-- reportar cooldown real ao gate;
+- [x] propagar `RetryAfter` e delay explícito ao gate/circuit breaker de recursos (FR-RES-001);
+- [ ] adicionar metadados de rate limit allowlisted/redigidos ao log (opcional);
 - testes de 429, `Retry-After` delta/data, headers inválidos, timeout e não vazamento.
 
 ### P1 — bindings e rate limit por modelo

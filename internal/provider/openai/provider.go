@@ -123,6 +123,10 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("openai-compatible provider: %s", e.Kind)
 }
 
+// RetryAfterDelay exposes bounded provider backpressure without coupling the
+// kernel to this adapter's concrete error type.
+func (e *Error) RetryAfterDelay() time.Duration { return e.RetryAfter }
+
 // New creates an OpenAI-compatible chat completions adapter. Optional Option
 // values configure non-secret profile metadata used by DeclaredProfile/Probe.
 func New(config Config, opts ...Option) (*Provider, error) {
