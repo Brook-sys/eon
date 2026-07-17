@@ -25,6 +25,7 @@ type Exchange struct {
 	OutputTokens          int
 	StatusCode            int
 	RawBody               string
+	Headers               map[string]string
 }
 
 type Request struct {
@@ -144,6 +145,11 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 	w.Header().Set("Content-Type", "application/json")
+	if len(exchange.Headers) > 0 {
+		for k, v := range exchange.Headers {
+			w.Header().Set(k, v)
+		}
+	}
 	w.WriteHeader(status)
 	if exchange.RawBody != "" {
 		_, _ = w.Write([]byte(exchange.RawBody))

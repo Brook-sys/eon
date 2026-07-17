@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/provider/openai"
@@ -61,8 +62,9 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 		limit     int64
 		kind      openai.ErrorKind
 		retryable bool
+		retryWait time.Duration
 	}{
-		{name: "rate limit", exchange: fakeserver.Exchange{StatusCode: http.StatusTooManyRequests, RawBody: `{"error":"prompt secret"}`}, kind: openai.ErrorHTTP, retryable: true},
+		{name: "rate limit", exchange: fakeserver.Exchange{StatusCode: http.StatusTooManyRequests, RawBody: `{"error":"prompt secret"}`, Headers: map[string]string{"Retry-After": "42"}}, kind: openai.ErrorHTTP, retryable: true, retryWait: 42 * time.Second},
 		{name: "invalid response", exchange: fakeserver.Exchange{RawBody: `{"choices":[]}`}, kind: openai.ErrorInvalidResponse},
 		{name: "too large", exchange: fakeserver.Exchange{RawBody: strings.Repeat("x", 33)}, limit: 32, kind: openai.ErrorResponseTooLarge},
 	}
@@ -78,6 +80,9 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 			var providerError *openai.Error
 			if !errors.As(err, &providerError) || providerError.Kind != test.kind || providerError.Retryable != test.retryable {
 				t.Fatalf("unexpected error: %#v", err)
+			}
+			if test.retryWait > 0 && providerError.RetryAfter != test.retryWait {
+				t.Fatalf("retry wait = %v, want %v", providerError.RetryAfter, test.retryWait)
 			}
 			if strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), "sensitive") {
 				t.Fatalf("error leaked data: %v", err)

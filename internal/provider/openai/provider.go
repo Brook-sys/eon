@@ -106,6 +106,10 @@ type Error struct {
 	Kind       ErrorKind
 	StatusCode int
 	Retryable  bool
+	// RetryAfter is the earliest safe retry delay declared by the provider.
+	// It is parsed only from the standard Retry-After header; response bodies
+	// remain discarded because they may echo prompts or credentials.
+	RetryAfter time.Duration
 }
 
 func (e *Error) Error() string {
@@ -232,7 +236,12 @@ func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest)
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, p.maxResponseBytes+1))
-		return port.CompletionResult{}, &Error{Kind: ErrorHTTP, StatusCode: response.StatusCode, Retryable: response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500}
+		return port.CompletionResult{}, &Error{
+			Kind:       ErrorHTTP,
+			StatusCode: response.StatusCode,
+			Retryable:  response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500,
+			RetryAfter: parseRetryAfter(response.Header.Get("Retry-After"), time.Now()),
+		}
 	}
 	limited := io.LimitReader(response.Body, p.maxResponseBytes+1)
 	body, err := io.ReadAll(limited)
@@ -247,6 +256,27 @@ func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest)
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse}
 	}
 	return port.CompletionResult{Text: decoded.Choices[0].Message.Content, InputTokens: decoded.Usage.PromptTokens, OutputTokens: decoded.Usage.CompletionTokens, Model: decoded.Model}, nil
+}
+
+// parseRetryAfter accepts both forms from RFC 9110: delay-seconds and an HTTP
+// date. Invalid, negative, or already elapsed values fail closed to zero so the
+// deterministic ResourceGate backoff remains the fallback.
+func parseRetryAfter(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	if seconds, err := time.ParseDuration(value + "s"); err == nil {
+		if seconds > 0 {
+			return seconds
+		}
+		return 0
+	}
+	when, err := http.ParseTime(value)
+	if err != nil || !when.After(now) {
+		return 0
+	}
+	return when.Sub(now)
 }
 
 // DeclaredProfile returns the conservative configuration snapshot without I/O.
