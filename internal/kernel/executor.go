@@ -81,6 +81,10 @@ func LocalEligible(spec domain.OperationSpec) bool {
 	if err := spec.Validate(); err != nil {
 		return false
 	}
+	// Web acquisition runs on WebExecutor (FR-RES-001/002), never the local path.
+	if webCapabilityFromSpec(spec) != "" {
+		return false
+	}
 	if spec.MaximumAuthority == domain.AuthorityReadOnly {
 		return true
 	}

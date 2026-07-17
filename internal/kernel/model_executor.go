@@ -107,11 +107,15 @@ func (e ModelExecutor) releaseResourcePermit(ctx context.Context, operation doma
 
 // ModelEligible reports whether an OperationSpec should run on the model path.
 // Continuity/local specs stay on LocalExecutor even if PROPOSE_ONLY.
+// Web acquisition specs stay on WebExecutor even if mis-tagged PROPOSE_ONLY.
 func ModelEligible(spec domain.OperationSpec) bool {
 	if err := spec.Validate(); err != nil {
 		return false
 	}
 	if LocalEligible(spec) {
+		return false
+	}
+	if webCapabilityFromSpec(spec) != "" {
 		return false
 	}
 	return spec.MaximumAuthority == domain.AuthorityProposeOnly

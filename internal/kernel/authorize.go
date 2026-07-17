@@ -59,6 +59,32 @@ type AuthorizationOutcome struct {
 	Failure *domain.FailureRecord
 }
 
+// CapabilityReserveRequest is the generic FR-RES-001 reserve input for any
+// catalog capability (model.complete, web.search, web.fetch, …).
+type CapabilityReserveRequest struct {
+	// Capability is the catalog name (e.g. "web.search", "model.complete").
+	Capability string
+	// Version is the capability version; 0 selects the latest installed.
+	Version uint64
+	// ArgsDigest binds the ALLOW decision to a validated args fingerprint.
+	ArgsDigest string
+	// Operation and Spec identify the READY work item being authorized.
+	Operation domain.Operation
+	Spec      domain.OperationSpec
+	// EstimatedCost is the Budget slice reserved by EvaluateCapability.
+	EstimatedCost domain.Budget
+	// AvailableBudget is the remaining operation/mission allowance.
+	// When zero-value and Spec is valid, Spec.Budget is used.
+	AvailableBudget domain.Budget
+	// ResourceCost is the ResourceGate cost. When zero and Capability is
+	// model.complete, ModelCompleteCost(Spec) is used.
+	ResourceCost domain.ResourceCost
+	// DefaultResource is used when the decision Resource field is empty.
+	DefaultResource domain.ResourceID
+	// Priority feeds ResourceGate reserved-for-critical slots.
+	Priority int
+}
+
 // ModelCompleteCost derives ResourceCost from an OperationSpec budget for one Complete.
 func ModelCompleteCost(spec domain.OperationSpec) domain.ResourceCost {
 	tokens := spec.MaxOutputTokens
@@ -86,21 +112,53 @@ func ModelCompleteEstimatedBudget(spec domain.OperationSpec) domain.Budget {
 	}
 }
 
-// ReserveModelComplete authorizes model.complete for a READY operation and, when
-// denied by the gate with a capacity wait, transitions the operation out of READY
-// via ThrottleTransitionInput (WAIT_UNTIL or THROTTLE) without dispatching a lease.
+// WebSearchCost is the ResourceGate cost for one web.search call.
+func WebSearchCost() domain.ResourceCost {
+	return domain.ResourceCost{Slots: 1, Calls: 1}
+}
+
+// WebFetchCost is the ResourceGate cost for one web.fetch call.
+// expectedBytes contributes to Bytes accounting when known; zero is valid.
+func WebFetchCost(expectedBytes int64) domain.ResourceCost {
+	if expectedBytes < 0 {
+		expectedBytes = 0
+	}
+	return domain.ResourceCost{Slots: 1, Calls: 1, Bytes: expectedBytes}
+}
+
+// WebCapabilityEstimatedBudget is the Budget slice reserved for web search/fetch.
+// Prefer Attempts (and Bytes when set on the operation budget).
+func WebCapabilityEstimatedBudget(spec domain.OperationSpec) domain.Budget {
+	attempts := 1
+	if spec.Budget.Attempts > 0 {
+		attempts = 1
+	}
+	var bytes int64
+	if spec.Budget.Bytes > 0 {
+		// Reserve a conservative slice; executor still enforces total Bytes.
+		bytes = spec.Budget.Bytes
+		if bytes > 1<<20 {
+			bytes = 1 << 20
+		}
+	}
+	return domain.Budget{
+		Attempts: attempts,
+		Bytes:    bytes,
+	}
+}
+
+// ReserveCapability authorizes an arbitrary catalog capability for a READY
+// operation and, when denied by the gate with a capacity wait, transitions the
+// operation out of READY via ThrottleTransitionInput without dispatching a lease.
 //
 // On ALLOW it persists projected ResourceUsage (in-flight) so concurrent admits
-// see the reservation. Call ReportModelComplete after the Complete attempt to
-// release the slot (success or failure).
+// see the reservation. Call ReportCapability after the effect to release the slot.
 //
-// When authorizer is nil, ReserveModelComplete returns Allowed=true with no I/O
+// When authorizer is nil, ReserveCapability returns Allowed=true with no I/O
 // so unit tests without resource wiring keep working (opt-in enforcement).
-func (a *CapabilityAuthorizer) ReserveModelComplete(
+func (a *CapabilityAuthorizer) ReserveCapability(
 	ctx context.Context,
-	operation domain.Operation,
-	spec domain.OperationSpec,
-	priority int,
+	req CapabilityReserveRequest,
 ) (AuthorizationOutcome, error) {
 	if a == nil {
 		return AuthorizationOutcome{Allowed: true, SkipReason: "authorizer_disabled"}, nil
@@ -108,69 +166,98 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 	if a.Store == nil || a.Clock == nil {
 		return AuthorizationOutcome{}, errors.New("capability authorizer requires store and clock")
 	}
-	if err := operation.Validate(); err != nil {
+	if err := req.Operation.Validate(); err != nil {
 		return AuthorizationOutcome{}, fmt.Errorf("operation: %w", err)
 	}
-	if err := spec.Validate(); err != nil {
+	if err := req.Spec.Validate(); err != nil {
 		return AuthorizationOutcome{}, fmt.Errorf("operation spec: %w", err)
+	}
+	capability := strings.TrimSpace(req.Capability)
+	if capability == "" {
+		return AuthorizationOutcome{}, errors.New("capability name is required")
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	now := a.Clock.Now().UTC()
-	estimated := ModelCompleteEstimatedBudget(spec)
-	// AvailableBudget is the operation's remaining allowance; for model path the
-	// full spec budget is the ceiling (attempt-local reserve of one call).
-	available := spec.Budget
-	if available.ModelCalls <= 0 {
-		// Zero model_calls means no Complete authorized — pure budget deny.
-		return a.denyBudget(ctx, operation, estimated, now, "operation model_calls budget is zero")
+
+	estimated := req.EstimatedCost
+	if estimated.IsZero() {
+		// Callers should always set estimated cost; empty means no units.
+		return a.denyBudget(ctx, req.Operation, capability, estimated, now, "estimated cost is zero")
+	}
+	available := req.AvailableBudget
+	if available.IsZero() {
+		available = req.Spec.Budget
+	}
+	// Capability-specific hard zeros (fail closed before PolicyEngine).
+	if capability == "model.complete" && available.ModelCalls <= 0 {
+		return a.denyBudget(ctx, req.Operation, capability, estimated, now, "operation model_calls budget is zero")
+	}
+	if (capability == "web.search" || capability == "web.fetch") && available.Attempts <= 0 && available.IsZero() {
+		return a.denyBudget(ctx, req.Operation, capability, estimated, now, "operation budget is zero")
 	}
 
-	req := domain.AuthorizationRequest{
-		Capability:         "model.complete",
-		Version:            0,
-		ArgsDigest:         "model.complete:" + string(operation.SpecID),
-		OperationID:        operation.ID,
-		MissionRevision:    operation.MissionRevision,
+	argsDigest := strings.TrimSpace(req.ArgsDigest)
+	if argsDigest == "" {
+		argsDigest = capability + ":" + string(req.Spec.ID)
+	}
+
+	authReq := domain.AuthorizationRequest{
+		Capability:         capability,
+		Version:            req.Version,
+		ArgsDigest:         argsDigest,
+		OperationID:        req.Operation.ID,
+		MissionRevision:    req.Operation.MissionRevision,
 		EstimatedCost:      estimated,
 		GrantedPermissions: a.GrantedPermissions,
 		AvailableBudget:    available,
 		Now:                now,
 		AuthorizationTTL:   a.AuthorizationTTL,
 	}
-	decision, err := domain.EvaluateCapability(a.Catalog, req)
+	decision, err := domain.EvaluateCapability(a.Catalog, authReq)
 	if err != nil {
 		return AuthorizationOutcome{}, err
 	}
 	out := AuthorizationOutcome{Decision: decision}
 	if decision.Decision != domain.PolicyAllow {
 		out.SkipReason = "policy_" + strings.ToLower(string(decision.Decision))
-		if err := a.persistPolicyDeny(ctx, operation, decision, now); err != nil {
+		if err := a.persistPolicyDeny(ctx, req.Operation, decision, now); err != nil {
 			return out, err
 		}
 		return out, nil
 	}
-	if !decision.UsableAt(now, operation.ID, operation.MissionRevision, req.ArgsDigest) {
+	if !decision.UsableAt(now, req.Operation.ID, req.Operation.MissionRevision, authReq.ArgsDigest) {
 		out.SkipReason = "policy_permit_unusable"
 		return out, nil
 	}
 
 	resource := domain.ResourceID(decision.Resource)
 	if resource == "" {
+		resource = req.DefaultResource
+	}
+	if resource == "" && capability == "model.complete" {
 		resource = DefaultModelCompleteResource
 	}
 	limit, hasLimit := a.Limits[resource]
-	if !hasLimit {
+	if !hasLimit || resource == "" {
 		// No configured gate for this resource: policy ALLOW is enough.
 		out.Allowed = true
-		if err := a.persistAuthorized(ctx, operation, decision, nil, now); err != nil {
+		if err := a.persistAuthorized(ctx, req.Operation, decision, nil, now); err != nil {
 			return out, err
 		}
 		return out, nil
 	}
 
-	cost := ModelCompleteCost(spec)
+	cost := req.ResourceCost
+	if cost.Slots == 0 && cost.Calls == 0 && cost.Tokens == 0 && cost.Bytes == 0 {
+		if capability == "model.complete" {
+			cost = ModelCompleteCost(req.Spec)
+		} else {
+			cost = domain.ResourceCost{Slots: 1, Calls: 1}
+		}
+	}
+
 	var usage domain.ResourceUsage
 	err = a.Store.View(ctx, func(r port.Reader) error {
 		u, err := r.ResourceUsage(resource)
@@ -188,7 +275,7 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 		return out, err
 	}
 
-	acquire, err := domain.Acquire(limit, usage, cost, priority, now)
+	acquire, err := domain.Acquire(limit, usage, cost, req.Priority, now)
 	if err != nil {
 		return out, err
 	}
@@ -199,7 +286,7 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 		if out.SkipReason == "resource_" {
 			out.SkipReason = "resource_denied"
 		}
-		if err := a.applyThrottle(ctx, operation, resource, decision, acquire, now); err != nil {
+		if err := a.applyThrottle(ctx, req.Operation, resource, decision, acquire, now); err != nil {
 			return out, err
 		}
 		return out, nil
@@ -212,12 +299,12 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 		}
 		if _, err := tx.AppendEvent(domain.Event{
 			SchemaVersion:   domain.SchemaVersionV1,
-			ID:              domain.EventID(fmt.Sprintf("%s:cap_auth:%s:%d", operation.ID, decision.CapabilityRef, now.UnixNano())),
+			ID:              domain.EventID(fmt.Sprintf("%s:cap_auth:%s:%d", req.Operation.ID, decision.CapabilityRef, now.UnixNano())),
 			Kind:            EventCapabilityAuthorized,
 			OccurredAt:      now,
-			MissionRevision: operation.MissionRevision,
-			InquiryID:       operation.InquiryID,
-			OperationID:     operation.ID,
+			MissionRevision: req.Operation.MissionRevision,
+			InquiryID:       req.Operation.InquiryID,
+			OperationID:     req.Operation.ID,
 			PayloadRef:      decision.CapabilityRef + ";resource=" + string(resource) + ";reason=" + decision.Reason,
 		}); err != nil {
 			return err
@@ -231,11 +318,11 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 	return out, nil
 }
 
-// ReportModelComplete releases the ResourceGate slot after Complete finishes.
+// ReportCapability releases the ResourceGate slot after an authorized effect.
 // success=true clears the failure streak; success=false may open the circuit.
 // retryAfter is optional (HTTP Retry-After). No-op when authorizer is nil or
 // permit is nil (policy-only allow without a gate).
-func (a *CapabilityAuthorizer) ReportModelComplete(
+func (a *CapabilityAuthorizer) ReportCapability(
 	ctx context.Context,
 	operation domain.Operation,
 	permit *domain.ResourcePermit,
@@ -295,6 +382,39 @@ func (a *CapabilityAuthorizer) ReportModelComplete(
 		})
 		return err
 	})
+}
+
+// ReserveModelComplete authorizes model.complete for a READY operation.
+// Thin wrapper over ReserveCapability for call-site compatibility.
+func (a *CapabilityAuthorizer) ReserveModelComplete(
+	ctx context.Context,
+	operation domain.Operation,
+	spec domain.OperationSpec,
+	priority int,
+) (AuthorizationOutcome, error) {
+	return a.ReserveCapability(ctx, CapabilityReserveRequest{
+		Capability:      "model.complete",
+		ArgsDigest:      "model.complete:" + string(spec.ID),
+		Operation:       operation,
+		Spec:            spec,
+		EstimatedCost:   ModelCompleteEstimatedBudget(spec),
+		AvailableBudget: spec.Budget,
+		ResourceCost:    ModelCompleteCost(spec),
+		DefaultResource: DefaultModelCompleteResource,
+		Priority:        priority,
+	})
+}
+
+// ReportModelComplete releases the ResourceGate slot after Complete finishes.
+// Thin wrapper over ReportCapability for call-site compatibility.
+func (a *CapabilityAuthorizer) ReportModelComplete(
+	ctx context.Context,
+	operation domain.Operation,
+	permit *domain.ResourcePermit,
+	success bool,
+	retryAfter *time.Time,
+) error {
+	return a.ReportCapability(ctx, operation, permit, success, retryAfter)
 }
 
 // DefaultMVPLimits returns conservative ResourceGate ceilings for MVP resources.
@@ -375,18 +495,29 @@ func NewMVPCapabilityAuthorizer(store port.Store, clock interface{ Now() time.Ti
 func (a *CapabilityAuthorizer) denyBudget(
 	ctx context.Context,
 	operation domain.Operation,
+	capability string,
 	estimated domain.Budget,
 	now time.Time,
 	reason string,
 ) (AuthorizationOutcome, error) {
+	capability = strings.TrimSpace(capability)
+	if capability == "" {
+		capability = "unknown"
+	}
+	version := uint64(1)
+	if a != nil {
+		if desc, ok := a.Catalog.Latest(capability); ok {
+			version = desc.Version
+		}
+	}
 	dec := domain.PolicyDecision{
 		SchemaVersion:     domain.SchemaVersionV1,
 		Decision:          domain.PolicyDeny,
 		Reason:            reason,
 		PolicyVersion:     a.catalogPolicyVersion(),
-		Capability:        "model.complete",
-		CapabilityVersion: 1,
-		CapabilityRef:     "model.complete@1",
+		Capability:        capability,
+		CapabilityVersion: version,
+		CapabilityRef:     fmt.Sprintf("%s@%d", capability, version),
 		OperationID:       operation.ID,
 		MissionRevision:   operation.MissionRevision,
 		IssuedAt:          now,

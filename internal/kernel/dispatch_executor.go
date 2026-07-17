@@ -8,12 +8,14 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-// DispatchExecutor routes a READY operation to LocalExecutor or ModelExecutor.
-// Local path is preferred when eligible so continuity never pays model cost.
-// When Model is nil, non-local ops stay skipped as requires_model.
+// DispatchExecutor routes a READY operation to Local, Web, or Model executors.
+// Local path is preferred when eligible so continuity never pays model/web cost.
+// Web path handles web.search/web.fetch under ResourceGate when Web is set.
+// When Model is nil, non-local non-web ops stay skipped as requires_model.
 type DispatchExecutor struct {
 	Store port.Store
 	Local LocalExecutor
+	Web   *WebExecutor   // optional
 	Model *ModelExecutor // optional
 }
 
@@ -61,6 +63,23 @@ func (d DispatchExecutor) Execute(ctx context.Context, operationID domain.Operat
 
 	if LocalEligible(spec) {
 		return d.Local.Execute(ctx, operationID)
+	}
+	if d.Web != nil && WebEligible(spec) {
+		webResult, err := d.Web.Execute(ctx, operationID)
+		if err != nil {
+			return ExecuteResult{OperationID: operationID, LeaseRef: webResult.LeaseRef}, err
+		}
+		return ExecuteResult{
+			OperationID: webResult.OperationID,
+			Completed:   webResult.Completed,
+			Skipped:     webResult.Skipped,
+			SkipReason:  webResult.SkipReason,
+			LeaseRef:    webResult.LeaseRef,
+			ArtifactID:  webResult.ArtifactID,
+		}, nil
+	}
+	if WebEligible(spec) && d.Web == nil {
+		return ExecuteResult{OperationID: operationID, Skipped: true, SkipReason: "requires_web"}, nil
 	}
 	if d.Model != nil && ModelEligible(spec) {
 		modelResult, err := d.Model.Execute(ctx, operationID)
