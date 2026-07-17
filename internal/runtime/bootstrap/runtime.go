@@ -43,12 +43,16 @@ type Runtime struct {
 	EventProcessor   observability.ExternalEventProcessor
 	ConfigApplier    *kernel.ConfigApplier
 	Scheduler        kernel.Scheduler
-	// Executor routes local continuity and optional PROPOSE_ONLY model paths.
+	// Executor routes local continuity and optional file/web/model paths.
 	Executor kernel.DispatchExecutor
 	// LeaseReaper reconciles expired RUNNING/VERIFYING leases before dispatch.
 	LeaseReaper kernel.LeaseReaper
 	// Model is optional; nil keeps non-local ops skipped as requires_model.
-	Model     *kernel.ModelExecutor
+	Model *kernel.ModelExecutor
+	// Web is optional; nil keeps web-eligible ops skipped as requires_web.
+	Web *kernel.WebExecutor
+	// File is optional; nil keeps file-eligible ops skipped as requires_file.
+	File      *kernel.FileExecutor
 	Registry  *kernel.StrategyRegistry
 	Cooldowns *kernel.StrategyCooldownBook
 
@@ -262,6 +266,22 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
+	webExec, err := buildWeb(opts, store, clock, ids)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, fmt.Errorf("web provider: %w", err)
+	}
+	fileExec, err := buildFile(opts, store, clock, ids)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, fmt.Errorf("file provider: %w", err)
+	}
 	// Expose declared/probed provider capabilities on inspect (read-only; FR-MODEL-005).
 	if modelExec != nil {
 		projector.SetModelProvider(modelExec.Provider)
@@ -282,10 +302,14 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Executor: kernel.DispatchExecutor{
 			Store: store,
 			Local: localExec,
+			File:  fileExec,
+			Web:   webExec,
 			Model: modelExec,
 		},
 		LeaseReaper:     leaseReaper,
 		Model:           modelExec,
+		Web:             webExec,
+		File:            fileExec,
 		Registry:        registry,
 		Cooldowns:       cooldowns,
 		Inspect:         inspectAPI,
@@ -318,6 +342,24 @@ func (rt *Runtime) AttachModel(model *kernel.ModelExecutor) {
 	}
 	rt.Model = model
 	rt.Executor.Model = model
+}
+
+// AttachWeb wires a READ_ONLY WebExecutor into the dispatch path. nil clears it.
+func (rt *Runtime) AttachWeb(web *kernel.WebExecutor) {
+	if rt == nil {
+		return
+	}
+	rt.Web = web
+	rt.Executor.Web = web
+}
+
+// AttachFile wires a READ_ONLY FileExecutor into the dispatch path. nil clears it.
+func (rt *Runtime) AttachFile(file *kernel.FileExecutor) {
+	if rt == nil {
+		return
+	}
+	rt.File = file
+	rt.Executor.File = file
 }
 
 // mountTelegramWebhook layers a validated webhook route over the existing mux

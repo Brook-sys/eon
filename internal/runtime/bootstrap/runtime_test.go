@@ -855,3 +855,83 @@ func TestOpenWithoutFallbackKeepsNilFallbackProvider(t *testing.T) {
 		t.Fatal("FallbackProvider must stay nil without fallback options")
 	}
 }
+
+func TestOpenWiresWebAndFileExecutors(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	searchServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"results":[{"title":"t","url":"https://example.com","content":"s"}]}`))
+	}))
+	t.Cleanup(searchServer.Close)
+
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		RuntimeName:  "test-web-file",
+		Web: &bootstrap.WebOptions{
+			Enabled:       true,
+			SearchBaseURL: searchServer.URL,
+			EnableFetch:   true,
+			// Tests may target the httptest loopback.
+			FetchAllowPrivate: true,
+			IngestFetched:     false,
+			PolicyVersion:     "policy@web-wire",
+		},
+		File: &bootstrap.FileOptions{
+			Enabled: true,
+			Roots: []bootstrap.FileRootConfig{
+				{Name: "default", Path: root},
+			},
+			PolicyVersion: "policy@file-wire",
+		},
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Web == nil || rt.Executor.Web == nil {
+		t.Fatal("Web executor must be wired")
+	}
+	if rt.File == nil || rt.Executor.File == nil {
+		t.Fatal("File executor must be wired")
+	}
+	if rt.Web.Searcher == nil || rt.Web.Fetcher == nil {
+		t.Fatal("web searcher and fetcher must be present")
+	}
+	if len(rt.File.Roots) != 1 || rt.File.Roots[0].Path != root {
+		t.Fatalf("file roots = %#v", rt.File.Roots)
+	}
+}
+
+func TestOpenWebRequiresAdapter(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	_, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		Web: &bootstrap.WebOptions{
+			Enabled: true,
+			// No search URL and fetch disabled.
+		},
+	})
+	if err == nil {
+		t.Fatal("expected validation error when web has no adapters")
+	}
+}
+
+func TestOpenFileRequiresRoots(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	_, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		File: &bootstrap.FileOptions{
+			Enabled: true,
+		},
+	})
+	if err == nil {
+		t.Fatal("expected validation error when file has no roots")
+	}
+}

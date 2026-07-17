@@ -8,13 +8,15 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-// DispatchExecutor routes a READY operation to Local, Web, or Model executors.
-// Local path is preferred when eligible so continuity never pays model/web cost.
+// DispatchExecutor routes a READY operation to Local, File, Web, or Model executors.
+// Local path is preferred when eligible so continuity never pays model/web/file cost.
+// File path handles file.discover/file.read under authorized roots when File is set.
 // Web path handles web.search/web.fetch under ResourceGate when Web is set.
-// When Model is nil, non-local non-web ops stay skipped as requires_model.
+// When Model is nil, non-local non-web/file ops stay skipped as requires_model.
 type DispatchExecutor struct {
 	Store port.Store
 	Local LocalExecutor
+	File  *FileExecutor  // optional
 	Web   *WebExecutor   // optional
 	Model *ModelExecutor // optional
 }
@@ -63,6 +65,23 @@ func (d DispatchExecutor) Execute(ctx context.Context, operationID domain.Operat
 
 	if LocalEligible(spec) {
 		return d.Local.Execute(ctx, operationID)
+	}
+	if d.File != nil && FileEligible(spec) {
+		fileResult, err := d.File.Execute(ctx, operationID)
+		if err != nil {
+			return ExecuteResult{OperationID: operationID, LeaseRef: fileResult.LeaseRef}, err
+		}
+		return ExecuteResult{
+			OperationID: fileResult.OperationID,
+			Completed:   fileResult.Completed,
+			Skipped:     fileResult.Skipped,
+			SkipReason:  fileResult.SkipReason,
+			LeaseRef:    fileResult.LeaseRef,
+			ArtifactID:  fileResult.ArtifactID,
+		}, nil
+	}
+	if FileEligible(spec) && d.File == nil {
+		return ExecuteResult{OperationID: operationID, Skipped: true, SkipReason: "requires_file"}, nil
 	}
 	if d.Web != nil && WebEligible(spec) {
 		webResult, err := d.Web.Execute(ctx, operationID)

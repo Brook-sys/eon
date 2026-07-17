@@ -194,7 +194,9 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 	if capability == "model.complete" && available.ModelCalls <= 0 {
 		return a.denyBudget(ctx, req.Operation, capability, estimated, now, "operation model_calls budget is zero")
 	}
-	if (capability == "web.search" || capability == "web.fetch") && available.Attempts <= 0 && available.IsZero() {
+	if (capability == "web.search" || capability == "web.fetch" ||
+		capability == "file.discover" || capability == "file.read") &&
+		available.Attempts <= 0 && available.IsZero() {
 		return a.denyBudget(ctx, req.Operation, capability, estimated, now, "operation budget is zero")
 	}
 

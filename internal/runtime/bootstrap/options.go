@@ -63,6 +63,58 @@ type Options struct {
 	// Model, when non-nil and enabled, wires a PROPOSE_ONLY OpenAI-compatible
 	// provider into DispatchExecutor. API keys come only from env (never flags).
 	Model *ModelOptions
+	// Web, when non-nil and enabled, wires web.search / web.fetch under FR-RES-001.
+	// Empty SearchBaseURL / Fetch disabled leave the corresponding adapter nil.
+	Web *WebOptions
+	// File, when non-nil and enabled, wires file.discover / file.read under
+	// authorized absolute roots (FR-RES-001/002). Requires at least one root.
+	File *FileOptions
+}
+
+// WebOptions configures optional READ_ONLY web acquisition adapters.
+// Secrets are not used for MVP SearXNG/httpfetch; deploy-level egress controls apply.
+type WebOptions struct {
+	Enabled bool
+	// SearchBaseURL is the SearXNG base URL (without /search). Empty disables search.
+	SearchBaseURL string
+	// EnableFetch turns on the hostile-by-default HTTP fetcher.
+	EnableFetch bool
+	// FetchMaxBytes caps response bodies (0 = adapter default 1 MiB).
+	FetchMaxBytes int64
+	// FetchAllowPrivate allows RFC1918/link-local targets (tests only; default false).
+	FetchAllowPrivate bool
+	// SearchMaxResponseBytes caps SearXNG JSON bodies (0 = adapter default).
+	SearchMaxResponseBytes int64
+	// DefaultSearchLimit is used when operations omit limit: (0 = executor default 5).
+	DefaultSearchLimit int
+	// PolicyVersion stamps capability authorizer decisions (empty = policy@runtime).
+	PolicyVersion string
+	// LeaseTTL bounds RUNNING/VERIFYING leases for web ops.
+	LeaseTTL time.Duration
+	// IngestFetched, when true, materializes Source lineage after successful fetch.
+	IngestFetched bool
+}
+
+// FileRootConfig is one operator-authorized absolute directory for file.* ops.
+type FileRootConfig struct {
+	Name string
+	// Path must be absolute on the host filesystem.
+	Path string
+}
+
+// FileOptions configures optional READ_ONLY file.discover / file.read.
+type FileOptions struct {
+	Enabled bool
+	// Roots lists authorized absolute directories. Required when Enabled.
+	Roots []FileRootConfig
+	// MaxReadBytes caps file.read content (0 = executor default 1 MiB).
+	MaxReadBytes int64
+	// MaxDiscoverEntries caps directory listing size (0 = executor default 256).
+	MaxDiscoverEntries int
+	// PolicyVersion stamps capability authorizer decisions (empty = policy@runtime).
+	PolicyVersion string
+	// LeaseTTL bounds RUNNING/VERIFYING leases for file ops.
+	LeaseTTL time.Duration
 }
 
 // ModelMaxOutputField is the Chat Completions dialect for bounding output.
@@ -295,6 +347,64 @@ func (o *Options) Validate() error {
 			}
 			// Write back defaults onto the nested pointer so buildModel sees them.
 			o.Model.Fallback = fb
+		}
+	}
+	if o.Web != nil && o.Web.Enabled {
+		hasSearch := strings.TrimSpace(o.Web.SearchBaseURL) != ""
+		if !hasSearch && !o.Web.EnableFetch {
+			return errors.New("web enabled requires search base URL and/or fetch")
+		}
+		if o.Web.FetchMaxBytes < 0 {
+			return errors.New("web fetch max bytes must not be negative")
+		}
+		if o.Web.SearchMaxResponseBytes < 0 {
+			return errors.New("web search max response bytes must not be negative")
+		}
+		if o.Web.DefaultSearchLimit < 0 {
+			return errors.New("web default search limit must not be negative")
+		}
+		if strings.TrimSpace(o.Web.PolicyVersion) == "" {
+			o.Web.PolicyVersion = "policy@runtime"
+		}
+		if o.Web.LeaseTTL <= 0 {
+			o.Web.LeaseTTL = 5 * time.Minute
+		}
+	}
+	if o.File != nil && o.File.Enabled {
+		if len(o.File.Roots) == 0 {
+			return errors.New("file enabled requires at least one authorized root")
+		}
+		seen := make(map[string]struct{}, len(o.File.Roots))
+		for i, root := range o.File.Roots {
+			name := strings.TrimSpace(root.Name)
+			path := strings.TrimSpace(root.Path)
+			if name == "" {
+				name = "default"
+			}
+			if path == "" || !strings.HasPrefix(path, "/") {
+				return fmt.Errorf("file root %d requires an absolute path", i)
+			}
+			if strings.Contains(path, "\x00") || strings.Contains(name, "\x00") {
+				return fmt.Errorf("file root %d contains NUL", i)
+			}
+			if _, ok := seen[name]; ok {
+				return fmt.Errorf("duplicate file root name %q", name)
+			}
+			seen[name] = struct{}{}
+			o.File.Roots[i].Name = name
+			o.File.Roots[i].Path = path
+		}
+		if o.File.MaxReadBytes < 0 {
+			return errors.New("file max read bytes must not be negative")
+		}
+		if o.File.MaxDiscoverEntries < 0 {
+			return errors.New("file max discover entries must not be negative")
+		}
+		if strings.TrimSpace(o.File.PolicyVersion) == "" {
+			o.File.PolicyVersion = "policy@runtime"
+		}
+		if o.File.LeaseTTL <= 0 {
+			o.File.LeaseTTL = 5 * time.Minute
 		}
 	}
 	if o.Telegram != nil && o.Telegram.Enabled {

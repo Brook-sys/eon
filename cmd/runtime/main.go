@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -45,6 +46,19 @@ func main() {
 		deliveryBatch    = flag.Int("delivery-batch", 8, "max outbox deliveries / reminder scans per control cycle")
 		deliveryLease    = flag.Duration("delivery-lease", 30*time.Second, "telegram outbox lease duration")
 		deliveryRetry    = flag.Duration("delivery-retry", 15*time.Second, "telegram outbox retry delay")
+		// Optional READ_ONLY web acquisition (FR-RES-001/002). Deploy-level egress
+		// controls remain outside the process; no secrets on flags.
+		webEnabled       = flag.Bool("web", false, "enable web.search / web.fetch path")
+		webSearchBaseURL = flag.String("web-search-base-url", "", "SearXNG base URL (enables web.search)")
+		webFetch         = flag.Bool("web-fetch", false, "enable hostile-by-default HTTP fetcher")
+		webFetchMaxBytes = flag.Int64("web-fetch-max-bytes", 0, "fetch body cap (0 = 1 MiB default)")
+		webAllowPrivate  = flag.Bool("web-fetch-allow-private", false, "allow private network targets (tests only)")
+		webIngestFetched = flag.Bool("web-ingest-fetched", true, "materialize Source lineage after fetch")
+		webSearchLimit   = flag.Int("web-search-limit", 0, "default search hit limit (0 = executor default)")
+		// Optional READ_ONLY file path under authorized absolute roots.
+		fileEnabled = flag.Bool("file", false, "enable file.discover / file.read path")
+		fileRoots   = flag.String("file-roots", "", "comma-separated name=/abs/path authorized roots")
+		fileMaxRead = flag.Int64("file-max-read-bytes", 0, "file.read cap (0 = 1 MiB default)")
 		// Optional OpenAI-compatible provider for non-local PROPOSE_ONLY ops.
 		// Secrets never appear as flags: pass -model-api-key-env=NAME only.
 		modelEnabled   = flag.Bool("model", false, "enable OpenAI-compatible PROPOSE_ONLY model path")
@@ -95,6 +109,28 @@ func main() {
 				MetricExportTimeout:     *otelMetricExport,
 			},
 		},
+	}
+	if *webEnabled {
+		opts.Web = &bootstrap.WebOptions{
+			Enabled:            true,
+			SearchBaseURL:      *webSearchBaseURL,
+			EnableFetch:        *webFetch,
+			FetchMaxBytes:      *webFetchMaxBytes,
+			FetchAllowPrivate:  *webAllowPrivate,
+			DefaultSearchLimit: *webSearchLimit,
+			IngestFetched:      *webIngestFetched,
+		}
+	}
+	if *fileEnabled {
+		roots, err := parseFileRootsFlag(*fileRoots)
+		if err != nil {
+			log.Fatalf("file-roots: %v", err)
+		}
+		opts.File = &bootstrap.FileOptions{
+			Enabled:      true,
+			Roots:        roots,
+			MaxReadBytes: *fileMaxRead,
+		}
 	}
 	if *modelEnabled {
 		mopts := &bootstrap.ModelOptions{
@@ -161,4 +197,39 @@ func main() {
 	if first != nil {
 		log.Fatalf("runtime exit: %v", first)
 	}
+}
+
+// parseFileRootsFlag accepts "name=/abs/path,other=/abs/other" entries.
+// A single bare absolute path becomes root name "default".
+func parseFileRootsFlag(raw string) ([]bootstrap.FileRootConfig, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, fmt.Errorf("at least one name=/abs/path root is required")
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]bootstrap.FileRootConfig, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if strings.HasPrefix(part, "/") && !strings.Contains(part, "=") {
+			out = append(out, bootstrap.FileRootConfig{Name: "default", Path: part})
+			continue
+		}
+		name, path, ok := strings.Cut(part, "=")
+		if !ok {
+			return nil, fmt.Errorf("root %q must be name=/abs/path", part)
+		}
+		name = strings.TrimSpace(name)
+		path = strings.TrimSpace(path)
+		if name == "" || path == "" {
+			return nil, fmt.Errorf("root %q needs non-empty name and path", part)
+		}
+		out = append(out, bootstrap.FileRootConfig{Name: name, Path: path})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("at least one name=/abs/path root is required")
+	}
+	return out, nil
 }
