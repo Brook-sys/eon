@@ -48,6 +48,9 @@ type AuthorizationOutcome struct {
 	Decision domain.PolicyDecision
 	// Permit is non-nil when the ResourceGate admitted cost.
 	Permit *domain.ResourcePermit
+	// Permits contains every ResourceGate reservation for a composite effect.
+	// Permit remains the first entry for backwards-compatible single gates.
+	Permits []*domain.ResourcePermit
 	// Acquire is set when a gate check ran (including denials).
 	Acquire *domain.ResourceAcquireResult
 	// Throttled is true when the operation should leave READY without running.
@@ -81,6 +84,9 @@ type CapabilityReserveRequest struct {
 	ResourceCost domain.ResourceCost
 	// DefaultResource is used when the decision Resource field is empty.
 	DefaultResource domain.ResourceID
+	// Resources, when non-empty, replaces the capability/default resource with
+	// a composite set of gates acquired under one policy/budget decision.
+	Resources []domain.ResourceID
 	// Priority feeds ResourceGate reserved-for-critical slots.
 	Priority int
 }
@@ -241,7 +247,18 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 	if resource == "" && capability == "model.complete" {
 		resource = DefaultModelCompleteResource
 	}
-	limit, hasLimit := a.Limits[resource]
+	resources := req.Resources
+	if len(resources) == 0 && resource != "" {
+		resources = []domain.ResourceID{resource}
+	}
+	if len(resources) == 0 {
+		out.Allowed = true
+		if err := a.persistAuthorized(ctx, req.Operation, decision, nil, now); err != nil {
+			return out, err
+		}
+		return out, nil
+	}
+	limit, hasLimit := a.Limits[resources[0]]
 	if !hasLimit || resource == "" {
 		// No configured gate for this resource: policy ALLOW is enough.
 		out.Allowed = true
@@ -260,44 +277,55 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 		}
 	}
 
-	var usage domain.ResourceUsage
-	err = a.Store.View(ctx, func(r port.Reader) error {
-		u, err := r.ResourceUsage(resource)
-		if err != nil {
-			if errors.Is(err, port.ErrNotFound) {
-				usage = domain.ResourceUsage{Resource: resource}
+	acquires := make([]domain.ResourceAcquireResult, 0, len(resources))
+	for _, gatedResource := range resources {
+		limit, hasLimit = a.Limits[gatedResource]
+		if !hasLimit {
+			continue
+		}
+		var usage domain.ResourceUsage
+		err = a.Store.View(ctx, func(r port.Reader) error {
+			u, readErr := r.ResourceUsage(gatedResource)
+			if errors.Is(readErr, port.ErrNotFound) {
+				usage = domain.ResourceUsage{Resource: gatedResource}
 				return nil
 			}
-			return err
-		}
-		usage = u
-		return nil
-	})
-	if err != nil {
-		return out, err
-	}
-
-	acquire, err := domain.Acquire(limit, usage, cost, req.Priority, now)
-	if err != nil {
-		return out, err
-	}
-	out.Acquire = &acquire
-	if !acquire.Allowed {
-		out.Throttled = true
-		out.SkipReason = "resource_" + strings.ToLower(acquire.FailureCode)
-		if out.SkipReason == "resource_" {
-			out.SkipReason = "resource_denied"
-		}
-		if err := a.applyThrottle(ctx, req.Operation, resource, decision, acquire, now); err != nil {
+			usage = u
+			return readErr
+		})
+		if err != nil {
 			return out, err
 		}
-		return out, nil
+		acquire, acquireErr := domain.Acquire(limit, usage, cost, req.Priority, now)
+		if acquireErr != nil {
+			return out, acquireErr
+		}
+		out.Acquire = &acquire
+		if !acquire.Allowed {
+			out.Throttled = true
+			out.SkipReason = "resource_" + strings.ToLower(acquire.FailureCode)
+			if out.SkipReason == "resource_" {
+				out.SkipReason = "resource_denied"
+			}
+			// READY callers can be moved to WAIT_UNTIL. Model recovery attempts
+			// authorize under an existing RUNNING/VERIFYING lease, where changing
+			// state here would violate the lease transition contract.
+			if req.Operation.State == domain.StateReady {
+				if err := a.applyThrottle(ctx, req.Operation, gatedResource, decision, acquire, now); err != nil {
+					return out, err
+				}
+			}
+			return out, nil
+		}
+		acquires = append(acquires, acquire)
 	}
 
 	// Persist projected usage (in-flight reservation) before effect.
 	if err := a.Store.Update(ctx, func(tx port.Transaction) error {
-		if err := tx.SaveResourceUsage(acquire.Usage); err != nil {
-			return err
+		for _, acquire := range acquires {
+			if err := tx.SaveResourceUsage(acquire.Usage); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.AppendEvent(domain.Event{
 			SchemaVersion:   domain.SchemaVersionV1,
@@ -307,7 +335,7 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 			MissionRevision: req.Operation.MissionRevision,
 			InquiryID:       req.Operation.InquiryID,
 			OperationID:     req.Operation.ID,
-			PayloadRef:      decision.CapabilityRef + ";resource=" + string(resource) + ";reason=" + decision.Reason,
+			PayloadRef:      decision.CapabilityRef + ";resources=" + joinResourceIDs(resources) + ";reason=" + decision.Reason,
 		}); err != nil {
 			return err
 		}
@@ -316,8 +344,19 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 		return out, err
 	}
 	out.Allowed = true
-	out.Permit = acquire.Permit
+	for _, acquire := range acquires {
+		out.Permits = append(out.Permits, acquire.Permit)
+	}
+	if len(out.Permits) > 0 {
+		out.Permit = out.Permits[0]
+	}
 	return out, nil
+}
+
+func joinResourceIDs(resources []domain.ResourceID) string {
+	values := make([]string, len(resources))
+	for i, resource := range resources { values[i] = string(resource) }
+	return strings.Join(values, ",")
 }
 
 // ReportCapability releases the ResourceGate slot after an authorized effect.
@@ -393,7 +432,16 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 	operation domain.Operation,
 	spec domain.OperationSpec,
 	priority int,
+	providerID string,
+	bindingID string,
 ) (AuthorizationOutcome, error) {
+	var resources []domain.ResourceID
+	if providerID != "" && bindingID != "" {
+		resources = []domain.ResourceID{
+			domain.ModelProviderResource(providerID),
+			domain.ModelBindingResource(bindingID),
+		}
+	}
 	return a.ReserveCapability(ctx, CapabilityReserveRequest{
 		Capability:      "model.complete",
 		ArgsDigest:      "model.complete:" + string(spec.ID),
@@ -403,6 +451,7 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 		AvailableBudget: spec.Budget,
 		ResourceCost:    ModelCompleteCost(spec),
 		DefaultResource: DefaultModelCompleteResource,
+		Resources:       resources,
 		Priority:        priority,
 	})
 }
@@ -412,11 +461,17 @@ func (a *CapabilityAuthorizer) ReserveModelComplete(
 func (a *CapabilityAuthorizer) ReportModelComplete(
 	ctx context.Context,
 	operation domain.Operation,
-	permit *domain.ResourcePermit,
+	permits []*domain.ResourcePermit,
 	success bool,
 	retryAfter *time.Time,
 ) error {
-	return a.ReportCapability(ctx, operation, permit, success, retryAfter)
+	var lastErr error
+	for _, permit := range permits {
+		if err := a.ReportCapability(ctx, operation, permit, success, retryAfter); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
 }
 
 // DefaultMVPLimits returns conservative ResourceGate ceilings for MVP resources.

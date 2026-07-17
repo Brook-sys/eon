@@ -44,7 +44,7 @@ func TestReserveModelCompleteAllowsAndPersistsUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := auth.ReserveModelComplete(ctx, op, spec, 0)
+	out, err := auth.ReserveModelComplete(ctx, op, spec, 0, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestReserveModelCompleteAllowsAndPersistsUsage(t *testing.T) {
 		t.Fatalf("authorized events = %v", kinds)
 	}
 
-	if err := auth.ReportModelComplete(ctx, op, out.Permit, true, nil); err != nil {
+	if err := auth.ReportModelComplete(ctx, op, []*domain.ResourcePermit{out.Permit}, true, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.View(ctx, func(r port.Reader) error {
@@ -132,7 +132,7 @@ func TestReserveModelCompleteThrottlesWhenConcurrencySaturated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	first, err := auth.ReserveModelComplete(ctx, op, spec, 0)
+	first, err := auth.ReserveModelComplete(ctx, op, spec, 0, "", "")
 	if err != nil || !first.Allowed {
 		t.Fatalf("first reserve: %+v err=%v", first, err)
 	}
@@ -147,7 +147,7 @@ func TestReserveModelCompleteThrottlesWhenConcurrencySaturated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	second, err := auth.ReserveModelComplete(ctx, op2, spec, 0)
+	second, err := auth.ReserveModelComplete(ctx, op2, spec, 0, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestReserveModelCompleteDeniesWithoutPermission(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := auth.ReserveModelComplete(ctx, op, spec, 0)
+	out, err := auth.ReserveModelComplete(ctx, op, spec, 0, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

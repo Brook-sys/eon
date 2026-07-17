@@ -83,12 +83,24 @@ func buildModel(
 		},
 		PolicyVersion: modelOpts.PolicyVersion,
 		LeaseTTL:      modelOpts.LeaseTTL,
+		PrimaryProviderID: modelOpts.ProviderID,
+		PrimaryBindingID:  modelOpts.BindingID,
+	}
+	if fb := modelOpts.Fallback; fb != nil {
+		exec.FallbackProviderID = fb.ProviderID
+		exec.FallbackBindingID = fb.BindingID
 	}
 	// FR-RES-001: opt-in ResourceGate + PolicyEngine for model.complete.
 	// Fail-closed MVP catalog; limits default; usage is durable via store.
 	authorizer, err := kernel.NewMVPCapabilityAuthorizer(store, clock, modelOpts.PolicyVersion)
 	if err != nil {
 		return nil, fmt.Errorf("capability authorizer: %w", err)
+	}
+	if modelOpts.ProviderLimit.Resource != "" { authorizer.Limits[modelOpts.ProviderLimit.Resource] = modelOpts.ProviderLimit }
+	if modelOpts.BindingLimit.Resource != "" { authorizer.Limits[modelOpts.BindingLimit.Resource] = modelOpts.BindingLimit }
+	if fb := modelOpts.Fallback; fb != nil {
+		if fb.ProviderLimit.Resource != "" { authorizer.Limits[fb.ProviderLimit.Resource] = fb.ProviderLimit }
+		if fb.BindingLimit.Resource != "" { authorizer.Limits[fb.BindingLimit.Resource] = fb.BindingLimit }
 	}
 	exec.Authorizer = authorizer
 	return exec, nil
@@ -118,6 +130,10 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 		}
 		selected = append(selected, &ModelOptions{
 			Enabled:          true,
+			ProviderID:       provider.ID,
+			BindingID:        binding.ID,
+			ProviderLimit:    provider.GlobalLimit,
+			BindingLimit:     binding.Limit,
 			BaseURL:          provider.BaseURL,
 			Model:            binding.ModelID,
 			APIKeyEnv:        provider.APIKeyEnv,
@@ -141,6 +157,10 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 	if len(selected) == 2 {
 		selected[0].Fallback = &ModelFallbackOptions{
 			Enabled:          true,
+			ProviderID:       selected[1].ProviderID,
+			BindingID:        selected[1].BindingID,
+			ProviderLimit:    selected[1].ProviderLimit,
+			BindingLimit:     selected[1].BindingLimit,
 			BaseURL:          selected[1].BaseURL,
 			Model:            selected[1].Model,
 			APIKeyEnv:        selected[1].APIKeyEnv,
