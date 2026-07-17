@@ -98,11 +98,11 @@ func (e ModelExecutor) leaseTTL() time.Duration {
 
 // releaseResourcePermit reports ResourceGate success/failure when an authorizer
 // reserved a slot. Best-effort: never overrides the primary Execute error path.
-func (e ModelExecutor) releaseResourcePermit(ctx context.Context, operation domain.Operation, permit *domain.ResourcePermit, success bool) {
+func (e ModelExecutor) releaseResourcePermit(ctx context.Context, operation domain.Operation, permit *domain.ResourcePermit, success bool, retryAfter *time.Time) {
 	if e.Authorizer == nil || permit == nil {
 		return
 	}
-	_ = e.Authorizer.ReportModelComplete(ctx, operation, permit, success, nil)
+	_ = e.Authorizer.ReportModelComplete(ctx, operation, permit, success, retryAfter)
 }
 
 // ModelEligible reports whether an OperationSpec should run on the model path.
@@ -281,12 +281,12 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	})
 	if err != nil {
 		// Best-effort release of reserved gate slot if dispatch failed after reserve.
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, err
 	}
 	if result.Skipped {
 		// Race: another path changed state after authorize — release reservation.
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, nil
 	}
 
@@ -304,7 +304,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	compileInput, err := e.buildPromptInput(operation, spec, baseCommit)
 	if err != nil {
 		failErr := e.failRunning(ctx, operation, leaseRef, err)
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, failErr
 	}
 	// FR-MODEL-006/007: select reversible enrichment + conservative context.
@@ -322,7 +322,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	compiled, err := compiler.Compile(spec, compileInput)
 	if err != nil {
 		failErr := e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, failErr
 	}
 	_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, 0)
@@ -331,7 +331,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if maxCalls <= 0 {
 		// Budget zero means no Complete authorized (domain.Budget semantics).
 		failErr := e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, failErr
 	}
 	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
@@ -343,6 +343,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	var lastCompletion port.CompletionResult
 	var lastErr error
 	var lastRaw string
+	var lastRetryAfter *time.Time
 
 	for {
 		if budget.ModelCallsUsed >= maxCalls {
@@ -352,6 +353,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
+			var providerErr port.ProviderError
+			if errors.As(callErr, &providerErr) {
+				if ra := providerErr.RetryAfterDelay(); ra > 0 {
+					t := e.Clock.Now().UTC().Add(ra)
+					lastRetryAfter = &t
+				}
+			}
 			lastErr = fmt.Errorf("model complete: %w", callErr)
 			// FR-MODEL-006: enrichment-related transport failures demote and retry
 			// on baseline when budget remains; other provider errors exit the loop.
@@ -419,7 +427,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				return nil
 			})
 			if err != nil {
-				e.releaseResourcePermit(ctx, operation, permit, false)
+				e.releaseResourcePermit(ctx, operation, permit, false, nil)
 				return result, err
 			}
 		} else {
@@ -512,10 +520,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				return nil
 			})
 			if err != nil {
-				e.releaseResourcePermit(ctx, operation, permit, false)
+				e.releaseResourcePermit(ctx, operation, permit, false, nil)
 				return result, err
 			}
-			e.releaseResourcePermit(ctx, operation, permit, true)
+			e.releaseResourcePermit(ctx, operation, permit, true, nil)
 			return result, nil
 		}
 
@@ -585,13 +593,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		case domain.DispositionReplan:
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			failErr := e.failVerifying(ctx, operation, leaseRef, lastErr)
-			e.releaseResourcePermit(ctx, operation, permit, false)
+			e.releaseResourcePermit(ctx, operation, permit, false, nil)
 			return result, failErr
 		default: // Exhaust
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			result.Exhausted = true
 			failErr := e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
-			e.releaseResourcePermit(ctx, operation, permit, false)
+			e.releaseResourcePermit(ctx, operation, permit, false, nil)
 			return result, failErr
 		}
 	}
@@ -622,16 +630,16 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if decision.Disposition == domain.DispositionExhaust {
 		result.Exhausted = true
 		failErr := e.exhaustOperation(ctx, operation, leaseRef, lastErr, decision)
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, failErr
 	}
 	if operation.State == domain.StateVerifying {
 		failErr := e.failVerifying(ctx, operation, leaseRef, lastErr)
-		e.releaseResourcePermit(ctx, operation, permit, false)
+		e.releaseResourcePermit(ctx, operation, permit, false, nil)
 		return result, failErr
 	}
 	failErr := e.failRunning(ctx, operation, leaseRef, lastErr)
-	e.releaseResourcePermit(ctx, operation, permit, false)
+	e.releaseResourcePermit(ctx, operation, permit, false, lastRetryAfter)
 	return result, failErr
 }
 

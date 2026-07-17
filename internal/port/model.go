@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"time"
 
 	"motor-autonomo/internal/domain"
 )
@@ -25,6 +26,15 @@ type CompletionResult struct {
 	InputTokens  int
 	OutputTokens int
 	Model        string
+}
+
+// ProviderError represents an active rejection from the provider.
+// It exposes retry availability without exposing raw error bodies.
+type ProviderError interface {
+	error
+	// RetryAfterDelay returns the earliest safe retry delay declared by the provider,
+	// or zero if none was provided.
+	RetryAfterDelay() time.Duration
 }
 
 // ModelProvider is the minimum text→text contract. Adapters may also implement
