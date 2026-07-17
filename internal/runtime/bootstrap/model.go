@@ -1,8 +1,10 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"motor-autonomo/internal/changeset"
@@ -23,23 +25,35 @@ func buildModel(
 	ids source.IDGenerator,
 	telemetry *observability.Runtime,
 ) (*kernel.ModelExecutor, error) {
-	if opts.Model == nil || !opts.Model.Enabled {
+	modelOpts := opts.Model
+	models, found, err := kernel.ActiveModelsConfig(context.Background(), store)
+	if err != nil {
+		return nil, fmt.Errorf("load active models config: %w", err)
+	}
+	if found {
+		resolved, resolveErr := modelOptionsFromCatalog(models, opts.Model)
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		modelOpts = resolved
+	}
+	if modelOpts == nil || !modelOpts.Enabled {
 		return nil, nil
 	}
-	modelProvider, err := openModelProvider(opts.Model.BaseURL, opts.Model.Model, opts.Model.APIKeyEnv, opts.Model.MaxOutputField, opts.Model.ContextTokens, opts.Model.MaxResponseBytes, "openai-compatible", telemetry)
+	modelProvider, err := openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, "openai-compatible", telemetry)
 	if err != nil {
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
 	var fallbackProvider port.ModelProvider
-	if fb := opts.Model.Fallback; fb != nil && fb.Enabled {
+	if fb := modelOpts.Fallback; fb != nil && fb.Enabled {
 		// Context/field defaults are filled by Options.Validate; still defend here.
 		field := fb.MaxOutputField
 		if field == "" {
-			field = opts.Model.MaxOutputField
+			field = modelOpts.MaxOutputField
 		}
 		ctxTokens := fb.ContextTokens
 		if ctxTokens <= 0 {
-			ctxTokens = opts.Model.ContextTokens
+			ctxTokens = modelOpts.ContextTokens
 		}
 		fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, "openai-compatible-fallback", telemetry)
 		if err != nil {
@@ -50,7 +64,7 @@ func buildModel(
 		Store:         store,
 		Clock:         clock,
 		IDs:           ids,
-		PolicyVersion: opts.Model.PolicyVersion,
+		PolicyVersion: modelOpts.PolicyVersion,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("changeset processor: %w", err)
@@ -64,19 +78,76 @@ func buildModel(
 		Changes:          processor,
 		Compiler: prompt.Compiler{
 			Estimator:             prompt.ConservativeEstimator{},
-			ProviderContextTokens: opts.Model.ContextTokens,
+			ProviderContextTokens: modelOpts.ContextTokens,
 		},
-		PolicyVersion: opts.Model.PolicyVersion,
-		LeaseTTL:      opts.Model.LeaseTTL,
+		PolicyVersion: modelOpts.PolicyVersion,
+		LeaseTTL:      modelOpts.LeaseTTL,
 	}
 	// FR-RES-001: opt-in ResourceGate + PolicyEngine for model.complete.
 	// Fail-closed MVP catalog; limits default; usage is durable via store.
-	authorizer, err := kernel.NewMVPCapabilityAuthorizer(store, clock, opts.Model.PolicyVersion)
+	authorizer, err := kernel.NewMVPCapabilityAuthorizer(store, clock, modelOpts.PolicyVersion)
 	if err != nil {
 		return nil, fmt.Errorf("capability authorizer: %w", err)
 	}
 	exec.Authorizer = authorizer
 	return exec, nil
+}
+
+func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions) (*ModelOptions, error) {
+	providers := make(map[string]domain.ModelProviderConfig, len(config.Providers))
+	for _, provider := range config.Providers {
+		providers[provider.ID] = provider
+	}
+	bindings := append([]domain.ModelBindingConfig(nil), config.Bindings...)
+	sort.SliceStable(bindings, func(i, j int) bool {
+		if bindings[i].Priority == bindings[j].Priority {
+			return bindings[i].ID < bindings[j].ID
+		}
+		return bindings[i].Priority < bindings[j].Priority
+	})
+	selected := make([]*ModelOptions, 0, 2)
+	for _, binding := range bindings {
+		if !binding.Enabled {
+			continue
+		}
+		provider := providers[binding.ProviderRef]
+		field := ModelMaxOutputTokensLegacy
+		if binding.MaxOutputDialect == domain.MaxOutputDialectCompletion {
+			field = ModelMaxOutputTokensCompletion
+		}
+		selected = append(selected, &ModelOptions{
+			Enabled:          true,
+			BaseURL:          provider.BaseURL,
+			Model:            binding.ModelID,
+			APIKeyEnv:        provider.APIKeyEnv,
+			MaxOutputField:   field,
+			ContextTokens:    binding.ContextTokens,
+			PolicyVersion:    config.Version,
+			LeaseTTL:         15 * time.Minute,
+			MaxResponseBytes: provider.MaxResponseBytes,
+		})
+		if len(selected) == 2 {
+			break
+		}
+	}
+	if len(selected) == 0 {
+		return nil, nil
+	}
+	if fallback != nil && fallback.LeaseTTL > 0 {
+		selected[0].LeaseTTL = fallback.LeaseTTL
+	}
+	if len(selected) == 2 {
+		selected[0].Fallback = &ModelFallbackOptions{
+			Enabled:          true,
+			BaseURL:          selected[1].BaseURL,
+			Model:            selected[1].Model,
+			APIKeyEnv:        selected[1].APIKeyEnv,
+			MaxOutputField:   selected[1].MaxOutputField,
+			ContextTokens:    selected[1].ContextTokens,
+			MaxResponseBytes: selected[1].MaxResponseBytes,
+		}
+	}
+	return selected[0], nil
 }
 
 // openModelProvider builds one OpenAI-compatible provider (+ optional OTel).

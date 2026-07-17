@@ -150,6 +150,32 @@ func ResolveSchedulerCadence(ctx context.Context, store port.Store, explicit dom
 	return ActiveSchedulerCadence(ctx, store)
 }
 
+// ActiveModelsConfig loads the active MODELS catalog. An absent revision is
+// not an error: bootstrap may continue using its process-local model options.
+func ActiveModelsConfig(ctx context.Context, store port.Store) (domain.ModelsConfig, bool, error) {
+	if store == nil {
+		return domain.ModelsConfig{}, false, errors.New("active models config requires store")
+	}
+	var config domain.ModelsConfig
+	var found bool
+	err := store.View(ctx, func(r port.Reader) error {
+		revision, err := r.ActiveConfigRevision(domain.ConfigScopeModels)
+		if errors.Is(err, port.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if revision.Models == nil {
+			return fmt.Errorf("active models revision %s has no payload", revision.ID)
+		}
+		config = *revision.Models
+		found = true
+		return config.Validate()
+	})
+	return config, found, err
+}
+
 // ActiveReminderPolicy projects the active interruption policy's reminder
 // section (or the built-in default, which disables reminders).
 func ActiveReminderPolicy(ctx context.Context, store port.Store) (domain.ReminderPolicy, error) {
