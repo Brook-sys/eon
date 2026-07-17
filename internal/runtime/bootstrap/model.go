@@ -40,7 +40,7 @@ func buildModel(
 	if modelOpts == nil || !modelOpts.Enabled {
 		return nil, nil
 	}
-	modelProvider, err := openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, "openai-compatible", telemetry)
+	modelProvider, err := openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, modelOpts.Timeout, "openai-compatible", telemetry)
 	if err != nil {
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
@@ -55,7 +55,7 @@ func buildModel(
 		if ctxTokens <= 0 {
 			ctxTokens = modelOpts.ContextTokens
 		}
-		fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, "openai-compatible-fallback", telemetry)
+		fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, fb.Timeout, "openai-compatible-fallback", telemetry)
 		if err != nil {
 			return nil, fmt.Errorf("model fallback provider: %w", err)
 		}
@@ -125,6 +125,7 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 			PolicyVersion:    config.Version,
 			LeaseTTL:         15 * time.Minute,
 			MaxResponseBytes: provider.MaxResponseBytes,
+			Timeout:          provider.Timeout,
 		})
 		if len(selected) == 2 {
 			break
@@ -145,6 +146,7 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 			MaxOutputField:   selected[1].MaxOutputField,
 			ContextTokens:    selected[1].ContextTokens,
 			MaxResponseBytes: selected[1].MaxResponseBytes,
+			Timeout:          selected[1].Timeout,
 		}
 	}
 	return selected[0], nil
@@ -157,6 +159,7 @@ func openModelProvider(
 	maxField ModelMaxOutputField,
 	contextTokens int,
 	maxResponseBytes int64,
+	timeout time.Duration,
 	profileName string,
 	telemetry *observability.Runtime,
 ) (port.ModelProvider, error) {
@@ -183,6 +186,7 @@ func openModelProvider(
 		Model:            modelName,
 		MaxOutputField:   field,
 		MaxResponseBytes: maxResponseBytes,
+		Timeout:          timeout,
 	}, openai.WithContextTokens(contextTokens), openai.WithProfileName(profileName))
 	if err != nil {
 		return nil, err

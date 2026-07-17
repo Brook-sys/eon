@@ -147,6 +147,8 @@ type ModelOptions struct {
 	LeaseTTL time.Duration
 	// MaxResponseBytes caps raw provider HTTP body size (0 = adapter default).
 	MaxResponseBytes int64
+	// Timeout bounds one provider HTTP call (0 = adapter default).
+	Timeout time.Duration
 	// Fallback is the optional FR-MODEL-004 step-7 alternate provider. When
 	// Enabled with BaseURL+Model, bootstrap wires ModelExecutor.FallbackProvider.
 	// Empty/nil leaves FallbackAvailable=false (policy never invents a provider).
@@ -169,6 +171,8 @@ type ModelFallbackOptions struct {
 	ContextTokens int
 	// MaxResponseBytes caps alternate HTTP body size (0 = adapter default).
 	MaxResponseBytes int64
+	// Timeout bounds one alternate provider HTTP call (0 = adapter default).
+	Timeout time.Duration
 }
 
 // TelegramIngressMode is the process-local inbound update collection mode.
