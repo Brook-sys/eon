@@ -160,7 +160,7 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 
 - [x] núcleo puro de roteamento ordenado por preferência/contexto/saúde, com razões auditáveis e hidratação de `ResourceUsage`;
 - [ ] integrar o roteador ao executor multi-binding além do primário + fallback;
-- taxonomia de falhas HTTP por binding;
+- [x] taxonomia de falhas HTTP por binding;
 - redução reversível de contexto para pressão NIM e recuperação gradual após janela saudável;
 - eventos/inspect de decisão.
 
