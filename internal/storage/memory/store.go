@@ -2379,6 +2379,7 @@ func cloneConfigDraft(v domain.ConfigDraft) domain.ConfigDraft {
 	v.Horizon = cloneHorizonPtr(v.Horizon)
 	v.Interruption = cloneInterruptionPtr(v.Interruption)
 	v.Channels = cloneChannelsPtr(v.Channels)
+	v.Models = cloneModelsPtr(v.Models)
 	return v
 }
 
@@ -2388,6 +2389,7 @@ func cloneConfigRevision(v domain.ConfigRevision) domain.ConfigRevision {
 	v.Horizon = cloneHorizonPtr(v.Horizon)
 	v.Interruption = cloneInterruptionPtr(v.Interruption)
 	v.Channels = cloneChannelsPtr(v.Channels)
+	v.Models = cloneModelsPtr(v.Models)
 	return v
 }
 
@@ -2429,6 +2431,16 @@ func cloneChannelsPtr(v *domain.ChannelsConfig) *domain.ChannelsConfig {
 	}
 	cp := *v
 	cp.Routes = append([]domain.ChannelRouteConfig(nil), v.Routes...)
+	return &cp
+}
+
+func cloneModelsPtr(v *domain.ModelsConfig) *domain.ModelsConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Providers = append([]domain.ModelProviderConfig(nil), v.Providers...)
+	cp.Bindings = append([]domain.ModelBindingConfig(nil), v.Bindings...)
 	return &cp
 }
 

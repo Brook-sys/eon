@@ -106,8 +106,12 @@ func validateStableID(value, field string) error {
 	return nil
 }
 
-func ModelProviderResource(providerID string) ResourceID { return ResourceID("model-provider:" + providerID) }
-func ModelBindingResource(bindingID string) ResourceID   { return ResourceID("model-binding:" + bindingID) }
+func ModelProviderResource(providerID string) ResourceID {
+	return ResourceID("model-provider:" + providerID)
+}
+func ModelBindingResource(bindingID string) ResourceID {
+	return ResourceID("model-binding:" + bindingID)
+}
 
 // ModelsConfig is the versioned provider/binding catalog. It stores only
 // secret references (environment-variable names), never credential values.
