@@ -437,7 +437,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			// Transport/provider errors without recoverable enrichment: disposition after loop.
 			break
 		}
-		observedTotal := completion.Usage.InputTokens + completion.Usage.OutputTokens
+		observedTotal := completion.InputTokens + completion.OutputTokens
 		e.releaseResourcePermitsWithTokens(ctx, operation, permits, true, nil, observedTotal)
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
