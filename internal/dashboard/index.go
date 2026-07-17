@@ -404,6 +404,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           <option value="RUNTIME">RUNTIME</option>
           <option value="SCHEDULER">SCHEDULER</option>
           <option value="CHANNELS">CHANNELS</option>
+          <option value="MODELS">MODELS</option>
         </select>
       </label>
       <label>draft status filter
@@ -983,6 +984,50 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
             priority: 10,
             credential_ref: { kind: "env", name: "NONE" },
             max_deliveries_per_hour: 60
+          }]
+        };
+      case "MODELS":
+        return {
+          version: "models.v1",
+          providers: [{
+            id: "groq",
+            kind: "groq",
+            base_url: "https://api.groq.com/openai/v1",
+            api_key_env: "GROQ_API_KEY",
+            timeout: 30000000000,
+            max_response_bytes: 1048576,
+            global_limit: {
+              resource: "model-provider:groq",
+              max_concurrent: 2,
+              max_per_minute: 30,
+              max_per_day: 0,
+              max_tokens_per_minute: 0,
+              failure_threshold: 3,
+              cooldown_base: 30000000000,
+              cooldown_max: 300000000000,
+              reserved_for_critical: 0
+            }
+          }],
+          bindings: [{
+            id: "groq-primary",
+            provider_ref: "groq",
+            model_id: "replace-with-operator-confirmed-model-id",
+            enabled: false,
+            priority: 10,
+            context_tokens: 8192,
+            max_output_tokens: 512,
+            max_output_dialect: "max_tokens",
+            limit: {
+              resource: "model-binding:groq-primary",
+              max_concurrent: 1,
+              max_per_minute: 0,
+              max_per_day: 0,
+              max_tokens_per_minute: 0,
+              failure_threshold: 3,
+              cooldown_base: 30000000000,
+              cooldown_max: 300000000000,
+              reserved_for_critical: 0
+            }
           }]
         };
       default:
