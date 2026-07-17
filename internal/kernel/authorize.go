@@ -370,6 +370,19 @@ func (a *CapabilityAuthorizer) ReportCapability(
 	success bool,
 	retryAfter *time.Time,
 ) error {
+	return a.ReportCapabilityObserved(ctx, operation, permit, success, retryAfter, 0)
+}
+
+// ReportCapabilityObserved additionally reconciles a successful model call's
+// provider-reported token total against the estimate charged on acquire.
+func (a *CapabilityAuthorizer) ReportCapabilityObserved(
+	ctx context.Context,
+	operation domain.Operation,
+	permit *domain.ResourcePermit,
+	success bool,
+	retryAfter *time.Time,
+	observedTokens int,
+) error {
 	if a == nil || permit == nil {
 		return nil
 	}
@@ -398,6 +411,9 @@ func (a *CapabilityAuthorizer) ReportCapability(
 		var next domain.ResourceUsage
 		if success {
 			next, err = domain.ReportSuccess(usage, permit.Cost, now)
+			if err == nil && observedTokens > 0 {
+				next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observedTokens, now)
+			}
 		} else {
 			next, err = domain.ReportFailure(usage, limit, permit.Cost, retryAfter, now)
 		}
@@ -465,9 +481,22 @@ func (a *CapabilityAuthorizer) ReportModelComplete(
 	success bool,
 	retryAfter *time.Time,
 ) error {
+	return a.ReportModelCompleteObserved(ctx, operation, permits, success, retryAfter, 0)
+}
+
+// ReportModelCompleteObserved releases all composite permits and reconciles
+// the same observed token total into each independently limited bucket.
+func (a *CapabilityAuthorizer) ReportModelCompleteObserved(
+	ctx context.Context,
+	operation domain.Operation,
+	permits []*domain.ResourcePermit,
+	success bool,
+	retryAfter *time.Time,
+	observedTokens int,
+) error {
 	var lastErr error
 	for _, permit := range permits {
-		if err := a.ReportCapability(ctx, operation, permit, success, retryAfter); err != nil {
+		if err := a.ReportCapabilityObserved(ctx, operation, permit, success, retryAfter, observedTokens); err != nil {
 			lastErr = err
 		}
 	}

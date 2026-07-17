@@ -262,6 +262,33 @@ func ReportSuccess(usage ResourceUsage, cost ResourceCost, now time.Time) (Resou
 	return next, nil
 }
 
+// ReconcileObservedTokens replaces the estimated token charge made at
+// acquire time with the provider-observed total for the same successful call.
+// Calls and slots are deliberately untouched: a completed request is never
+// refunded, and concurrency is released separately by ReportSuccess.
+//
+// When providers report more tokens than reserved this may move usage above
+// the configured ceiling; the next Acquire then waits for the minute window
+// to roll rather than pretending the excess did not happen.
+func ReconcileObservedTokens(usage ResourceUsage, estimated, observed int, now time.Time) (ResourceUsage, error) {
+	if err := usage.Validate(); err != nil {
+		return usage, err
+	}
+	if estimated < 0 || observed < 0 {
+		return usage, errors.New("token reconciliation values must not be negative")
+	}
+	if now.IsZero() {
+		return usage, errors.New("token reconciliation requires now")
+	}
+	if observed == 0 || estimated == observed {
+		return usage, nil
+	}
+	next := usage
+	next.TokenMinuteCount = saturatingSubInt(next.TokenMinuteCount, estimated)
+	next.TokenMinuteCount += observed
+	return next, nil
+}
+
 // ReportFailure releases in-flight slots, increments the failure streak, and
 // may open the circuit. retryAfter, when set (e.g. HTTP Retry-After), is the
 // earliest reopen instant and wins over computed cooldown if later.

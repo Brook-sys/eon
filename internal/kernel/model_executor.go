@@ -110,6 +110,15 @@ func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation dom
 	_ = e.Authorizer.ReportModelComplete(ctx, operation, permits, success, retryAfter)
 }
 
+// releaseResourcePermitsWithTokens replaces the conservative acquire estimate
+// with provider-observed input+output tokens on a successful attempt.
+func (e ModelExecutor) releaseResourcePermitsWithTokens(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time, observedTokens int) {
+	if e.Authorizer == nil || len(permits) == 0 {
+		return
+	}
+	_ = e.Authorizer.ReportModelCompleteObserved(ctx, operation, permits, success, retryAfter, observedTokens)
+}
+
 // ModelEligible reports whether an OperationSpec should run on the model path.
 // Continuity/local specs stay on LocalExecutor even if PROPOSE_ONLY.
 // Web/file acquisition specs stay on dedicated executors even if mis-tagged PROPOSE_ONLY.
@@ -428,7 +437,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			// Transport/provider errors without recoverable enrichment: disposition after loop.
 			break
 		}
-		e.releaseResourcePermits(ctx, operation, permits, true, nil)
+		observedTotal := completion.Usage.InputTokens + completion.Usage.OutputTokens
+		e.releaseResourcePermitsWithTokens(ctx, operation, permits, true, nil, observedTotal)
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
 		}

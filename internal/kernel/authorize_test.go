@@ -84,7 +84,7 @@ func TestReserveModelCompleteAllowsAndPersistsUsage(t *testing.T) {
 		t.Fatalf("authorized events = %v", kinds)
 	}
 
-	if err := auth.ReportModelComplete(ctx, op, []*domain.ResourcePermit{out.Permit}, true, nil); err != nil {
+	if err := auth.ReportModelCompleteObserved(ctx, op, []*domain.ResourcePermit{out.Permit}, true, nil, 100); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.View(ctx, func(r port.Reader) error {
@@ -95,6 +95,10 @@ func TestReserveModelCompleteAllowsAndPersistsUsage(t *testing.T) {
 	}
 	if usage.InFlight != 0 || usage.MinuteCount != 1 {
 		t.Fatalf("usage after success report = %+v", usage)
+	}
+	// Token reconciliation should replace the conservative estimate with 100 observed tokens.
+	if usage.TokenMinuteCount != 100 {
+		t.Fatalf("usage tokens after success report = %d", usage.TokenMinuteCount)
 	}
 }
 

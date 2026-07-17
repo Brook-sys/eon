@@ -152,7 +152,7 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 - [x] usar resource keys compostas e tipadas (`model-provider:<provider>` + `model-binding:<binding>`);
 - [x] adquirir/reportar ambos os gates por tentativa, incluindo correção, simplificação e fallback, sem dupla contagem do budget de `ModelCalls`;
 - [x] fazer preflight dos gates antes da lease e reutilizar a reserva na primeira tentativa, evitando operação `RUNNING` apenas por throttle conhecido;
-- [ ] reconciliar tokens observados de `usage` contra a reserva estimada, sem refund inseguro de calls já consumidas;
+- [x] reconciliar tokens observados de `usage` contra a reserva estimada, sem refund inseguro de calls já consumidas;
 - [ ] ampliar testes de relógio virtual para demonstrar explicitamente: Groq modelo A saturado não bloqueia B; 429 global NIM bloqueia todos os bindings NIM; fallback respeita budget e gates do binding efetivamente usado.
 
 ### P2 — roteamento e adaptação de contexto

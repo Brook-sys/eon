@@ -134,6 +134,29 @@ func TestAcquireCircuitAndReport(t *testing.T) {
 	}
 }
 
+func TestReconcileObservedTokens(t *testing.T) {
+	now := time.Date(2026, 7, 16, 15, 0, 0, 0, time.UTC)
+	usage := ResourceUsage{Resource: "model:local", TokenMinuteCount: 1000}
+
+	// Estimate > Observed (e.g. fast early exit)
+	next, err := ReconcileObservedTokens(usage, 500, 100, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.TokenMinuteCount != 600 { // 1000 - 500 + 100
+		t.Fatalf("expected 600, got %d", next.TokenMinuteCount)
+	}
+
+	// Estimate < Observed (e.g. more tokens produced than expected)
+	next, err = ReconcileObservedTokens(usage, 100, 500, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.TokenMinuteCount != 1400 { // 1000 - 100 + 500
+		t.Fatalf("expected 1400, got %d", next.TokenMinuteCount)
+	}
+}
+
 func TestThrottleTransitionInput(t *testing.T) {
 	until := time.Date(2026, 7, 16, 15, 1, 0, 0, time.UTC)
 	withWait := ResourceAcquireResult{
