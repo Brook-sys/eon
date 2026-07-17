@@ -127,6 +127,9 @@ func (e *Error) Error() string {
 // kernel to this adapter's concrete error type.
 func (e *Error) RetryAfterDelay() time.Duration { return e.RetryAfter }
 
+func (e *Error) HTTPStatusCode() int    { return e.StatusCode }
+func (e *Error) RetryableFailure() bool { return e.Retryable }
+
 // New creates an OpenAI-compatible chat completions adapter. Optional Option
 // values configure non-secret profile metadata used by DeclaredProfile/Probe.
 func New(config Config, opts ...Option) (*Provider, error) {

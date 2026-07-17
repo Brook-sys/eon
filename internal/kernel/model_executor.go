@@ -19,8 +19,9 @@ import (
 // Event kinds for the PROPOSE_ONLY model path. Model text never mutates
 // canonical state directly; only changeset.Processor commit does.
 const (
-	EventOperationModelInvoked  = "operation.model_invoked"
-	EventOperationModelVerified = "operation.model_verified"
+	EventOperationModelInvoked       = "operation.model_invoked"
+	EventOperationModelVerified      = "operation.model_verified"
+	EventOperationModelFailurePolicy = "operation.model_failure_policy"
 )
 
 // ModelExecutor completes non-local PROPOSE_ONLY operations under a lease:
@@ -432,6 +433,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					t := e.Clock.Now().UTC().Add(ra)
 					lastRetryAfter = &t
 				}
+			}
+			if decision, ok := classifyProviderFailure(callErr); ok {
+				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			}
 			e.releaseResourcePermits(ctx, operation, permits, false, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
@@ -1034,4 +1038,36 @@ func fallbackTag(usingFallback bool) string {
 		return ";fallback=1"
 	}
 	return ""
+}
+
+func classifyProviderFailure(err error) (domain.ModelBindingFailureDecision, bool) {
+	if err == nil {
+		return domain.ModelBindingFailureDecision{}, false
+	}
+	var he port.ProviderHTTPError
+	if errors.As(err, &he) {
+		// Provide wide fallback assumption: assume not provider-wide until we connect multiple configs
+		return domain.ClassifyModelBindingFailure(he.HTTPStatusCode(), he.RetryableFailure(), false), true
+	}
+	return domain.ModelBindingFailureDecision{}, false
+}
+
+func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, callsUsed int) error {
+	return e.Store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation(operation.ID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:model_failure_policy:%d:%d:%d", op.ID, op.Attempt, callsUsed, e.Clock.Now().UnixNano())),
+			Kind:            EventOperationModelFailurePolicy,
+			OccurredAt:      e.Clock.Now().UTC(),
+			MissionRevision: op.MissionRevision,
+			InquiryID:       op.InquiryID,
+			OperationID:     op.ID,
+			PayloadRef:      fmt.Sprintf("%s;class=%s;disposition=%s;scope=%s;reason=%s", leaseRef, decision.Class, decision.Disposition, decision.Scope, decision.Reason),
+		})
+		return err
+	})
 }

@@ -37,6 +37,15 @@ type ProviderError interface {
 	RetryAfterDelay() time.Duration
 }
 
+// ProviderHTTPError is the optional adapter-neutral HTTP failure projection used
+// by binding recovery policy. It deliberately excludes response bodies and
+// headers other than the bounded Retry-After delay exposed by ProviderError.
+type ProviderHTTPError interface {
+	ProviderError
+	HTTPStatusCode() int
+	RetryableFailure() bool
+}
+
 // ModelProvider is the minimum text→text contract. Adapters may also implement
 // ModelCapabilityReporter for FR-MODEL-005 discovery without expanding this
 // surface for every test double.
