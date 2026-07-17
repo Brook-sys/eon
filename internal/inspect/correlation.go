@@ -29,6 +29,9 @@ type OperationDetail struct {
 	Events         []domain.Event             `json:"events"`
 	Idempotency    *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
 	HeadCommit     *domain.Commit             `json:"head_commit,omitempty"`
+	// ModelRouting is a derived, read-only summary of P2 binding selections.
+	// Empty when the operation has no persisted routing decision.
+	ModelRouting *ModelRoutingSummary `json:"model_routing,omitempty"`
 	// ModelRecovery is a derived, read-only summary of FR-MODEL-004 ladder
 	// decisions for this operation (parsed from official event PayloadRefs).
 	// Empty when no recovery/model events are present.
@@ -274,6 +277,7 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 		sort.Slice(detail.Commits, func(i, j int) bool {
 			return detail.Commits[i].Version < detail.Commits[j].Version
 		})
+		detail.ModelRouting = deriveModelRoutingSummary(detail.Events)
 		detail.ModelRecovery = deriveModelRecoverySummary(detail.Events)
 		detail.ModelAdaptation = deriveModelAdaptationSummary(detail.Events)
 		return nil
@@ -658,4 +662,63 @@ func (p *Projector) HealthProbe(ctx context.Context) (Health, error) {
 		return degraded, fmt.Errorf("health probe: %w", err)
 	}
 	return health, nil
+}
+
+// ModelRoutingSummary projects P2 multi-binding routing decisions.
+type ModelRoutingSummary struct {
+	Decisions    []ModelRoutingDecisionView `json:"decisions"`
+	LastProvider string                     `json:"last_provider,omitempty"`
+	LastBinding  string                     `json:"last_binding,omitempty"`
+}
+
+// ModelRoutingDecisionView is one parsed routing decision event.
+type ModelRoutingDecisionView struct {
+	EventID    domain.EventID `json:"event_id"`
+	OccurredAt string         `json:"occurred_at"`
+	ProviderID string         `json:"provider_id,omitempty"`
+	BindingID  string         `json:"binding_id,omitempty"`
+	PayloadRef string         `json:"payload_ref,omitempty"`
+}
+
+// deriveModelRoutingSummary projects P2 multi-binding routing decisions.
+// Returns nil when the operation never recorded a routing plan.
+func deriveModelRoutingSummary(events []domain.Event) *ModelRoutingSummary {
+	if len(events) == 0 {
+		return nil
+	}
+	var (
+		sum       ModelRoutingSummary
+		hasSignal bool
+	)
+	sorted := append([]domain.Event(nil), events...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].OccurredAt.Equal(sorted[j].OccurredAt) {
+			return string(sorted[i].ID) < string(sorted[j].ID)
+		}
+		return sorted[i].OccurredAt.Before(sorted[j].OccurredAt)
+	})
+	for _, event := range sorted {
+		if event.Kind != "operation.model_routed" {
+			continue
+		}
+		hasSignal = true
+		tags := parsePayloadTags(event.PayloadRef)
+		view := ModelRoutingDecisionView{
+			EventID:    event.ID,
+			OccurredAt: event.OccurredAt.UTC().Format(time.RFC3339Nano),
+			ProviderID: tags["provider_id"],
+			BindingID:  tags["binding_id"],
+			PayloadRef: event.PayloadRef,
+		}
+		sum.Decisions = append(sum.Decisions, view)
+		sum.LastProvider = view.ProviderID
+		sum.LastBinding = view.BindingID
+	}
+	if !hasSignal {
+		return nil
+	}
+	if sum.Decisions == nil {
+		sum.Decisions = []ModelRoutingDecisionView{}
+	}
+	return &sum
 }

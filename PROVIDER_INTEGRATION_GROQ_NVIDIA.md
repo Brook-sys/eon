@@ -159,10 +159,10 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 ### P2 — roteamento e adaptação de contexto
 
 - [x] núcleo puro de roteamento ordenado por preferência/contexto/saúde, com razões auditáveis e hidratação de `ResourceUsage`;
-- [ ] integrar o roteador ao executor multi-binding além do primário + fallback;
+- [x] integrar o roteador ao executor multi-binding além do primário + fallback;
 - [x] taxonomia de falhas HTTP por binding;
 - redução reversível de contexto para pressão NIM e recuperação gradual após janela saudável;
-- eventos/inspect de decisão.
+- [x] eventos/inspect de decisão.
 
 ### P3 — configuração e dashboard
 

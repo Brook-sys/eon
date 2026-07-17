@@ -620,3 +620,69 @@ func TestOperationInspectorProjectsModelAdaptationSummary(t *testing.T) {
 		t.Fatalf("last ctx = %q", sum.LastContextTokens)
 	}
 }
+
+func TestOperationInspectorProjectsModelRoutingSummary(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		events := []domain.Event{
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_rout_1", Kind: "operation.model_routed",
+				OccurredAt: now, MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: "provider_id=groq;binding_id=fast-groq",
+			},
+			{
+				SchemaVersion: domain.SchemaVersionV1, ID: "ev_rout_2", Kind: "operation.model_routed",
+				OccurredAt: now.Add(time.Second), MissionRevision: mission.ID, InquiryID: operation.InquiryID, OperationID: operation.ID,
+				PayloadRef: "provider_id=nvidia_nim;binding_id=fallback-nim",
+			},
+		}
+		for _, event := range events {
+			if _, err := tx.AppendEvent(event); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.ModelRouting == nil {
+		t.Fatal("expected model_routing summary")
+	}
+	sum := detail.ModelRouting
+	if len(sum.Decisions) != 2 {
+		t.Fatalf("decisions = %#v", sum.Decisions)
+	}
+	if sum.Decisions[0].ProviderID != "groq" || sum.Decisions[0].BindingID != "fast-groq" {
+		t.Fatalf("decision 1 = %#v", sum.Decisions[0])
+	}
+	if sum.Decisions[1].ProviderID != "nvidia_nim" || sum.Decisions[1].BindingID != "fallback-nim" {
+		t.Fatalf("decision 2 = %#v", sum.Decisions[1])
+	}
+	if sum.LastProvider != "nvidia_nim" || sum.LastBinding != "fallback-nim" {
+		t.Fatalf("last = %s/%s", sum.LastProvider, sum.LastBinding)
+	}
+}
+
+func TestOperationInspectorOmitsModelRoutingWithoutSignal(t *testing.T) {
+	store, _, operation, _ := seedRuntime(t)
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.ModelRouting != nil {
+		t.Fatalf("expected nil model_routing without routing events, got %#v", detail.ModelRouting)
+	}
+}
