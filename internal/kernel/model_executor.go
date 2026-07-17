@@ -28,14 +28,16 @@ const (
 // dispatch → compile prompt → Complete → process ProposedChangeSet → SUCCEED.
 // Local continuity work remains on LocalExecutor.
 type ModelExecutor struct {
-	Store    port.Store
-	Clock    source.Clock
-	IDs      source.IDGenerator
-	Provider port.ModelProvider
-	// FallbackProvider is the optional FR-MODEL-004 step-7 alternate model.
-	// When nil, DecideNextRecovery never selects FALLBACK_MODEL.
-	FallbackProvider port.ModelProvider
-	// Provider/binding IDs select the two catalog ResourceGates for each attempt.
+	Store port.Store
+	Clock source.Clock
+	IDs   source.IDGenerator
+	// Catalog path: providers are keyed by binding ID because model name, wire
+	// dialect, and context are binding-specific even when transport is shared.
+	Providers    map[string]port.ModelProvider
+	ModelsConfig *domain.ModelsConfig
+	// Legacy direct construction remains supported.
+	Provider             port.ModelProvider
+	FallbackProvider     port.ModelProvider
 	PrimaryProviderID    string
 	PrimaryBindingID     string
 	PrimaryProviderKind  domain.ProviderKind
@@ -44,9 +46,11 @@ type ModelExecutor struct {
 	FallbackProviderKind domain.ProviderKind
 	Changes              *changeset.Processor
 	Compiler             prompt.Compiler
-	PolicyVersion        string
-	LeaseTTL             time.Duration
-	MaxOutputBytes       int64
+	// PolicyVersion is stamped on accepted changesets.
+	PolicyVersion string
+	LeaseTTL      time.Duration
+	// MaxOutputBytes bounds the provider response buffer before memory limits.
+	MaxOutputBytes int64
 	// Profile is the FR-MODEL-005 capability snapshot used for progressive
 	// adaptation (FR-MODEL-006) and conservative context (FR-MODEL-007).
 	// Zero-value falls back to a declared baseline using Compiler context.
@@ -82,8 +86,8 @@ func (e ModelExecutor) validateDeps() error {
 	if e.Store == nil || e.Clock == nil || e.IDs == nil {
 		return errors.New("model executor dependencies are incomplete")
 	}
-	if e.Provider == nil {
-		return errors.New("model executor requires a ModelProvider")
+	if e.Provider == nil && (e.Providers == nil || len(e.Providers) == 0) {
+		return errors.New("model executor requires at least one ModelProvider")
 	}
 	if e.Changes == nil {
 		return errors.New("model executor requires a changeset processor")
@@ -178,6 +182,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		leaseRef         string
 		now              time.Time
 		preflightPermits []*domain.ResourcePermit
+		activeProviderID = e.PrimaryProviderID
+		activeBindingID  = e.PrimaryBindingID
+		activeKind       = e.PrimaryProviderKind
+		activeProvider   = e.Provider
 	)
 	err := e.Store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation(operationID)
@@ -218,8 +226,34 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return result, nil
 	}
 
+	// Catalog execution routes every attempt through durable usage/circuit state.
+	// The conservative preflight requirement is output capacity; compilation below
+	// validates the full prompt against the selected binding context before a call.
+	if e.ModelsConfig != nil {
+		binding, decision, routeErr := SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
+		if routeErr != nil {
+			result.Skipped = true
+			result.SkipReason = "model_route_unavailable"
+			return result, nil
+		}
+		activeProviderID, activeBindingID = binding.ProviderRef, binding.ID
+		activeProvider = e.Providers[binding.ID]
+		if activeProvider == nil {
+			return result, fmt.Errorf("model binding %s has no provider instance", binding.ID)
+		}
+		for _, p := range e.ModelsConfig.Providers {
+			if p.ID == binding.ProviderRef {
+				activeKind = p.Kind
+				break
+			}
+		}
+		if err := AppendModelRoutingEvent(ctx, e.Store, e.Clock.Now().UTC(), operation, decision); err != nil {
+			return result, err
+		}
+	}
+
 	if e.Authorizer != nil {
-		auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, e.PrimaryProviderID, e.PrimaryBindingID)
+		auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, activeProviderID, activeBindingID)
 		if authErr != nil {
 			return result, authErr
 		}
@@ -404,9 +438,12 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
 	budget.FallbackAvailable = e.FallbackProvider != nil
+	if e.ModelsConfig != nil {
+		// New path allows multiple bindings
+		budget.FallbackAvailable = len(e.ModelsConfig.Bindings) > 1
+	}
 	request := compiled.Request
 	request.ResponseFormat = plan.ResponseFormat
-	activeProvider := e.Provider
 	usingFallback := false
 	var lastCompletion port.CompletionResult
 	var lastErr error
@@ -423,11 +460,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				permits = preflightPermits
 				preflightPermits = nil
 			} else {
-				providerID, bindingID := e.PrimaryProviderID, e.PrimaryBindingID
-				if usingFallback {
-					providerID, bindingID = e.FallbackProviderID, e.FallbackBindingID
-				}
-				auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, providerID, bindingID)
+				auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, activeProviderID, activeBindingID)
 				if authErr != nil {
 					lastErr = fmt.Errorf("authorize model attempt: %w", authErr)
 					break
@@ -452,12 +485,6 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					t := e.Clock.Now().UTC().Add(ra)
 					lastRetryAfter = &t
 				}
-			}
-			activeProviderID, activeBindingID := e.PrimaryProviderID, e.PrimaryBindingID
-			activeKind := e.PrimaryProviderKind
-			if usingFallback {
-				activeProviderID, activeBindingID = e.FallbackProviderID, e.FallbackBindingID
-				activeKind = e.FallbackProviderKind
 			}
 			decision, classified := classifyProviderFailure(callErr, activeKind)
 			if classified {
@@ -673,17 +700,48 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			continue
 		case domain.DispositionFallbackModel:
-			if e.FallbackProvider == nil {
+			if e.ModelsConfig != nil {
+				// We don't implement full multi-binding retry traversal in this recovery switch
+				// but legacy semantic checks expect we can fall back to *some* alternative.
+				// However, new binding path treats circuit routing per-cycle, not inline.
+				// For inline fallback, we can fall back to the highest priority binding that wasn't used yet.
+				var nextBinding *domain.ModelBindingConfig
+				for _, cand := range e.ModelsConfig.Bindings {
+					if cand.ID != activeBindingID && cand.Enabled {
+						nextBinding = &cand
+						break
+					}
+				}
+				if nextBinding == nil {
+					budget.FallbackModelUsed = true
+					_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+					continue
+				}
+				activeBindingID = nextBinding.ID
+				activeProviderID = nextBinding.ProviderRef
+				activeProvider = e.Providers[nextBinding.ID]
+				for _, p := range e.ModelsConfig.Providers {
+					if p.ID == nextBinding.ProviderRef {
+						activeKind = p.Kind
+						break
+					}
+				}
+				usingFallback = true
+			} else if e.FallbackProvider == nil {
 				// Policy should not select this without FallbackAvailable; fail safe.
 				budget.FallbackModelUsed = true
 				_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 				continue
+			} else {
+				activeProvider = e.FallbackProvider
+				activeProviderID = e.FallbackProviderID
+				activeBindingID = e.FallbackBindingID
+				activeKind = e.FallbackProviderKind
+				usingFallback = true
 			}
 			// One shot on the alternate provider with the original compiled prompt
 			// (different model, not a full multi-retry of the same endpoint).
 			// Baseline text on fallback — do not re-apply failed enrichment.
-			activeProvider = e.FallbackProvider
-			usingFallback = true
 			plan = domain.AdaptationPlan{
 				Level: domain.AdaptationBaseline, ContextTokens: plan.ContextTokens,
 				Reason: "fallback_baseline", Reversible: true,

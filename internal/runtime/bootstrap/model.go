@@ -42,24 +42,46 @@ func buildModel(
 	if modelOpts == nil || !modelOpts.Enabled {
 		return nil, nil
 	}
-	modelProvider, err := openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, modelOpts.Timeout, "openai-compatible", telemetry)
-	if err != nil {
-		return nil, fmt.Errorf("model provider: %w", err)
-	}
-	var fallbackProvider port.ModelProvider
-	if fb := modelOpts.Fallback; fb != nil && fb.Enabled {
-		// Context/field defaults are filled by Options.Validate; still defend here.
-		field := fb.MaxOutputField
-		if field == "" {
-			field = modelOpts.MaxOutputField
+	var modelProvider, fallbackProvider port.ModelProvider
+	providersByBinding := map[string]port.ModelProvider{}
+	if found {
+		providerConfigs := make(map[string]domain.ModelProviderConfig, len(models.Providers))
+		for _, provider := range models.Providers {
+			providerConfigs[provider.ID] = provider
 		}
-		ctxTokens := fb.ContextTokens
-		if ctxTokens <= 0 {
-			ctxTokens = modelOpts.ContextTokens
+		for _, binding := range models.Bindings {
+			if !binding.Enabled {
+				continue
+			}
+			provider := providerConfigs[binding.ProviderRef]
+			field := ModelMaxOutputTokensLegacy
+			if binding.MaxOutputDialect == domain.MaxOutputDialectCompletion {
+				field = ModelMaxOutputTokensCompletion
+			}
+			instance, openErr := openModelProvider(provider.BaseURL, binding.ModelID, provider.APIKeyEnv, field, binding.ContextTokens, provider.MaxResponseBytes, provider.Timeout, string(provider.Kind)+":"+binding.ID, telemetry)
+			if openErr != nil {
+				return nil, fmt.Errorf("model binding %s provider: %w", binding.ID, openErr)
+			}
+			providersByBinding[binding.ID] = instance
 		}
-		fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, fb.Timeout, "openai-compatible-fallback", telemetry)
+	} else {
+		modelProvider, err = openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, modelOpts.Timeout, "openai-compatible", telemetry)
 		if err != nil {
-			return nil, fmt.Errorf("model fallback provider: %w", err)
+			return nil, fmt.Errorf("model provider: %w", err)
+		}
+		if fb := modelOpts.Fallback; fb != nil && fb.Enabled {
+			field := fb.MaxOutputField
+			if field == "" {
+				field = modelOpts.MaxOutputField
+			}
+			ctxTokens := fb.ContextTokens
+			if ctxTokens <= 0 {
+				ctxTokens = modelOpts.ContextTokens
+			}
+			fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, fb.Timeout, "openai-compatible-fallback", telemetry)
+			if err != nil {
+				return nil, fmt.Errorf("model fallback provider: %w", err)
+			}
 		}
 	}
 	processor, err := changeset.New(changeset.Config{
@@ -77,6 +99,7 @@ func buildModel(
 		IDs:              ids,
 		Provider:         modelProvider,
 		FallbackProvider: fallbackProvider,
+		Providers:        providersByBinding,
 		Changes:          processor,
 		Compiler: prompt.Compiler{
 			Estimator:             prompt.ConservativeEstimator{},
@@ -86,6 +109,9 @@ func buildModel(
 		LeaseTTL:          modelOpts.LeaseTTL,
 		PrimaryProviderID: modelOpts.ProviderID,
 		PrimaryBindingID:  modelOpts.BindingID,
+	}
+	if found {
+		exec.ModelsConfig = &models
 	}
 	if fb := modelOpts.Fallback; fb != nil {
 		exec.FallbackProviderID = fb.ProviderID
@@ -97,18 +123,31 @@ func buildModel(
 	if err != nil {
 		return nil, fmt.Errorf("capability authorizer: %w", err)
 	}
-	if modelOpts.ProviderLimit.Resource != "" {
-		authorizer.Limits[modelOpts.ProviderLimit.Resource] = modelOpts.ProviderLimit
-	}
-	if modelOpts.BindingLimit.Resource != "" {
-		authorizer.Limits[modelOpts.BindingLimit.Resource] = modelOpts.BindingLimit
-	}
-	if fb := modelOpts.Fallback; fb != nil {
-		if fb.ProviderLimit.Resource != "" {
-			authorizer.Limits[fb.ProviderLimit.Resource] = fb.ProviderLimit
+	if found {
+		for _, provider := range models.Providers {
+			if provider.GlobalLimit.Resource != "" {
+				authorizer.Limits[provider.GlobalLimit.Resource] = provider.GlobalLimit
+			}
 		}
-		if fb.BindingLimit.Resource != "" {
-			authorizer.Limits[fb.BindingLimit.Resource] = fb.BindingLimit
+		for _, binding := range models.Bindings {
+			if binding.Limit.Resource != "" {
+				authorizer.Limits[binding.Limit.Resource] = binding.Limit
+			}
+		}
+	} else {
+		if modelOpts.ProviderLimit.Resource != "" {
+			authorizer.Limits[modelOpts.ProviderLimit.Resource] = modelOpts.ProviderLimit
+		}
+		if modelOpts.BindingLimit.Resource != "" {
+			authorizer.Limits[modelOpts.BindingLimit.Resource] = modelOpts.BindingLimit
+		}
+		if fb := modelOpts.Fallback; fb != nil {
+			if fb.ProviderLimit.Resource != "" {
+				authorizer.Limits[fb.ProviderLimit.Resource] = fb.ProviderLimit
+			}
+			if fb.BindingLimit.Resource != "" {
+				authorizer.Limits[fb.BindingLimit.Resource] = fb.BindingLimit
+			}
 		}
 	}
 	exec.Authorizer = authorizer

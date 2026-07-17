@@ -21,6 +21,58 @@ type Store struct {
 	state state
 }
 
+// SetActiveConfig sets an active config revision directly for testing.
+func (s *Store) SetActiveConfig(ctx context.Context, scope domain.ConfigScope, version string, payload interface{}) error {
+	return s.Update(ctx, func(tx port.Transaction) error {
+		rev := domain.ConfigRevision{
+			SchemaVersion: domain.SchemaVersionV1,
+			ID:            domain.ConfigRevisionID(scope) + "@" + domain.ConfigRevisionID(version),
+			Scope:         scope,
+			Revision:      1,
+			Applicability: domain.ConfigHot,
+			ContentHash:   "test",
+			ActorType:     domain.ActorKernel,
+			ActorID:       "test",
+			Reason:        "test",
+			DraftID:       "draft_test",
+			AcceptedAt:    time.Now().UTC(),
+		}
+		if m, ok := payload.(*domain.ModelsConfig); ok {
+			rev.Models = m
+		}
+		draft := domain.ConfigDraft{
+			SchemaVersion: domain.SchemaVersionV1,
+			ID:            "draft_test",
+			Scope:         scope,
+			Applicability: domain.ConfigHot,
+			Status:        domain.ConfigDraftOpen,
+			ActorType:     domain.ActorKernel,
+			ActorID:       "test",
+			Reason:        "test",
+			CreatedAt:     time.Now().UTC(),
+			Models:        rev.Models,
+		}
+		if err := tx.CreateConfigDraft(draft); err != nil {
+			return err
+		}
+		draft.Status = domain.ConfigDraftValidated
+		draft.ValidatedAt = time.Now().UTC()
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
+		draft.Status = domain.ConfigDraftApplied
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
+		hash, _ := domain.ConfigPayloadHash(scope, nil, nil, nil, nil, nil, rev.Models)
+		rev.ContentHash = hash
+		if err := tx.AppendConfigRevision(rev); err != nil {
+			return err
+		}
+		return tx.ActivateConfigRevision(scope, rev.ID)
+	})
+}
+
 type state struct {
 	missionRevisions          map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions            map[domain.MissionID]domain.MissionRevisionID
