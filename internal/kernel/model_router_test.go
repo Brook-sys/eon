@@ -11,7 +11,7 @@ import (
 )
 
 func TestSelectModelBindingReadsUsageAndRoutes(t *testing.T) {
-	store := memory.NewStore()
+	store := memory.New()
 	ctx := context.Background()
 	now := time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC)
 	config := domain.ModelsConfig{
