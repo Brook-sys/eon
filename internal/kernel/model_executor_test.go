@@ -1051,3 +1051,73 @@ func TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure(t *testing.T) 
 		t.Fatalf("model calls = %d", result.ModelCalls)
 	}
 }
+
+type scopedHTTPError struct {
+	status int
+}
+
+func (e scopedHTTPError) Error() string                  { return "provider failure" }
+func (e scopedHTTPError) RetryAfterDelay() time.Duration { return time.Minute }
+func (e scopedHTTPError) HTTPStatusCode() int            { return e.status }
+func (e scopedHTTPError) RetryableFailure() bool         { return true }
+
+func TestModelFailureScopeByProviderKindAndSelectivePermitReporting(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 17, 14, 0, 0, 0, time.UTC)
+	operation := domain.Operation{SchemaVersion: domain.SchemaVersionV1, ID: "operation_scope", MissionRevision: "revision_1"}
+
+	cases := []struct {
+		name               string
+		kind               domain.ProviderKind
+		wantScope          string
+		wantProviderFailed bool
+		wantBindingFailed  bool
+	}{
+		{name: "groq binding-wide", kind: domain.ProviderKindGroq, wantScope: "binding", wantBindingFailed: true},
+		{name: "NIM provider-wide", kind: domain.ProviderKindNVIDIANIM, wantScope: "provider", wantProviderFailed: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			decision, ok := classifyProviderFailure(scopedHTTPError{status: 429}, tc.kind)
+			if !ok || decision.Scope != tc.wantScope {
+				t.Fatalf("decision = %+v, classified=%v", decision, ok)
+			}
+			store := memory.New()
+			clock := source.NewManualClock(now)
+			auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			providerResource := domain.ModelProviderResource("p")
+			bindingResource := domain.ModelBindingResource("b")
+			for _, resource := range []domain.ResourceID{providerResource, bindingResource} {
+				auth.Limits[resource] = domain.ResourceLimit{Resource: resource, FailureThreshold: 1, CooldownBase: time.Minute, CooldownMax: time.Minute}
+				if err := store.Update(ctx, func(tx port.Transaction) error {
+					return tx.SaveResourceUsage(domain.ResourceUsage{Resource: resource, InFlight: 1})
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			exec := ModelExecutor{Authorizer: auth}
+			permits := []*domain.ResourcePermit{{Resource: providerResource, Cost: domain.ResourceCost{Slots: 1}}, {Resource: bindingResource, Cost: domain.ResourceCost{Slots: 1}}}
+			retryAfter := now.Add(time.Minute)
+			exec.releaseFailedResourcePermits(ctx, operation, permits, decision, true, &retryAfter)
+
+			var providerUsage, bindingUsage domain.ResourceUsage
+			if err := store.View(ctx, func(r port.Reader) error {
+				providerUsage, err = r.ResourceUsage(providerResource)
+				if err == nil {
+					bindingUsage, err = r.ResourceUsage(bindingResource)
+				}
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			providerFailed := providerUsage.ConsecutiveFailures == 1 && providerUsage.CircuitOpenUntil != nil
+			bindingFailed := bindingUsage.ConsecutiveFailures == 1 && bindingUsage.CircuitOpenUntil != nil
+			if providerFailed != tc.wantProviderFailed || bindingFailed != tc.wantBindingFailed {
+				t.Fatalf("provider=%+v binding=%+v", providerUsage, bindingUsage)
+			}
+		})
+	}
+}

@@ -9,16 +9,18 @@ import (
 // ModelRouteCandidate is a non-secret routing projection. Availability is
 // derived from durable ResourceGate state; it never grants capability itself.
 type ModelRouteCandidate struct {
-	Binding ModelBindingConfig `json:"binding"`
-	Usage   ResourceUsage      `json:"usage"`
+	Binding       ModelBindingConfig `json:"binding"`
+	BindingUsage  ResourceUsage      `json:"binding_usage"`
+	ProviderUsage ResourceUsage      `json:"provider_usage"`
 }
 
 // ModelRouteDecision records deterministic selection and bounded rejection
 // reasons suitable for audit events and inspect projections.
 type ModelRouteDecision struct {
-	SelectedBindingID string            `json:"selected_binding_id,omitempty"`
-	Considered        []string          `json:"considered"`
-	Rejected          map[string]string `json:"rejected,omitempty"`
+	SelectedProviderID string            `json:"selected_provider_id,omitempty"`
+	SelectedBindingID  string            `json:"selected_binding_id,omitempty"`
+	Considered         []string          `json:"considered"`
+	Rejected           map[string]string `json:"rejected,omitempty"`
 }
 
 // SelectModelBinding orders candidates by configured priority and stable ID,
@@ -56,11 +58,16 @@ func SelectModelBinding(candidates []ModelRouteCandidate, requiredTokens int, no
 			decision.Rejected[binding.ID] = "context_insufficient"
 			continue
 		}
-		if candidate.Usage.CircuitOpenUntil != nil && now.Before(candidate.Usage.CircuitOpenUntil.UTC()) {
+		if candidate.ProviderUsage.CircuitOpenUntil != nil && now.Before(candidate.ProviderUsage.CircuitOpenUntil.UTC()) {
+			decision.Rejected[binding.ID] = "provider_circuit_open"
+			continue
+		}
+		if candidate.BindingUsage.CircuitOpenUntil != nil && now.Before(candidate.BindingUsage.CircuitOpenUntil.UTC()) {
 			decision.Rejected[binding.ID] = "circuit_open"
 			continue
 		}
 		decision.SelectedBindingID = binding.ID
+		decision.SelectedProviderID = binding.ProviderRef
 		return binding, decision, nil
 	}
 	return ModelBindingConfig{}, decision, errors.New("no eligible model binding")

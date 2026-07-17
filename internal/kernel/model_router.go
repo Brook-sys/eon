@@ -10,6 +10,30 @@ import (
 	"motor-autonomo/internal/port"
 )
 
+const EventOperationModelRouted = "operation.model_routed"
+
+// AppendModelRoutingEvent persists the non-secret IDs and bounded rejection
+// reasons from a routing decision. Selection remains pure and legacy callers
+// may keep using SelectModelBinding without event persistence.
+func AppendModelRoutingEvent(ctx context.Context, store port.Store, now time.Time, operation domain.Operation, decision domain.ModelRouteDecision) error {
+	if decision.SelectedBindingID == "" || decision.SelectedProviderID == "" {
+		return errors.New("routing event requires selected provider and binding")
+	}
+	return store.Update(ctx, func(tx port.Transaction) error {
+		_, err := tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:model_routed:%d:%s", operation.ID, operation.Attempt, decision.SelectedBindingID)),
+			Kind:            EventOperationModelRouted,
+			OccurredAt:      now.UTC(),
+			MissionRevision: operation.MissionRevision,
+			InquiryID:       operation.InquiryID,
+			OperationID:     operation.ID,
+			PayloadRef:      fmt.Sprintf("provider_id=%s;binding_id=%s", decision.SelectedProviderID, decision.SelectedBindingID),
+		})
+		return err
+	})
+}
+
 // SelectModelBinding applies domain.SelectModelBinding after hydrating durable ResourceUsage
 // for each candidate binding. This separates routing decisions from resource persistence.
 func SelectModelBinding(ctx context.Context, store port.Store, config domain.ModelsConfig, requiredTokens int, now time.Time) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
@@ -25,16 +49,24 @@ func SelectModelBinding(ctx context.Context, store port.Store, config domain.Mod
 				candidates = append(candidates, domain.ModelRouteCandidate{Binding: b})
 				continue
 			}
-			usage, err := r.ResourceUsage(domain.ModelBindingResource(b.ID))
+			bindingUsage, err := r.ResourceUsage(domain.ModelBindingResource(b.ID))
 			if err != nil && !errors.Is(err, port.ErrNotFound) {
 				return err
 			}
 			if errors.Is(err, port.ErrNotFound) {
-				usage = domain.ResourceUsage{Resource: domain.ModelBindingResource(b.ID)}
+				bindingUsage = domain.ResourceUsage{Resource: domain.ModelBindingResource(b.ID)}
+			}
+			providerUsage, err := r.ResourceUsage(domain.ModelProviderResource(b.ProviderRef))
+			if err != nil && !errors.Is(err, port.ErrNotFound) {
+				return err
+			}
+			if errors.Is(err, port.ErrNotFound) {
+				providerUsage = domain.ResourceUsage{Resource: domain.ModelProviderResource(b.ProviderRef)}
 			}
 			candidates = append(candidates, domain.ModelRouteCandidate{
-				Binding: b,
-				Usage:   usage,
+				Binding:       b,
+				BindingUsage:  bindingUsage,
+				ProviderUsage: providerUsage,
 			})
 		}
 		return nil

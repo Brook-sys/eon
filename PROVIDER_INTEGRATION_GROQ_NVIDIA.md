@@ -199,3 +199,11 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 - NVIDIA hosted Chat Completions endpoint observado nas páginas de modelo: `https://integrate.api.nvidia.com/v1/chat/completions`
 
 As quotas e o catálogo são dados mutáveis; presets devem registrar data/fonte e nunca substituir headers/erros observados ou configuração do operador.
+
+## P2 — roteamento e escopo de falha (2026-07-17)
+
+- o roteador considera circuitos duráveis de provider e binding antes da seleção;
+- HTTP 429 de `nvidia_nim` é classificado como cooldown provider-wide; Groq permanece binding-wide;
+- reporte composto libera como sucesso o permit fora do escopo da falha, evitando contaminação cruzada de circuitos;
+- eventos de policy de falha registram `provider_id` e `binding_id` validados pela configuração (sem URL, chave ou corpo de erro);
+- o executor legado continua válido: kind vazio mantém a classificação conservadora binding-wide.

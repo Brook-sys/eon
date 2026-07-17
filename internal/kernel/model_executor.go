@@ -36,15 +36,17 @@ type ModelExecutor struct {
 	// When nil, DecideNextRecovery never selects FALLBACK_MODEL.
 	FallbackProvider port.ModelProvider
 	// Provider/binding IDs select the two catalog ResourceGates for each attempt.
-	PrimaryProviderID  string
-	PrimaryBindingID   string
-	FallbackProviderID string
-	FallbackBindingID  string
-	Changes            *changeset.Processor
-	Compiler           prompt.Compiler
-	PolicyVersion      string
-	LeaseTTL           time.Duration
-	MaxOutputBytes     int64
+	PrimaryProviderID    string
+	PrimaryBindingID     string
+	PrimaryProviderKind  domain.ProviderKind
+	FallbackProviderID   string
+	FallbackBindingID    string
+	FallbackProviderKind domain.ProviderKind
+	Changes              *changeset.Processor
+	Compiler             prompt.Compiler
+	PolicyVersion        string
+	LeaseTTL             time.Duration
+	MaxOutputBytes       int64
 	// Profile is the FR-MODEL-005 capability snapshot used for progressive
 	// adaptation (FR-MODEL-006) and conservative context (FR-MODEL-007).
 	// Zero-value falls back to a declared baseline using Compiler context.
@@ -109,6 +111,23 @@ func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation dom
 		return
 	}
 	_ = e.Authorizer.ReportModelComplete(ctx, operation, permits, success, retryAfter)
+}
+
+// releaseFailedResourcePermits applies a classified cooldown only to its scope;
+// other composite permits are released as successes so their circuits are not contaminated.
+func (e ModelExecutor) releaseFailedResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, decision domain.ModelBindingFailureDecision, classified bool, retryAfter *time.Time) {
+	if e.Authorizer == nil {
+		return
+	}
+	for _, permit := range permits {
+		failure := true
+		if classified && decision.Scope == "provider" {
+			failure = strings.HasPrefix(string(permit.Resource), "model-provider:")
+		} else if classified && decision.Scope == "binding" {
+			failure = strings.HasPrefix(string(permit.Resource), "model-binding:")
+		}
+		_ = e.Authorizer.ReportCapability(ctx, operation, permit, !failure, retryAfter)
+	}
 }
 
 // releaseResourcePermitsWithTokens replaces the conservative acquire estimate
@@ -434,10 +453,17 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					lastRetryAfter = &t
 				}
 			}
-			if decision, ok := classifyProviderFailure(callErr); ok {
-				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
+			activeProviderID, activeBindingID := e.PrimaryProviderID, e.PrimaryBindingID
+			activeKind := e.PrimaryProviderKind
+			if usingFallback {
+				activeProviderID, activeBindingID = e.FallbackProviderID, e.FallbackBindingID
+				activeKind = e.FallbackProviderKind
 			}
-			e.releaseResourcePermits(ctx, operation, permits, false, lastRetryAfter)
+			decision, classified := classifyProviderFailure(callErr, activeKind)
+			if classified {
+				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed)
+			}
+			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
 			// FR-MODEL-006: enrichment-related transport failures demote and retry
 			// on baseline when budget remains; other provider errors exit the loop.
@@ -1040,19 +1066,19 @@ func fallbackTag(usingFallback bool) string {
 	return ""
 }
 
-func classifyProviderFailure(err error) (domain.ModelBindingFailureDecision, bool) {
+func classifyProviderFailure(err error, kind domain.ProviderKind) (domain.ModelBindingFailureDecision, bool) {
 	if err == nil {
 		return domain.ModelBindingFailureDecision{}, false
 	}
 	var he port.ProviderHTTPError
 	if errors.As(err, &he) {
-		// Provide wide fallback assumption: assume not provider-wide until we connect multiple configs
-		return domain.ClassifyModelBindingFailure(he.HTTPStatusCode(), he.RetryableFailure(), false), true
+		providerWide := kind == domain.ProviderKindNVIDIANIM && he.HTTPStatusCode() == 429
+		return domain.ClassifyModelBindingFailure(he.HTTPStatusCode(), he.RetryableFailure(), providerWide), true
 	}
 	return domain.ModelBindingFailureDecision{}, false
 }
 
-func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, callsUsed int) error {
+func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int) error {
 	return e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operation.ID)
 		if err != nil {
@@ -1066,7 +1092,7 @@ func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operat
 			MissionRevision: op.MissionRevision,
 			InquiryID:       op.InquiryID,
 			OperationID:     op.ID,
-			PayloadRef:      fmt.Sprintf("%s;class=%s;disposition=%s;scope=%s;reason=%s", leaseRef, decision.Class, decision.Disposition, decision.Scope, decision.Reason),
+			PayloadRef:      fmt.Sprintf("%s;class=%s;disposition=%s;scope=%s;reason=%s;provider_id=%s;binding_id=%s", leaseRef, decision.Class, decision.Disposition, decision.Scope, decision.Reason, providerID, bindingID),
 		})
 		return err
 	})

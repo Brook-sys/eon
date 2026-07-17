@@ -29,7 +29,7 @@ func TestSelectModelBindingOrdersAndExplainsRejections(t *testing.T) {
 		{Binding: routeBinding("healthy", 40, 4096)},
 		{Binding: routeBinding("small", 20, 512)},
 		{Binding: disabled},
-		{Binding: routeBinding("open", 30, 4096), Usage: ResourceUsage{Resource: ModelBindingResource("open"), CircuitOpenUntil: &openUntil}},
+		{Binding: routeBinding("open", 30, 4096), BindingUsage: ResourceUsage{Resource: ModelBindingResource("open"), CircuitOpenUntil: &openUntil}},
 	}, 1024, now)
 	if err != nil {
 		t.Fatalf("select: %v", err)
