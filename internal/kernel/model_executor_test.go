@@ -593,10 +593,27 @@ func TestModelExecutorFallbackProviderSucceeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@model-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, resource := range []domain.ResourceID{
+		domain.ModelProviderResource("primary-provider"),
+		domain.ModelBindingResource("primary-binding"),
+		domain.ModelProviderResource("fallback-provider"),
+		domain.ModelBindingResource("fallback-binding"),
+	} {
+		auth.Limits[resource] = domain.ResourceLimit{Resource: resource, MaxConcurrent: 1, MaxPerMinute: 10}
+	}
 	exec := ModelExecutor{
 		Store: store, Clock: clock, IDs: ids, Provider: primaryProvider, FallbackProvider: fallbackProvider, Changes: processor,
-		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
-		PolicyVersion: "policy@model-test",
+		Compiler:           prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion:      "policy@model-test",
+		Authorizer:         auth,
+		PrimaryProviderID:  "primary-provider",
+		PrimaryBindingID:   "primary-binding",
+		FallbackProviderID: "fallback-provider",
+		FallbackBindingID:  "fallback-binding",
 	}
 	result, err := exec.Execute(ctx, "operation_model")
 	if err != nil {
@@ -623,6 +640,24 @@ func TestModelExecutorFallbackProviderSucceeds(t *testing.T) {
 	}
 	if result.ModelCalls != 4 {
 		t.Fatalf("total model calls want 4, got %d", result.ModelCalls)
+	}
+	var primaryBindingUsage, fallbackBindingUsage domain.ResourceUsage
+	if err := store.View(ctx, func(r port.Reader) error {
+		var readErr error
+		primaryBindingUsage, readErr = r.ResourceUsage(domain.ModelBindingResource("primary-binding"))
+		if readErr != nil {
+			return readErr
+		}
+		fallbackBindingUsage, readErr = r.ResourceUsage(domain.ModelBindingResource("fallback-binding"))
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if primaryBindingUsage.MinuteCount != 3 || fallbackBindingUsage.MinuteCount != 1 {
+		t.Fatalf("attempts must charge the binding actually used: primary=%+v fallback=%+v", primaryBindingUsage, fallbackBindingUsage)
+	}
+	if primaryBindingUsage.InFlight != 0 || fallbackBindingUsage.InFlight != 0 {
+		t.Fatalf("all binding permits must release: primary=%+v fallback=%+v", primaryBindingUsage, fallbackBindingUsage)
 	}
 }
 

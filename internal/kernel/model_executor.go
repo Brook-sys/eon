@@ -243,12 +243,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			return result, nil
 		}
-		// Preflight only: release without consuming a provider call or recording failure.
+		// Keep the preflight reservation across lease acquisition and consume it on
+		// the first provider attempt. Releasing it here would make concurrency
+		// accounting blind while Complete is actually in flight.
 		preflightPermits = auth.Permits
 		if len(preflightPermits) == 0 && auth.Permit != nil {
 			preflightPermits = []*domain.ResourcePermit{auth.Permit}
 		}
-		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 	}
 
 	// Phase 1: claim lease under READY → RUNNING (short transaction).
@@ -322,11 +323,15 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return nil
 	})
 	if err != nil {
-		// Best-effort release of reserved gate slot if dispatch failed after reserve.
+		// Best-effort release of reserved gate slots if dispatch failed after
+		// preflight. No provider call occurred, but ReportSuccess is the existing
+		// safe release primitive; quota counters remain conservative.
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 		return result, err
 	}
 	if result.Skipped {
 		// Race: another path changed state after authorize — release reservation.
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 		return result, nil
 	}
 
@@ -343,6 +348,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 
 	compileInput, err := e.buildPromptInput(operation, spec, baseCommit)
 	if err != nil {
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		preflightPermits = nil
 		failErr := e.failRunning(ctx, operation, leaseRef, err)
 		return result, failErr
 	}
@@ -360,6 +367,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	compiled, err := compiler.Compile(spec, compileInput)
 	if err != nil {
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		preflightPermits = nil
 		failErr := e.failRunning(ctx, operation, leaseRef, fmt.Errorf("compile prompt: %w", err))
 		return result, failErr
 	}
@@ -368,6 +377,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	maxCalls := spec.Budget.ModelCalls
 	if maxCalls <= 0 {
 		// Budget zero means no Complete authorized (domain.Budget semantics).
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		preflightPermits = nil
 		failErr := e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
 		return result, failErr
 	}
