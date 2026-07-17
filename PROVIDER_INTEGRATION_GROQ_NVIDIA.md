@@ -139,14 +139,16 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 
 ### P0 — correção de transporte e quota
 
-- enriquecer erro OpenAI-compatible com `RetryAfter` parseado e metadados de rate limit allowlisted/redigidos;
-- configurar timeout HTTP explícito por binding;
+- [x] enriquecer erro OpenAI-compatible com `RetryAfter` padrão parseado sem corpo de erro;
+- [x] configurar timeout HTTP explícito no adapter (default limitado; override por config);
+- [ ] adicionar metadados de rate limit allowlisted/redigidos e propagar `RetryAfter` ao gate;
 - reportar cooldown real ao gate;
 - testes de 429, `Retry-After` delta/data, headers inválidos, timeout e não vazamento.
 
 ### P1 — bindings e rate limit por modelo
 
-- introduzir IDs/provider kinds e configuração de múltiplos bindings;
+- [x] introduzir contrato de IDs/provider kinds e bindings múltiplos sem segredo;
+- [ ] ligar a configuração de múltiplos bindings ao bootstrap/config store;
 - resource keys globais + por binding;
 - adquirir/reportar por tentativa, incluindo correção e fallback;
 - reconciliar usage observado quando disponível;

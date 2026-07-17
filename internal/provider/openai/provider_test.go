@@ -98,6 +98,12 @@ func TestProviderRejectsInvalidConfigurationAndRequest(t *testing.T) {
 	if _, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture", MaxOutputField: "unknown"}); err == nil {
 		t.Fatal("expected invalid max output field error")
 	}
+	if _, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture", Timeout: -time.Second}); err == nil {
+		t.Fatal("expected invalid timeout error")
+	}
+	if _, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture", Timeout: time.Second, Client: http.DefaultClient}); err == nil {
+		t.Fatal("expected timeout/custom client conflict")
+	}
 	provider, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture"})
 	if err != nil {
 		t.Fatal(err)

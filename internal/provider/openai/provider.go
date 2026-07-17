@@ -19,7 +19,10 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-const defaultMaxResponseBytes int64 = 1 << 20
+const (
+	defaultMaxResponseBytes int64 = 1 << 20
+	defaultHTTPTimeout            = 2 * time.Minute
+)
 
 type Config struct {
 	BaseURL          string
@@ -27,6 +30,7 @@ type Config struct {
 	Model            string
 	MaxOutputField   MaxOutputField
 	MaxResponseBytes int64
+	Timeout          time.Duration
 	Client           *http.Client
 }
 
@@ -141,7 +145,16 @@ func New(config Config, opts ...Option) (*Provider, error) {
 	}
 	client := config.Client
 	if client == nil {
-		client = http.DefaultClient
+		timeout := config.Timeout
+		if timeout == 0 {
+			timeout = defaultHTTPTimeout
+		}
+		if timeout < 0 || timeout > 10*time.Minute {
+			return nil, errors.New("HTTP timeout must be positive and at most ten minutes")
+		}
+		client = &http.Client{Timeout: timeout}
+	} else if config.Timeout != 0 {
+		return nil, errors.New("HTTP timeout cannot be combined with a custom client")
 	}
 	maxOutputField := config.MaxOutputField
 	if maxOutputField == "" {
