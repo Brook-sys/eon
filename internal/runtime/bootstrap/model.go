@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/changeset"
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
@@ -81,8 +82,8 @@ func buildModel(
 			Estimator:             prompt.ConservativeEstimator{},
 			ProviderContextTokens: modelOpts.ContextTokens,
 		},
-		PolicyVersion: modelOpts.PolicyVersion,
-		LeaseTTL:      modelOpts.LeaseTTL,
+		PolicyVersion:     modelOpts.PolicyVersion,
+		LeaseTTL:          modelOpts.LeaseTTL,
 		PrimaryProviderID: modelOpts.ProviderID,
 		PrimaryBindingID:  modelOpts.BindingID,
 	}
@@ -96,11 +97,19 @@ func buildModel(
 	if err != nil {
 		return nil, fmt.Errorf("capability authorizer: %w", err)
 	}
-	if modelOpts.ProviderLimit.Resource != "" { authorizer.Limits[modelOpts.ProviderLimit.Resource] = modelOpts.ProviderLimit }
-	if modelOpts.BindingLimit.Resource != "" { authorizer.Limits[modelOpts.BindingLimit.Resource] = modelOpts.BindingLimit }
+	if modelOpts.ProviderLimit.Resource != "" {
+		authorizer.Limits[modelOpts.ProviderLimit.Resource] = modelOpts.ProviderLimit
+	}
+	if modelOpts.BindingLimit.Resource != "" {
+		authorizer.Limits[modelOpts.BindingLimit.Resource] = modelOpts.BindingLimit
+	}
 	if fb := modelOpts.Fallback; fb != nil {
-		if fb.ProviderLimit.Resource != "" { authorizer.Limits[fb.ProviderLimit.Resource] = fb.ProviderLimit }
-		if fb.BindingLimit.Resource != "" { authorizer.Limits[fb.BindingLimit.Resource] = fb.BindingLimit }
+		if fb.ProviderLimit.Resource != "" {
+			authorizer.Limits[fb.ProviderLimit.Resource] = fb.ProviderLimit
+		}
+		if fb.BindingLimit.Resource != "" {
+			authorizer.Limits[fb.BindingLimit.Resource] = fb.BindingLimit
+		}
 	}
 	exec.Authorizer = authorizer
 	return exec, nil

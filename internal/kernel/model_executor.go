@@ -39,11 +39,11 @@ type ModelExecutor struct {
 	PrimaryBindingID   string
 	FallbackProviderID string
 	FallbackBindingID  string
-	Changes          *changeset.Processor
-	Compiler         prompt.Compiler
-	PolicyVersion    string
-	LeaseTTL         time.Duration
-	MaxOutputBytes   int64
+	Changes            *changeset.Processor
+	Compiler           prompt.Compiler
+	PolicyVersion      string
+	LeaseTTL           time.Duration
+	MaxOutputBytes     int64
 	// Profile is the FR-MODEL-005 capability snapshot used for progressive
 	// adaptation (FR-MODEL-006) and conservative context (FR-MODEL-007).
 	// Zero-value falls back to a declared baseline using Compiler context.
@@ -144,10 +144,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 
 	// Phase 0: load READY model-eligible operation (read-only) for authorization.
 	var (
-		operation domain.Operation
-		spec      domain.OperationSpec
-		leaseRef  string
-		now       time.Time
+		operation        domain.Operation
+		spec             domain.OperationSpec
+		leaseRef         string
+		now              time.Time
+		preflightPermits []*domain.ResourcePermit
 	)
 	err := e.Store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation(operationID)
@@ -186,6 +187,59 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	if result.Skipped {
 		return result, nil
+	}
+
+	if e.Authorizer != nil {
+		auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, e.PrimaryProviderID, e.PrimaryBindingID)
+		if authErr != nil {
+			return result, authErr
+		}
+		if auth.Throttled {
+			result.Skipped = true
+			result.SkipReason = auth.SkipReason
+			if result.SkipReason == "" {
+				result.SkipReason = "resource_throttled"
+			}
+			// Apply ThrottleTransitionInput to leave READY without dispatching.
+			if err := e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if op.State != domain.StateReady {
+					return nil
+				}
+				snap := domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation}
+				input, err := domain.ThrottleTransitionInput(*auth.Acquire, DefaultModelCompleteResource)
+				if err != nil {
+					return err
+				}
+				next, err := domain.Transition(snap, input)
+				if err != nil {
+					return err
+				}
+				op.State = next.State
+				op.Reevaluation = next.Reevaluation
+				return tx.SaveOperation(op)
+			}); err != nil {
+				return result, err
+			}
+			return result, nil
+		}
+		if !auth.Allowed {
+			result.Skipped = true
+			result.SkipReason = auth.SkipReason
+			if result.SkipReason == "" {
+				result.SkipReason = "policy_deny"
+			}
+			return result, nil
+		}
+		// Preflight only: release without consuming a provider call or recording failure.
+		preflightPermits = auth.Permits
+		if len(preflightPermits) == 0 && auth.Permit != nil {
+			preflightPermits = []*domain.ResourcePermit{auth.Permit}
+		}
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 	}
 
 	// Phase 1: claim lease under READY → RUNNING (short transaction).
@@ -325,21 +379,28 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 		var permits []*domain.ResourcePermit
 		if e.Authorizer != nil {
-			providerID, bindingID := e.PrimaryProviderID, e.PrimaryBindingID
-			if usingFallback {
-				providerID, bindingID = e.FallbackProviderID, e.FallbackBindingID
+			if budget.ModelCallsUsed == 0 && !usingFallback && len(preflightPermits) > 0 {
+				permits = preflightPermits
+				preflightPermits = nil
+			} else {
+				providerID, bindingID := e.PrimaryProviderID, e.PrimaryBindingID
+				if usingFallback {
+					providerID, bindingID = e.FallbackProviderID, e.FallbackBindingID
+				}
+				auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, providerID, bindingID)
+				if authErr != nil {
+					lastErr = fmt.Errorf("authorize model attempt: %w", authErr)
+					break
+				}
+				if !auth.Allowed {
+					lastErr = fmt.Errorf("authorize model attempt: %s", auth.SkipReason)
+					break
+				}
+				permits = auth.Permits
+				if len(permits) == 0 && auth.Permit != nil {
+					permits = []*domain.ResourcePermit{auth.Permit}
+				}
 			}
-			auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, providerID, bindingID)
-			if authErr != nil {
-				lastErr = fmt.Errorf("authorize model attempt: %w", authErr)
-				break
-			}
-			if !auth.Allowed {
-				lastErr = fmt.Errorf("authorize model attempt: %s", auth.SkipReason)
-				break
-			}
-			permits = auth.Permits
-			if len(permits) == 0 && auth.Permit != nil { permits = []*domain.ResourcePermit{auth.Permit} }
 		}
 		completion, callErr := activeProvider.Complete(ctx, request)
 		budget.ModelCallsUsed++
