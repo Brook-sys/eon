@@ -52,6 +52,46 @@ func TestEffectiveContextTokensConservativeMargins(t *testing.T) {
 	}
 }
 
+func TestContextBudgetPolicyReductionAndRecovery(t *testing.T) {
+	t.Parallel()
+
+	policy := DefaultContextBudgetPolicy(8192)
+	if got := policy.ApplyReduction(true, 4000).EffectiveContextTokens(); got != 4000 {
+		t.Fatalf("dynamic ceiling = %d, want 4000", got)
+	}
+	if got := policy.ApplyReduction(true, -1).EffectiveContextTokens(); got != 0 {
+		t.Fatalf("invalid active ceiling must fail closed, got %d", got)
+	}
+
+	state := RecordContextPressure(ContextPressureState{})
+	if state.Level != 1 || state.SuccessesAtLevel != 0 {
+		t.Fatalf("first pressure = %+v", state)
+	}
+	state = RecordContextPressure(state)
+	state = RecordContextPressure(state)
+	state = RecordContextPressure(state)
+	if state.Level != MaxContextPressureLevel {
+		t.Fatalf("pressure must cap at %d: %+v", MaxContextPressureLevel, state)
+	}
+	reduction := ReductionForPressure(8000, state)
+	if !reduction.Active || reduction.AllowedTokens != 2000 {
+		t.Fatalf("max pressure reduction = %+v", reduction)
+	}
+
+	state = RecordContextSuccess(state)
+	if state.Level != MaxContextPressureLevel || state.SuccessesAtLevel != 1 {
+		t.Fatalf("single success must not oscillate: %+v", state)
+	}
+	state = RecordContextSuccess(state)
+	if state.Level != MaxContextPressureLevel-1 || state.SuccessesAtLevel != 0 {
+		t.Fatalf("success streak must recover one level: %+v", state)
+	}
+
+	if reduction := ReductionForPressure(8000, ContextPressureState{}); reduction.Active {
+		t.Fatalf("zero pressure unexpectedly active: %+v", reduction)
+	}
+}
+
 func TestSelectAdaptationPlanNeverPresumesCapabilities(t *testing.T) {
 	t.Parallel()
 
@@ -98,6 +138,15 @@ func TestSelectAdaptationPlanNeverPresumesCapabilities(t *testing.T) {
 	})
 	if plan.Level != AdaptationNativeTools {
 		t.Fatalf("tools confirmed: %+v", plan)
+	}
+
+	// Reduction is propagated to plan.
+	reduced := SelectAdaptationPlan(AdaptationSelectionInput{
+		Profile:          baseline,
+		ContextReduction: ContextReductionPolicy{Active: true, AllowedTokens: 2000},
+	})
+	if reduced.ContextTokens != 2000 {
+		t.Fatalf("context reduction ignored: %+v", reduced)
 	}
 }
 

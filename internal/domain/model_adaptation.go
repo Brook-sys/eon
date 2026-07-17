@@ -24,6 +24,13 @@ const (
 	AdaptationExpandedContext AdaptationLevel = "EXPANDED_CONTEXT"
 )
 
+// ContextReductionPolicy controls a reversible ceiling on the compiler window
+// after observed provider pressure. It does not mutate the declared profile.
+type ContextReductionPolicy struct {
+	Active        bool `json:"active"`
+	AllowedTokens int  `json:"allowed_tokens"`
+}
+
 // ResponseFormatHint is the optional wire enrichment on CompletionRequest.
 // Empty means plain text baseline. Only values the kernel understands may be
 // selected; adapters must not invent additional authority from unknown hints.
@@ -53,6 +60,67 @@ type ContextBudgetPolicy struct {
 	// AllowExpanded is true when the caller may spend up to MaxExpansionBps of
 	// the safe base. When false, an extra conservative reduction applies.
 	AllowExpanded bool `json:"allow_expanded,omitempty"`
+	// Reduction is an optional dynamic ceiling. Invalid ceilings fail closed.
+	Reduction ContextReductionPolicy `json:"reduction,omitempty"`
+}
+
+// ApplyReduction returns a copy with a dynamic context ceiling. The declared
+// profile remains unchanged, so recovery is an explicit reversible decision.
+func (p ContextBudgetPolicy) ApplyReduction(active bool, allowedTokens int) ContextBudgetPolicy {
+	p.Reduction = ContextReductionPolicy{Active: active, AllowedTokens: allowedTokens}
+	return p
+}
+
+// ContextPressureState is a persisted-friendly, authority-free control signal.
+// Level grows on confirmed context rejection and recovers only after consecutive
+// successes, avoiding oscillation between large and reduced prompts.
+type ContextPressureState struct {
+	Level            int `json:"level"`
+	SuccessesAtLevel int `json:"successes_at_level"`
+}
+
+const (
+	MaxContextPressureLevel  = 3
+	ContextRecoverySuccesses = 2
+)
+
+// RecordContextPressure raises pressure monotonically to the bounded maximum.
+func RecordContextPressure(state ContextPressureState) ContextPressureState {
+	if state.Level < 0 {
+		state.Level = 0
+	}
+	if state.Level < MaxContextPressureLevel {
+		state.Level++
+	}
+	state.SuccessesAtLevel = 0
+	return state
+}
+
+// RecordContextSuccess recovers one level only after a stable success streak.
+func RecordContextSuccess(state ContextPressureState) ContextPressureState {
+	if state.Level <= 0 {
+		return ContextPressureState{}
+	}
+	state.SuccessesAtLevel++
+	if state.SuccessesAtLevel >= ContextRecoverySuccesses {
+		state.Level--
+		state.SuccessesAtLevel = 0
+	}
+	return state
+}
+
+// ReductionForPressure derives a reversible ceiling: each level removes 25%
+// of the declared window, with a 25% floor at the maximum pressure level.
+func ReductionForPressure(declared int, state ContextPressureState) ContextReductionPolicy {
+	if declared <= 0 || state.Level <= 0 {
+		return ContextReductionPolicy{}
+	}
+	level := state.Level
+	if level > MaxContextPressureLevel {
+		level = MaxContextPressureLevel
+	}
+	allowed := declared * (4 - level) / 4
+	return ContextReductionPolicy{Active: true, AllowedTokens: allowed}
 }
 
 // DefaultContextBudgetPolicy returns conservative MVP marks for FR-MODEL-007.
@@ -109,7 +177,15 @@ func (p ContextBudgetPolicy) EffectiveContextTokens() int {
 		return 0
 	}
 	if effective > base {
-		return base
+		effective = base
+	}
+	if p.Reduction.Active {
+		if p.Reduction.AllowedTokens <= 0 {
+			return 0
+		}
+		if effective > p.Reduction.AllowedTokens {
+			effective = p.Reduction.AllowedTokens
+		}
 	}
 	return effective
 }
@@ -137,6 +213,8 @@ type AdaptationSelectionInput struct {
 	PreferExpandedContext bool
 	// AllowNativeTools is reserved; when false (MVP default), tools are never selected.
 	AllowNativeTools bool
+	// ContextReduction is an optional dynamic ceiling after observed pressure.
+	ContextReduction ContextReductionPolicy
 }
 
 // SelectAdaptationPlan chooses the highest *confirmed* enrichment that is safe
@@ -147,6 +225,7 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 		SafetyMarginBps:       1250,
 		MaxExpansionBps:       10000,
 		AllowExpanded:         in.PreferExpandedContext,
+		Reduction:             in.ContextReduction,
 	}
 	// Prefer SafeObserved-style quirks only when encoded as MaxContextTokens already
 	// reduced by the operator; we do not invent a second limit field here.

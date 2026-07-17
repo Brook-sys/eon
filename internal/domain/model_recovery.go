@@ -69,6 +69,10 @@ type ModelRecoveryBudget struct {
 	// AllowReplan permits READY replan when attempt budget remains. When false,
 	// budget exhaustion always yields EXHAUST (preferred for always-invalid models).
 	AllowReplan bool `json:"allow_replan"`
+	// ContextPressure holds reversible pressure signaling (e.g., NIM limits).
+	ContextPressure ContextPressureState `json:"context_pressure"`
+	// Decisions tracks recovery milestones within the execute lifetime.
+	Decisions []ModelBindingFailureDecision `json:"decisions"`
 }
 
 // ModelRecoveryDecision records a pure policy outcome for audit.
@@ -92,6 +96,7 @@ func NewModelRecoveryBudget(spec OperationSpec, operationAttempt uint32, modelCa
 		ModelCallsUsed:   modelCallsUsed,
 		OperationAttempt: operationAttempt,
 		AllowReplan:      maxAttempts > 1 && int(operationAttempt) < maxAttempts,
+		ContextPressure:  ContextPressureState{},
 	}
 }
 

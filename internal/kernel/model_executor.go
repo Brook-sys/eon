@@ -475,6 +475,39 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				}
 			}
 		}
+		// A prior NIM context rejection activates a bounded, reversible ceiling
+		// before another contact. Recompile deterministically with fewer facts.
+		if activeKind == domain.ProviderKindNVIDIANIM && budget.ContextPressure.Level > 0 {
+			declared := profile.MaxContextTokens
+			if e.ModelsConfig != nil {
+				for _, configured := range e.ModelsConfig.Bindings {
+					if configured.ID == activeBindingID && (declared <= 0 || configured.ContextTokens < declared) {
+						declared = configured.ContextTokens
+						break
+					}
+				}
+			}
+			plan = domain.SelectAdaptationPlan(domain.AdaptationSelectionInput{
+				Profile:               profile,
+				PreferJSON:            true,
+				PreferExpandedContext: e.PreferExpandedContext,
+				AllowNativeTools:      false,
+				ContextReduction:      domain.ReductionForPressure(declared, budget.ContextPressure),
+			})
+			compiler.ProviderContextTokens = plan.ContextTokens
+			var compileErr error
+			compiled, compileErr = compiler.Compile(spec, compileInput)
+			if compileErr != nil {
+				e.releaseResourcePermits(ctx, operation, permits, true, nil)
+				lastErr = fmt.Errorf("compile reduced context: %w", compileErr)
+				break
+			}
+			request = compiled.Request
+			request.ResponseFormat = plan.ResponseFormat
+			plan.Reason = "context_pressure_reduction"
+			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
+		}
+
 		completion, callErr := activeProvider.Complete(ctx, request)
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
@@ -488,10 +521,19 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			decision, classified := classifyProviderFailure(callErr, activeKind)
 			if classified {
+				budget.Decisions = append(budget.Decisions, decision)
+				if activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest {
+					budget.ContextPressure = domain.RecordContextPressure(budget.ContextPressure)
+				}
 				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed)
 			}
 			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
+			// Confirmed NIM request rejection receives a bounded reduced-context retry.
+			// The retry still consumes the operation's normal model-call budget.
+			if classified && activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest && budget.ModelCallsUsed < maxCalls {
+				continue
+			}
 			// FR-MODEL-006: enrichment-related transport failures demote and retry
 			// on baseline when budget remains; other provider errors exit the loop.
 			safeDetail := safeErrorDetail(callErr)
@@ -507,6 +549,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 		observedTotal := completion.InputTokens + completion.OutputTokens
 		e.releaseResourcePermitsWithTokens(ctx, operation, permits, true, nil, observedTotal)
+		if activeKind == domain.ProviderKindNVIDIANIM {
+			budget.ContextPressure = domain.RecordContextSuccess(budget.ContextPressure)
+		}
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
 		}
