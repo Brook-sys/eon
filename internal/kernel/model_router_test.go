@@ -20,12 +20,12 @@ func TestSelectModelBindingReadsUsageAndRoutes(t *testing.T) {
 			{ID: "p", Kind: domain.ProviderKindOpenAICompatible, BaseURL: "http://example", APIKeyEnv: "KEY", Timeout: time.Second, MaxResponseBytes: 1024, GlobalLimit: domain.ResourceLimit{Resource: "model-provider:p"}},
 		},
 		Bindings: []domain.ModelBindingConfig{
-			{ID: "b1", ProviderRef: "p", ModelID: "m1", Enabled: true, Priority: 10, ContextTokens: 2048, MaxOutputTokens: 100, Limit: domain.ResourceLimit{Resource: "model-binding:b1"}},
-			{ID: "b2", ProviderRef: "p", ModelID: "m2", Enabled: true, Priority: 20, ContextTokens: 2048, MaxOutputTokens: 100, Limit: domain.ResourceLimit{Resource: "model-binding:b2"}},
+			{ID: "b1", ProviderRef: "p", ModelID: "m1", Enabled: true, Priority: 10, ContextTokens: 2048, MaxOutputTokens: 100, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: domain.ResourceLimit{Resource: "model-binding:b1"}},
+			{ID: "b2", ProviderRef: "p", ModelID: "m2", Enabled: true, Priority: 20, ContextTokens: 2048, MaxOutputTokens: 100, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: domain.ResourceLimit{Resource: "model-binding:b2"}},
 		},
 	}
 	openUntil := now.Add(time.Minute)
-	err := store.Update(ctx, func(w port.Writer) error {
+	err := store.Update(ctx, func(w port.Transaction) error {
 		return w.SaveResourceUsage(domain.ResourceUsage{Resource: "model-binding:b1", CircuitOpenUntil: &openUntil})
 	})
 	if err != nil {

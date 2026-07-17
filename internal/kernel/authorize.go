@@ -329,7 +329,7 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 		}
 		if _, err := tx.AppendEvent(domain.Event{
 			SchemaVersion:   domain.SchemaVersionV1,
-			ID:              domain.EventID(fmt.Sprintf("%s:cap_auth:%s:%d", req.Operation.ID, decision.CapabilityRef, now.UnixNano())),
+			ID:              domain.EventID(fmt.Sprintf("%s:cap_auth:%s:%s:%s:%d", req.Operation.ID, decision.CapabilityRef, resourceEventKey(resources), acquireEventKey(acquires), now.UnixNano())),
 			Kind:            EventCapabilityAuthorized,
 			OccurredAt:      now,
 			MissionRevision: req.Operation.MissionRevision,
@@ -353,9 +353,45 @@ func (a *CapabilityAuthorizer) ReserveCapability(
 	return out, nil
 }
 
+func resourceEventKey(resources []domain.ResourceID) string {
+	if len(resources) == 0 {
+		return "ungated"
+	}
+	var b strings.Builder
+	for i, resource := range resources {
+		if i > 0 {
+			b.WriteByte('+')
+		}
+		for _, r := range string(resource) {
+			if r == ':' {
+				b.WriteByte('_')
+			} else {
+				b.WriteRune(r)
+			}
+		}
+	}
+	return b.String()
+}
+
+func acquireEventKey(acquires []domain.ResourceAcquireResult) string {
+	if len(acquires) == 0 {
+		return "0"
+	}
+	var b strings.Builder
+	for i, acquire := range acquires {
+		if i > 0 {
+			b.WriteByte('+')
+		}
+		fmt.Fprintf(&b, "%d", acquire.Usage.MinuteCount)
+	}
+	return b.String()
+}
+
 func joinResourceIDs(resources []domain.ResourceID) string {
 	values := make([]string, len(resources))
-	for i, resource := range resources { values[i] = string(resource) }
+	for i, resource := range resources {
+		values[i] = string(resource)
+	}
 	return strings.Join(values, ",")
 }
 
@@ -427,9 +463,10 @@ func (a *CapabilityAuthorizer) ReportCapabilityObserved(
 		if !success {
 			outcome = "failure"
 		}
-		_, err = tx.AppendEvent(domain.Event{
+		var err2 error
+		_, err2 = tx.AppendEvent(domain.Event{
 			SchemaVersion:   domain.SchemaVersionV1,
-			ID:              domain.EventID(fmt.Sprintf("%s:resource_released:%s:%d", operation.ID, resource, now.UnixNano())),
+			ID:              domain.EventID(fmt.Sprintf("%s:resource_released:%s:%d:%d", operation.ID, resource, next.MinuteCount, now.UnixNano())),
 			Kind:            EventResourceReleased,
 			OccurredAt:      now,
 			MissionRevision: operation.MissionRevision,
@@ -437,7 +474,7 @@ func (a *CapabilityAuthorizer) ReportCapabilityObserved(
 			OperationID:     operation.ID,
 			PayloadRef:      string(resource) + ";outcome=" + outcome,
 		})
-		return err
+		return err2
 	})
 }
 

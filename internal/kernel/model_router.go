@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,8 +26,11 @@ func SelectModelBinding(ctx context.Context, store port.Store, config domain.Mod
 				continue
 			}
 			usage, err := r.ResourceUsage(domain.ModelBindingResource(b.ID))
-			if err != nil {
+			if err != nil && !errors.Is(err, port.ErrNotFound) {
 				return err
+			}
+			if errors.Is(err, port.ErrNotFound) {
+				usage = domain.ResourceUsage{Resource: domain.ModelBindingResource(b.ID)}
 			}
 			candidates = append(candidates, domain.ModelRouteCandidate{
 				Binding: b,
