@@ -21,11 +21,12 @@ const (
 	ConfigScopeHorizon      ConfigScope = "HORIZON"
 	ConfigScopeInterruption ConfigScope = "INTERRUPTION"
 	ConfigScopeChannels     ConfigScope = "CHANNELS"
+	ConfigScopeModels       ConfigScope = "MODELS"
 )
 
 func (s ConfigScope) Valid() bool {
 	switch s {
-	case ConfigScopeRuntime, ConfigScopeScheduler, ConfigScopeHorizon, ConfigScopeInterruption, ConfigScopeChannels:
+	case ConfigScopeRuntime, ConfigScopeScheduler, ConfigScopeHorizon, ConfigScopeInterruption, ConfigScopeChannels, ConfigScopeModels:
 		return true
 	default:
 		return false
@@ -313,6 +314,7 @@ type ConfigDraft struct {
 	Horizon         *HorizonPolicy             `json:"horizon,omitempty"`
 	Interruption    *InterruptionRuntimePolicy `json:"interruption,omitempty"`
 	Channels        *ChannelsConfig            `json:"channels,omitempty"`
+	Models          *ModelsConfig              `json:"models,omitempty"`
 	CreatedAt       time.Time                  `json:"created_at"`
 	ValidatedAt     time.Time                  `json:"validated_at,omitempty"`
 }
@@ -380,6 +382,15 @@ func (d ConfigDraft) Validate() error {
 			return err
 		}
 	}
+	if d.Models != nil {
+		bodies++
+		if d.Scope != ConfigScopeModels {
+			return errors.New("models payload requires MODELS scope")
+		}
+		if err := d.Models.Validate(); err != nil {
+			return err
+		}
+	}
 	if d.Channels != nil {
 		bodies++
 		if d.Scope != ConfigScopeChannels {
@@ -413,6 +424,7 @@ type ConfigRevision struct {
 	Horizon       *HorizonPolicy             `json:"horizon,omitempty"`
 	Interruption  *InterruptionRuntimePolicy `json:"interruption,omitempty"`
 	Channels      *ChannelsConfig            `json:"channels,omitempty"`
+	Models        *ModelsConfig              `json:"models,omitempty"`
 	AcceptedAt    time.Time                  `json:"accepted_at"`
 }
 
@@ -469,6 +481,15 @@ func (r ConfigRevision) Validate() error {
 			return err
 		}
 	}
+	if r.Models != nil {
+		bodies++
+		if r.Scope != ConfigScopeModels {
+			return errors.New("models payload requires MODELS scope")
+		}
+		if err := r.Models.Validate(); err != nil {
+			return err
+		}
+	}
 	if r.Channels != nil {
 		bodies++
 		if r.Scope != ConfigScopeChannels {
@@ -481,7 +502,7 @@ func (r ConfigRevision) Validate() error {
 	if bodies != 1 {
 		return errors.New("config revision requires exactly one payload matching its scope")
 	}
-	hash, err := ConfigPayloadHash(r.Scope, r.Runtime, r.Scheduler, r.Horizon, r.Interruption, r.Channels)
+	hash, err := ConfigPayloadHash(r.Scope, r.Runtime, r.Scheduler, r.Horizon, r.Interruption, r.Channels, r.Models)
 	if err != nil {
 		return err
 	}
@@ -624,7 +645,7 @@ func (p ConfigImpactPreview) Validate() error {
 }
 
 // ConfigPayloadHash produces a stable content hash for one scoped payload.
-func ConfigPayloadHash(scope ConfigScope, runtime *RuntimeProcessConfig, scheduler *SchedulerCadenceConfig, horizon *HorizonPolicy, interruption *InterruptionRuntimePolicy, channels *ChannelsConfig) (string, error) {
+func ConfigPayloadHash(scope ConfigScope, runtime *RuntimeProcessConfig, scheduler *SchedulerCadenceConfig, horizon *HorizonPolicy, interruption *InterruptionRuntimePolicy, channels *ChannelsConfig, models *ModelsConfig) (string, error) {
 	body := struct {
 		Scope        ConfigScope                `json:"scope"`
 		Runtime      *RuntimeProcessConfig      `json:"runtime,omitempty"`
@@ -632,7 +653,8 @@ func ConfigPayloadHash(scope ConfigScope, runtime *RuntimeProcessConfig, schedul
 		Horizon      *HorizonPolicy             `json:"horizon,omitempty"`
 		Interruption *InterruptionRuntimePolicy `json:"interruption,omitempty"`
 		Channels     *ChannelsConfig            `json:"channels,omitempty"`
-	}{Scope: scope, Runtime: runtime, Scheduler: scheduler, Horizon: horizon, Interruption: interruption, Channels: channels}
+		Models       *ModelsConfig              `json:"models,omitempty"`
+	}{Scope: scope, Runtime: runtime, Scheduler: scheduler, Horizon: horizon, Interruption: interruption, Channels: channels, Models: models}
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return "", fmt.Errorf("marshal config payload: %w", err)
@@ -658,9 +680,9 @@ func DiffConfig(active *ConfigRevision, draft ConfigDraft) (ConfigDiff, error) {
 	after := map[string]string{}
 	secret := map[string]bool{}
 	if active != nil {
-		collectConfigFields(before, secret, active.Scope, active.Runtime, active.Scheduler, active.Horizon, active.Interruption, active.Channels)
+		collectConfigFields(before, secret, active.Scope, active.Runtime, active.Scheduler, active.Horizon, active.Interruption, active.Channels, active.Models)
 	}
-	collectConfigFields(after, secret, draft.Scope, draft.Runtime, draft.Scheduler, draft.Horizon, draft.Interruption, draft.Channels)
+	collectConfigFields(after, secret, draft.Scope, draft.Runtime, draft.Scheduler, draft.Horizon, draft.Interruption, draft.Channels, draft.Models)
 	paths := map[string]struct{}{}
 	for p := range before {
 		paths[p] = struct{}{}
@@ -773,6 +795,7 @@ func DraftFromConfigRevision(source ConfigRevision, draftID ConfigDraftID, based
 		Horizon:         cloneHorizonPolicy(source.Horizon),
 		Interruption:    cloneInterruptionPolicy(source.Interruption),
 		Channels:        cloneChannelsConfig(source.Channels),
+		Models:          cloneModelsConfig(source.Models),
 		CreatedAt:       now.UTC(),
 	}
 	if err := draft.Validate(); err != nil {
@@ -845,7 +868,7 @@ func ApplyConfigDraft(active *ConfigRevision, draft ConfigDraft, revisionID Conf
 		return ConfigRevision{}, ConfigDraft{}, ConfigApplyReceipt{}, errors.New("config apply blocked by impact preview")
 	}
 
-	hash, err := ConfigPayloadHash(draft.Scope, draft.Runtime, draft.Scheduler, draft.Horizon, draft.Interruption, draft.Channels)
+	hash, err := ConfigPayloadHash(draft.Scope, draft.Runtime, draft.Scheduler, draft.Horizon, draft.Interruption, draft.Channels, draft.Models)
 	if err != nil {
 		return ConfigRevision{}, ConfigDraft{}, ConfigApplyReceipt{}, err
 	}
@@ -872,6 +895,7 @@ func ApplyConfigDraft(active *ConfigRevision, draft ConfigDraft, revisionID Conf
 		Horizon:       cloneHorizonPolicy(draft.Horizon),
 		Interruption:  cloneInterruptionPolicy(draft.Interruption),
 		Channels:      cloneChannelsConfig(draft.Channels),
+		Models:        cloneModelsConfig(draft.Models),
 		AcceptedAt:    now.UTC(),
 	}
 	if err := revision.Validate(); err != nil {
@@ -936,6 +960,8 @@ func DefaultApplicabilityForScope(scope ConfigScope) ConfigApplicability {
 		return ConfigNextCycle
 	case ConfigScopeChannels:
 		return ConfigHot
+	case ConfigScopeModels:
+		return ConfigNextCycle
 	case ConfigScopeRuntime:
 		return ConfigRestartRequired
 	default:
@@ -943,7 +969,7 @@ func DefaultApplicabilityForScope(scope ConfigScope) ConfigApplicability {
 	}
 }
 
-func collectConfigFields(dst map[string]string, secret map[string]bool, scope ConfigScope, runtime *RuntimeProcessConfig, scheduler *SchedulerCadenceConfig, horizon *HorizonPolicy, interruption *InterruptionRuntimePolicy, channels *ChannelsConfig) {
+func collectConfigFields(dst map[string]string, secret map[string]bool, scope ConfigScope, runtime *RuntimeProcessConfig, scheduler *SchedulerCadenceConfig, horizon *HorizonPolicy, interruption *InterruptionRuntimePolicy, channels *ChannelsConfig, models *ModelsConfig) {
 	switch scope {
 	case ConfigScopeRuntime:
 		if runtime == nil {
@@ -1014,6 +1040,25 @@ func collectConfigFields(dst map[string]string, secret map[string]bool, scope Co
 			dst[prefix+".credential_ref"] = route.CredentialRef.Kind + ":" + route.CredentialRef.Name
 			secret[prefix+".credential_ref"] = true
 		}
+	case ConfigScopeModels:
+		if models == nil {
+			return
+		}
+		dst["models.version"] = models.Version
+		for i, p := range models.Providers {
+			prefix := fmt.Sprintf("models.providers[%d]", i)
+			dst[prefix+".id"] = p.ID
+			dst[prefix+".kind"] = string(p.Kind)
+			dst[prefix+".base_url"] = p.BaseURL
+			dst[prefix+".api_key_env"] = p.APIKeyEnv
+			secret[prefix+".api_key_env"] = true
+		}
+		for i, b := range models.Bindings {
+			prefix := fmt.Sprintf("models.bindings[%d]", i)
+			dst[prefix+".id"] = b.ID
+			dst[prefix+".provider_ref"] = b.ProviderRef
+			dst[prefix+".model_id"] = b.ModelID
+		}
 	}
 }
 
@@ -1022,6 +1067,16 @@ func cloneRuntimeConfig(v *RuntimeProcessConfig) *RuntimeProcessConfig {
 		return nil
 	}
 	cp := *v
+	return &cp
+}
+
+func cloneModelsConfig(v *ModelsConfig) *ModelsConfig {
+	if v == nil {
+		return nil
+	}
+	cp := *v
+	cp.Providers = append([]ModelProviderConfig(nil), v.Providers...)
+	cp.Bindings = append([]ModelBindingConfig(nil), v.Bindings...)
 	return &cp
 }
 

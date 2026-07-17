@@ -237,7 +237,7 @@ func TestFrontierListHygieneAndOpportunityInspector(t *testing.T) {
 	tight := domain.DefaultHorizonPolicy()
 	tight.MaxCandidates = 1
 	tight.Version = "horizon.tight.v1"
-	hash, err := domain.ConfigPayloadHash(domain.ConfigScopeHorizon, nil, nil, &tight, nil, nil)
+	hash, err := domain.ConfigPayloadHash(domain.ConfigScopeHorizon, nil, nil, &tight, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

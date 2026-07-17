@@ -37,3 +37,35 @@ func TestModelProviderConfigRejectsSecretValueAndUnsafeBindingID(t *testing.T) {
 		t.Fatal("expected unsafe id rejection")
 	}
 }
+
+func TestModelsConfigValidate(t *testing.T) {
+	provider := ModelProviderConfig{ID: "groq", Kind: ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1", APIKeyEnv: "GROQ_API_KEY", Timeout: time.Second, MaxResponseBytes: 1024, GlobalLimit: ResourceLimit{Resource: "model-provider:groq", MaxConcurrent: 1, CooldownBase: time.Second, CooldownMax: time.Minute}}
+	binding := ModelBindingConfig{ID: "gemma2", ProviderRef: "groq", ModelID: "gemma2-9b-it", Enabled: true, Priority: 1, ContextTokens: 8192, MaxOutputTokens: 1024, MaxOutputDialect: MaxOutputDialectCompletion, Limit: ResourceLimit{Resource: "model-binding:gemma2", MaxConcurrent: 1, CooldownBase: time.Second, CooldownMax: time.Minute}}
+	cfg := ModelsConfig{Version: "models.v1", Providers: []ModelProviderConfig{provider}, Bindings: []ModelBindingConfig{binding}}
+	if err := cfg.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Version = ""
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected version rejection")
+	}
+	cfg.Version = "models.v1"
+	cfg.Bindings = []ModelBindingConfig{binding, binding}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected duplicate binding rejection")
+	}
+	cfg.Bindings = []ModelBindingConfig{binding}
+	cfg.Providers = []ModelProviderConfig{provider, provider}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected duplicate provider rejection")
+	}
+	cfg.Providers = nil
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected missing provider rejection")
+	}
+	cfg.Providers = []ModelProviderConfig{provider}
+	cfg.Bindings[0].ProviderRef = "unknown"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected unknown provider rejection")
+	}
+}

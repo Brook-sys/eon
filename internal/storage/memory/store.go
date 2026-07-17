@@ -2433,8 +2433,8 @@ func cloneChannelsPtr(v *domain.ChannelsConfig) *domain.ChannelsConfig {
 }
 
 func equalConfigPayloads(a, b domain.ConfigDraft) bool {
-	ha, errA := domain.ConfigPayloadHash(a.Scope, a.Runtime, a.Scheduler, a.Horizon, a.Interruption, a.Channels)
-	hb, errB := domain.ConfigPayloadHash(b.Scope, b.Runtime, b.Scheduler, b.Horizon, b.Interruption, b.Channels)
+	ha, errA := domain.ConfigPayloadHash(a.Scope, a.Runtime, a.Scheduler, a.Horizon, a.Interruption, a.Channels, a.Models)
+	hb, errB := domain.ConfigPayloadHash(b.Scope, b.Runtime, b.Scheduler, b.Horizon, b.Interruption, b.Channels, b.Models)
 	if errA != nil || errB != nil {
 		return false
 	}

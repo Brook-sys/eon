@@ -106,5 +106,49 @@ func validateStableID(value, field string) error {
 	return nil
 }
 
-func ModelProviderResource(providerID string) string { return "model-provider:" + providerID }
-func ModelBindingResource(bindingID string) string   { return "model-binding:" + bindingID }
+func ModelProviderResource(providerID string) ResourceID { return ResourceID("model-provider:" + providerID) }
+func ModelBindingResource(bindingID string) ResourceID   { return ResourceID("model-binding:" + bindingID) }
+
+// ModelsConfig is the versioned provider/binding catalog. It stores only
+// secret references (environment-variable names), never credential values.
+type ModelsConfig struct {
+	Version   string                `json:"version"`
+	Providers []ModelProviderConfig `json:"providers"`
+	Bindings  []ModelBindingConfig  `json:"bindings"`
+}
+
+func (c ModelsConfig) Validate() error {
+	if strings.TrimSpace(c.Version) == "" || len(c.Version) > 128 {
+		return errors.New("models config version is required and must be bounded")
+	}
+	if len(c.Providers) == 0 && len(c.Bindings) > 0 {
+		return errors.New("models config bindings require at least one provider")
+	}
+	if len(c.Providers) > 32 || len(c.Bindings) > 128 {
+		return errors.New("models config has too many providers or bindings")
+	}
+	seenProvider := map[string]struct{}{}
+	for _, p := range c.Providers {
+		if err := p.Validate(); err != nil {
+			return err
+		}
+		if _, ok := seenProvider[p.ID]; ok {
+			return errors.New("models config has duplicate provider id")
+		}
+		seenProvider[p.ID] = struct{}{}
+	}
+	seenBinding := map[string]struct{}{}
+	for _, b := range c.Bindings {
+		if err := b.Validate(); err != nil {
+			return err
+		}
+		if _, ok := seenProvider[b.ProviderRef]; !ok {
+			return fmt.Errorf("binding %q refers to unknown provider %q", b.ID, b.ProviderRef)
+		}
+		if _, ok := seenBinding[b.ID]; ok {
+			return errors.New("models config has duplicate binding id")
+		}
+		seenBinding[b.ID] = struct{}{}
+	}
+	return nil
+}

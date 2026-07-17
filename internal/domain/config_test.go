@@ -12,11 +12,11 @@ func TestConfigDraftValidateAndHash(t *testing.T) {
 	if err := draft.Validate(); err != nil {
 		t.Fatalf("valid draft: %v", err)
 	}
-	hash, err := ConfigPayloadHash(draft.Scope, nil, nil, nil, draft.Interruption, nil)
+	hash, err := ConfigPayloadHash(draft.Scope, nil, nil, nil, draft.Interruption, nil, nil)
 	if err != nil || hash == "" {
 		t.Fatalf("hash = %q err=%v", hash, err)
 	}
-	again, err := ConfigPayloadHash(draft.Scope, nil, nil, nil, draft.Interruption, nil)
+	again, err := ConfigPayloadHash(draft.Scope, nil, nil, nil, draft.Interruption, nil, nil)
 	if err != nil || again != hash {
 		t.Fatalf("hash instability: %q vs %q err=%v", hash, again, err)
 	}
@@ -272,5 +272,61 @@ func TestDefaultSchedulerCadenceConfigAndWithinCycleBudget(t *testing.T) {
 	}
 	if !WithinCycleBudget(started, started.Add(time.Hour), 0) {
 		t.Fatal("zero max disables deadline")
+	}
+}
+
+func TestModelsConfigDraftDiffAndRollback(t *testing.T) {
+	now := time.Date(2026, 7, 17, 2, 0, 0, 0, time.UTC)
+	provider := ModelProviderConfig{
+		ID: "groq", Kind: ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1",
+		APIKeyEnv: "GROQ_API_KEY", Timeout: 30 * time.Second, MaxResponseBytes: 1 << 20,
+		GlobalLimit: ResourceLimit{Resource: ModelProviderResource("groq"), MaxConcurrent: 1},
+	}
+	binding := ModelBindingConfig{
+		ID: "groq-gemma", ProviderRef: "groq", ModelID: "gemma2-9b-it", Enabled: true,
+		Priority: 10, ContextTokens: 8192, MaxOutputTokens: 1024,
+		MaxOutputDialect: MaxOutputDialectCompletion,
+		Limit:            ResourceLimit{Resource: ModelBindingResource("groq-gemma"), MaxConcurrent: 1},
+	}
+	draft := ConfigDraft{
+		SchemaVersion: SchemaVersionV1, ID: "draft_models_1", Scope: ConfigScopeModels,
+		Applicability: ConfigNextCycle, Status: ConfigDraftOpen, ActorType: ActorOperator,
+		ActorID: "operator", Reason: "configure providers", CreatedAt: now,
+		Models: &ModelsConfig{Version: "models.v1", Providers: []ModelProviderConfig{provider}, Bindings: []ModelBindingConfig{binding}},
+	}
+	if err := draft.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	diff, err := DiffConfig(nil, draft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundSecretRef := false
+	for _, change := range diff.Changes {
+		if change.Path == "models.providers[0].api_key_env" {
+			foundSecretRef = change.Secret && change.After == "[secret-ref]"
+		}
+	}
+	if !foundSecretRef {
+		t.Fatalf("missing redacted api key env in %#v", diff.Changes)
+	}
+	validated, err := MarkConfigDraftValidated(draft, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rev, _, _, err := ApplyConfigDraft(nil, validated, "cfgrev_models_1", "receipt_models_1", now.Add(2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rollback, err := DraftFromConfigRevision(rev, "draft_models_rb", 1, ActorOperator, "operator", "restore model catalog", now.Add(3*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rollback.Models == nil || len(rollback.Models.Bindings) != 1 || rollback.Models.Bindings[0].ID != binding.ID {
+		t.Fatalf("rollback models = %#v", rollback.Models)
+	}
+	rollback.Models.Bindings[0].ID = "changed"
+	if rev.Models.Bindings[0].ID != binding.ID {
+		t.Fatal("rollback must deep-copy model bindings")
 	}
 }
