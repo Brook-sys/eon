@@ -249,3 +249,28 @@ func interruptionDraft(now time.Time) ConfigDraft {
 		Interruption: &policy, CreatedAt: now,
 	}
 }
+
+func TestDefaultSchedulerCadenceConfigAndWithinCycleBudget(t *testing.T) {
+	def := DefaultSchedulerCadenceConfig()
+	if err := def.Validate(); err != nil {
+		t.Fatalf("default cadence: %v", err)
+	}
+	if def.MaxDispatches <= 0 || def.MaxCycleDuration <= 0 {
+		t.Fatalf("default cadence should bound dispatches and duration: %#v", def)
+	}
+	zero := def
+	zero.MaxDispatches = 0
+	if err := zero.Validate(); err == nil {
+		t.Fatal("expected zero max dispatches rejection")
+	}
+	started := time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC)
+	if !WithinCycleBudget(started, started.Add(time.Second), 5*time.Second) {
+		t.Fatal("expected inside budget")
+	}
+	if WithinCycleBudget(started, started.Add(5*time.Second), 5*time.Second) {
+		t.Fatal("exact boundary must be exhausted")
+	}
+	if !WithinCycleBudget(started, started.Add(time.Hour), 0) {
+		t.Fatal("zero max disables deadline")
+	}
+}

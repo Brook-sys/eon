@@ -3,6 +3,7 @@ package bootstrap_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -215,6 +216,13 @@ func TestProcessCycleExecutesLocalContinuityOperation(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = rt.Close(ctx) })
 
+	// Pin MaxDispatches=1 so this regression stays focused on local post-dispatch
+	// execution without multi-step replenishment filling the default budget of 8.
+	applySchedulerCadence(t, rt, domain.SchedulerCadenceConfig{
+		Version: "scheduler.test.single.v1", MinIdleSleep: time.Millisecond, MaxIdleSleep: 2 * time.Millisecond,
+		MaxCycleDuration: time.Minute, MaxDispatches: 1,
+	})
+
 	loader := mission.Loader{Store: rt.Store, Clock: rt.Clock, IDs: rt.IDs}
 	specJSON := []byte(`{
   "schema_version": 1,
@@ -265,6 +273,9 @@ func TestProcessCycleExecutesLocalContinuityOperation(t *testing.T) {
 	if result.OperationsExecuted != 1 || !result.Worked {
 		t.Fatalf("expected one local execution, got %#v", result)
 	}
+	if result.CadenceVersion != "scheduler.test.single.v1" || result.SchedulerSteps != 1 {
+		t.Fatalf("cadence single-step expected, got %#v", result)
+	}
 
 	var op domain.Operation
 	if err := rt.Store.View(ctx, func(r port.Reader) error {
@@ -276,6 +287,154 @@ func TestProcessCycleExecutesLocalContinuityOperation(t *testing.T) {
 	}
 	if op.State != domain.StateSucceeded {
 		t.Fatalf("operation state = %s, want SUCCEEDED", op.State)
+	}
+}
+
+func applySchedulerCadence(t *testing.T, rt *bootstrap.Runtime, cadence domain.SchedulerCadenceConfig) {
+	t.Helper()
+	ctx := context.Background()
+	clock := source.NewManualClock(rt.Clock.Now().UTC())
+	ids := source.NewSequenceIDGenerator(9000)
+	applier, err := kernel.NewConfigApplier(rt.Store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            domain.ConfigDraftID("draft_sched_" + cadence.Version),
+		Scope:         domain.ConfigScopeScheduler,
+		Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+		ActorType: domain.ActorOperator, ActorID: "op", Reason: "test cadence",
+		Scheduler: &cadence, CreatedAt: clock.Now(),
+	}
+	if err := rt.Store.Update(ctx, func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(draft)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	if _, _, err := applier.ApplyDraft(ctx, draft.ID); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProcessCycleHonorsMaxDispatchesCadence(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend: bootstrap.StorageMemory,
+		MissionID:    "mission_budget",
+		IdleMin:      time.Millisecond,
+		IdleMax:      2 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+
+	loader := mission.Loader{Store: rt.Store, Clock: rt.Clock, IDs: rt.IDs}
+	specJSON := []byte(`{
+  "schema_version": 1,
+  "id": "mission_budget",
+  "revision": 1,
+  "original_text": "budget multi dispatch",
+  "purpose": "prove MaxDispatches bounds a control cycle",
+  "domains": ["test"],
+  "policies": ["policy.v1"],
+  "budget": {"model_calls": 10, "tokens": 1024, "bytes": 4096, "attempts": 3, "duration": 60000000000},
+  "status": "ACTIVE"
+}`)
+	revision, err := loader.Load(ctx, specJSON, "bootstrap:budget")
+	if err != nil {
+		t.Fatalf("install mission: %v", err)
+	}
+	if err := kernel.EnsureCatalogSpecs(ctx, rt.Store, nil); err != nil {
+		t.Fatalf("catalog: %v", err)
+	}
+
+	// At most two productive dispatches per ProcessCycle.
+	applySchedulerCadence(t, rt, domain.SchedulerCadenceConfig{
+		Version: "scheduler.budget.v1", MinIdleSleep: time.Millisecond, MaxIdleSleep: 2 * time.Millisecond,
+		MaxCycleDuration: time.Minute, MaxDispatches: 2,
+	})
+
+	// Disable continuity strategies so only the three seeded READY ops exist;
+	// otherwise replenishment would admit more work and blur the budget signal.
+	rt.Scheduler.Strategies = nil
+	rt.Scheduler.Registry = nil
+
+	now := rt.Clock.Now().UTC()
+	for i := 1; i <= 3; i++ {
+		opp := domain.WorkOpportunity{
+			SchemaVersion: domain.SchemaVersionV1, ID: domain.WorkOpportunityID(fmt.Sprintf("opp_budget_%d", i)),
+			MissionRevision: revision.ID, Family: domain.FamilyIntegrityAudit,
+			Title: "local integrity", Origin: "test", ExpectedGain: "audit",
+			Novelty: fmt.Sprintf("budget-%d", i), StopCondition: "report",
+			DedupSignature: fmt.Sprintf("integrity:budget:%d", i),
+			Risk:           domain.RiskLow, Priority: 30, EstimatedCost: domain.Budget{Tokens: 64, Attempts: 1},
+			Status: domain.OpportunityOpen, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := rt.Store.Update(ctx, func(tx port.Transaction) error {
+			return tx.CreateWorkOpportunity(opp)
+		}); err != nil {
+			t.Fatalf("seed opportunity %d: %v", i, err)
+		}
+		admitter := kernel.Admitter{Store: rt.Store, Clock: rt.Clock, IDs: rt.IDs}
+		if _, err := admitter.AdmitOne(ctx, opp.ID); err != nil {
+			t.Fatalf("admit %d: %v", i, err)
+		}
+	}
+
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("cycle: %v", err)
+	}
+	if result.CadenceVersion != "scheduler.budget.v1" {
+		t.Fatalf("cadence version = %q", result.CadenceVersion)
+	}
+	if result.OperationsExecuted != 2 {
+		t.Fatalf("executed = %d, want 2 under MaxDispatches (got %#v)", result.OperationsExecuted, result)
+	}
+	if !result.DispatchBudgetHit {
+		t.Fatalf("expected dispatch budget hit, got %#v", result)
+	}
+	if result.SchedulerSteps != 2 {
+		t.Fatalf("scheduler steps = %d, want 2", result.SchedulerSteps)
+	}
+
+	// Residual READY work remains for the next cycle.
+	ready := 0
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		ops, err := r.Operations(revision.ID)
+		if err != nil {
+			return err
+		}
+		for _, op := range ops {
+			if op.State == domain.StateReady {
+				ready++
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if ready != 1 {
+		t.Fatalf("ready remaining = %d, want 1", ready)
+	}
+
+	// Second cycle drains the remainder; without strategies it cannot invent more.
+	result2, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("second cycle: %v", err)
+	}
+	if result2.OperationsExecuted != 1 {
+		t.Fatalf("second cycle executed = %d, want 1 (got %#v)", result2.OperationsExecuted, result2)
+	}
+	if result2.DispatchBudgetHit {
+		t.Fatalf("second cycle should not hit dispatch budget with one remaining op: %#v", result2)
 	}
 }
 

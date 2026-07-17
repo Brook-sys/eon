@@ -131,6 +131,32 @@ func (c SchedulerCadenceConfig) Validate() error {
 	return nil
 }
 
+// DefaultSchedulerCadenceConfig returns conservative MVP cadence for the
+// control loop. Zero MaxCycleDuration would disable the soft deadline; the
+// default keeps a positive bound so a single cycle cannot monopolize the process.
+func DefaultSchedulerCadenceConfig() SchedulerCadenceConfig {
+	return SchedulerCadenceConfig{
+		Version:          "scheduler.default.v1",
+		MinIdleSleep:     50 * time.Millisecond,
+		MaxIdleSleep:     time.Second,
+		MaxCycleDuration: 30 * time.Second,
+		MaxDispatches:    8,
+	}
+}
+
+// WithinCycleBudget reports whether now is still inside the soft cycle window.
+// max <= 0 disables the deadline (always true). Equality at the exact boundary
+// counts as exhausted so callers stop starting new work when the budget elapses.
+func WithinCycleBudget(started, now time.Time, max time.Duration) bool {
+	if max <= 0 {
+		return true
+	}
+	if started.IsZero() || now.IsZero() {
+		return true
+	}
+	return now.Before(started.Add(max))
+}
+
 // InterruptionRuntimePolicy is the versioned human-attention configuration that
 // projects into the pure QuestionGate evaluation surface. It never embeds
 // model authority.

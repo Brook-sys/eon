@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -110,6 +111,43 @@ func ResolveHorizonPolicy(ctx context.Context, store port.Store, explicit domain
 		return explicit, nil
 	}
 	return ActiveHorizonPolicy(ctx, store)
+}
+
+// ActiveSchedulerCadence loads the active SCHEDULER revision when present;
+// otherwise returns DefaultSchedulerCadenceConfig. Callers re-validate before use.
+func ActiveSchedulerCadence(ctx context.Context, store port.Store) (domain.SchedulerCadenceConfig, error) {
+	if store == nil {
+		return domain.SchedulerCadenceConfig{}, errors.New("active scheduler cadence requires store")
+	}
+	var cadence domain.SchedulerCadenceConfig
+	err := store.View(ctx, func(r port.Reader) error {
+		revision, err := r.ActiveConfigRevision(domain.ConfigScopeScheduler)
+		if errors.Is(err, port.ErrNotFound) {
+			cadence = domain.DefaultSchedulerCadenceConfig()
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if revision.Scheduler == nil {
+			return fmt.Errorf("active scheduler revision %s has no payload", revision.ID)
+		}
+		cadence = *revision.Scheduler
+		return cadence.Validate()
+	})
+	return cadence, err
+}
+
+// ResolveSchedulerCadence prefers an explicit non-zero cadence (Version set),
+// then the active durable SCHEDULER revision, then the built-in default.
+func ResolveSchedulerCadence(ctx context.Context, store port.Store, explicit domain.SchedulerCadenceConfig) (domain.SchedulerCadenceConfig, error) {
+	if strings.TrimSpace(explicit.Version) != "" {
+		if err := explicit.Validate(); err != nil {
+			return domain.SchedulerCadenceConfig{}, err
+		}
+		return explicit, nil
+	}
+	return ActiveSchedulerCadence(ctx, store)
 }
 
 // ActiveReminderPolicy projects the active interruption policy's reminder

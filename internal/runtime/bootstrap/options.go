@@ -451,13 +451,8 @@ func (o *Options) Validate() error {
 }
 
 // DefaultSchedulerCadence returns conservative process-local cadence knobs.
-// Durable SCHEDULER revisions may later replace these via config projection.
+// Prefer domain.DefaultSchedulerCadenceConfig for shared defaults; durable
+// SCHEDULER revisions replace process knobs via ActiveSchedulerCadence.
 func DefaultSchedulerCadence() domain.SchedulerCadenceConfig {
-	return domain.SchedulerCadenceConfig{
-		Version:          "scheduler.bootstrap.v1",
-		MinIdleSleep:     50 * time.Millisecond,
-		MaxIdleSleep:     time.Second,
-		MaxCycleDuration: 30 * time.Second,
-		MaxDispatches:    8,
-	}
+	return domain.DefaultSchedulerCadenceConfig()
 }

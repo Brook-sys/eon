@@ -439,14 +439,20 @@ type CycleResult struct {
 	TelegramDuplicate   int
 	LeasesReconciled    int
 	SchedulerRan        bool
+	SchedulerSteps      int
 	SchedulerKind       kernel.DecisionKind
 	OperationsExecuted  int
 	OperationsSkipped   int
+	DispatchBudgetHit   bool
+	CycleBudgetHit      bool
+	CadenceVersion      string
 	Worked              bool
 	Stopping            bool
 }
 
-// ProcessCycle drains inboxes and optionally steps the scheduler once.
+// ProcessCycle drains inboxes and steps the scheduler under cadence budgets.
+// MaxDispatches bounds productive DISPATCH decisions per cycle; MaxCycleDuration
+// is a soft wall-clock budget that stops starting new scheduler steps.
 // It never busy-polls: callers sleep when Worked is false.
 func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	if rt == nil {
@@ -457,6 +463,7 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	}
 
 	var result CycleResult
+	cycleStarted := rt.Clock.Now().UTC()
 	ctx, span := rt.Telemetry.TraceControl(ctx, "runtime.control_cycle", "control_cycle", string(rt.Opts.MissionID), "")
 	defer func() {
 		outcome := "idle"
@@ -566,21 +573,51 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		result.Worked = true
 	}
 
-	decision, err := rt.Scheduler.Step(ctx, missionRevision)
-	if err != nil {
-		return result, fmt.Errorf("scheduler step: %w", err)
+	cadence, cadErr := kernel.ActiveSchedulerCadence(ctx, rt.Store)
+	if cadErr != nil {
+		return result, fmt.Errorf("scheduler cadence: %w", cadErr)
 	}
-	result.SchedulerRan = true
-	result.SchedulerKind = decision.Kind
-	// Continuity blocked without admission is still a completed step, but does
-	// not count as productive work for idle backoff purposes.
-	if decision.Kind == kernel.DecisionDispatch || decision.Kind == kernel.DecisionExpand {
-		result.Worked = true
+	if err := cadence.Validate(); err != nil {
+		return result, fmt.Errorf("scheduler cadence: %w", err)
+	}
+	result.CadenceVersion = cadence.Version
+	maxDispatches := cadence.MaxDispatches
+	if maxDispatches <= 0 {
+		maxDispatches = 1
 	}
 
-	// After DISPATCH, route to local or optional model executor. Non-local
-	// specs without a wired provider skip with requires_model.
-	if decision.Kind == kernel.DecisionDispatch && decision.Operation != "" {
+	// Bounded multi-step schedule/dispatch under FR-RES-001 cycle budgets.
+	// Productive DISPATCH counts toward MaxDispatches; non-dispatch decisions
+	// (EXPAND/DIAGNOSE/CONTINUITY_BLOCKED) end the loop after one attempt so we
+	// do not spin on empty replenishment inside a single cycle.
+	for result.OperationsExecuted+result.OperationsSkipped < maxDispatches {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
+		if !domain.WithinCycleBudget(cycleStarted, rt.Clock.Now().UTC(), cadence.MaxCycleDuration) {
+			result.CycleBudgetHit = true
+			break
+		}
+
+		decision, stepErr := rt.Scheduler.Step(ctx, missionRevision)
+		if stepErr != nil {
+			return result, fmt.Errorf("scheduler step: %w", stepErr)
+		}
+		result.SchedulerRan = true
+		result.SchedulerSteps++
+		result.SchedulerKind = decision.Kind
+		// Continuity blocked without admission is still a completed step, but does
+		// not count as productive work for idle backoff purposes.
+		if decision.Kind == kernel.DecisionDispatch || decision.Kind == kernel.DecisionExpand {
+			result.Worked = true
+		}
+
+		if decision.Kind != kernel.DecisionDispatch || decision.Operation == "" {
+			// No more ready work this cycle (or expand/diagnose already done).
+			break
+		}
+
+		// After DISPATCH, route to local or optional model/file/web executors.
 		execResult, execErr := rt.Executor.Execute(ctx, decision.Operation)
 		if execErr != nil {
 			return result, fmt.Errorf("dispatch executor: %w", execErr)
@@ -590,6 +627,17 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 			result.Worked = true
 		} else if execResult.Skipped {
 			result.OperationsSkipped++
+			// Skips still consume a dispatch slot so a missing provider cannot
+			// monopolize the cycle with infinite requires_* attempts.
+		} else {
+			// Unexpected non-complete non-skip: stop to avoid thrash.
+			break
+		}
+	}
+	if result.OperationsExecuted+result.OperationsSkipped >= maxDispatches && result.SchedulerRan {
+		// Mark budget hit only when we actually reached the cap with dispatch activity.
+		if result.OperationsExecuted+result.OperationsSkipped > 0 {
+			result.DispatchBudgetHit = result.OperationsExecuted+result.OperationsSkipped >= maxDispatches
 		}
 	}
 	return result, nil
@@ -659,15 +707,29 @@ func (rt *Runtime) RunHTTP(ctx context.Context) error {
 }
 
 // RunControlLoop repeatedly processes cycles until ctx ends or graceful stop.
-// Empty cycles sleep with exponential backoff between IdleMin and IdleMax.
+// Empty cycles sleep with exponential backoff between cadence MinIdleSleep and
+// MaxIdleSleep when a SCHEDULER revision is active; otherwise Options IdleMin/Max.
 func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 	if rt == nil {
 		return errors.New("runtime is nil")
 	}
-	idle := rt.Opts.IdleMin
+	idleMin, idleMax := rt.Opts.IdleMin, rt.Opts.IdleMax
+	idle := idleMin
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
+		}
+		// Refresh durable cadence each iteration so HOT/NEXT_CYCLE applies without restart.
+		if cad, err := kernel.ActiveSchedulerCadence(ctx, rt.Store); err == nil && cad.Validate() == nil {
+			if cad.MinIdleSleep > 0 {
+				idleMin = cad.MinIdleSleep
+			}
+			if cad.MaxIdleSleep > 0 {
+				idleMax = cad.MaxIdleSleep
+			}
+			if idleMin > idleMax && idleMax > 0 {
+				idleMin = idleMax
+			}
 		}
 		result, err := rt.ProcessCycle(ctx)
 		if err != nil {
@@ -678,7 +740,7 @@ func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 			return nil
 		}
 		if result.Worked {
-			idle = rt.Opts.IdleMin
+			idle = idleMin
 			continue
 		}
 		// Bounded wait — never spin. Clock is injectable for tests via WaitUntil.
@@ -686,10 +748,10 @@ func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 		if err := rt.Clock.WaitUntil(ctx, deadline); err != nil {
 			return err
 		}
-		if idle < rt.Opts.IdleMax {
+		if idle < idleMax {
 			idle *= 2
-			if idle > rt.Opts.IdleMax {
-				idle = rt.Opts.IdleMax
+			if idle > idleMax {
+				idle = idleMax
 			}
 		}
 	}

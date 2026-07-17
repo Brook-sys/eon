@@ -149,6 +149,58 @@ func TestSchedulerConsumesActiveHorizonRevision(t *testing.T) {
 	}
 }
 
+func TestActiveSchedulerCadenceFallbackAndRevision(t *testing.T) {
+	store := memory.New()
+	got, err := ActiveSchedulerCadence(context.Background(), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	def := domain.DefaultSchedulerCadenceConfig()
+	if got.Version != def.Version || got.MaxDispatches != def.MaxDispatches {
+		t.Fatalf("cadence default = %#v", got)
+	}
+
+	clock := source.NewManualClock(time.Date(2026, 7, 17, 10, 0, 0, 0, time.UTC))
+	ids := source.NewSequenceIDGenerator(1)
+	applier, err := NewConfigApplier(store, clock, ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tight := domain.DefaultSchedulerCadenceConfig()
+	tight.Version = "scheduler.tight.v1"
+	tight.MaxDispatches = 2
+	tight.MaxCycleDuration = 5 * time.Second
+	draft := domain.ConfigDraft{
+		SchemaVersion: domain.SchemaVersionV1, ID: "draft_sched_1", Scope: domain.ConfigScopeScheduler,
+		Applicability: domain.ConfigNextCycle, Status: domain.ConfigDraftOpen,
+		ActorType: domain.ActorOperator, ActorID: "op", Reason: "tighten cadence",
+		Scheduler: &tight, CreatedAt: clock.Now(),
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.CreateConfigDraft(draft)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := applier.ValidateDraft(context.Background(), draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	clock.Advance(time.Second)
+	if _, _, err := applier.ApplyDraft(context.Background(), draft.ID); err != nil {
+		t.Fatal(err)
+	}
+	active, err := ActiveSchedulerCadence(context.Background(), store)
+	if err != nil || active.Version != "scheduler.tight.v1" || active.MaxDispatches != 2 {
+		t.Fatalf("active cadence = %#v err=%v", active, err)
+	}
+	explicit := domain.DefaultSchedulerCadenceConfig()
+	explicit.Version = "scheduler.explicit.v1"
+	explicit.MaxDispatches = 3
+	resolved, err := ResolveSchedulerCadence(context.Background(), store, explicit)
+	if err != nil || resolved.MaxDispatches != 3 || resolved.Version != "scheduler.explicit.v1" {
+		t.Fatalf("explicit resolve = %#v err=%v", resolved, err)
+	}
+}
+
 func TestQuestionGateProcessorUsesActiveInterruptionPolicy(t *testing.T) {
 	store := memory.New()
 	clock := source.NewManualClock(time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC))
