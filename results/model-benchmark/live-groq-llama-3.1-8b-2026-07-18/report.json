@@ -1,0 +1,615 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v1",
+  "model": "llama-3.1-8b-instant",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 46,
+      "duration_millis": 398,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "Based on the provided facts, the publication date is 2025-11-03 and the source identifier is S-17. \n\nHere's the output:\n\ndate=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 46,
+      "duration_millis": 514,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "Based on the provided facts, the publication date is 2025-11-03 and the source identifier is S-17. \n\nHere's the output:\n\ndate=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 46,
+      "duration_millis": 357,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "Based on the provided facts, the publication date is 2025-11-03 and the source identifier is S-17. \n\nHere's the output:\n\ndate=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 16,
+      "duration_millis": 219,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date: 2025-11-03\nsource: S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 16,
+      "duration_millis": 226,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date: 2025-11-03\nsource: S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 16,
+      "duration_millis": 264,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date: 2025-11-03\nsource: S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 172,
+      "output_tokens": 256,
+      "duration_millis": 450,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_info():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys containing the extracted information.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"date\"]\n    source_identifier = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted information\n    result = {\n        \"date\": publication_date,\n        \"source\": source_identifier\n    }\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_publication_info())\n```\n\nThis code defines a function `extract_publication_info` that extracts the publication date and source identifier from the given facts. It then creates a JSON object with the extracted information and returns it. The `json.dumps` function is used to convert"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 172,
+      "output_tokens": 256,
+      "duration_millis": 472,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_info():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys containing the extracted information.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"date\"]\n    source_identifier = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted information\n    result = {\n        \"date\": publication_date,\n        \"source\": source_identifier\n    }\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_publication_info())\n```\n\nThis code defines a function `extract_publication_info` that extracts the publication date and source identifier from the given facts. It then creates a JSON object with the extracted information and returns it. The `json.dumps` function is used to convert"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 172,
+      "output_tokens": 256,
+      "duration_millis": 479,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_info():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys containing the extracted information.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"date\"]\n    source_identifier = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted information\n    result = {\n        \"date\": publication_date,\n        \"source\": source_identifier\n    }\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_publication_info())\n```\n\nThis code defines a function `extract_publication_info` that extracts the publication date and source identifier from the given facts. It then creates a JSON object with the extracted information and returns it. The `json.dumps` function is used to convert"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 299,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 206,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 295,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 291,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "observation=O-9\nsupport=YES"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 204,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "observation=O-9\nsupport=YES"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 221,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "observation=O-9\nsupport=YES"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 158,
+      "output_tokens": 256,
+      "duration_millis": 603,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the facts.\n                 F1: Claim C-4: all measured retries completed without duplicate effects.\n                 F2: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\n    Returns:\n    dict: A JSON object with exactly two string keys: observation, support.\n    \"\"\"\n\n    # Extract the claim and observation from the facts\n    claim = facts.get('F1')\n    observation = facts.get('F2')\n\n    # Check if the observation supports the claim\n    # If all retries completed with exactly one effect, it supports the claim\n    if '30 of 30' in observation and 'exactly one effect' in observation:\n        support = 'YES'\n    else:\n        support = 'NO'\n\n    # Return the result as a JSON object\n    return {\n        'observation': observation,\n        'support': support\n    }\n\n# Example usage:\nfacts = {\n    'F1': 'Claim C-4: all measured retries completed without duplicate effects.',\n    'F2': 'Observation O-9: 30"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 158,
+      "output_tokens": 256,
+      "duration_millis": 526,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the facts.\n                 F1: Claim C-4: all measured retries completed without duplicate effects.\n                 F2: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\n    Returns:\n    dict: A JSON object with exactly two string keys: observation, support.\n    \"\"\"\n\n    # Extract the claim and observation from the facts\n    claim = facts.get('F1')\n    observation = facts.get('F2')\n\n    # Check if the observation supports the claim\n    # If all retries completed with exactly one effect, it supports the claim\n    if '30 of 30' in observation and 'exactly one effect' in observation:\n        support = 'YES'\n    else:\n        support = 'NO'\n\n    # Return the result as a JSON object\n    return {\n        'observation': observation,\n        'support': support\n    }\n\n# Example usage:\nfacts = {\n    'F1': 'Claim C-4: all measured retries completed without duplicate effects.',\n    'F2': 'Observation O-9: 30"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 158,
+      "output_tokens": 256,
+      "duration_millis": 560,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the facts.\n                 F1: Claim C-4: all measured retries completed without duplicate effects.\n                 F2: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\n    Returns:\n    dict: A JSON object with exactly two string keys: observation, support.\n    \"\"\"\n\n    # Extract the claim and observation from the facts\n    claim = facts.get('F1')\n    observation = facts.get('F2')\n\n    # Check if the observation supports the claim\n    # If all retries completed with exactly one effect, it supports the claim\n    if '30 of 30' in observation and 'exactly one effect' in observation:\n        support = 'YES'\n    else:\n        support = 'NO'\n\n    # Return the result as a JSON object\n    return {\n        'observation': observation,\n        'support': support\n    }\n\n# Example usage:\nfacts = {\n    'F1': 'Claim C-4: all measured retries completed without duplicate effects.',\n    'F2': 'Observation O-9: 30"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 13,
+      "duration_millis": 231,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "pair=O-1/O-2\nconflict=YES",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 13,
+      "duration_millis": 225,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "pair=O-1/O-2\nconflict=YES",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 13,
+      "duration_millis": 225,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "pair=O-1/O-2\nconflict=YES",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 186,
+      "output_tokens": 13,
+      "duration_millis": 219,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "conflict=YES\npair=O-1/O-2"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 34,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 37,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 37,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 35,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 36,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 37,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 39,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 41,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 44,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 47,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 46,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    }
+  ],
+  "summary": {
+    "total": 33,
+    "compiled": 33,
+    "syntax_valid": 12,
+    "semantically_correct": 12,
+    "input_tokens": 3744,
+    "output_tokens": 1828,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 11,
+    "validation_errors": 10
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "EXTRACT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 6,
+        "semantically_correct": 6,
+        "omitted_facts": 0,
+        "errors": 3
+      },
+      {
+        "label": "REPAIR",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 6
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 9,
+        "semantically_correct": 9,
+        "omitted_facts": 0,
+        "errors": 0
+      },
+      {
+        "label": "DELIMITED",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 9
+      },
+      {
+        "label": "JSON",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 12
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 7
+      },
+      {
+        "label": "4096",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 7
+      },
+      {
+        "label": "8192",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 7
+      }
+    ]
+  }
+}
