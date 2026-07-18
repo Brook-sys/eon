@@ -340,6 +340,8 @@ Dado o mesmo estado persistido, eventos e fontes injetadas, recuperação e sele
 
 O primeiro vertical slice SHOULD operar serialmente e MUST limitar goroutines, conexões, resposta HTTP, conteúdo de fonte, tokens e tamanho de agenda por configuração validada.
 
+**Verificação estrutural (2026-07-18):** `internal/architecture/bounded_buffers_test.go` parseia adapters de rede em `internal/provider` e `internal/channel` e rejeita `io.ReadAll` sem `io.LimitReader` direto ou previamente atribuído. A fixture negativa comprova resolução de alias e detecção de leitura integral sem teto; limites comportamentais e configuração validada continuam cobertos pelos testes específicos de cada adapter.
+
 ### NFR-EVOL-001 — Compatibilidade versionada
 
 Schemas persistidos, `OperationSpec`s, templates, eventos e interfaces públicas MUST possuir versão e política explícita de compatibilidade ou migração.
