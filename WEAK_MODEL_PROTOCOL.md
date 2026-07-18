@@ -556,8 +556,21 @@ Modos offline do runner (sem rede, sem credenciais):
 
 Baseline offline oracle do corpus `cognitive-v1` (2026-07-16): 33/33 runs
 semanticamente corretos na matriz 2k/4k/8k — prova de round-trip encode/Parse,
-não de capacidade cognitiva de um LLM. Eval live permanece bloqueada até existir
-endpoint OpenAI-compatible local.
+não de capacidade cognitiva de um LLM.
+
+Campanha live comparável pós-alinhamento do contrato delimitado (2026-07-18):
+
+- Groq Llama 3.1 8B: 12/33; JSON 0/12 e CONFLICT/REPAIR 0/15, com parte das falhas causada por quota do provider durante a campanha;
+- NVIDIA Llama 3.1 8B: 15/33; DELIMITED 11/12, JSON 1/12 e CHOICE 3/9;
+- Groq Llama 3.3 70B: 24/33; EXTRACT/SYNTHESIZE 18/18, CONFLICT 3/9 e REPAIR 3/6.
+
+A evidência sustenta três limites conservadores, sem promover política
+automaticamente: modelos 8B devem preferir o formato empiricamente mais forte
+por operação; JSON livre não é baseline portátil; CONFLICT e REPAIR exigem
+validação externa e devem permanecer operações menores ou ser encaminhadas a
+um binding superior quando a confiabilidade exigida não for demonstrada. O
+`InterpretReport` registra agora os formatos mais forte e mais fraco por taxa
+semântica para orientar revisão do operador sem alterar o router.
 
 ## Continuidade permanente acima de sofisticação
 

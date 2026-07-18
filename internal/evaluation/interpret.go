@@ -79,12 +79,16 @@ func InterpretReport(report Report) Interpretation {
 		fmt.Sprintf("interpret:errors_validation=%d", report.Summary.ValidationErrors),
 	}
 
-	// Weakest operation / format slices for operator focus (absolute rates only).
+	// Weakest operation / format slices identify risk; the strongest format
+	// provides an evidence-based fallback candidate without changing policy.
 	if worst := weakestAggregate(report.Breakdown.ByOperation); worst != "" {
 		notes = append(notes, "interpret:weakest_operation="+worst)
 	}
 	if worst := weakestAggregate(report.Breakdown.ByFormat); worst != "" {
 		notes = append(notes, "interpret:weakest_format="+worst)
+	}
+	if strongest := strongestAggregate(report.Breakdown.ByFormat); strongest != "" {
+		notes = append(notes, "interpret:strongest_format="+strongest)
 	}
 	if worst := weakestAggregate(report.Breakdown.ByContext); worst != "" {
 		notes = append(notes, "interpret:weakest_context="+worst)
@@ -105,8 +109,8 @@ func InterpretReport(report Report) Interpretation {
 		}
 	case "live":
 		notes = append(notes, "interpret:live_provider_baseline")
-		if verdict != "PASS" {
-			notes = append(notes, "interpret:prefer_weaker_formats_or_smaller_ops_first")
+		if verdict != "PASS" && verdict != "UNSCORED" {
+			notes = append(notes, "interpret:prefer_empirically_stronger_format_or_smaller_ops_first")
 		}
 	}
 
@@ -167,6 +171,16 @@ func buildHeadline(kind, verdict string, report Report, correct, scored, syntax 
 // weakestAggregate returns "label rate=correct/total" for the group with the
 // lowest semantic hit rate among groups with Total>0. Ties break by label ASC.
 func weakestAggregate(aggs []Aggregate) string {
+	return extremeAggregate(aggs, false)
+}
+
+// strongestAggregate returns "label rate=correct/total" for the group with the
+// highest semantic hit rate among groups with Total>0. Ties break by label ASC.
+func strongestAggregate(aggs []Aggregate) string {
+	return extremeAggregate(aggs, true)
+}
+
+func extremeAggregate(aggs []Aggregate, strongest bool) string {
 	type cand struct {
 		label   string
 		correct int
@@ -182,12 +196,17 @@ func weakestAggregate(aggs []Aggregate) string {
 			best = &c
 			continue
 		}
-		// Compare correct/total without floats: a/b < c/d ⇔ a*d < c*b
-		if c.correct*best.total < best.correct*c.total {
+		// Compare correct/total without floats: a/b < c/d ⇔ a*d < c*b.
+		left, right := c.correct*best.total, best.correct*c.total
+		better := left < right
+		if strongest {
+			better = left > right
+		}
+		if better {
 			best = &c
 			continue
 		}
-		if c.correct*best.total == best.correct*c.total && c.label < best.label {
+		if left == right && c.label < best.label {
 			best = &c
 		}
 	}

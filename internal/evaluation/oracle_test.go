@@ -74,6 +74,46 @@ func TestQueueProviderExhaustion(t *testing.T) {
 	}
 }
 
+func TestInterpretLiveReportsEmpiricallyStrongestFormat(t *testing.T) {
+	t.Parallel()
+	report := Report{
+		SchemaVersion: 1,
+		FixtureName:   "fixture",
+		Model:         "model",
+		Summary: Summary{
+			Total:             6,
+			Compiled:          6,
+			SyntaxValid:       4,
+			SemanticallyRight: 4,
+			ValidationErrors:  2,
+		},
+		Runs: []Run{
+			{SyntaxValid: true, SemanticallyCorrect: true},
+			{SyntaxValid: true, SemanticallyCorrect: true},
+			{SyntaxValid: true, SemanticallyCorrect: true},
+			{SyntaxValid: true, SemanticallyCorrect: true},
+			{ErrorKind: "VALIDATION"},
+			{ErrorKind: "VALIDATION"},
+		},
+		Breakdown: Breakdown{ByFormat: []Aggregate{
+			{Label: "JSON", Total: 3, SemanticallyRight: 1},
+			{Label: "DELIMITED", Total: 3, SemanticallyRight: 3},
+		}},
+	}
+
+	interp := InterpretReport(report)
+	joined := strings.Join(interp.Notes, "\n")
+	if !strings.Contains(joined, "interpret:strongest_format=DELIMITED rate=3/3") {
+		t.Fatalf("notes missing strongest format: %v", interp.Notes)
+	}
+	if !strings.Contains(joined, "interpret:weakest_format=JSON rate=1/3") {
+		t.Fatalf("notes missing weakest format: %v", interp.Notes)
+	}
+	if !strings.Contains(joined, "interpret:prefer_empirically_stronger_format_or_smaller_ops_first") {
+		t.Fatalf("notes missing evidence-based guidance: %v", interp.Notes)
+	}
+}
+
 func TestInterpretCompileOnly(t *testing.T) {
 	t.Parallel()
 	set, err := LoadEmbeddedCognitiveV1()
