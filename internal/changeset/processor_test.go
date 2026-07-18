@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/modeltext"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
@@ -55,6 +56,46 @@ func TestDecodeStrictAcceptsDeterministicNormalization(t *testing.T) {
 		if got.OperationID != "operation_1" {
 			t.Fatalf("proposal = %#v", got)
 		}
+	}
+}
+
+func TestDecodeStrictAcceptsVersionedDelimitedChangeSet(t *testing.T) {
+	valid := proposalText(t, proposal("operation_1", "idem_1", domain.GenesisCommitID, "entity_1"))
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(valid), &fields); err != nil {
+		t.Fatal(err)
+	}
+	keys := []string{"schema_version", "id", "mission_revision_id", "operation_id", "base_commit_id", "read_set", "preconditions", "changes", "expected_delta", "validator_ids", "provenance", "idempotency_key"}
+	var text strings.Builder
+	text.WriteString("CHANGESET_DELIMITED_V1\n")
+	for _, key := range keys {
+		text.WriteString(strings.ToUpper(key))
+		text.WriteString(": ")
+		val, ok := fields[key]
+		if !ok {
+			// the proposal() fixture doesn't emit nulls for empty slices
+			if key == "read_set" || key == "preconditions" {
+				val = []byte("[]")
+			} else {
+				val = []byte(`""`)
+			}
+		}
+		text.Write(val)
+		text.WriteByte('\n')
+	}
+	converted, err := modeltext.DelimitedChangeSetJSON(text.String())
+	if err != nil {
+		t.Fatalf("convert delimited: %v", err)
+	}
+	if !strings.Contains(converted, `"read_set"`) {
+		t.Fatalf("converted payload lacks read_set: %s", converted)
+	}
+	got, err := DecodeStrict(text.String(), 1<<20)
+	if err != nil {
+		t.Fatalf("decode delimited: %v", err)
+	}
+	if got.OperationID != "operation_1" || got.IdempotencyKey != "idem_1" {
+		t.Fatalf("proposal = %#v", got)
 	}
 }
 

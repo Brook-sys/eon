@@ -81,7 +81,16 @@ func DecodeStrict(text string, maxBytes int64) (domain.ProposedChangeSet, error)
 	}
 	// Normalize against the raw size budget: refuse to expand authority by
 	// accepting a payload whose pre-normalized form already exceeds the limit.
-	normalized := modeltext.BestJSONCandidate(text)
+	var normalized string
+	if strings.HasPrefix(strings.TrimSpace(text), "CHANGESET_DELIMITED_V1") {
+		var err error
+		normalized, err = modeltext.DelimitedChangeSetJSON(text)
+		if err != nil {
+			return domain.ProposedChangeSet{}, fmt.Errorf("decode delimited proposed changeset: %w", err)
+		}
+	} else {
+		normalized = modeltext.BestJSONCandidate(text)
+	}
 	if int64(len(normalized)) > maxBytes {
 		return domain.ProposedChangeSet{}, errors.New("model output exceeds changeset limit")
 	}

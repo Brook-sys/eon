@@ -52,16 +52,23 @@ func TestBuildShortCorrectionDefaults(t *testing.T) {
 func TestBuildSimplerFormatCorrection(t *testing.T) {
 	t.Parallel()
 	got := BuildSimplerFormatCorrection(`{"bad":true}`, "unknown field")
-	if !strings.Contains(got.Prompt, "changes") || !strings.Contains(got.Prompt, "idempotency_key") {
+	if !strings.Contains(got.Prompt, "CHANGESET_DELIMITED_V1") || !strings.Contains(got.Prompt, "CHANGES") || !strings.Contains(got.Prompt, "IDEMPOTENCY_KEY") {
 		t.Fatalf("simpler format missing keys: %s", got.Prompt)
 	}
 	found := false
 	for _, a := range got.Applied {
-		if a == "simpler_format" {
+		if a == "simpler_delimited_format" {
 			found = true
 		}
 	}
 	if !found {
 		t.Fatalf("applied=%v", got.Applied)
+	}
+}
+
+func TestAppendDelimitedChangeSetInstruction(t *testing.T) {
+	got := AppendDelimitedChangeSetInstruction("task")
+	if !strings.HasPrefix(got, "task\n\nOUTPUT_OVERRIDE:") || !strings.Contains(got, "CHANGESET_DELIMITED_V1") {
+		t.Fatalf("instruction = %q", got)
 	}
 }

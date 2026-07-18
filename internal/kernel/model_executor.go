@@ -398,7 +398,15 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 		return result, fmt.Errorf("invalid lease ref deadline format: %s", leaseRef)
 	}
-	providerCtx, cancelProvider := context.WithDeadline(ctx, leaseDeadline)
+	// Lease timestamps live on the injected clock (including virtual clocks in
+	// deterministic replay/tests), whereas context deadlines use wall time.
+	// Preserve the lease's remaining duration instead of comparing clock domains.
+	remainingLease := leaseDeadline.Sub(e.Clock.Now())
+	if remainingLease <= 0 {
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		return result, errors.New("operation lease expired before provider call")
+	}
+	providerCtx, cancelProvider := context.WithTimeout(ctx, remainingLease)
 	defer cancelProvider()
 
 	// Phase 2: compile + model call(s) outside the write transaction.
@@ -804,6 +812,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				Reason: "fallback_baseline", Reversible: true,
 			}
 			request = compiled.Request
+			// Remote fallback profiles (notably constrained NIM/Groq bindings)
+			// use the reduced line format. The changeset decoder accepts only the
+			// explicitly versioned, fixed-key contract and still applies all kernel
+			// validators after deterministic conversion to JSON.
+			if activeKind == domain.ProviderKindNVIDIANIM || activeKind == domain.ProviderKindGroq {
+				request.Prompt = modeltext.AppendDelimitedChangeSetInstruction(request.Prompt)
+			}
 			request.ResponseFormat = domain.ResponseFormatNone
 			budget.FallbackModelUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)

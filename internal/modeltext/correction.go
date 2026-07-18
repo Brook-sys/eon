@@ -72,19 +72,28 @@ func BuildShortCorrection(in ShortCorrectionInput) ShortCorrectionResult {
 	return ShortCorrectionResult{Prompt: prompt, Applied: applied}
 }
 
-// SimplerJSONFormat is the reduced answer contract for ladder step 6.
-// It drops optional narrative keys and demands the minimal ProposedChangeSet shape.
-const SimplerJSONFormat = "single JSON object only with keys: schema_version, id, mission_revision_id, operation_id, base_commit_id, read_set, preconditions, changes, expected_delta, validator_ids, provenance, idempotency_key; no markdown; no prose before or after"
+// DelimitedChangeSetFormat is the reduced answer contract for ladder step 6.
+// Each value remains a JSON scalar/array, but the outer object punctuation is
+// removed. This avoids the long-range brace/comma bookkeeping that weak models
+// commonly truncate while preserving deterministic, typed local validation.
+const DelimitedChangeSetFormat = "CHANGESET_DELIMITED_V1 followed by exactly one KEY: JSON_VALUE line for SCHEMA_VERSION, ID, MISSION_REVISION_ID, OPERATION_ID, BASE_COMMIT_ID, READ_SET, PRECONDITIONS, CHANGES, EXPECTED_DELTA, VALIDATOR_IDS, PROVENANCE, IDEMPOTENCY_KEY; no markdown; no prose"
 
 // BuildSimplerFormatCorrection is step 6: short correction plus a stricter/simpler format.
 func BuildSimplerFormatCorrection(previousOutput, safeError string) ShortCorrectionResult {
 	r := BuildShortCorrection(ShortCorrectionInput{
 		PreviousOutput: previousOutput,
 		SafeError:      safeError,
-		AnswerFormat:   SimplerJSONFormat,
+		AnswerFormat:   DelimitedChangeSetFormat,
 	})
-	r.Applied = append(r.Applied, "simpler_format")
+	r.Applied = append(r.Applied, "simpler_delimited_format")
 	return r
+}
+
+// AppendDelimitedChangeSetInstruction conservatively changes only the answer
+// serialization requested by an existing prompt. The semantic task, authority,
+// validators, and lineage requirements remain unchanged.
+func AppendDelimitedChangeSetInstruction(prompt string) string {
+	return strings.TrimSpace(prompt) + "\n\nOUTPUT_OVERRIDE: " + DelimitedChangeSetFormat
 }
 
 func truncateRunes(s string, max int) (string, bool) {
