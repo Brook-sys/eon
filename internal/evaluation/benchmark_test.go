@@ -12,10 +12,14 @@ import (
 
 type scriptedProvider struct {
 	answers []port.CompletionResult
+	err     error
 	index   int
 }
 
 func (p *scriptedProvider) Complete(_ context.Context, _ port.CompletionRequest) (port.CompletionResult, error) {
+	if p.err != nil {
+		return port.CompletionResult{}, p.err
+	}
 	answer := p.answers[p.index]
 	p.index++
 	return answer, nil
@@ -93,7 +97,7 @@ func TestRunnerExecutesContextFormatMatrix(t *testing.T) {
 		{Text: `{"value":"7"}`, InputTokens: 11, OutputTokens: 3, Model: "fake"},
 		{Text: `{broken`, InputTokens: 11, OutputTokens: 3, Model: "fake"},
 	}}
-	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec()}).Run(context.Background(), set, Matrix{ContextTokens: []int{2048, 4096}})
+	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec(), ModelLabel: "fake"}).Run(context.Background(), set, Matrix{ContextTokens: []int{2048, 4096}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,6 +109,25 @@ func TestRunnerExecutesContextFormatMatrix(t *testing.T) {
 	}
 }
 
+func TestRunnerPreservesConfiguredModelWhenEveryProviderCallFails(t *testing.T) {
+	set := FixtureSet{SchemaVersion: 1, Name: "provider-failure", Cases: []Case{{
+		ID: "extract", Operation: OperationExtract, Task: "Extract.",
+		RequiredFacts: []FixtureFact{{ID: "f", Text: "Value is 7."}},
+		Formats:       []Format{FormatChoice}, Expected: map[string]string{"value": "7"},
+	}}}
+	provider := &scriptedProvider{err: context.DeadlineExceeded}
+	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec(), ModelLabel: "configured-live-model"}).Run(context.Background(), set, Matrix{ContextTokens: []int{2048}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Model != "configured-live-model" || report.Summary.ProviderErrors != 1 || report.Runs[0].ErrorKind != "PROVIDER" {
+		t.Fatalf("unexpected provider failure report: %+v", report)
+	}
+	if got := InterpretReport(report); got.Kind != "live" || got.Verdict != "FAIL" {
+		t.Fatalf("interpretation = %+v", got)
+	}
+}
+
 func TestRunnerRecordsCompileFailureWithoutCallingProvider(t *testing.T) {
 	set := FixtureSet{SchemaVersion: 1, Name: "large", Cases: []Case{{
 		ID: "large", Operation: OperationExtract, Task: strings.Repeat("task ", 500),
@@ -112,7 +135,7 @@ func TestRunnerRecordsCompileFailureWithoutCallingProvider(t *testing.T) {
 		Formats:       []Format{FormatJSON}, Expected: map[string]string{"value": "7"},
 	}}}
 	provider := &scriptedProvider{}
-	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec()}).Run(context.Background(), set, Matrix{ContextTokens: []int{512}})
+	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec(), ModelLabel: "compile-fake"}).Run(context.Background(), set, Matrix{ContextTokens: []int{512}})
 	if err != nil {
 		t.Fatal(err)
 	}

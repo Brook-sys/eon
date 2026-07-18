@@ -230,6 +230,10 @@ type Runner struct {
 	Provider  port.ModelProvider
 	Estimator prompt.TokenEstimator
 	Spec      domain.OperationSpec
+	// ModelLabel records the configured deployment even when every provider
+	// call fails before returning a ModelResult. This prevents failed live
+	// campaigns from being mislabeled as offline compile-only reports.
+	ModelLabel string
 }
 
 func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Report, error) {
@@ -246,7 +250,7 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 		return Report{}, err
 	}
 	var runs []Run
-	model := ""
+	model := strings.TrimSpace(r.ModelLabel)
 	for _, c := range fixtures.Cases {
 		for _, format := range c.Formats {
 			for _, contextTokens := range matrix.ContextTokens {

@@ -80,7 +80,7 @@ func main() {
 		if perr != nil {
 			log.Fatal(perr)
 		}
-		report, err = (evaluation.Runner{Provider: provider, Estimator: estimator, Spec: spec}).Run(ctx, fixtures, matrix)
+		report, err = (evaluation.Runner{Provider: provider, Estimator: estimator, Spec: spec, ModelLabel: model}).Run(ctx, fixtures, matrix)
 	}
 	if err != nil {
 		log.Fatal(err)
