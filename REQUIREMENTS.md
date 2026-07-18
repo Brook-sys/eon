@@ -344,6 +344,8 @@ O primeiro vertical slice SHOULD operar serialmente e MUST limitar goroutines, c
 
 Schemas persistidos, `OperationSpec`s, templates, eventos e interfaces públicas MUST possuir versão e política explícita de compatibilidade ou migração.
 
+**Verificação estrutural (2026-07-18):** `internal/architecture/domain_validation_test.go` parseia os tipos de produção de `internal/domain` e exige que toda struct com `SchemaVersion` publique ao menos um entrypoint `Validate*() error`. A fixture negativa comprova que schemas versionados sem validação são rejeitados e que tipos não versionados permanecem fora do guard; assim, adicionar estado persistível versionado sem política executável de aceitação deixa de ser silencioso.
+
 ## 8. Matriz inicial de rastreabilidade
 
 | Área | Requisitos primários | Verificação planejada |
