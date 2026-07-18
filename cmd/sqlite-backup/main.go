@@ -4,7 +4,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -14,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	storage "motor-autonomo/internal/storage/sqlite"
 )
@@ -56,6 +59,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if fs.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
 	}
+	if err := validateModeFlags(fs, *mode); err != nil {
+		return err
+	}
+	if err := validateReportPath(*reportPath, *source, *destination, *path, *inventoryPath); err != nil {
+		return err
+	}
 	verificationOptions := storage.VerificationOptions{
 		ExpectedSHA256:           *expectedSHA256,
 		ExpectedPageSize:         expectedPageSize.Pointer(),
@@ -92,11 +101,20 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if *pageSteps < 0 || *pageSteps > math.MaxInt32 {
 			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
 		}
+		if err := preflightReportPath(*reportPath); err != nil {
+			return err
+		}
 		report, err := storage.ClosedCopyTo(ctx, *source, *destination, storage.BackupOptions{PageSteps: int32(*pageSteps)})
 		if err != nil {
 			return fmt.Errorf("backup: %w", err)
 		}
-		return emitReport(stdout, *reportPath, report)
+		reportPublished, err := emitReport(stdout, *reportPath, report)
+		if err != nil && *reportPath != "" && !reportPublished {
+			if rollbackErr := removePublishedArtifact(*destination); rollbackErr != nil {
+				return fmt.Errorf("%w; rollback destination: %v", err, rollbackErr)
+			}
+		}
+		return err
 	case "verify":
 		if *path == "" {
 			return errors.New("verify mode requires -path")
@@ -105,7 +123,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
 		}
-		return emitReport(stdout, *reportPath, verification)
+		_, err = emitReport(stdout, *reportPath, verification)
+		return err
 	case "restore":
 		if *source == "" {
 			return errors.New("restore mode requires -source")
@@ -115,6 +134,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 		if *pageSteps < 0 || *pageSteps > math.MaxInt32 {
 			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
+		}
+		if err := preflightReportPath(*reportPath); err != nil {
+			return err
 		}
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
 			ExpectedSHA256:           verificationOptions.ExpectedSHA256,
@@ -131,27 +153,112 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("restore: %w", err)
 		}
-		return emitReport(stdout, *reportPath, report)
+		reportPublished, err := emitReport(stdout, *reportPath, report)
+		if err != nil && *reportPath != "" && !reportPublished {
+			if rollbackErr := removePublishedArtifact(*destination); rollbackErr != nil {
+				return fmt.Errorf("%w; rollback destination: %v", err, rollbackErr)
+			}
+		}
+		return err
 	default:
 		return fmt.Errorf("unsupported mode %q (want backup, verify, or restore)", *mode)
 	}
 }
 
-func emitReport(stdout io.Writer, reportPath string, report any) error {
+func validateModeFlags(fs *flag.FlagSet, mode string) error {
+	allowed := map[string]map[string]bool{
+		"backup": {
+			"mode": true, "source": true, "destination": true, "page-steps": true, "report-path": true,
+		},
+		"verify": {
+			"mode": true, "path": true, "report-path": true, "inventory": true,
+			"expected-sha256": true, "expected-page-size": true, "expected-page-count": true,
+			"expected-schema-version": true, "expected-schema-objects": true, "expected-schema-sha256": true,
+			"expected-checkpoint-sha256": true, "expected-checkpoint-rows": true, "expected-checkpoint-format": true,
+		},
+		"restore": {
+			"mode": true, "source": true, "destination": true, "page-steps": true, "report-path": true, "inventory": true,
+			"expected-sha256": true, "expected-page-size": true, "expected-page-count": true,
+			"expected-schema-version": true, "expected-schema-objects": true, "expected-schema-sha256": true,
+			"expected-checkpoint-sha256": true, "expected-checkpoint-rows": true, "expected-checkpoint-format": true,
+		},
+	}
+	modeAllowed, ok := allowed[mode]
+	if !ok {
+		return fmt.Errorf("unsupported mode %q (want backup, verify, or restore)", mode)
+	}
+	var invalid string
+	fs.Visit(func(item *flag.Flag) {
+		if invalid == "" && !modeAllowed[item.Name] {
+			invalid = item.Name
+		}
+	})
+	if invalid != "" {
+		return fmt.Errorf("-%s is not supported in %s mode", invalid, mode)
+	}
+	return nil
+}
+
+func validateReportPath(reportPath string, dataPaths ...string) error {
+	if reportPath == "" {
+		return nil
+	}
+	reportPath = filepath.Clean(reportPath)
+	for _, dataPath := range dataPaths {
+		if dataPath != "" && reportPath == filepath.Clean(dataPath) {
+			return fmt.Errorf("report path must differ from data path: %s", reportPath)
+		}
+	}
+	return nil
+}
+
+func preflightReportPath(path string) error {
+	if path == "" {
+		return nil
+	}
+	path = filepath.Clean(path)
+	if path == "." {
+		return errors.New("report path is required")
+	}
+	if _, err := os.Lstat(path); err == nil {
+		return fmt.Errorf("report path already exists: %s", path)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect report path: %w", err)
+	}
+	return nil
+}
+
+func removePublishedArtifact(path string) error {
+	path = filepath.Clean(path)
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	directory, err := os.Open(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	return directory.Sync()
+}
+
+var publishReport = writeReportAtomic
+
+func emitReport(stdout io.Writer, reportPath string, report any) (bool, error) {
 	payload, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
-		return fmt.Errorf("encode report: %w", err)
+		return false, fmt.Errorf("encode report: %w", err)
 	}
 	payload = append(payload, '\n')
 	if reportPath != "" {
-		if err := writeReportAtomic(reportPath, payload); err != nil {
-			return fmt.Errorf("publish report: %w", err)
+		if err := publishReport(reportPath, payload); err != nil {
+			return false, fmt.Errorf("publish report: %w", err)
 		}
 	}
+	reportPublished := reportPath != ""
 	if _, err := stdout.Write(payload); err != nil {
-		return fmt.Errorf("write report: %w", err)
+		return reportPublished, fmt.Errorf("write report: %w", err)
 	}
-	return nil
+	return reportPublished, nil
 }
 
 // writeReportAtomic gives the inventory report the same fail-closed publication
@@ -274,12 +381,14 @@ type backupInventory struct {
 }
 
 func loadInventory(path string) (backupInventory, error) {
-	file, err := os.Open(filepath.Clean(path))
+	payload, err := readInventoryFile(path)
 	if err != nil {
 		return backupInventory{}, err
 	}
-	defer file.Close()
-	decoder := json.NewDecoder(io.LimitReader(file, maxInventoryBytes+1))
+	if err := rejectDuplicateInventoryFields(payload); err != nil {
+		return backupInventory{}, err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
 	var inventory backupInventory
 	if err := decoder.Decode(&inventory); err != nil {
@@ -291,11 +400,6 @@ func loadInventory(path string) (backupInventory, error) {
 			return backupInventory{}, errors.New("inventory contains trailing JSON")
 		}
 		return backupInventory{}, fmt.Errorf("decode trailing JSON: %w", err)
-	}
-	if info, err := file.Stat(); err != nil {
-		return backupInventory{}, err
-	} else if info.Size() > maxInventoryBytes {
-		return backupInventory{}, fmt.Errorf("inventory exceeds %d bytes", maxInventoryBytes)
 	}
 	if inventory.FileSize <= 0 || inventory.PageSize <= 0 || inventory.PageCount <= 0 {
 		return backupInventory{}, errors.New("inventory physical identity is incomplete")
@@ -315,15 +419,118 @@ func loadInventory(path string) (backupInventory, error) {
 	if inventory.SchemaVersion < 0 || inventory.SchemaObjects != 1 || inventory.CheckpointRows < 0 || inventory.CheckpointRows > 1 || inventory.CheckpointFormat < 0 {
 		return backupInventory{}, errors.New("inventory logical identity is invalid")
 	}
+	if inventory.CheckpointRows == 0 && inventory.CheckpointFormat != 0 {
+		return backupInventory{}, errors.New("inventory empty checkpoint must use format 0")
+	}
 	if inventory.IntegrityCheck != "ok" || inventory.ForeignKeyCheck != "ok" {
 		return backupInventory{}, errors.New("inventory does not record successful integrity checks")
 	}
-	if len(inventory.SHA256) != sha256HexLength || len(inventory.SchemaSHA256) != sha256HexLength ||
-		(inventory.CheckpointRows == 1 && len(inventory.CheckpointSHA256) != sha256HexLength) ||
+	if !isCanonicalSHA256(inventory.SHA256) || !isCanonicalSHA256(inventory.SchemaSHA256) ||
+		(inventory.CheckpointRows == 1 && !isCanonicalSHA256(inventory.CheckpointSHA256)) ||
 		(inventory.CheckpointRows == 0 && inventory.CheckpointSHA256 != "") {
-		return backupInventory{}, errors.New("inventory digest identity is incomplete")
+		return backupInventory{}, errors.New("inventory digest identity is incomplete or non-canonical")
 	}
 	return inventory, nil
+}
+
+func readInventoryFile(path string) ([]byte, error) {
+	path = filepath.Clean(path)
+	pathInfo, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if pathInfo.Mode()&os.ModeSymlink != 0 || !pathInfo.Mode().IsRegular() {
+		return nil, fmt.Errorf("inventory path is not a regular file: %s", path)
+	}
+	if pathInfo.Size() > maxInventoryBytes {
+		return nil, fmt.Errorf("inventory exceeds %d bytes", maxInventoryBytes)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	openedInfo, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !openedInfo.Mode().IsRegular() || !os.SameFile(pathInfo, openedInfo) {
+		return nil, fmt.Errorf("inventory path changed before read: %s", path)
+	}
+	payload, err := io.ReadAll(io.LimitReader(file, maxInventoryBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(payload) > maxInventoryBytes {
+		return nil, fmt.Errorf("inventory exceeds %d bytes", maxInventoryBytes)
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("rewind inventory: %w", err)
+	}
+	confirmation, err := io.ReadAll(io.LimitReader(file, maxInventoryBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("reread inventory: %w", err)
+	}
+	if !bytes.Equal(payload, confirmation) {
+		return nil, errors.New("inventory changed during read")
+	}
+	openedAfter, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(openedInfo, openedAfter) || openedInfo.Size() != openedAfter.Size() || !openedInfo.ModTime().Equal(openedAfter.ModTime()) {
+		return nil, errors.New("inventory metadata changed during read")
+	}
+	afterInfo, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if afterInfo.Mode()&os.ModeSymlink != 0 || !afterInfo.Mode().IsRegular() || !os.SameFile(openedInfo, afterInfo) {
+		return nil, fmt.Errorf("inventory path changed during read: %s", path)
+	}
+	return payload, nil
+}
+
+func rejectDuplicateInventoryFields(payload []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	token, err := decoder.Token()
+	if err != nil {
+		return fmt.Errorf("decode JSON: %w", err)
+	}
+	if delimiter, ok := token.(json.Delim); !ok || delimiter != '{' {
+		return errors.New("inventory must be a JSON object")
+	}
+	seen := make(map[string]struct{})
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return fmt.Errorf("decode inventory field: %w", err)
+		}
+		key, ok := token.(string)
+		if !ok {
+			return errors.New("inventory field name is not a string")
+		}
+		if _, exists := seen[key]; exists {
+			return fmt.Errorf("inventory contains duplicate field %q", key)
+		}
+		seen[key] = struct{}{}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return fmt.Errorf("decode inventory field %q: %w", key, err)
+		}
+	}
+	if _, err := decoder.Token(); err != nil {
+		return fmt.Errorf("close inventory object: %w", err)
+	}
+	return nil
+}
+
+func isCanonicalSHA256(value string) bool {
+	if len(value) != sha256HexLength || value != strings.ToLower(value) {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && len(decoded) == 32
 }
 
 func (inventory backupInventory) verificationOptions() storage.VerificationOptions {

@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"motor-autonomo/internal/storage/sqlite"
@@ -166,6 +168,8 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=-1"},
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=2147483648"},
 		{"-mode=backup", "-source=x", "-destination=y", "-inventory=z"},
+		{"-mode=backup", "-source=x", "-destination=y", "-path=z"},
+		{"-mode=backup", "-source=x", "-destination=y", "-expected-sha256=" + string(bytes.Repeat([]byte("0"), 64))},
 		{"-mode=verify"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=not-an-int"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=2"},
@@ -173,10 +177,14 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=verify", "-path=x", "-expected-schema-objects=2"},
 		{"-mode=verify", "-path=x", "-expected-page-size=0"},
 		{"-mode=verify", "-path=x", "-expected-page-count=-1"},
+		{"-mode=verify", "-path=x", "-source=y"},
+		{"-mode=verify", "-path=x", "-page-steps=1"},
 		{"-mode=restore"},
 		{"-mode=restore", "-source=x"},
 		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=-1"},
 		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=2147483648"},
+		{"-mode=restore", "-source=x", "-destination=y", "-path=z"},
+		{"-mode=restore", "-source=x", "-destination=y", "-report-path=y"},
 		{"-mode=unknown"},
 	} {
 		if err := run(context.Background(), args, &bytes.Buffer{}); err == nil {
@@ -185,15 +193,111 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 	}
 }
 
+func TestRunRollsBackDestinationWhenRequestedReportCannotPublish(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "runtime.sqlite")
+	store, err := sqlite.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	blockingParent := filepath.Join(dir, "not-a-directory")
+	if err := os.WriteFile(blockingParent, []byte("block"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"backup", "restore"} {
+		destination := filepath.Join(dir, mode+"-destination.sqlite")
+		if err := run(context.Background(), []string{
+			"-mode=" + mode,
+			"-source=" + sourcePath,
+			"-destination=" + destination,
+			"-report-path=" + filepath.Join(blockingParent, mode+".json"),
+		}, &bytes.Buffer{}); err == nil {
+			t.Fatalf("%s unexpectedly succeeded", mode)
+		}
+		if _, err := os.Lstat(destination); !os.IsNotExist(err) {
+			t.Fatalf("%s destination survived failed report publication: %v", mode, err)
+		}
+	}
+}
+
+func TestRunRollsBackDestinationWhenReportPublicationFailsAfterMutation(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "runtime.sqlite")
+	store, err := sqlite.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	originalPublisher := publishReport
+	publishReport = func(string, []byte) error { return errors.New("forced publication failure") }
+	t.Cleanup(func() { publishReport = originalPublisher })
+	for _, mode := range []string{"backup", "restore"} {
+		destination := filepath.Join(dir, mode+"-destination.sqlite")
+		if err := run(context.Background(), []string{
+			"-mode=" + mode,
+			"-source=" + sourcePath,
+			"-destination=" + destination,
+			"-report-path=" + filepath.Join(dir, mode+".json"),
+		}, &bytes.Buffer{}); err == nil {
+			t.Fatalf("%s unexpectedly succeeded", mode)
+		}
+		if _, err := os.Lstat(destination); !os.IsNotExist(err) {
+			t.Fatalf("%s destination survived report publication failure: %v", mode, err)
+		}
+	}
+}
+
+func TestRunKeepsPublishedArtifactsWhenOnlyStdoutFails(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "runtime.sqlite")
+	destination := filepath.Join(dir, "backup.sqlite")
+	reportPath := filepath.Join(dir, "backup.json")
+	store, err := sqlite.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := run(context.Background(), []string{
+		"-mode=backup", "-source=" + sourcePath, "-destination=" + destination, "-report-path=" + reportPath,
+	}, failingWriter{}); err == nil {
+		t.Fatal("stdout failure unexpectedly succeeded")
+	}
+	for _, path := range []string{destination, reportPath} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("published artifact %s missing after stdout failure: %v", path, err)
+		}
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errors.New("forced stdout failure")
+}
+
 func TestLoadInventoryRejectsUntrustedJSON(t *testing.T) {
 	dir := t.TempDir()
+	canonicalDigest := string(bytes.Repeat([]byte("a"), 64))
 	for name, payload := range map[string]string{
-		"unknown.json":   `{"unknown":true}`,
-		"trailing.json":  `{} {}`,
-		"invalid.json":   `{"file_size":1,"page_size":4096,"page_count":1,"application_id":0,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
-		"digest.json":    `{"file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
-		"future.json":    `{"report_schema":"motor-autonomo.sqlite-backup-report.v2","operation":"backup","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
-		"operation.json": `{"report_schema":"motor-autonomo.sqlite-backup-report.v1","operation":"delete","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"unknown.json":      `{"unknown":true}`,
+		"trailing.json":     `{} {}`,
+		"duplicate.json":    `{"report_schema":"motor-autonomo.sqlite-backup-report.v1","report_schema":"motor-autonomo.sqlite-backup-report.v1"}`,
+		"invalid.json":      `{"file_size":1,"page_size":4096,"page_count":1,"application_id":0,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"digest.json":       `{"file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"future.json":       `{"report_schema":"motor-autonomo.sqlite-backup-report.v2","operation":"backup","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"operation.json":    `{"report_schema":"motor-autonomo.sqlite-backup-report.v1","operation":"delete","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"uppercase.json":    fmt.Sprintf(`{"report_schema":"motor-autonomo.sqlite-backup-report.v1","operation":"backup","file_size":4096,"page_size":4096,"page_count":1,"sha256":%q,"application_id":1296127316,"user_version":1,"schema_version":1,"schema_objects":1,"schema_sha256":%q,"checkpoint_rows":0,"checkpoint_format":0,"integrity_check":"ok","foreign_key_check":"ok"}`, strings.ToUpper(canonicalDigest), canonicalDigest),
+		"empty-format.json": fmt.Sprintf(`{"report_schema":"motor-autonomo.sqlite-backup-report.v1","operation":"backup","file_size":4096,"page_size":4096,"page_count":1,"sha256":%q,"application_id":1296127316,"user_version":1,"schema_version":1,"schema_objects":1,"schema_sha256":%q,"checkpoint_rows":0,"checkpoint_format":2,"integrity_check":"ok","foreign_key_check":"ok"}`, canonicalDigest, canonicalDigest),
 	} {
 		path := filepath.Join(dir, name)
 		if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
@@ -202,5 +306,17 @@ func TestLoadInventoryRejectsUntrustedJSON(t *testing.T) {
 		if _, err := loadInventory(path); err == nil {
 			t.Fatalf("inventory %s unexpectedly accepted", name)
 		}
+	}
+
+	target := filepath.Join(dir, "target.json")
+	if err := os.WriteFile(target, []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "inventory-link.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadInventory(link); err == nil {
+		t.Fatal("symlink inventory unexpectedly accepted")
 	}
 }

@@ -58,7 +58,11 @@ impresso em stdout em um arquivo novo `0600`, por inode temporário sincronizado
 hard link sem replace e `fsync` do diretório. O comando nunca sobrescreve um
 inventário existente. Assim, o digest físico, identidade lógica, schema e
 inventário de páginas usados numa restauração permanecem juntos do backup sem
-depender de redirecionamento de shell parcialmente gravado.
+depender de redirecionamento de shell parcialmente gravado. A CLI rejeita flags
+de outro modo e colisões entre `-report-path` e caminhos de dados. Em backup ou
+restore, falha ao publicar o inventário solicitado remove e sincroniza o destino
+SQLite recém-criado; falha posterior somente em stdout preserva os dois
+artefatos já duráveis.
 Todo relatório inclui framing explícito `report_schema` com valor
 `motor-autonomo.sqlite-backup-report.v1` e `operation` (`backup`, `verify` ou
 `restore`). O loader de inventário rejeita versões futuras ou operações
@@ -108,10 +112,12 @@ go run ./cmd/sqlite-backup \
 ```
 
 `-inventory` fixa digest físico, páginas, schema e checkpoint sem transcrição
-manual. O parser é estrito, limitado a 64 KiB, rejeita campos desconhecidos,
-JSON trailing, identidade de aplicação não canônica e inventário sem checks de
-integridade bem-sucedidos; também exige o `report_schema` v1 e uma operação
-conhecida. Para evitar seleção ambígua, `-inventory` não pode
+manual. O parser é estrito, limitado a 64 KiB, rejeita symlinks, campos
+duplicados ou desconhecidos, JSON trailing, hashes não canônicos, identidade de
+aplicação não canônica e inventário sem checks de integridade bem-sucedidos;
+também exige o `report_schema` v1 e uma operação conhecida. Antes do parse, ele
+confere a identidade do inode e exige duas leituras idênticas para detectar
+alteração in-place concorrente. Para evitar seleção ambígua, `-inventory` não pode
 ser combinado com flags `-expected-*`. As flags individuais permanecem
 disponíveis para integrações que transportem os campos separadamente:
 
