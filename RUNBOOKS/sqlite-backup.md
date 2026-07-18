@@ -29,6 +29,9 @@ Comportamento:
 Regras:
 
 - o destino **não** pode existir (fail-closed contra overwrite);
+- a cópia é construída e verificada em arquivo temporário no mesmo diretório,
+  publicada atomicamente sem substituir um path criado concorrentemente e
+  fica com permissão `0600`;
 - diretórios pais são criados;
 - cancelamento de `context` interrompe o step e remove o destino incompleto.
 

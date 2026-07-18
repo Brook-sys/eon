@@ -63,6 +63,11 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
 		t.Fatalf("backup identity = %#v", report)
 	}
+	if info, err := os.Stat(destPath); err != nil {
+		t.Fatal(err)
+	} else if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("backup mode = %04o, want 0600", got)
+	}
 	verified, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{ExpectedSHA256: report.SHA256})
 	if err != nil {
 		t.Fatalf("verify pinned digest: %v", err)

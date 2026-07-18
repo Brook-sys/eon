@@ -148,6 +148,7 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Restauração (2026-07-18): `RestoreTo` e `cmd/sqlite-backup -mode=restore` verificam a origem antes da cópia, restauram somente para path novo, recusam overwrite e verificam novamente o destino; testes reabrem estado lógico, preservam destino existente e rejeitam origem inválida sem artefato parcial.
   - Identidade de transporte (2026-07-18): relatórios de backup/verificação agora registram bytes + SHA-256 do arquivo completo; `VerifyBackupWithOptions` e `-expected-sha256` permitem confrontar a identidade preservada após cópia, rejeitam digest inválido/divergente e detectam alteração concorrente por hash antes/depois da auditoria SQLite/checkpoint.
   - Restauração identificada (2026-07-18): `RestoreToWithOptions` e o CLI aceitam o SHA-256 selecionado no inventário, registram `source_sha256` separado da identidade do destino e revalidam a origem depois da cópia; mudança durante restore remove o destino fail-closed.
+  - Publicação segura (2026-07-18): backup/restore escrevem e verificam inode temporário `0600` no diretório de destino e só então publicam por hard link atômico sem replace; corrida que cria o destino após o preflight preserva o arquivo existente e remove o temporário.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -363,6 +364,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 10:00 — Restauração SQLite fail-closed — API/CLI verificam backup antes de restaurar, exigem destino novo, revalidam a cópia e preservam paths existentes; runbook formaliza promoção explícita com runtime parado — verificação: testes específicos, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
 2026-07-18 10:40 — Identidade na restauração SQLite — restore aceita digest esperado, distingue identidade da origem e do destino no relatório e revalida a origem após a cópia, removendo o destino se o contrato offline for violado — verificação: testes específicos, suite completa, vet e `git diff --check` — commit pendente neste ciclo.
+
+2026-07-18 11:00 — Publicação segura de backup SQLite — cópias verificadas passam a usar inode temporário `0600` e publicação atômica sem replace, eliminando a janela TOCTOU entre checar e criar o destino; testes preservam destino concorrente e conferem permissões — verificação: testes específicos, suite completa, vet e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 

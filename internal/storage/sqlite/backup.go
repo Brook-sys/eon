@@ -92,6 +92,24 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		return BackupReport{}, fmt.Errorf("create backup parent directory: %w", err)
 	}
+	tempFile, err := os.CreateTemp(filepath.Dir(destPath), ".sqlite-backup-*")
+	if err != nil {
+		return BackupReport{}, fmt.Errorf("reserve backup temporary path: %w", err)
+	}
+	tempPath := tempFile.Name()
+	if err := tempFile.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return BackupReport{}, fmt.Errorf("close backup temporary file: %w", err)
+	}
+	if err := os.Remove(tempPath); err != nil {
+		return BackupReport{}, fmt.Errorf("prepare backup temporary path: %w", err)
+	}
+	published := false
+	defer func() {
+		if !published {
+			_ = os.Remove(tempPath)
+		}
+	}()
 
 	// Hold the write lock so domain Updates cannot interleave with the page
 	// copy of the checkpoint blob. Views remain blocked only for the short
@@ -122,7 +140,7 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		if !ok {
 			return fmt.Errorf("sqlite driver connection does not support NewBackup: %T", driverConn)
 		}
-		backup, err := backuper.NewBackup(destPath)
+		backup, err := backuper.NewBackup(tempPath)
 		if err != nil {
 			return fmt.Errorf("start sqlite online backup: %w", err)
 		}
@@ -154,16 +172,21 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		return nil
 	})
 	if err != nil {
-		_ = os.Remove(destPath)
 		return BackupReport{}, err
+	}
+	if err := os.Chmod(tempPath, 0o600); err != nil {
+		return BackupReport{}, fmt.Errorf("restrict backup permissions: %w", err)
 	}
 
 	// Verify destination has the checkpoint row and can load.
-	verification, err := VerifyBackup(destPath)
+	verification, err := VerifyBackup(tempPath)
 	if err != nil {
-		_ = os.Remove(destPath)
 		return BackupReport{}, err
 	}
+	if err := publishBackupNoReplace(tempPath, destPath); err != nil {
+		return BackupReport{}, err
+	}
+	published = true
 
 	return BackupReport{
 		DestinationPath:  destPath,
@@ -176,6 +199,24 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		CheckpointFormat: verification.CheckpointFormat,
 		IntegrityCheck:   verification.IntegrityCheck,
 	}, nil
+}
+
+// publishBackupNoReplace makes a verified temporary backup visible without a
+// check-then-create race. Link is atomic and fails if another process created
+// destPath after the initial validation; removing the temporary name leaves
+// the published inode and its restrictive permissions intact.
+func publishBackupNoReplace(tempPath, destPath string) error {
+	if err := os.Link(tempPath, destPath); err != nil {
+		if _, statErr := os.Lstat(destPath); statErr == nil {
+			return fmt.Errorf("backup destination already exists: %s", destPath)
+		}
+		return fmt.Errorf("publish backup without overwrite: %w", err)
+	}
+	if err := os.Remove(tempPath); err != nil {
+		_ = os.Remove(destPath)
+		return fmt.Errorf("remove published backup temporary name: %w", err)
+	}
+	return nil
 }
 
 // ClosedCopyTo copies a store that has already been Closed by reopening the
