@@ -50,7 +50,10 @@ go run ./cmd/sqlite-backup \
 
 A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela
 exige que a origem já exista como arquivo regular (não cria banco ausente e não
-segue symlink), reabre a origem, faz `BackupTo` e fecha.
+segue symlink), reabre a origem em modo SQLite `read-only`/`immutable`, faz
+`BackupTo` e fecha. O fluxo não executa configuração ou migração na origem,
+não cria WAL/SHM e compara inode, tamanho e SHA-256 antes/depois da cópia;
+qualquer mutação concorrente remove o destino e falha.
 
 Para auditar uma cópia já existente sem migração ou escrita:
 
@@ -136,3 +139,4 @@ cópia e verifica o destino por meio de `BackupTo`.
 - `TestVerifyBackupRejectsSymlinkPath`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`
 - `TestVerifyBackupRejectsTamperedCheckpointPayload`
+- `TestClosedCopyToDoesNotMutateSourceOrCreateSidecars`

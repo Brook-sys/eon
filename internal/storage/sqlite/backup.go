@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -251,14 +252,11 @@ func syncDirectory(path string) error {
 // source path for the duration of the backup. Prefer BackupTo for online
 // stores. This helper exists for offline runbook paths.
 func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options BackupOptions) (BackupReport, error) {
-	info, err := os.Lstat(sourcePath)
+	beforeSize, beforeDigest, beforeIdentity, err := hashBackupFile(sourcePath)
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("inspect offline backup source: %w", err)
 	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return BackupReport{}, fmt.Errorf("offline backup source is not a regular file: %s", sourcePath)
-	}
-	store, err := Open(sourcePath)
+	store, err := openReadOnlyStore(sourcePath, beforeIdentity)
 	if err != nil {
 		return BackupReport{}, err
 	}
@@ -267,8 +265,53 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 	if err != nil {
 		return BackupReport{}, err
 	}
+	afterSize, afterDigest, afterIdentity, err := hashBackupFile(sourcePath)
+	if err != nil {
+		_ = os.Remove(destPath)
+		return BackupReport{}, fmt.Errorf("reinspect offline backup source: %w", err)
+	}
+	if !os.SameFile(beforeIdentity, afterIdentity) || beforeSize != afterSize || beforeDigest != afterDigest {
+		_ = os.Remove(destPath)
+		return BackupReport{}, errors.New("offline backup source changed during copy")
+	}
 	report.SourcePath = sourcePath
+	report.SourceSHA256 = beforeDigest
 	return report, nil
+}
+
+// openReadOnlyStore loads an offline source without running the normal store
+// configuration path. In particular it must not create tables, switch journal
+// mode, migrate the checkpoint, or leave WAL/SHM sidecars next to a backup
+// artifact selected for restore.
+func openReadOnlyStore(path string, expectedIdentity os.FileInfo) (*Store, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("resolve offline backup source: %w", err)
+	}
+	dsn := (&url.URL{
+		Scheme:   "file",
+		Path:     filepath.ToSlash(absPath),
+		RawQuery: "immutable=1&mode=ro",
+	}).String()
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
+	}
+	db.SetMaxOpenConns(1)
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
+	}
+	if err := requireSameRegularPath(path, expectedIdentity); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
+	}
+	core, err := load(db)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &Store{db: db, core: core}, nil
 }
 
 // RestoreTo verifies an existing standalone backup before creating a new

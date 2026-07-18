@@ -459,3 +459,44 @@ func TestClosedCopyToRejectsMissingAndSymlinkSources(t *testing.T) {
 		t.Fatalf("destination exists after symlink source: %v", err)
 	}
 }
+
+func TestClosedCopyToDoesNotMutateSourceOrCreateSidecars(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "offline.sqlite")
+	store, err := storage.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before, err := storage.VerifyBackup(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	destination := filepath.Join(dir, "copy.sqlite")
+	report, err := storage.ClosedCopyTo(context.Background(), sourcePath, destination, storage.BackupOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := storage.VerifyBackup(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.SHA256 != before.SHA256 || after.FileSize != before.FileSize {
+		t.Fatalf("offline source mutated: before=%#v after=%#v", before, after)
+	}
+	if report.SourceSHA256 != before.SHA256 {
+		t.Fatalf("reported source digest = %q, want %q", report.SourceSHA256, before.SHA256)
+	}
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+		if _, err := os.Lstat(sourcePath + suffix); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("read-only copy left source sidecar %s: %v", suffix, err)
+		}
+	}
+}
