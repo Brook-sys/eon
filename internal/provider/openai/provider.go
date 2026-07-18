@@ -165,7 +165,11 @@ func New(config Config, opts ...Option) (*Provider, error) {
 	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Host == "" {
 		return nil, errors.New("base URL must be an absolute HTTP(S) URL")
 	}
-	base.Path = strings.TrimRight(base.Path, "/") + "/v1/chat/completions"
+	base.Path = strings.TrimRight(base.Path, "/")
+	if !strings.HasSuffix(base.Path, "/v1") {
+		base.Path += "/v1"
+	}
+	base.Path += "/chat/completions"
 	base.RawQuery = ""
 	base.Fragment = ""
 	limit := config.MaxResponseBytes
