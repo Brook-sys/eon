@@ -18,9 +18,10 @@ import (
 	"motor-autonomo/internal/runtime/source"
 )
 
-// buildModel assembles an optional PROPOSE_ONLY ModelExecutor. Returns nil when
-// Model is disabled so non-local ops stay skipped as requires_model.
-func buildModel(
+// BuildModelExecutor assembles the runtime's optional PROPOSE_ONLY executor.
+// It is exported for bounded operator campaigns that must exercise the exact
+// same catalog, changeset, and ResourceGate wiring as the runtime process.
+func BuildModelExecutor(
 	opts Options,
 	store port.Store,
 	clock source.Clock,
@@ -152,6 +153,11 @@ func buildModel(
 	}
 	exec.Authorizer = authorizer
 	return exec, nil
+}
+
+// buildModel keeps the package-local name used by older focused tests.
+func buildModel(opts Options, store port.Store, clock source.Clock, ids source.IDGenerator, telemetry *observability.Runtime) (*kernel.ModelExecutor, error) {
+	return BuildModelExecutor(opts, store, clock, ids, telemetry)
 }
 
 func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions) (*ModelOptions, error) {

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "groq-primary-circuit-to-nim-fallback-2026-07-18",
+  "started_at": "2026-07-18T10:21:52.278942245Z",
+  "completed_at": "2026-07-18T10:21:54.80290587Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-primary",
+  "selected_provider_id": "nvidia-nim",
+  "selected_binding_id": "nim-fallback",
+  "route_rejected": {
+    "groq-primary": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "observed_input_tokens": 239,
+  "observed_output_tokens": 16,
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-18T10:22:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-primary",
+      "in_flight": 0,
+      "minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-18T10:22:52.278942245Z"
+    },
+    {
+      "resource": "model-binding:nim-fallback",
+      "in_flight": 0,
+      "minute_count": 1,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nvidia-nim",
+      "in_flight": 0,
+      "minute_count": 1,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

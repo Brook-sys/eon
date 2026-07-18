@@ -2,6 +2,7 @@ package gatecampaign
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +22,23 @@ type recordingProvider struct {
 func (p *recordingProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
 	p.calls++
 	return p.result, p.err
+}
+
+func TestBoundedCallRecorderIsSharedAndFailClosed(t *testing.T) {
+	recorder := &boundedCallRecorder{max: 1}
+	primary := &recordingProvider{}
+	fallback := &recordingProvider{}
+	first := recordedProvider{bindingID: "primary", provider: primary, recorder: recorder}
+	second := recordedProvider{bindingID: "fallback", provider: fallback, recorder: recorder}
+	if _, err := first.Complete(context.Background(), port.CompletionRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := second.Complete(context.Background(), port.CompletionRequest{}); err == nil {
+		t.Fatal("shared recorder must reject calls beyond the campaign maximum")
+	}
+	if primary.calls != 1 || fallback.calls != 0 || recorder.calls != 1 {
+		t.Fatalf("underlying calls primary=%d fallback=%d recorded=%d", primary.calls, fallback.calls, recorder.calls)
+	}
 }
 
 func runtimeGateTestManifest() RuntimeGateCampaignManifest {
@@ -50,9 +68,21 @@ func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T
 	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
 	clock := source.NewManualClock(now)
 	primary := &recordingProvider{}
-	fallback := &recordingProvider{result: port.CompletionResult{Text: "OK", InputTokens: 7, OutputTokens: 1, Model: "fallback"}}
+	proposal, err := json.Marshal(domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_runtime_gate", MissionRevision: "revision_runtime_gate",
+		OperationID: "operation_runtime_gate", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"manifest"}, Preconditions: []string{}, Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "runtime_gate_observation", PayloadRef: "runtime_gate_payload",
+		}}, ExpectedDelta: "runtime provider gate evidence", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "runtime-gate-campaign",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fallback := &recordingProvider{result: port.CompletionResult{Text: string(proposal), InputTokens: 7, OutputTokens: 1, Model: "fallback"}}
+	store := memory.New()
 	runner := RuntimeGateCampaignRunner{
-		Store: memory.New(), Clock: clock,
+		Store: store, Clock: clock,
 		Providers: map[string]port.ModelProvider{"groq-primary": primary, "nim-fallback": fallback},
 	}
 	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
@@ -67,6 +97,24 @@ func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T
 	}
 	if report.SecondAcquireReason != "resource_resource_rate_limit" || report.SecondAcquireWait == nil || report.OperationState != domain.StateWaitingTime {
 		t.Fatalf("second acquire=%+v", report)
+	}
+	var routed, invoked bool
+	if err := store.View(context.Background(), func(reader port.Reader) error {
+		events, err := reader.Events(0, 100)
+		for _, event := range events {
+			if event.OperationID == "operation_runtime_gate" && event.Kind == "operation.model_routed" {
+				routed = true
+			}
+			if event.OperationID == "operation_runtime_gate" && event.Kind == "operation.model_invoked" {
+				invoked = true
+			}
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !routed || !invoked {
+		t.Fatalf("executor evidence routed=%t invoked=%t", routed, invoked)
 	}
 	for _, usage := range report.Usages {
 		if usage.InFlight != 0 {

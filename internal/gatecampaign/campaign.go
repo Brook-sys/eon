@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
-	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/runtime/bootstrap"
 	"motor-autonomo/internal/runtime/source"
 )
 
@@ -177,6 +177,30 @@ type RuntimeGateCampaignRunner struct {
 	Providers map[string]port.ModelProvider
 }
 
+type boundedCallRecorder struct {
+	max       int
+	calls     int
+	bindingID string
+	result    port.CompletionResult
+	err       error
+}
+
+type recordedProvider struct {
+	bindingID string
+	provider  port.ModelProvider
+	recorder  *boundedCallRecorder
+}
+
+func (p recordedProvider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
+	if p.recorder.calls >= p.recorder.max {
+		return port.CompletionResult{}, errors.New("runtime gate external call budget exhausted")
+	}
+	p.recorder.calls++
+	p.recorder.bindingID = p.bindingID
+	p.recorder.result, p.recorder.err = p.provider.Complete(ctx, request)
+	return p.recorder.result, p.recorder.err
+}
+
 func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGateCampaignManifest) (RuntimeGateCampaignReport, error) {
 	if err := manifest.Validate(); err != nil {
 		return RuntimeGateCampaignReport{}, err
@@ -192,90 +216,69 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Priority < ordered[j].Priority })
 	primary := ordered[0]
 
-	config, spec, operation, err := runtimeGateSeed(r.Store, manifest, started)
+	config, _, _, err := runtimeGateSeed(r.Store, manifest, started)
 	if err != nil {
 		return RuntimeGateCampaignReport{}, err
 	}
-	selected, route, err := kernel.SelectModelBinding(ctx, r.Store, config, manifest.MaxOutputTokens, started)
+	ids := source.NewSequenceIDGenerator(1)
+	executor, err := bootstrap.BuildModelExecutor(bootstrap.Options{Model: &bootstrap.ModelOptions{
+		Enabled: true, PolicyVersion: "policy@runtime-gate-campaign", LeaseTTL: time.Duration(manifest.TimeoutSeconds) * time.Second,
+	}}, r.Store, r.Clock, ids, nil)
 	if err != nil {
-		return RuntimeGateCampaignReport{}, fmt.Errorf("select runtime gate binding: %w", err)
+		return RuntimeGateCampaignReport{}, fmt.Errorf("build runtime gate model executor: %w", err)
+	}
+	if executor == nil {
+		return RuntimeGateCampaignReport{}, errors.New("runtime gate model executor was not enabled")
+	}
+	recorder := &boundedCallRecorder{max: manifest.MaxCalls}
+	executor.Providers = make(map[string]port.ModelProvider, len(r.Providers))
+	for bindingID, provider := range r.Providers {
+		executor.Providers[bindingID] = recordedProvider{bindingID: bindingID, provider: provider, recorder: recorder}
+	}
+	_, _ = executor.Execute(ctx, "operation_runtime_gate")
+	if recorder.calls != manifest.MaxCalls {
+		return RuntimeGateCampaignReport{}, fmt.Errorf("runtime gate executor made %d external calls, want %d", recorder.calls, manifest.MaxCalls)
+	}
+	secondResult, err := executor.Execute(ctx, "operation_runtime_gate_quota")
+	if err != nil {
+		return RuntimeGateCampaignReport{}, err
+	}
+	if !secondResult.Skipped || secondResult.SkipReason == "" {
+		return RuntimeGateCampaignReport{}, errors.New("second executor operation unexpectedly passed the one-call quota")
+	}
+	if recorder.calls != manifest.MaxCalls {
+		return RuntimeGateCampaignReport{}, errors.New("second executor operation contacted a provider")
+	}
+	selected := config.Bindings[0]
+	for _, binding := range config.Bindings {
+		if binding.ID == recorder.bindingID {
+			selected = binding
+			break
+		}
 	}
 	if selected.ID == primary.BindingID {
-		return RuntimeGateCampaignReport{}, errors.New("seeded primary circuit did not route to alternate binding")
+		return RuntimeGateCampaignReport{}, errors.New("seeded primary circuit did not route executor to alternate binding")
 	}
-	if err := kernel.AppendModelRoutingEvent(ctx, r.Store, started, operation, route); err != nil {
-		return RuntimeGateCampaignReport{}, err
-	}
-	authorizer, err := kernel.NewMVPCapabilityAuthorizer(r.Store, r.Clock, "policy@runtime-gate-campaign")
-	if err != nil {
-		return RuntimeGateCampaignReport{}, err
-	}
-	for _, provider := range config.Providers {
-		authorizer.Limits[provider.GlobalLimit.Resource] = provider.GlobalLimit
-	}
-	for _, binding := range config.Bindings {
-		authorizer.Limits[binding.Limit.Resource] = binding.Limit
-	}
-	first, err := authorizer.ReserveModelComplete(ctx, operation, spec, 0, selected.ProviderRef, selected.ID)
-	if err != nil {
-		return RuntimeGateCampaignReport{}, err
-	}
-	if !first.Allowed {
-		return RuntimeGateCampaignReport{}, fmt.Errorf("first runtime gate reservation denied: %s", first.SkipReason)
-	}
-	permits := first.Permits
-	if len(permits) == 0 && first.Permit != nil {
-		permits = []*domain.ResourcePermit{first.Permit}
-	}
-
 	report := RuntimeGateCampaignReport{
 		SchemaVersion: RuntimeGateCampaignSchemaVersion, Name: manifest.Name, StartedAt: started,
-		MaxCalls: manifest.MaxCalls, ExternalCalls: 1,
+		MaxCalls: manifest.MaxCalls, ExternalCalls: recorder.calls,
 		SeededCircuit:      domain.ModelBindingResource(primary.BindingID),
 		SelectedProviderID: selected.ProviderRef, SelectedBindingID: selected.ID,
-		RouteRejected: route.Rejected,
+		RouteRejected:       map[string]string{primary.BindingID: "circuit_open"},
+		SecondAcquireReason: secondResult.SkipReason,
 	}
-	provider := r.Providers[selected.ID]
-	if provider == nil {
-		return RuntimeGateCampaignReport{}, fmt.Errorf("selected binding %s has no provider", selected.ID)
-	}
-	completion, callErr := provider.Complete(ctx, port.CompletionRequest{Prompt: manifest.ProbePrompt, MaxOutputTokens: manifest.MaxOutputTokens})
-	if callErr == nil {
+	if recorder.err == nil {
 		report.ProviderSucceeded = true
-		report.ObservedInputTokens = completion.InputTokens
-		report.ObservedOutputTokens = completion.OutputTokens
-		if err := authorizer.ReportModelCompleteObserved(ctx, operation, permits, true, nil, completion.InputTokens+completion.OutputTokens); err != nil {
-			return RuntimeGateCampaignReport{}, err
-		}
+		report.ObservedInputTokens = recorder.result.InputTokens
+		report.ObservedOutputTokens = recorder.result.OutputTokens
 	} else {
-		var retryAfter *time.Time
-		if providerErr, ok := callErr.(port.ProviderError); ok {
+		if providerErr, ok := recorder.err.(port.ProviderError); ok {
 			delay := providerErr.RetryAfterDelay()
 			report.ProviderRetryAfter = delay
-			if delay > 0 {
-				t := r.Clock.Now().UTC().Add(delay)
-				retryAfter = &t
-			}
 		}
-		if httpErr, ok := callErr.(port.ProviderHTTPError); ok {
+		if httpErr, ok := recorder.err.(port.ProviderHTTPError); ok {
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
-		if err := authorizer.ReportModelComplete(ctx, operation, permits, false, retryAfter); err != nil {
-			return RuntimeGateCampaignReport{}, err
-		}
-	}
-
-	second, err := authorizer.ReserveModelComplete(ctx, operation, spec, 0, selected.ProviderRef, selected.ID)
-	if err != nil {
-		return RuntimeGateCampaignReport{}, err
-	}
-	if second.Allowed {
-		_ = authorizer.ReportModelComplete(ctx, operation, second.Permits, true, nil)
-		return RuntimeGateCampaignReport{}, errors.New("second reservation unexpectedly allowed beyond max_calls")
-	}
-	report.SecondAcquireReason = second.SkipReason
-	if second.Acquire != nil {
-		report.SecondAcquireWait = second.Acquire.WaitUntil
 	}
 	if err := runtimeGateSnapshot(ctx, r.Store, config, &report); err != nil {
 		return RuntimeGateCampaignReport{}, err
@@ -302,16 +305,43 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 	if err := config.Validate(); err != nil {
 		return config, domain.OperationSpec{}, domain.Operation{}, err
 	}
-	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: "probe_text", Budget: domain.Budget{ModelCalls: 1, Tokens: manifest.MaxOutputTokens + 2, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{"transport"}, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
-	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_runtime_gate", MissionID: "mission_runtime_gate", Revision: 1, OriginalText: "bounded provider gate probe", Purpose: "validate quota and routing", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: 1, Tokens: manifest.MaxOutputTokens + 2, Attempts: 1}}
+	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: "proposed changeset", Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{"schema"}, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
+	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_runtime_gate", MissionID: "mission_runtime_gate", Revision: 1, OriginalText: "bounded provider gate probe", Purpose: "validate quota and routing", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}}
 	question := domain.Question{SchemaVersion: 1, ID: "question_runtime_gate", MissionRevision: revision.ID, Text: "is the provider gate operational?", Origin: "campaign", Relevance: "diagnostic", AnswerCondition: "one bounded call"}
 	candidate := domain.InquiryCandidate{SchemaVersion: 1, ID: "candidate_runtime_gate", MissionRevision: revision.ID, QuestionID: question.ID, DerivedFrom: []string{"manifest"}, ExpectedProgress: "runtime evidence", Novelty: "dated probe", Risk: domain.RiskLow, SourcePlan: []string{"provider"}, AnswerCondition: "report", StopCondition: "one call", ReviewAfter: now.Add(time.Hour)}
 	inquiry := domain.Inquiry{SchemaVersion: 1, ID: "inquiry_runtime_gate", CandidateID: candidate.ID, MissionRevision: revision.ID, QuestionID: question.ID, AdmissionReason: "bounded campaign", StopCondition: "one call", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
-	operation := domain.Operation{SchemaVersion: 1, ID: "operation_runtime_gate", InquiryID: inquiry.ID, MissionRevision: revision.ID, SpecID: spec.ID, ReadSet: []string{"manifest"}, InputRefs: []string{"probe_prompt"}, ExpectedOutput: "transport observation", IdempotencyKey: "runtime-gate-campaign", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
+	operation := domain.Operation{SchemaVersion: 1, ID: "operation_runtime_gate", InquiryID: inquiry.ID, MissionRevision: revision.ID, SpecID: spec.ID, ReadSet: []string{"manifest"}, InputRefs: []string{"probe_prompt"}, ExpectedOutput: manifest.ProbePrompt, IdempotencyKey: "runtime-gate-campaign", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
+	quotaOperation := operation
+	quotaOperation.ID = "operation_runtime_gate_quota"
+	quotaOperation.IdempotencyKey = "runtime-gate-campaign-quota"
 	ordered := append([]RuntimeGateBinding(nil), manifest.Bindings...)
 	sort.Slice(ordered, func(i, j int) bool { return ordered[i].Priority < ordered[j].Priority })
 	primaryCircuit := now.Add(time.Duration(manifest.SeedPrimaryCircuitSeconds) * time.Second)
 	err := store.Update(context.Background(), func(tx port.Transaction) error {
+		hash, err := domain.ConfigPayloadHash(domain.ConfigScopeModels, nil, nil, nil, nil, nil, &config)
+		if err != nil {
+			return err
+		}
+		draft := domain.ConfigDraft{SchemaVersion: 1, ID: "draft_runtime_gate_models", Scope: domain.ConfigScopeModels, Applicability: domain.ConfigHot, Status: domain.ConfigDraftOpen, ActorType: domain.ActorOperator, ActorID: "runtime-gate-campaign", Reason: "bounded live model gate campaign", Models: &config, CreatedAt: now}
+		revisionConfig := domain.ConfigRevision{SchemaVersion: 1, ID: "config_runtime_gate_models", Scope: domain.ConfigScopeModels, Revision: 1, Applicability: domain.ConfigHot, ContentHash: hash, ActorType: domain.ActorOperator, ActorID: "runtime-gate-campaign", Reason: draft.Reason, DraftID: draft.ID, Models: &config, AcceptedAt: now}
+		if err := tx.CreateConfigDraft(draft); err != nil {
+			return err
+		}
+		draft.Status = domain.ConfigDraftValidated
+		draft.ValidatedAt = now
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
+		draft.Status = domain.ConfigDraftApplied
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
+		if err := tx.AppendConfigRevision(revisionConfig); err != nil {
+			return err
+		}
+		if err := tx.ActivateConfigRevision(domain.ConfigScopeModels, revisionConfig.ID); err != nil {
+			return err
+		}
 		if err := tx.AppendMissionRevision(revision); err != nil {
 			return err
 		}
@@ -330,6 +360,9 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 		if err := tx.CreateOperation(operation); err != nil {
 			return err
 		}
+		if err := tx.CreateOperation(quotaOperation); err != nil {
+			return err
+		}
 		return tx.SaveResourceUsage(domain.ResourceUsage{Resource: domain.ModelBindingResource(ordered[0].BindingID), ConsecutiveFailures: 1, CircuitOpenUntil: &primaryCircuit, LastFailureAt: &now})
 	})
 	return config, spec, operation, err
@@ -337,11 +370,12 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 
 func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.ModelsConfig, report *RuntimeGateCampaignReport) error {
 	return store.View(ctx, func(r port.Reader) error {
-		op, err := r.Operation("operation_runtime_gate")
+		op, err := r.Operation("operation_runtime_gate_quota")
 		if err != nil {
 			return err
 		}
 		report.OperationState = op.State
+		report.SecondAcquireWait = op.Reevaluation.NotBefore
 		for _, provider := range config.Providers {
 			usage, err := r.ResourceUsage(provider.GlobalLimit.Resource)
 			if err != nil && !errors.Is(err, port.ErrNotFound) {

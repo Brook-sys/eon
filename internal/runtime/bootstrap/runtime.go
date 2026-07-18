@@ -258,7 +258,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Clock: clock,
 		IDs:   ids,
 	}
-	modelExec, err := buildModel(opts, store, clock, ids, telemetry)
+	modelExec, err := BuildModelExecutor(opts, store, clock, ids, telemetry)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
 		if closer != nil {
