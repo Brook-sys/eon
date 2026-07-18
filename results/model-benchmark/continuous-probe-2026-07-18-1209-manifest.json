@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-18-1209",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v1.json",
+  "context_tokens": [2048],
+  "max_calls": 22,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 5632,
+  "timeout_seconds": 720,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nvidia-nemotron-super-49b-v1-5",
+      "base_url": "https://integrate.api.nvidia.com",
+      "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}
