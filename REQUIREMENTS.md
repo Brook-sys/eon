@@ -326,6 +326,8 @@ Domínio e kernel MUST NOT importar adapters concretos de provider ou persistên
 
 Testes unitários e do kernel MUST executar sem rede, modelo remoto, processo externo ou relógio real. O conjunto aplicável MUST incluir unitários, race detector, vet e fuzz/property tests para parsers e invariantes críticos.
 
+**Verificação estrutural (2026-07-18):** `internal/architecture/offline_tests_test.go` inspeciona os arquivos `_test.go` de `internal/domain` e `internal/kernel`, rejeita relógio/esperas reais, execução de processos externos e imports diretos de `net`/`net/http`. A fixture negativa comprova resolução de alias e detecção das três classes; timestamps necessários aos testes usam instantes fixos ou fontes injetadas.
+
 ### NFR-REL-001 — Recuperação determinística
 
 Dado o mesmo estado persistido, eventos e fontes injetadas, recuperação e seleção determinísticas MUST produzir a mesma decisão oficial, salvo desempate explicitamente alimentado por `RandomSource` registrado.

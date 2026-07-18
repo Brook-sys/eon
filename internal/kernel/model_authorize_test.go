@@ -14,7 +14,7 @@ import (
 func TestCompositeReserveModelComplete(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
-	now := time.Now().UTC()
+	now := time.Date(2026, 7, 18, 0, 0, 0, 0, time.UTC)
 	clock := source.NewManualClock(now)
 	seedModelAgenda(t, store, now)
 
@@ -27,10 +27,14 @@ func TestCompositeReserveModelComplete(t *testing.T) {
 	if err := store.View(ctx, func(r port.Reader) error {
 		var err error
 		op, err = r.Operation("operation_model")
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		spec, err = r.OperationSpec(op.SpecID)
 		return err
-	}); err != nil { t.Fatal(err) }
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	out, err := auth.ReserveModelComplete(ctx, op, spec, 0, "prov1", "bind1")
 	if err != nil {

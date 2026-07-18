@@ -105,7 +105,7 @@ func TestTransitionRejectsIllegalOrUnsafeChanges(t *testing.T) {
 		{name: "applied effect cannot retry", from: snapshotFor(StateVerifying, "lease_1"), input: TransitionInput{Event: EventRetry, EffectState: EffectApplied}},
 		{name: "known non-effect cannot reconcile", from: snapshotFor(StateRunning, "lease_1"), input: TransitionInput{Event: EventReconcile, EffectState: EffectNotApplied}},
 		{name: "unrelated event rejects effect state", from: snapshotFor(StateReady, ""), input: TransitionInput{Event: EventDispatch, EffectState: EffectNotApplied}},
-		{name: "unrelated event rejects instant", from: snapshotFor(StateReady, ""), input: TransitionInput{Event: EventDispatch, NotBefore: ptrTime(time.Now())}},
+		{name: "unrelated event rejects instant", from: snapshotFor(StateReady, ""), input: TransitionInput{Event: EventDispatch, NotBefore: ptrTime(time.Date(2026, 7, 18, 0, 0, 0, 0, time.UTC))}},
 		{name: "invalid current snapshot fails closed", from: OperationalSnapshot{State: StateWaitingEvent, Reevaluation: ReevaluationCondition{Kind: ReevaluateReady}}, input: TransitionInput{Event: EventResume}},
 	}
 
