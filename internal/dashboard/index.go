@@ -315,10 +315,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="commitErr"></div>
     </section>
     <section>
-      <h2>Resources / context pressure</h2>
-      <p class="hint">Projeções somente-leitura de ResourceGate (GET /resources) e pressão de contexto binding-local (GET /model-context-pressures). Não inventam linhas ausentes; secrets e corpos de provider nunca aparecem.</p>
+      <h2>Models / resources / context pressure</h2>
+      <p class="hint">Postura correlacionada do catálogo MODELS ativo (GET /model-bindings), ResourceGate e pressão binding-local. Uso ou pressão ausentes permanecem ausentes; secrets e corpos de provider nunca aparecem.</p>
       <div class="row">
-        <button class="primary" type="button" id="btnResourcesList">Listar resources</button>
+        <button class="primary" type="button" id="btnModelBindingsList">Postura por binding</button>
+        <button type="button" id="btnResourcesList">Listar resources</button>
         <button type="button" id="btnContextPressureList">Listar context pressure</button>
         <label>resource_id
           <input id="resourceId" placeholder="model-binding:... / web:http" spellcheck="false" style="min-width:200px"/>
@@ -2072,6 +2073,49 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   }
 
+  async function listModelBindings() {
+    el("resourceErr").textContent = "";
+    el("resourceOk").textContent = "";
+    try {
+      const body = await getJSON(inspectBase + "/model-bindings");
+      const rows = body.bindings || [];
+      let html = "";
+      rows.forEach(function (row) {
+        const id = row.binding_id || "";
+        const bu = row.binding_usage;
+        const pu = row.provider_usage;
+        const cp = row.context_pressure;
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + " · " + esc(row.provider_id || "") + " · " + esc(row.model_id || "")
+          + (row.enabled ? " · ENABLED" : " · disabled") + "</div>";
+        html += '<div class="muted">priority=' + esc(String(row.priority || 0))
+          + ' · context=' + esc(String(row.context_tokens || 0))
+          + ' · max_output=' + esc(String(row.max_output_tokens || 0))
+          + ' · binding_usage=' + (bu ? ("min " + esc(String(bu.minute_count || 0)) + ", tok/min " + esc(String(bu.token_minute_count || 0)) + (bu.circuit_open ? ", CIRCUIT_OPEN" : "")) : "not_observed")
+          + ' · provider_usage=' + (pu ? ("min " + esc(String(pu.minute_count || 0)) + (pu.circuit_open ? ", CIRCUIT_OPEN" : "")) : "not_observed")
+          + ' · pressure=' + (cp ? ("level " + esc(String(cp.level || 0)) + (cp.reduction_active ? (", remaining " + esc(String(cp.reduction_fraction || ""))) : "")) : "not_observed")
+          + "</div>";
+        html += '<div class="ops"><button type="button" data-binding-posture-id="' + esc(id) + '">JSON</button></div>';
+        html += "</div>";
+      });
+      el("resourceList").innerHTML = html || '<div class="muted">' + esc(body.note || "sem bindings no catálogo ativo") + "</div>";
+      el("resourceList").className = "list";
+      el("resourceList").querySelectorAll("button[data-binding-posture-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const id = btn.getAttribute("data-binding-posture-id") || "";
+          const row = rows.find(function (item) { return item.binding_id === id; });
+          el("resourceDetail").hidden = false;
+          el("resourceDetail").textContent = pretty(row || {});
+          el("resourceDetail").className = "prebox";
+        });
+      });
+      el("resourceOk").textContent = "model bindings count=" + String(body.count || rows.length)
+        + (body.config_generation ? (" · revision=" + String(body.config_generation)) : "");
+    } catch (err) {
+      el("resourceErr").textContent = String(err.message || err);
+    }
+  }
+
   async function listResources() {
     el("resourceErr").textContent = "";
     el("resourceOk").textContent = "";
@@ -2171,6 +2215,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnCommitList").addEventListener("click", listCommits);
   el("btnProviderProfile").addEventListener("click", function () { loadProviderProfile(false); });
   el("btnProviderProbe").addEventListener("click", function () { loadProviderProfile(true); });
+  el("btnModelBindingsList").addEventListener("click", listModelBindings);
   el("btnResourcesList").addEventListener("click", listResources);
   el("btnContextPressureList").addEventListener("click", listContextPressures);
   el("btnResourceDetail").addEventListener("click", loadResourceDetail);

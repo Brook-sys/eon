@@ -1,0 +1,18 @@
+{
+  "attempts": 1,
+  "http_status": 200,
+  "latency_ms": 828,
+  "max_calls": 1,
+  "max_output_tokens": 8,
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "provider": "nvidia_nim",
+  "response_exact_probe_ok": true,
+  "retry_after": null,
+  "schema": "motor-autonomo.continuous-probe.v1",
+  "usage": {
+    "completion_tokens": 4,
+    "prompt_tokens": 21,
+    "prompt_tokens_details": null,
+    "total_tokens": 25
+  }
+}

@@ -65,6 +65,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /store/retention", a.handleStoreRetention)
 	mux.HandleFunc("GET /resources", a.handleResources)
 	mux.HandleFunc("GET /resources/{resourceID}", a.handleResource)
+	mux.HandleFunc("GET /model-bindings", a.handleModelBindings)
 	mux.HandleFunc("GET /model-context-pressures", a.handleModelContextPressures)
 	mux.HandleFunc("GET /model-context-pressures/{bindingID}", a.handleModelContextPressure)
 	return mux
@@ -556,6 +557,17 @@ func (a *API) handleResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, view)
+}
+
+// handleModelBindings correlates active declared model configuration with
+// durable ResourceGate usage and context pressure without granting authority.
+func (a *API) handleModelBindings(w http.ResponseWriter, r *http.Request) {
+	proj, err := a.Projector.ListModelBindingPostures(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
 }
 
 // handleModelContextPressures lists durable binding-local context pressure
