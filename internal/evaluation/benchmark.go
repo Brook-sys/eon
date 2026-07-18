@@ -184,6 +184,9 @@ type Run struct {
 	SyntaxValid          bool              `json:"syntax_valid"`
 	SemanticallyCorrect  bool              `json:"semantically_correct"`
 	ErrorKind            string            `json:"error_kind,omitempty"`
+	ProviderStatus       int               `json:"provider_status,omitempty"`
+	RetryAfterMillis     int64             `json:"retry_after_millis,omitempty"`
+	TimedOut             bool              `json:"timed_out,omitempty"`
 	Output               string            `json:"output,omitempty"`
 	Values               map[string]string `json:"values,omitempty"`
 }
@@ -208,6 +211,8 @@ type Summary struct {
 	CompileErrors     int `json:"compile_errors"`
 	ProviderErrors    int `json:"provider_errors"`
 	ValidationErrors  int `json:"validation_errors"`
+	RateLimited       int `json:"rate_limited"`
+	Timeouts          int `json:"timeouts"`
 }
 
 type Breakdown struct {
@@ -270,6 +275,15 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 				run.DurationMillis = time.Since(started).Milliseconds()
 				if err != nil {
 					run.ErrorKind = "PROVIDER"
+					var httpError port.ProviderHTTPError
+					if errors.As(err, &httpError) {
+						run.ProviderStatus = httpError.HTTPStatusCode()
+					}
+					var providerError port.ProviderError
+					if errors.As(err, &providerError) {
+						run.RetryAfterMillis = providerError.RetryAfterDelay().Milliseconds()
+					}
+					run.TimedOut = errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded)
 					runs = append(runs, run)
 					continue
 				}
@@ -311,6 +325,12 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 			report.Summary.ProviderErrors++
 		case "VALIDATION":
 			report.Summary.ValidationErrors++
+		}
+		if run.ProviderStatus == 429 {
+			report.Summary.RateLimited++
+		}
+		if run.TimedOut {
+			report.Summary.Timeouts++
 		}
 	}
 	report.Breakdown = summarizeRuns(runs)
@@ -517,7 +537,7 @@ func WriteArtifacts(directory string, report Report) error {
 		return err
 	}
 	var markdown strings.Builder
-	fmt.Fprintf(&markdown, "# Cognitive benchmark\n\n- Fixture: `%s`\n- Model: `%s`\n- Runs: %d\n- Compiled: %d\n- Syntax valid: %d\n- Semantically correct: %d\n- Input tokens: %d\n- Output tokens: %d\n- Omitted facts: %d\n- Errors (compile/provider/validation): %d/%d/%d\n\n", report.FixtureName, report.Model, report.Summary.Total, report.Summary.Compiled, report.Summary.SyntaxValid, report.Summary.SemanticallyRight, report.Summary.InputTokens, report.Summary.OutputTokens, report.Summary.OmittedFacts, report.Summary.CompileErrors, report.Summary.ProviderErrors, report.Summary.ValidationErrors)
+	fmt.Fprintf(&markdown, "# Cognitive benchmark\n\n- Fixture: `%s`\n- Model: `%s`\n- Runs: %d\n- Compiled: %d\n- Syntax valid: %d\n- Semantically correct: %d\n- Input tokens: %d\n- Output tokens: %d\n- Omitted facts: %d\n- Errors (compile/provider/validation): %d/%d/%d\n- Rate limited / timed out: %d/%d\n\n", report.FixtureName, report.Model, report.Summary.Total, report.Summary.Compiled, report.Summary.SyntaxValid, report.Summary.SemanticallyRight, report.Summary.InputTokens, report.Summary.OutputTokens, report.Summary.OmittedFacts, report.Summary.CompileErrors, report.Summary.ProviderErrors, report.Summary.ValidationErrors, report.Summary.RateLimited, report.Summary.Timeouts)
 	markdown.WriteString(FormatInterpretationMarkdown(InterpretReport(report)))
 	writeBreakdown := func(title string, aggregates []Aggregate) {
 		fmt.Fprintf(&markdown, "## %s\n\n| Group | Runs | Compiled | Syntax valid | Correct | Omitted facts | Errors |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n", title)
@@ -530,7 +550,7 @@ func WriteArtifacts(directory string, report Report) error {
 	writeBreakdown("By format", report.Breakdown.ByFormat)
 	writeBreakdown("By context", report.Breakdown.ByContext)
 	markdown.WriteString("## Runs\n\n")
-	markdown.WriteString("| Case | Operation | Format | Context | Result | Input/output tokens | Latency |\n| --- | --- | --- | ---: | --- | ---: | ---: |\n")
+	markdown.WriteString("| Case | Operation | Format | Context | Result | HTTP | Retry-After | Input/output tokens | Latency |\n| --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: |\n")
 	for _, run := range report.Runs {
 		result := run.ErrorKind
 		if result == "" {
@@ -540,7 +560,7 @@ func WriteArtifacts(directory string, report Report) error {
 				result = "INCORRECT"
 			}
 		}
-		fmt.Fprintf(&markdown, "| %s | %s | %s | %d | %s | %d/%d | %d ms |\n", run.CaseID, run.Operation, run.Format, run.ContextTokens, result, run.ActualInputTokens, run.OutputTokens, run.DurationMillis)
+		fmt.Fprintf(&markdown, "| %s | %s | %s | %d | %s | %d | %d ms | %d/%d | %d ms |\n", run.CaseID, run.Operation, run.Format, run.ContextTokens, result, run.ProviderStatus, run.RetryAfterMillis, run.ActualInputTokens, run.OutputTokens, run.DurationMillis)
 	}
 	return atomicWrite(filepath.Join(directory, "report.md"), []byte(markdown.String()))
 }

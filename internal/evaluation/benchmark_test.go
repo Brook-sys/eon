@@ -2,9 +2,11 @@ package evaluation
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
@@ -126,6 +128,33 @@ func TestRunnerPreservesConfiguredModelWhenEveryProviderCallFails(t *testing.T) 
 	}
 	if got := InterpretReport(report); got.Kind != "live" || got.Verdict != "FAIL" {
 		t.Fatalf("interpretation = %+v", got)
+	}
+}
+
+type diagnosticProviderError struct {
+	status     int
+	retryAfter time.Duration
+}
+
+func (e diagnosticProviderError) Error() string                  { return fmt.Sprintf("status %d", e.status) }
+func (e diagnosticProviderError) RetryAfterDelay() time.Duration { return e.retryAfter }
+func (e diagnosticProviderError) HTTPStatusCode() int            { return e.status }
+func (e diagnosticProviderError) RetryableFailure() bool         { return true }
+
+func TestRunnerRecordsBoundedProviderDiagnostics(t *testing.T) {
+	set := FixtureSet{SchemaVersion: 1, Name: "provider-diagnostics", Cases: []Case{{
+		ID: "extract", Operation: OperationExtract, Task: "Extract.",
+		RequiredFacts: []FixtureFact{{ID: "f", Text: "Value is 7."}},
+		Formats:       []Format{FormatChoice}, Expected: map[string]string{"value": "7"},
+	}}}
+	provider := &scriptedProvider{err: diagnosticProviderError{status: 429, retryAfter: 3 * time.Second}}
+	report, err := (Runner{Provider: provider, Estimator: prompt.ConservativeEstimator{}, Spec: DefaultOperationSpec(), ModelLabel: "rate-limited"}).Run(context.Background(), set, Matrix{ContextTokens: []int{2048}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := report.Runs[0]
+	if run.ProviderStatus != 429 || run.RetryAfterMillis != 3000 || report.Summary.RateLimited != 1 {
+		t.Fatalf("unexpected diagnostics run=%+v summary=%+v", run, report.Summary)
 	}
 }
 
