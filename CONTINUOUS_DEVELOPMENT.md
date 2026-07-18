@@ -341,6 +341,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `cognitive-v2` dobra o corpus para oito casos, com ao menos dois exemplos por operação e adversariais de datas qualificadas, counterexample universal, mudança temporal sem conflito e reparo irrecuperável; oracle offline fecha 66/66 na matriz 2k/4k/8k. `CompareReports` passou a comparar taxas por dimensão entre fixtures de tamanhos diferentes. Campanha live bounded de 44 chamadas em `results/model-benchmark/cognitive-v2-live-2026-07-18`: Groq Llama 3.3 70B 19/22 (sem provider errors) e NVIDIA Llama 3.1 8B 11/22 (cinco 503), com regressões objetivas em JSON e REPAIR para o 8B; resultados não alteram routing automaticamente.
 - [x] `DONE` Proteger integridade e migração do checkpoint durável.
   - Evidência: formato v2 encapsula estado gob separado com SHA-256 verificado antes do restore; adulteração falha com erro identificável; decoder rejeita trailing/concatenação gob; versão externa e envelope interno precisam concordar; v0 sem envelope e v1 permanecem legíveis somente sob coluna v1; SQLite aceita versão externa v1 e comprova reescrita automática como v2 na próxima transação; adapters Dolt compartilham a mesma política de compatibilidade.
+- [x] `DONE` Publicar presets de modelo versionados sem autoridade automática.
+  - Evidência: catálogo `model-presets.v1.json` referencia apenas Groq Llama 3.3 70B e NVIDIA Mistral Small 4 qualificados live, fixa digest dos relatórios e limites conservadores; decoder estrito/limitado e testes exigem evidência `QUALIFIED`, path seguro, SHA-256 e binding desabilitado. O preset só produz payload de draft `MODELS`, nunca altera routing.
 
 ## Política de seleção
 
@@ -388,6 +390,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 14:00 — Identidade estrutural de backup SQLite — verify/restore passaram a inventariar e fixar versão + digest do schema canônico, separados das identidades física e lógica; probe live bounded confirmou catálogos Groq 15/NIM 119 sem drift desde a descoberta anterior — verificação: testes específicos, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 12:00 — Imutabilidade da origem offline SQLite — backup/restore não passam mais pelo configurador mutável do store: abrem a origem read-only/immutable, não criam sidecars e confrontam inode+tamanho+digest antes/depois, removendo a cópia se houver mutação concorrente — verificação: teste de não mutação/sidecars, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
+
+2026-07-18 17:00 — Presets de modelos qualificados — catálogo versionado fixa evidência live por SHA-256 e materializa somente drafts MODELS desabilitados; backlog P4 reconciliado com campanhas, regressão e gate runtime já concluídos; probe live bounded NVIDIA Mistral Small 4 retornou `PROBE_OK` — verificação: testes domain/suite completa, vet, gofmt, validação do catálogo/digests e `git diff --check`; race foi tentado, mas indisponível neste host sem CGO/gcc — commit pendente neste ciclo.
 
 2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 

@@ -183,11 +183,16 @@ Política aceita pelo operador (2026-07-18): avaliação live não é uma etapa 
 
 - [x] descoberta opcional de `/v1/models` com allowlist/validação e cache, nunca como autoridade automática;
 - [x] inventário versionado de modelos observados por provider, data, ID opaco e resultado de qualificação;
-- [ ] presets versionados para modelos prioritários confirmados;
-- [ ] campanhas live recorrentes por binding/modelo/operação/formato/contexto;
-- [ ] campanhas controladas de quota e falha para observar 429, `Retry-After`, timeout, circuit breaker e fallback sem carga ilimitada;
-- [ ] detecção de regressão contra baseline anterior por operação, validade sintática, acerto, tokens e latência;
-- [ ] registrar resultados e ajustar preferência somente por decisão explícita e auditável.
+- [x] presets versionados para modelos prioritários confirmados;
+  - Evidência: `model-presets.v1.json` fixa somente deployments `QUALIFIED`, data e SHA-256 do relatório live; `domain.ModelPresetCatalog` faz decode estrito/limitado e materializa apenas drafts `MODELS` desabilitados, preservando diff/apply explícitos.
+- [x] campanhas live recorrentes por binding/modelo/operação/formato/contexto;
+  - Evidência: manifesto bounded multi-binding, campanhas cognitivas v1/v2 e probes contínuos datados em `results/model-benchmark`.
+- [x] campanhas controladas de quota e falha para observar 429, `Retry-After`, timeout, circuit breaker e fallback sem carga ilimitada;
+  - Evidência: campanha runtime real em `results/runtime-gate/executor-live-2026-07-18` mais contract tests determinísticos de 429/503/timeout/fallback; nenhum esgotamento artificial de quota.
+- [x] detecção de regressão contra baseline anterior por operação, validade sintática, acerto, tokens e latência;
+  - Evidência: `CompareReports` compara taxas por operação/formato/contexto mesmo entre versões de corpus; reports preservam tokens, duração, status, 429 e timeout por célula.
+- [x] registrar resultados e ajustar preferência somente por decisão explícita e auditável.
+  - Evidência: qualification e presets são evidência separada da configuração ativa; bindings de preset permanecem `enabled=false` e precisam percorrer draft/diff/apply do control plane.
 
 O inventário inicial de 2026-07-18 está em
 `results/model-inventory/2026-07-18`. A classificação reproduzível da campanha

@@ -1,0 +1,35 @@
+{
+  "schema": "model-presets.v1",
+  "presets": [
+    {
+      "id": "groq-llama-3.3-70b",
+      "provider": {
+        "id": "groq", "kind": "groq", "base_url": "https://api.groq.com/openai/v1", "api_key_env": "GROQ_API_KEY",
+        "timeout": 90000000000, "max_response_bytes": 1048576,
+        "global_limit": {"resource":"model-provider:groq","max_concurrent":1,"max_per_minute":0,"max_per_day":0,"max_tokens_per_minute":0,"failure_threshold":3,"cooldown_base":30000000000,"cooldown_max":300000000000,"reserved_for_critical":0}
+      },
+      "binding": {
+        "id":"groq-llama-3.3-70b","provider_ref":"groq","model_id":"llama-3.3-70b-versatile","enabled":false,"priority":10,"context_tokens":8192,"max_output_tokens":512,"max_output_dialect":"max_tokens",
+        "limit":{"resource":"model-binding:groq-llama-3.3-70b","max_concurrent":1,"max_per_minute":0,"max_per_day":0,"max_tokens_per_minute":0,"failure_threshold":3,"cooldown_base":30000000000,"cooldown_max":300000000000,"reserved_for_critical":0}
+      },
+      "observed_at":"2026-07-18T00:00:00Z","qualification":"QUALIFIED",
+      "evidence_report":"results/model-benchmark/live-groq-llama-3.3-70b-contract-2026-07-18/report.json",
+      "evidence_sha256":"d4d6017ebc091118a53c1cd0054322d1b4294843afaf565f5e9105917168fab5","recommended_priority":10
+    },
+    {
+      "id": "nvidia-mistral-small-4",
+      "provider": {
+        "id":"nvidia-nim","kind":"nvidia_nim","base_url":"https://integrate.api.nvidia.com/v1","api_key_env":"NVIDIA_NIM_API_KEY",
+        "timeout":90000000000,"max_response_bytes":1048576,
+        "global_limit":{"resource":"model-provider:nvidia-nim","max_concurrent":1,"max_per_minute":20,"max_per_day":0,"max_tokens_per_minute":0,"failure_threshold":2,"cooldown_base":30000000000,"cooldown_max":300000000000,"reserved_for_critical":0}
+      },
+      "binding": {
+        "id":"nvidia-mistral-small-4","provider_ref":"nvidia-nim","model_id":"mistralai/mistral-small-4-119b-2603","enabled":false,"priority":20,"context_tokens":8192,"max_output_tokens":512,"max_output_dialect":"max_tokens",
+        "limit":{"resource":"model-binding:nvidia-mistral-small-4","max_concurrent":1,"max_per_minute":0,"max_per_day":0,"max_tokens_per_minute":0,"failure_threshold":2,"cooldown_base":30000000000,"cooldown_max":300000000000,"reserved_for_critical":0}
+      },
+      "observed_at":"2026-07-18T00:00:00Z","qualification":"QUALIFIED",
+      "evidence_report":"results/model-benchmark/new-candidates-2026-07-18/nvidia-mistral-small-4-119b/report.json",
+      "evidence_sha256":"8c37266b0f3f503e7fa7104152169e2c874d9e033bf5f0d24f5f70ebe7616c19","recommended_priority":20
+    }
+  ]
+}
