@@ -16,7 +16,8 @@ store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
 // report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
-// SchemaVersion, SchemaObjects, SchemaSHA256, CheckpointRows, CheckpointFormat,
+// ApplicationID, UserVersion, SchemaVersion, SchemaObjects, SchemaSHA256,
+// CheckpointRows, CheckpointFormat,
 // CheckpointSHA256, IntegrityCheck e ForeignKeyCheck
 ```
 
@@ -24,7 +25,7 @@ Comportamento:
 
 1. adquire o lock de escrita do adapter (serializa com `Update`);
 2. copia páginas via `modernc.org/sqlite` `NewBackup` / `Step` / `Finish` (`sqlite3_backup_*`);
-3. executa `PRAGMA quick_check` e verifica versão externa, SHA-256, framing e decode integral do `runtime_checkpoint` quando existir;
+3. executa `PRAGMA integrity_check(1)` e `foreign_key_check`, exige os marcadores de header `application_id=0x4d415554` (`MAUT`) e `user_version=1`, e verifica versão externa, SHA-256, framing e decode integral do `runtime_checkpoint` quando existir;
 4. registra separadamente o SHA-256 do payload versionado do checkpoint, permitindo confrontar a identidade lógica mesmo quando a cópia SQLite possui bytes físicos diferentes.
 5. deixa a origem aberta e utilizável.
 
@@ -74,7 +75,10 @@ exige `PRAGMA foreign_key_check` sem violações e confere que toda linha de
 com SQLite `mode=ro&immutable=1`: não cria banco ausente, não executa migração
 ou configuração e não deixa WAL/SHM/journal ao lado do backup. O resultado
 válido registra `IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo
-completo; divergência de versão, adulteração do payload ou framing inválido
+completo. A auditoria também exige os marcadores SQLite `application_id`
+(`MAUT`) e `user_version` canônico, distinguindo um banco do runtime de outro
+arquivo SQLite que por acaso possua uma tabela homônima; divergência de versão,
+adulteração do payload ou framing inválido
 tornam a cópia não restaurável. Preserve o JSON do backup ao lado do artefato ou em
 inventário durável. Depois de copiar o backup para outro volume/host, fixe a
 identidade registrada na verificação:
@@ -103,7 +107,7 @@ triggers ou views adicionais, mesmo que `runtime_checkpoint` permaneça válida,
 inventário, inclusive o caso válido vazio (`0`/`0`). Valores ausentes continuam
 significando apenas calcular e reportar; valores fornecidos inválidos ou
 divergentes são rejeitados. A auditoria
-calcula o hash antes e depois de `quick_check`/decode e falha se o arquivo mudar
+calcula o hash antes e depois de `integrity_check`/decode e falha se o arquivo mudar
 durante a verificação. O path auditado precisa ser um arquivo regular direto:
 symlinks são recusados, e a identidade do inode é conferida entre hash,
 abertura SQLite e hash final para impedir troca de path durante a auditoria.

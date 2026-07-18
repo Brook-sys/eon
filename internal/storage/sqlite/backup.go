@@ -31,6 +31,8 @@ type BackupReport struct {
 	SQLiteVersion    string        `json:"sqlite_version"`
 	FileSize         int64         `json:"file_size"`
 	SHA256           string        `json:"sha256"`
+	ApplicationID    int           `json:"application_id"`
+	UserVersion      int           `json:"user_version"`
 	SchemaVersion    int           `json:"schema_version"`
 	SchemaObjects    int           `json:"schema_objects"`
 	SchemaSHA256     string        `json:"schema_sha256"`
@@ -47,6 +49,8 @@ type BackupReport struct {
 type BackupVerification struct {
 	FileSize         int64  `json:"file_size"`
 	SHA256           string `json:"sha256"`
+	ApplicationID    int    `json:"application_id"`
+	UserVersion      int    `json:"user_version"`
 	SchemaVersion    int    `json:"schema_version"`
 	SchemaObjects    int    `json:"schema_objects"`
 	SchemaSHA256     string `json:"schema_sha256"`
@@ -224,6 +228,8 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		SQLiteVersion:    version,
 		FileSize:         verification.FileSize,
 		SHA256:           verification.SHA256,
+		ApplicationID:    verification.ApplicationID,
+		UserVersion:      verification.UserVersion,
 		SchemaVersion:    verification.SchemaVersion,
 		SchemaObjects:    verification.SchemaObjects,
 		SchemaSHA256:     verification.SchemaSHA256,
@@ -396,6 +402,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
 	}
 	if report.CheckpointRows != sourceVerification.CheckpointRows ||
+		report.ApplicationID != sourceVerification.ApplicationID ||
+		report.UserVersion != sourceVerification.UserVersion ||
 		report.SchemaVersion != sourceVerification.SchemaVersion ||
 		report.SchemaObjects != sourceVerification.SchemaObjects ||
 		report.SchemaSHA256 != sourceVerification.SchemaSHA256 ||
@@ -478,6 +486,23 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("close backup foreign-key check: %w", err)
 	}
+	var applicationID, userVersion int
+	if err := db.QueryRow(`PRAGMA application_id`).Scan(&applicationID); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup application id: %w", err)
+	}
+	if applicationID != runtimeApplicationID {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup application id: got %d, want %d", applicationID, runtimeApplicationID)
+	}
+	if err := db.QueryRow(`PRAGMA user_version`).Scan(&userVersion); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup user version: %w", err)
+	}
+	if userVersion != runtimeUserVersion {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup user version: got %d, want %d", userVersion, runtimeUserVersion)
+	}
 	var schemaVersion int
 	if err := db.QueryRow(`PRAGMA schema_version`).Scan(&schemaVersion); err != nil {
 		db.Close()
@@ -514,6 +539,8 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	verification := BackupVerification{
 		FileSize:        beforeSize,
 		SHA256:          beforeDigest,
+		ApplicationID:   applicationID,
+		UserVersion:     userVersion,
 		SchemaVersion:   schemaVersion,
 		SchemaObjects:   schemaObjects,
 		SchemaSHA256:    hex.EncodeToString(schemaDigest[:]),

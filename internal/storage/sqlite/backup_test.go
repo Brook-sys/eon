@@ -60,6 +60,9 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if report.CheckpointFormat != memory.CheckpointFormatVersion || len(report.CheckpointSHA256) != sha256.Size*2 || report.IntegrityCheck != "ok" || report.ForeignKeyCheck != "ok" {
 		t.Fatalf("backup verification report = %#v", report)
 	}
+	if report.ApplicationID != 0x4d415554 || report.UserVersion != 1 {
+		t.Fatalf("backup runtime identity = %#v", report)
+	}
 	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
 		t.Fatalf("backup identity = %#v", report)
 	}
@@ -217,6 +220,42 @@ func TestRestoreToRejectsExistingDestinationAndInvalidSource(t *testing.T) {
 	}
 	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("invalid restore left destination: %v", err)
+	}
+}
+
+func TestVerifyBackupRejectsWrongRuntimeHeaderIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		statement string
+		want      string
+	}{
+		{name: "application id", statement: `PRAGMA application_id=0`, want: "application id"},
+		{name: "user version", statement: `PRAGMA user_version=2`, want: "user version"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "runtime.sqlite")
+			store, err := storage.Open(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := store.Close(); err != nil {
+				t.Fatal(err)
+			}
+			db, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(tc.statement); err != nil {
+				db.Close()
+				t.Fatal(err)
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := storage.VerifyBackup(path); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("VerifyBackup error = %v, want %q", err, tc.want)
+			}
+		})
 	}
 }
 

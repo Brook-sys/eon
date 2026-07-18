@@ -16,7 +16,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const checkpointID = 1
+const (
+	checkpointID         = 1
+	runtimeApplicationID = 0x4d415554 // "MAUT"
+	runtimeUserVersion   = 1
+)
 
 type Failpoint string
 
@@ -61,6 +65,8 @@ func configure(db *sql.DB) error {
 		`PRAGMA journal_mode=WAL`,
 		`PRAGMA synchronous=FULL`,
 		`PRAGMA foreign_keys=ON`,
+		fmt.Sprintf(`PRAGMA application_id=%d`, runtimeApplicationID),
+		fmt.Sprintf(`PRAGMA user_version=%d`, runtimeUserVersion),
 		`CREATE TABLE IF NOT EXISTS runtime_checkpoint (
 			id INTEGER PRIMARY KEY CHECK (id = 1),
 			format_version INTEGER NOT NULL,
