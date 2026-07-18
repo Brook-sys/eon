@@ -42,6 +42,9 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if report.SourcePath != sourcePath || report.DestinationPath != backupPath || report.IntegrityCheck != "ok" || report.SHA256 == "" || report.FileSize <= 0 {
 		t.Fatalf("unexpected report: %+v", report)
 	}
+	if report.ReportSchema != "motor-autonomo.sqlite-backup-report.v1" || report.Operation != "backup" {
+		t.Fatalf("unexpected report framing: %+v", report)
+	}
 	reportBytes, err := os.ReadFile(reportPath)
 	if err != nil {
 		t.Fatal(err)
@@ -87,6 +90,9 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if verification.IntegrityCheck != "ok" || verification.SHA256 != report.SHA256 || verification.FileSize != report.FileSize {
 		t.Fatalf("unexpected verification: %+v", verification)
 	}
+	if verification.ReportSchema != report.ReportSchema || verification.Operation != "verify" {
+		t.Fatalf("unexpected verification framing: %+v", verification)
+	}
 	var inventoryVerifyOut bytes.Buffer
 	if err := run(context.Background(), []string{
 		"-mode=verify", "-path=" + backupPath, "-inventory=" + reportPath,
@@ -128,6 +134,9 @@ func TestRunBackupAndVerify(t *testing.T) {
 	}
 	if restoreReport.SourcePath != backupPath || restoreReport.SourceSHA256 != report.SHA256 || restoreReport.DestinationPath != restoredPath || restoreReport.IntegrityCheck != "ok" {
 		t.Fatalf("unexpected restore report: %+v", restoreReport)
+	}
+	if restoreReport.ReportSchema != report.ReportSchema || restoreReport.Operation != "restore" {
+		t.Fatalf("unexpected restore framing: %+v", restoreReport)
 	}
 	if _, err := sqlite.VerifyBackup(restoredPath); err != nil {
 		t.Fatalf("verify restored runtime: %v", err)
@@ -179,10 +188,12 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 func TestLoadInventoryRejectsUntrustedJSON(t *testing.T) {
 	dir := t.TempDir()
 	for name, payload := range map[string]string{
-		"unknown.json":  `{"unknown":true}`,
-		"trailing.json": `{} {}`,
-		"invalid.json":  `{"file_size":1,"page_size":4096,"page_count":1,"application_id":0,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
-		"digest.json":   `{"file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"unknown.json":   `{"unknown":true}`,
+		"trailing.json":  `{} {}`,
+		"invalid.json":   `{"file_size":1,"page_size":4096,"page_count":1,"application_id":0,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"digest.json":    `{"file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"future.json":    `{"report_schema":"motor-autonomo.sqlite-backup-report.v2","operation":"backup","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"operation.json": `{"report_schema":"motor-autonomo.sqlite-backup-report.v1","operation":"delete","file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
 	} {
 		path := filepath.Join(dir, name)
 		if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {

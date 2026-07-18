@@ -249,6 +249,8 @@ func (value optionalInt) Pointer() *int {
 const maxInventoryBytes = 64 << 10
 
 type backupInventory struct {
+	ReportSchema     string `json:"report_schema"`
+	Operation        string `json:"operation"`
 	SourcePath       string `json:"source_path"`
 	SourceSHA256     string `json:"source_sha256"`
 	DestinationPath  string `json:"destination_path"`
@@ -297,6 +299,12 @@ func loadInventory(path string) (backupInventory, error) {
 	}
 	if inventory.FileSize <= 0 || inventory.PageSize <= 0 || inventory.PageCount <= 0 {
 		return backupInventory{}, errors.New("inventory physical identity is incomplete")
+	}
+	if inventory.ReportSchema != "motor-autonomo.sqlite-backup-report.v1" {
+		return backupInventory{}, fmt.Errorf("unsupported inventory report schema %q", inventory.ReportSchema)
+	}
+	if inventory.Operation != "backup" && inventory.Operation != "verify" && inventory.Operation != "restore" {
+		return backupInventory{}, fmt.Errorf("unsupported inventory operation %q", inventory.Operation)
 	}
 	if inventory.FileSize != int64(inventory.PageSize)*int64(inventory.PageCount) {
 		return backupInventory{}, errors.New("inventory page geometry does not match file size")

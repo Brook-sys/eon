@@ -23,6 +23,8 @@ import (
 // The destination is a standalone SQLite database file that can be reopened
 // with Open after the source store remains online.
 type BackupReport struct {
+	ReportSchema     string        `json:"report_schema"`
+	Operation        string        `json:"operation"`
 	SourcePath       string        `json:"source_path,omitempty"`
 	SourceSHA256     string        `json:"source_sha256,omitempty"`
 	DestinationPath  string        `json:"destination_path"`
@@ -49,6 +51,8 @@ type BackupReport struct {
 // runtime checkpoint's framing, digest and decodability. Empty stores are
 // valid and therefore report zero checkpoint rows and format.
 type BackupVerification struct {
+	ReportSchema     string `json:"report_schema"`
+	Operation        string `json:"operation"`
 	FileSize         int64  `json:"file_size"`
 	PageSize         int    `json:"page_size"`
 	PageCount        int    `json:"page_count"`
@@ -104,6 +108,13 @@ type RestoreOptions struct {
 	ExpectedCheckpointFormat *int
 	Backup                   BackupOptions
 }
+
+const (
+	backupReportSchema    = "motor-autonomo.sqlite-backup-report.v1"
+	backupOperation       = "backup"
+	restoreOperation      = "restore"
+	verificationOperation = "verify"
+)
 
 // BackupTo creates a consistent online copy of the store database at destPath
 // using modernc.org/sqlite's NewBackup API (sqlite3_backup_*). The source store
@@ -222,6 +233,8 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 	published = true
 
 	return BackupReport{
+		ReportSchema:     backupReportSchema,
+		Operation:        backupOperation,
 		DestinationPath:  destPath,
 		PagesCopied:      int64(verification.PageCount),
 		Duration:         time.Since(started),
@@ -423,6 +436,7 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 		return BackupReport{}, fmt.Errorf("reverify restore source: %w", err)
 	}
 	report.SourceSHA256 = sourceVerification.SHA256
+	report.Operation = restoreOperation
 	return report, nil
 }
 
@@ -564,6 +578,8 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("verify backup checkpoint: got %d total rows but %d canonical id=1 rows", count, canonicalCount)
 	}
 	verification := BackupVerification{
+		ReportSchema:    backupReportSchema,
+		Operation:       verificationOperation,
 		FileSize:        beforeSize,
 		PageSize:        pageSize,
 		PageCount:       pageCount,

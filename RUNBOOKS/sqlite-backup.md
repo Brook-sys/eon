@@ -59,6 +59,10 @@ hard link sem replace e `fsync` do diretório. O comando nunca sobrescreve um
 inventário existente. Assim, o digest físico, identidade lógica, schema e
 inventário de páginas usados numa restauração permanecem juntos do backup sem
 depender de redirecionamento de shell parcialmente gravado.
+Todo relatório inclui framing explícito `report_schema` com valor
+`motor-autonomo.sqlite-backup-report.v1` e `operation` (`backup`, `verify` ou
+`restore`). O loader de inventário rejeita versões futuras ou operações
+desconhecidas em vez de interpretar silenciosamente um formato incompatível.
 
 A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela
 exige que a origem já exista como arquivo regular (não cria banco ausente e não
@@ -106,7 +110,8 @@ go run ./cmd/sqlite-backup \
 `-inventory` fixa digest físico, páginas, schema e checkpoint sem transcrição
 manual. O parser é estrito, limitado a 64 KiB, rejeita campos desconhecidos,
 JSON trailing, identidade de aplicação não canônica e inventário sem checks de
-integridade bem-sucedidos. Para evitar seleção ambígua, `-inventory` não pode
+integridade bem-sucedidos; também exige o `report_schema` v1 e uma operação
+conhecida. Para evitar seleção ambígua, `-inventory` não pode
 ser combinado com flags `-expected-*`. As flags individuais permanecem
 disponíveis para integrações que transportem os campos separadamente:
 
