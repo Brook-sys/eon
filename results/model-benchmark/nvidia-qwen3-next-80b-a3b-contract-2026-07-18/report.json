@@ -1,0 +1,513 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v1",
+  "model": "qwen/qwen3-next-80b-a3b-instruct",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "duration_millis": 396,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "duration_millis": 127,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "duration_millis": 124,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "duration_millis": 124,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "duration_millis": 132,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "duration_millis": 138,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "duration_millis": 133,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "duration_millis": 131,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "duration_millis": 130,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "duration_millis": 135,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "duration_millis": 135,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "duration_millis": 131,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "duration_millis": 126,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "duration_millis": 125,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 124,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 124,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 90000,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 139,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 126,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 137,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "duration_millis": 136,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "duration_millis": 127,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "duration_millis": 136,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 124,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 130,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 137,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER"
+    }
+  ],
+  "summary": {
+    "total": 33,
+    "compiled": 33,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 33,
+    "validation_errors": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 9
+      },
+      {
+        "label": "EXTRACT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 9
+      },
+      {
+        "label": "REPAIR",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 9
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 9
+      },
+      {
+        "label": "DELIMITED",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 12
+      },
+      {
+        "label": "JSON",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 12
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 11
+      },
+      {
+        "label": "4096",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 11
+      },
+      {
+        "label": "8192",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 11
+      }
+    ]
+  }
+}

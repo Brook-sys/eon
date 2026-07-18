@@ -177,12 +177,19 @@ O template da UI é deliberadamente não executável até o operador substituir 
 `model_id` opaco e marcar o binding como habilitado. Quotas no template são
 limites conservadores locais, não afirmações sobre quotas atuais do provedor.
 
-### P4 — catálogo e avaliação live
+### P4 — catálogo e avaliação live contínua
 
-- descoberta opcional de `/v1/models` com allowlist/validação e cache, nunca como autoridade automática;
-- presets versionados para modelos prioritários confirmados;
-- matriz cognitiva live por binding/modelo/contexto/formato;
-- registrar resultados e ajustar preferência com decisão explícita do operador.
+Política aceita pelo operador (2026-07-18): avaliação live não é uma etapa única. Groq e NVIDIA NIM devem ser exercitados continuamente para detectar regressões, mudanças de catálogo, diferenças entre modelos e comportamento real de quota/recovery. Fakes e oracle offline comprovam determinismo, mas não qualificam sozinhos comportamento cognitivo ou compatibilidade de deployment.
+
+- [x] descoberta opcional de `/v1/models` com allowlist/validação e cache, nunca como autoridade automática;
+- [ ] inventário versionado de modelos observados por provider, data, ID opaco e resultado de qualificação;
+- [ ] presets versionados para modelos prioritários confirmados;
+- [ ] campanhas live recorrentes por binding/modelo/operação/formato/contexto;
+- [ ] campanhas controladas de quota e falha para observar 429, `Retry-After`, timeout, circuit breaker e fallback sem carga ilimitada;
+- [ ] detecção de regressão contra baseline anterior por operação, validade sintática, acerto, tokens e latência;
+- [ ] registrar resultados e ajustar preferência somente por decisão explícita e auditável.
+
+Cada campanha DEVE declarar antes de executar: providers/modelos, fixture e versão, matriz de contexto/formato, teto de chamadas, teto de tokens ou saída, timeout global e critério de interrupção. A campanha DEVE parar em 429/cooldown quando o comportamento pretendido já estiver observado; "esgotar quota" significa testar o limite de maneira bounded e informativa, não consumir capacidade sem propósito.
 
 ## Critérios de aceite
 
@@ -193,6 +200,9 @@ limites conservadores locais, não afirmações sobre quotas atuais do provedor.
 - correções e fallbacks consomem chamadas e quota individualmente;
 - ordem de modelos, timeout e todos os limites relevantes são editáveis no dashboard com diff/rollback;
 - modelo novo pode ser configurado por ID opaco sem alteração de código;
+- mudanças em prompt/parser/router/recovery recebem ao menos uma campanha live aplicável antes de serem consideradas cognitivamente validadas;
+- cada modelo promovido possui evidência live por todas as operações suportadas e comparação com baseline;
+- descoberta recorrente identifica modelos novos/retirados sem habilitá-los automaticamente;
 - feature não confirmada nunca é enviada;
 - API keys e corpos de erro não aparecem em config, eventos, inspect ou dashboard.
 

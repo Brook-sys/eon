@@ -302,6 +302,19 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `internal/architecture/portability_test.go` rejeita import de `C` em produção de `cmd`/`internal`, com fixture negativa; os quatro comandos compilam com `CGO_ENABLED=0` em Linux, macOS e Windows para `amd64`/`arm64`.
 - [x] `DONE` Fechar deadlines padrão e framing JSON nos adapters de rede residuais.
   - Evidência: SearXNG e Telegram não usam mais `http.DefaultClient`, adotando deadlines totais de 30s/60s; guard AST rejeita regressão em `internal/provider`/`internal/channel`; SearXNG rejeita JSON trailing após o documento de resposta.
+- [ ] `READY` Instituir campanhas cognitivas live recorrentes para Groq e NVIDIA NIM.
+  - Objetivo: transformar avaliação real em política contínua, com manifesto pré-execução, tetos de chamadas/tokens/tempo, artefatos versionados e comparação com baseline anterior por operação/formato/contexto.
+  - Aceite: harness suporta executar uma matriz de vários modelos sem expor chaves; relatório agregado mostra provider/binding/modelo, validade, acerto, tokens, latência, 429/Retry-After/timeout e regressões.
+- [ ] `READY` Descobrir e qualificar modelos novos de Groq e NVIDIA NIM.
+  - Objetivo: consultar `/v1/models` com as credenciais autorizadas, registrar inventário datado e selecionar candidatos ainda não avaliados sem habilitação automática no runtime.
+  - Evidência inicial (2026-07-18): inventário live registrou 15 IDs Groq e 119 NVIDIA NIM em `results/model-inventory/2026-07-18`; quatro candidatos novos receberam matriz bounded de 33 chamadas. Groq `openai/gpt-oss-20b` obteve 19/33; NVIDIA `nvidia/nemotron-3-nano-30b-a3b`, 16/33; Groq `qwen/qwen3.6-27b`, 0/33 (22 validações + 11 provider errors); NVIDIA `qwen/qwen3-next-80b-a3b-instruct`, 0/33 provider errors.
+  - Aceite residual: automatizar manifesto multi-modelo/agregação e continuar qualificação de candidatos ainda não avaliados; IDs removidos ou incompatíveis ficam registrados com evidência.
+- [ ] `READY` Exercitar quotas, circuit breaker e fallback em campanhas live controladas.
+  - Objetivo: observar comportamento real de 429, `Retry-After`, timeout e escopo provider/binding sem busy loop nem consumo sem finalidade.
+  - Aceite: campanha possui teto explícito e prova que o gate estaciona/reencaminha corretamente, preservando budget e liberando concorrência.
+- [ ] `READY` Expandir o corpus cognitivo e detectar regressões por operação.
+  - Objetivo: evitar overfitting aos quatro casos atuais, adicionando casos adversariais e múltiplos exemplos de EXTRACT, SYNTHESIZE, CONFLICT e REPAIR.
+  - Aceite: fixtures versionadas, oracle offline, execução live nos modelos ativos e comparação objetiva com baseline anterior.
 
 ## Política de seleção
 
@@ -468,3 +481,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 04:20 — NFR-PORT-001 portable binaries — guard AST impede cgo em toda produção `cmd`/`internal`, fixture negativa comprova detecção e os quatro comandos compilam com `CGO_ENABLED=0` para Linux/macOS/Windows em amd64/arm64 — verificação: `go test ./...`, `go vet ./...`, `gofmt`, matriz de cross-build e `git diff --check` com Go 1.26.5 — próximo: selecionar novo gap observável em vez de ampliar guards sem evidência.
 2026-07-18 04:40 — FR-MODEL-007 durable NIM context pressure — o sinal limitado de redução agora é persistido por binding, carregado antes de cada tentativa NIM, isolado de prompts/segredos e recuperado um nível somente após dois sucessos; checkpoint memory/SQLite/Dolt preserva replay/restart e IDs de eventos de adaptação distinguem planos no mesmo tick virtual — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — próximo: projetar pressão corrente no inspect apenas se surgir necessidade operacional observável; avaliação live continua dependente de endpoint/quota autorizados.
 2026-07-18 05:00 — NFR-PERF-001 network deadlines + strict SearXNG framing — defaults de SearXNG/Telegram agora têm timeout total limitado, guard AST impede retorno a `http.DefaultClient` e resposta SearXNG com segundo valor JSON é rejeitada — verificação: `gofmt`, `git diff --check`, testes focais, `go test ./...` e `go vet ./...` com Go 1.26.5; race focal indisponível neste host porque o SDK exige cgo e não há compilador C — próximo: selecionar somente gaps observáveis adicionais.
+
+2026-07-18 05:30 — Política de avaliação live contínua — HEARTBEAT e contrato Groq/NIM passam a exigir evidência real bounded em mudanças cognitivas; inventário descobriu 15 modelos Groq/119 NIM; campanhas novas: GPT-OSS-20B 19/33, Nemotron-3-Nano 16/33, Qwen3.6 0/33 e Qwen3-Next 0/33 — verificação: quatro matrizes live completas, artefatos JSON/Markdown e `git diff --check` — próximo: harness multi-modelo agregado, análise de provider errors/429 e expansão do corpus.

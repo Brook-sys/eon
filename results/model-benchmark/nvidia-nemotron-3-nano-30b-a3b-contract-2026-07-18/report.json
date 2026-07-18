@@ -1,0 +1,660 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 180,
+      "output_tokens": 233,
+      "duration_millis": 5997,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 180,
+      "output_tokens": 231,
+      "duration_millis": 3812,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 180,
+      "output_tokens": 256,
+      "duration_millis": 2572,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to follow constraints: Use only supplied facts; do not invent missing evidence. Return the original publication date. Allowed outputs: A: date=2025-11-03, B: source=S-17. The task: Extract the publication date and source identifier. But constraints say \"Return the original publication date.\" So we need to output exactly one line per key as KEY=VALUE. Use only allowed values. So we need to output two lines? It says \"Return exactly one line per key as KEY=VALUE.\" So we have two keys: date and source. So we should output:\n\ndate=2025-11-03\nsource=S-17\n\nBut need to ensure we only use allowed values. Allowed values are \"A: date=2025-11-03\" and \"B: source=S-17\". Those are the allowed outputs? The allowed outputs list shows two options: A: date=2025-11-03 and B: source=S-17. But the instruction says \"Return exactly one line per key as KEY=VALUE.\" So we need to output both lines? Possibly they want"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 178,
+      "output_tokens": 247,
+      "duration_millis": 2406,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 178,
+      "output_tokens": 234,
+      "duration_millis": 2114,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 178,
+      "output_tokens": 200,
+      "duration_millis": 1981,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 177,
+      "output_tokens": 232,
+      "duration_millis": 2585,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"date\": \"2025-11-03\",\n  \"source\": \"S-17\"\n}",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 177,
+      "output_tokens": 229,
+      "duration_millis": 2020,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"date\": \"2025-11-03\",\n  \"source\": \"S-17\"\n}",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 177,
+      "output_tokens": 232,
+      "duration_millis": 2849,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"date\": \"2025-11-03\",\n  \"source\": \"S-17\"\n}",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 156,
+      "output_tokens": 256,
+      "duration_millis": 2383,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to parse the instruction. The user gave a template v1 with TASK: Determine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS: F1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS: Use only supplied facts; do not invent missing evidence. SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS: A: observation=O-9 B: support=YES\n\nANSWER: Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\nSo we need to output exactly one line per key as KEY=VALUE. The allowed values are \"A: observation=O-9\" and \"B: support=YES\". Actually they say \"ALLOWED OUTPUTS A: observation=O-9 B: support=YES\". Probably they want us to output lines like \"A=observation=O-9\"? Or maybe they want \"A=observation=O-9\"? The instruction: \"Return exactly one line per key as KEY=VALUE. Use only the allowed values"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 156,
+      "output_tokens": 256,
+      "duration_millis": 3261,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to parse the template. The user gave a template v1 with TASK: Determine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS:\nF1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS:\n- Use only supplied facts; do not invent missing evidence.\n- SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS\nA: observation=O-9\nB: support=YES\n\nANSWER\nReturn exactly one line per key as KEY=VALUE. Use only the allowed values.\n\nWe need to output exactly one line per key as KEY=VALUE. The allowed outputs are A: observation=O-9 and B: support=YES. So we need to output two lines? Actually \"Return exactly one line per key as KEY=VALUE.\" Means we need to output lines for each key we choose? The allowed outputs are A and B. So we need to output \"A=observation=O-9\"? Or \"observation=O-9\"? The format says KEY=VALUE. The allowed outputs"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 156,
+      "output_tokens": 256,
+      "duration_millis": 3549,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to parse the template. The user gave a template v1 with TASK: Determine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS:\nF1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS:\n- Use only supplied facts; do not invent missing evidence.\n- SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS:\nA: observation=O-9\nB: support=YES\n\nANSWER\nReturn exactly one line per key as KEY=VALUE. Use only the allowed values.\n\nWe need to output exactly one line per key as KEY=VALUE. The allowed values are A: observation=O-9 and B: support=YES. So we need to output two lines? Or one line per key? The instruction: \"Return exactly one line per key as KEY=VALUE. Use only the allowed values.\" So we have two keys: observation and support? The allowed outputs are A: observation=O-9 and B: support=YES. So we need to output lines like:\n\nobservation=O"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 154,
+      "output_tokens": 256,
+      "duration_millis": 5273,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to parse the template. The user gave:\n\nTEMPLATE v1\n\nTASK\nDetermine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS\nF1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS\n- Use only supplied facts; do not invent missing evidence.\n- SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS\nA: observation=O-9\nB: support=YES\n\nANSWER\nReturn exactly one line per key as KEY=VALUE, with no prose.\n\nWe need to output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are A: observation=O-9 and B: support=YES. So we need to output two lines? Or exactly one line per key? The instruction: \"Return exactly one line per key as KEY=VALUE, with no prose.\" So we need to output lines like \"A: observation=O-9\" and \"B: support=YES\"? Or maybe just \"A: observation=O-9\" and"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 154,
+      "output_tokens": 256,
+      "duration_millis": 2568,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to parse the template. The user gave a template v1 with TASK: Determine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS:\nF1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS:\n- Use only supplied facts; do not invent missing evidence.\n- SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS:\nA: observation=O-9\nB: support=YES\n\nANSWER\nReturn exactly one line per key as KEY=VALUE, with no prose.\n\nWe need to output exactly one line per key as KEY=VALUE. The allowed outputs are A: observation=O-9 and B: support=YES. Probably we need to output both? The instruction: \"Return exactly one line per key as KEY=VALUE, with no prose.\" So we need to output lines like \"A=observation=O-9\"? Or \"observation=O-9\"? The allowed outputs are \"A: observation=O-9\" and \"B: support=YES\". But they say \""
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 154,
+      "output_tokens": 256,
+      "duration_millis": 2625,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are A: observation=O-9 and B: support=YES. The template says \"Return exactly one line per key as KEY=VALUE, with no prose.\" So we need to output lines like \"A=observation=O-9\"? Or \"observation=O-9\"? The allowed outputs are \"A: observation=O-9\" and \"B: support=YES\". But they say \"Return exactly one line per key as KEY=VALUE\". So likely we need to output \"A=observation=O-9\"? Or maybe \"A=observation=O-9\"? Let's parse.\n\nThe allowed outputs are:\n\nA: observation=O-9\nB: support=YES\n\nBut they also say \"Return exactly one line per key as KEY=VALUE, with no prose.\"\n\nThus we need to output lines like:\n\nA=observation=O-9\nB=support=YES\n\nBut that seems weird. Actually maybe they want to output exactly one line per key, where the key is either A or B, and the value is the corresponding value. So we could output:\n\nA=observation=O"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 153,
+      "output_tokens": 256,
+      "duration_millis": 1958,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "{\n  \"observation\": \"O-9\",\n"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 153,
+      "output_tokens": 256,
+      "duration_millis": 2300,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "{\n  \"observation\": \"O"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 153,
+      "output_tokens": 256,
+      "duration_millis": 3225,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "We need to parse the task. It's a template. The user gave:\n\nTEMPLATE v1\n\nTASK\nDetermine whether the evidence supports the claim and identify the decisive observation.\n\nFACTS\nF1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\nF2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n\nCONSTRAINTS\n- Use only supplied facts; do not invent missing evidence.\n- SUPPORT is either YES or NO.\n\nALLOWED OUTPUTS\nA: observation=O-9\nB: support=YES\n\nANSWER\nReturn one JSON object with exactly these string keys: observation, support\n\nWe need to output a JSON object with keys \"observation\" and \"support\". The allowed outputs are A: observation=O-9 and B: support=YES. Probably they want to output something like {\"observation\":\"O-9\",\"support\":\"YES\"}? Or maybe they want the values exactly as \"O-9\" and \"YES\". The allowed outputs are A: observation=O-9 and B: support=YES. That suggests that the JSON should have observation key set to \"O",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 189,
+      "output_tokens": 174,
+      "duration_millis": 2296,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "A: conflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 189,
+      "output_tokens": 226,
+      "duration_millis": 2159,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "A: conflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 189,
+      "output_tokens": 256,
+      "duration_millis": 3215,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE. Allowed outputs: A: conflict=YES or B: pair=O-1/O-2. The task: classify whether the two observations conflict about the same measured property. The facts: both measured same service and configuration at same time (10:00). They found latency p95=120ms vs 410ms. That's a disagreement on the same property (latency p95). So conflict is YES. So output should be \"A: conflict=YES\"? Wait allowed outputs: A: conflict=YES and B: pair=O-1/O-2. The format: Return exactly one line per key as KEY=VALUE. Use only allowed values. So we need to output a line with KEY=VALUE. The allowed outputs are \"A: conflict=YES\" and \"B: pair=O-1/O-2\". Probably they want exactly that string. So we output \"A: conflict=YES\". That is a line with KEY=VALUE? Actually it's \"A: conflict=YES\". That includes colon. But they said KEY=VALUE. Might be they want \"A=conflict=YES\"? No, they"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 187,
+      "output_tokens": 153,
+      "duration_millis": 1299,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "A: conflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 187,
+      "output_tokens": 203,
+      "duration_millis": 2780,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "A: conflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 187,
+      "output_tokens": 256,
+      "duration_millis": 2860,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are A: conflict=YES or B: pair=O-1/O-2. The task: classify whether the two observations conflict about the same measured property. The facts: O-1 measured latency p95=120ms at 10:00. O-2 measured same service and configuration at 10:00 and found latency p95=410ms. Same property (latency p95), same subject (service), same configuration, same time (10:00). They disagree (120 vs 410). So conflict is YES. According to allowed outputs, we must output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are \"A: conflict=YES\" or \"B: pair=O-1/O-2\". Which one to choose? The instruction: \"ANSWER Return exactly one line per key as KEY=VALUE, with no prose.\" The allowed outputs list two options: A: conflict=YES and B: pair=O-1/O-2. We need to decide which key to output. The task"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 186,
+      "output_tokens": 173,
+      "duration_millis": 1698,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"conflict\": \"YES\",\n  \"pair\": \"O-1/O-2\"\n}",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 186,
+      "output_tokens": 256,
+      "duration_millis": 1999,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "We need to output JSON with keys conflict and pair. Determine if conflict is YES or NO? The allowed outputs: A: conflict=YES, B: pair=O-1/O-2. Probably conflict can be YES or NO? The instruction: \"Return one JSON object with exactly these string keys: conflict, pair\". So we need to output something like {\"conflict\":\"YES\",\"pair\":\"O-1/O-2\"} or {\"conflict\":\"NO\",\"pair\":\"\"}? The allowed outputs mention A: conflict=YES, B: pair=O-1/O-2. That suggests two possible outputs: either conflict=YES (maybe pair not needed?) or pair=O-1/O-2 (maybe conflict=NO?). But they want exactly keys conflict and pair. So we need both keys. Probably if conflict is YES, we set conflict=\"YES\" and pair maybe empty? Or maybe we set pair to something else? The allowed outputs: A: conflict=YES (maybe pair omitted?), B: pair=O-1/O-2 (maybe conflict omitted?). But they require both keys. So we need to decide which output format to use. The instruction: \"Return one JSON object with exactly these string keys: conflict, pair\".",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 186,
+      "output_tokens": 172,
+      "duration_millis": 1407,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"conflict\": \"YES\",\n  \"pair\": \"O-1/O-2\"\n}",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 160,
+      "output_tokens": 256,
+      "duration_millis": 3888,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are A: quote=... and B: status=REPAIRED. The task: Repair the proposed quote so it exactly matches the source fragment. The fragment says \"The kernel rejected the stale base revision.\" The proposal says \"The kernel accepted the stale base revision.\" That's opposite. We need to repair it to match exactly. So we need to output both? The allowed outputs list two lines: A: quote=... and B: status=REPAIRED. Probably we need to output both lines? The instruction: \"Return exactly one line per key as KEY=VALUE, with no prose.\" So we need to output two lines: one for A with the corrected quote, and one for B with status=REPAIRED. The key names are \"A\" and \"B\"? Actually they said \"Allowed outputs: A: quote=... B: status=REPAIRED\". So we need to output lines like:\n\nquote=The kernel rejected the stale base revision.\nstatus=REPAIRED\n\nBut they said \"KEY=VALUE\". So maybe they want \"A=quote=...\"? No, they said \"Return exactly"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 160,
+      "output_tokens": 240,
+      "duration_millis": 2354,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 160,
+      "output_tokens": 256,
+      "duration_millis": 3063,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE, with no prose. The allowed outputs are A: quote=... and B: status=REPAIRED. The task: Repair the proposed quote so it exactly matches the source fragment. The fragment says \"The kernel rejected the stale base revision.\" The proposal says \"The kernel accepted the stale base revision.\" So we need to repair it to match exactly. The output should be a line with quote=... and also status=REPAIRED? The allowed outputs list both A and B. The instruction: \"Return exactly one line per key as KEY=VALUE, with no prose.\" It seems we need to output both lines? Or exactly one line per key? The allowed outputs show two possible lines: A: quote=... and B: status=REPAIRED. Probably we need to output both lines: one for quote and one for status. The example says \"ANSWER Return exactly one line per key as KEY=VALUE, with no prose.\" So we have two keys: quote and status. So we output:\n\nquote=The kernel rejected the stale base revision.\nstatus=REPAIRED\n\nEach on its own line, no extra text. Ensure no extra spaces?"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 159,
+      "output_tokens": 147,
+      "duration_millis": 1346,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"quote\": \"The kernel rejected the stale base revision.\",\n  \"status\": \"REPAIRED\"\n}",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 159,
+      "output_tokens": 166,
+      "duration_millis": 2231,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"quote\": \"The kernel rejected the stale base revision.\",\n  \"status\": \"REPAIRED\"\n}",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 159,
+      "output_tokens": 163,
+      "duration_millis": 1464,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"quote\": \"The kernel rejected the stale base revision.\",\n  \"status\": \"REPAIRED\"\n}",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    }
+  ],
+  "summary": {
+    "total": 33,
+    "compiled": 33,
+    "syntax_valid": 16,
+    "semantically_correct": 16,
+    "input_tokens": 5637,
+    "output_tokens": 7495,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 17
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "EXTRACT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 8,
+        "semantically_correct": 8,
+        "omitted_facts": 0,
+        "errors": 1
+      },
+      {
+        "label": "REPAIR",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 2
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 8
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 2,
+        "semantically_correct": 2,
+        "omitted_facts": 0,
+        "errors": 7
+      },
+      {
+        "label": "DELIMITED",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 8
+      },
+      {
+        "label": "JSON",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 10,
+        "semantically_correct": 10,
+        "omitted_facts": 0,
+        "errors": 2
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 5,
+        "semantically_correct": 5,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "4096",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 6,
+        "semantically_correct": 6,
+        "omitted_facts": 0,
+        "errors": 5
+      },
+      {
+        "label": "8192",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 5,
+        "semantically_correct": 5,
+        "omitted_facts": 0,
+        "errors": 6
+      }
+    ]
+  }
+}
