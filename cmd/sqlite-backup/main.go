@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"strconv"
 
 	storage "motor-autonomo/internal/storage/sqlite"
 )
@@ -33,6 +34,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	path := fs.String("path", "", "existing backup path (verify mode)")
 	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify or restore mode)")
 	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
+	var expectedCheckpointRows optionalInt
+	var expectedCheckpointFormat optionalInt
+	fs.Var(&expectedCheckpointRows, "expected-checkpoint-rows", "expected runtime checkpoint row count, 0 or 1 (verify or restore mode)")
+	fs.Var(&expectedCheckpointFormat, "expected-checkpoint-format", "expected non-negative runtime checkpoint format (verify or restore mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -68,6 +73,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{
 			ExpectedSHA256:           *expectedSHA256,
 			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
+			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
+			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
 		})
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
@@ -89,6 +96,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
 			ExpectedSHA256:           *expectedSHA256,
 			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
+			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
+			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
 			Backup:                   storage.BackupOptions{PageSteps: int32(*pageSteps)},
 		})
 		if err != nil {
@@ -101,4 +110,34 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	default:
 		return fmt.Errorf("unsupported mode %q (want backup, verify, or restore)", *mode)
 	}
+}
+
+type optionalInt struct {
+	set   bool
+	value int
+}
+
+func (value *optionalInt) String() string {
+	if value == nil || !value.set {
+		return ""
+	}
+	return fmt.Sprint(value.value)
+}
+
+func (value *optionalInt) Set(raw string) error {
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return fmt.Errorf("must be an integer: %w", err)
+	}
+	value.set = true
+	value.value = parsed
+	return nil
+}
+
+func (value optionalInt) Pointer() *int {
+	if !value.set {
+		return nil
+	}
+	copy := value.value
+	return &copy
 }

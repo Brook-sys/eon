@@ -54,6 +54,11 @@ type BackupVerification struct {
 type VerificationOptions struct {
 	ExpectedSHA256           string
 	ExpectedCheckpointSHA256 string
+	// ExpectedCheckpointRows and ExpectedCheckpointFormat pin the logical
+	// framing recorded in an inventory. Nil means report without comparison.
+	// A zero row count is meaningful for a valid empty store.
+	ExpectedCheckpointRows   *int
+	ExpectedCheckpointFormat *int
 }
 
 // BackupOptions configures online backup behavior.
@@ -69,6 +74,8 @@ type BackupOptions struct {
 type RestoreOptions struct {
 	ExpectedSHA256           string
 	ExpectedCheckpointSHA256 string
+	ExpectedCheckpointRows   *int
+	ExpectedCheckpointFormat *int
 	Backup                   BackupOptions
 }
 
@@ -357,6 +364,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{
 		ExpectedSHA256:           options.ExpectedSHA256,
 		ExpectedCheckpointSHA256: options.ExpectedCheckpointSHA256,
+		ExpectedCheckpointRows:   options.ExpectedCheckpointRows,
+		ExpectedCheckpointFormat: options.ExpectedCheckpointFormat,
 	})
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("verify restore source: %w", err)
@@ -466,6 +475,26 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	if expectedCheckpoint != "" && verification.CheckpointSHA256 != expectedCheckpoint {
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("verify backup checkpoint digest: got %q, want %s", verification.CheckpointSHA256, expectedCheckpoint)
+	}
+	if options.ExpectedCheckpointRows != nil {
+		if *options.ExpectedCheckpointRows < 0 || *options.ExpectedCheckpointRows > 1 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected checkpoint rows must be 0 or 1")
+		}
+		if verification.CheckpointRows != *options.ExpectedCheckpointRows {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup checkpoint rows: got %d, want %d", verification.CheckpointRows, *options.ExpectedCheckpointRows)
+		}
+	}
+	if options.ExpectedCheckpointFormat != nil {
+		if *options.ExpectedCheckpointFormat < 0 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected checkpoint format must not be negative")
+		}
+		if verification.CheckpointFormat != *options.ExpectedCheckpointFormat {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup checkpoint format: got %d, want %d", verification.CheckpointFormat, *options.ExpectedCheckpointFormat)
+		}
 	}
 	if err := db.Close(); err != nil {
 		return BackupVerification{}, fmt.Errorf("close backup verification database: %w", err)

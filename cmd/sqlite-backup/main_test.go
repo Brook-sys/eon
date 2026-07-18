@@ -44,6 +44,8 @@ func TestRunBackupAndVerify(t *testing.T) {
 		"-mode=verify", "-path=" + backupPath,
 		"-expected-sha256=" + report.SHA256,
 		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
+		"-expected-checkpoint-rows=0",
+		"-expected-checkpoint-format=0",
 	}, &verifyOut); err != nil {
 		t.Fatal(err)
 	}
@@ -64,6 +66,8 @@ func TestRunBackupAndVerify(t *testing.T) {
 		"-mode=restore", "-source=" + backupPath, "-destination=" + restoredPath,
 		"-expected-sha256=" + report.SHA256,
 		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
+		"-expected-checkpoint-rows=0",
+		"-expected-checkpoint-format=0",
 	}, &restoreOut); err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +96,9 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=-1"},
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=2147483648"},
 		{"-mode=verify"},
+		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=not-an-int"},
+		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=2"},
+		{"-mode=verify", "-path=x", "-expected-checkpoint-format=-1"},
 		{"-mode=restore"},
 		{"-mode=restore", "-source=x"},
 		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=-1"},

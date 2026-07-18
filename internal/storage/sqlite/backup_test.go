@@ -341,6 +341,59 @@ func TestOnlineBackupEmptyStore(t *testing.T) {
 	defer restored.Close()
 }
 
+func TestVerifyBackupPinsCheckpointInventoryFields(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(filepath.Join(dir, "source.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	report, err := store.BackupTo(context.Background(), path, storage.BackupOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, format := report.CheckpointRows, report.CheckpointFormat
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{
+		ExpectedCheckpointRows:   &rows,
+		ExpectedCheckpointFormat: &format,
+	}); err != nil {
+		t.Fatalf("verify pinned inventory: %v", err)
+	}
+	wrongRows := 0
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedCheckpointRows: &wrongRows}); err == nil {
+		t.Fatal("checkpoint row mismatch accepted")
+	}
+	wrongFormat := format + 1
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedCheckpointFormat: &wrongFormat}); err == nil {
+		t.Fatal("checkpoint format mismatch accepted")
+	}
+	invalidRows := 2
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedCheckpointRows: &invalidRows}); err == nil {
+		t.Fatal("invalid expected row count accepted")
+	}
+	invalidFormat := -1
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedCheckpointFormat: &invalidFormat}); err == nil {
+		t.Fatal("invalid expected format accepted")
+	}
+
+	destination := filepath.Join(dir, "not-restored.sqlite")
+	if _, err := storage.RestoreToWithOptions(context.Background(), path, destination, storage.RestoreOptions{
+		ExpectedCheckpointRows: &wrongRows,
+	}); err == nil {
+		t.Fatal("restore accepted mismatched checkpoint row count")
+	}
+	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("destination exists after inventory mismatch: %v", err)
+	}
+}
+
 func TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "runtime.sqlite")
