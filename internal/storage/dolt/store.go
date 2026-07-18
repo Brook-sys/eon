@@ -117,6 +117,9 @@ func (s *Store) load() (*memory.Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decode dolt checkpoint payload: %w", err)
 	}
+	if err := memory.ValidateExternalCheckpoint(result.Rows[0].FormatVersion, payload); err != nil {
+		return nil, fmt.Errorf("validate dolt checkpoint: %w", err)
+	}
 	core, err := memory.NewFromBinary(payload)
 	if err != nil {
 		return nil, fmt.Errorf("restore dolt checkpoint: %w", err)

@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
 
 	"motor-autonomo/internal/domain"
 )
@@ -17,6 +18,8 @@ const (
 
 var ErrUnsupportedCheckpointFormat = errors.New("unsupported checkpoint format version")
 var ErrCheckpointIntegrity = errors.New("checkpoint integrity verification failed")
+var ErrCheckpointFraming = errors.New("checkpoint contains trailing or malformed gob data")
+var ErrCheckpointFormatMismatch = errors.New("checkpoint table and payload format versions disagree")
 
 type checkpointEnvelope struct {
 	FormatVersion int
@@ -141,20 +144,24 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 // NewFromBinary restores a checkpoint produced by MarshalBinary.
 func NewFromBinary(data []byte) (*Store, error) {
 	var envelope checkpointEnvelope
-	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&envelope); err == nil && envelope.FormatVersion != 0 {
+	envelopeErr := decodeSingleGob(data, &envelope)
+	if envelope.FormatVersion != 0 {
+		if envelopeErr != nil {
+			return nil, fmt.Errorf("decode memory checkpoint envelope: %w", envelopeErr)
+		}
 		switch envelope.FormatVersion {
 		case CheckpointFormatVersion:
 			if len(envelope.Payload) == 0 || sha256.Sum256(envelope.Payload) != envelope.PayloadDigest {
 				return nil, ErrCheckpointIntegrity
 			}
 			var p persistedState
-			if err := gob.NewDecoder(bytes.NewReader(envelope.Payload)).Decode(&p); err != nil {
+			if err := decodeSingleGob(envelope.Payload, &p); err != nil {
 				return nil, fmt.Errorf("decode memory checkpoint state: %w", err)
 			}
 			return newFromPersistedState(p)
 		case checkpointFormatV1:
 			var legacy checkpointEnvelopeV1
-			if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&legacy); err != nil {
+			if err := decodeSingleGob(data, &legacy); err != nil {
 				return nil, fmt.Errorf("decode v1 memory checkpoint: %w", err)
 			}
 			return newFromPersistedState(legacy.State)
@@ -165,10 +172,60 @@ func NewFromBinary(data []byte) (*Store, error) {
 
 	// Compatibility path for checkpoints written before the envelope existed.
 	var p persistedState
-	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&p); err != nil {
+	if err := decodeSingleGob(data, &p); err != nil {
 		return nil, fmt.Errorf("decode memory checkpoint: %w", err)
 	}
 	return newFromPersistedState(p)
+}
+
+// ValidateExternalCheckpoint verifies that the durable table-level version
+// agrees with the payload's own framing before restore. External v1 remains a
+// migration umbrella for the legacy unwrapped payload (v0) and v1 envelope;
+// external v2 requires the integrity-protected v2 envelope.
+func ValidateExternalCheckpoint(version int, data []byte) error {
+	if !SupportsExternalCheckpointFormat(version) {
+		return fmt.Errorf("%w: got %d, support %d", ErrUnsupportedCheckpointFormat, version, CheckpointFormatVersion)
+	}
+	detected, err := checkpointPayloadFormat(data)
+	if err != nil {
+		return err
+	}
+	compatible := version == CheckpointFormatVersion && detected == CheckpointFormatVersion ||
+		version == checkpointFormatV1 && (detected == 0 || detected == checkpointFormatV1)
+	if !compatible {
+		return fmt.Errorf("%w: table=%d payload=%d", ErrCheckpointFormatMismatch, version, detected)
+	}
+	return nil
+}
+
+func checkpointPayloadFormat(data []byte) (int, error) {
+	var envelope checkpointEnvelope
+	envelopeErr := decodeSingleGob(data, &envelope)
+	if envelope.FormatVersion != 0 {
+		if envelopeErr != nil {
+			return 0, fmt.Errorf("decode checkpoint envelope: %w", envelopeErr)
+		}
+		return envelope.FormatVersion, nil
+	}
+	var legacy persistedState
+	if err := decodeSingleGob(data, &legacy); err != nil {
+		return 0, fmt.Errorf("decode checkpoint framing: %w", err)
+	}
+	return 0, nil
+}
+
+func decodeSingleGob(data []byte, target any) error {
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	var trailing struct{}
+	if err := decoder.Decode(&trailing); errors.Is(err, io.EOF) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("%w: %v", ErrCheckpointFraming, err)
+	}
+	return ErrCheckpointFraming
 }
 
 // SupportsExternalCheckpointFormat reports whether a durable adapter may pass

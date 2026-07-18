@@ -87,6 +87,9 @@ func load(db *sql.DB) (*memory.Store, error) {
 	if !memory.SupportsExternalCheckpointFormat(formatVersion) {
 		return nil, fmt.Errorf("load sqlite checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, formatVersion, memory.CheckpointFormatVersion)
 	}
+	if err := memory.ValidateExternalCheckpoint(formatVersion, payload); err != nil {
+		return nil, fmt.Errorf("validate sqlite checkpoint: %w", err)
+	}
 	core, err := memory.NewFromBinary(payload)
 	if err != nil {
 		return nil, fmt.Errorf("restore sqlite checkpoint: %w", err)
