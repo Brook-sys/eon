@@ -31,6 +31,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	destination := fs.String("destination", "", "new standalone backup path (backup mode) or new runtime path (restore mode)")
 	pageSteps := fs.Int("page-steps", 0, "pages per sqlite backup step (0 = all remaining)")
 	path := fs.String("path", "", "existing backup path (verify mode)")
+	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if *path == "" {
 			return errors.New("verify mode requires -path")
 		}
-		verification, err := storage.VerifyBackup(*path)
+		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{ExpectedSHA256: *expectedSHA256})
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
 		}

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,6 +59,16 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	}
 	if report.CheckpointFormat != memory.CheckpointFormatVersion || report.IntegrityCheck != "ok" {
 		t.Fatalf("backup verification report = %#v", report)
+	}
+	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
+		t.Fatalf("backup identity = %#v", report)
+	}
+	verified, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{ExpectedSHA256: report.SHA256})
+	if err != nil {
+		t.Fatalf("verify pinned digest: %v", err)
+	}
+	if verified.FileSize != report.FileSize || verified.SHA256 != report.SHA256 {
+		t.Fatalf("verification identity = %#v, report = %#v", verified, report)
 	}
 
 	// Source must remain usable after backup.
@@ -225,6 +236,35 @@ func TestOnlineBackupEmptyStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restored.Close()
+}
+
+func TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	verification, err := storage.VerifyBackup(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrong := strings.Repeat("0", sha256.Size*2)
+	if wrong == verification.SHA256 {
+		wrong = strings.Repeat("f", sha256.Size*2)
+	}
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSHA256: wrong}); err == nil {
+		t.Fatal("digest mismatch accepted")
+	}
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSHA256: "not-a-digest"}); err == nil {
+		t.Fatal("invalid expected digest accepted")
+	}
 }
 
 func TestVerifyBackupRejectsCheckpointVersionMismatch(t *testing.T) {

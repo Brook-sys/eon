@@ -35,20 +35,23 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if err := json.Unmarshal(backupOut.Bytes(), &report); err != nil {
 		t.Fatalf("decode report: %v\n%s", err, backupOut.String())
 	}
-	if report.SourcePath != sourcePath || report.DestinationPath != backupPath || report.IntegrityCheck != "ok" {
+	if report.SourcePath != sourcePath || report.DestinationPath != backupPath || report.IntegrityCheck != "ok" || report.SHA256 == "" || report.FileSize <= 0 {
 		t.Fatalf("unexpected report: %+v", report)
 	}
 
 	var verifyOut bytes.Buffer
-	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath}, &verifyOut); err != nil {
+	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath, "-expected-sha256=" + report.SHA256}, &verifyOut); err != nil {
 		t.Fatal(err)
 	}
 	var verification sqlite.BackupVerification
 	if err := json.Unmarshal(verifyOut.Bytes(), &verification); err != nil {
 		t.Fatalf("decode verification: %v", err)
 	}
-	if verification.IntegrityCheck != "ok" {
+	if verification.IntegrityCheck != "ok" || verification.SHA256 != report.SHA256 || verification.FileSize != report.FileSize {
 		t.Fatalf("unexpected verification: %+v", verification)
+	}
+	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath, "-expected-sha256=invalid"}, &bytes.Buffer{}); err == nil {
+		t.Fatal("invalid expected digest accepted")
 	}
 
 	restoredPath := filepath.Join(dir, "restored.sqlite")

@@ -15,8 +15,8 @@ Use a API Go de backup online — **não** copie só o arquivo `.sqlite` enquant
 store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
-// report inclui DestinationPath, SQLiteVersion, CheckpointRows,
-// CheckpointFormat e IntegrityCheck
+// report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
+// CheckpointRows, CheckpointFormat e IntegrityCheck
 ```
 
 Comportamento:
@@ -55,8 +55,22 @@ go run ./cmd/sqlite-backup \
 ```
 
 A API equivalente é `sqlite.VerifyBackup(path)`. O resultado válido registra
-`IntegrityCheck == "ok"`; divergência de versão, adulteração do payload ou
-framing inválido tornam a cópia não restaurável.
+`IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo completo;
+divergência de versão, adulteração do payload ou framing inválido tornam a
+cópia não restaurável. Preserve o JSON do backup ao lado do artefato ou em
+inventário durável. Depois de copiar o backup para outro volume/host, fixe a
+identidade registrada na verificação:
+
+```sh
+go run ./cmd/sqlite-backup \
+  -mode=verify \
+  -path=/mnt/restore/runtime-YYYYMMDD.sqlite \
+  -expected-sha256=<sha256_emitido_no_backup>
+```
+
+A opção `-expected-sha256` rejeita digest malformado ou divergente. A auditoria
+calcula o hash antes e depois de `quick_check`/decode e falha se o arquivo mudar
+durante a verificação.
 
 Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida verifique a cópia com o comando acima antes de considerá-la restaurável.
 
@@ -72,7 +86,7 @@ go run ./cmd/sqlite-backup \
   -destination=/var/lib/motor-autonomo/runtime-restored.sqlite
 ```
 
-3. Inspecione o relatório JSON (`integrity_check == "ok"`, formato esperado e um checkpoint quando aplicável).
+3. Inspecione o relatório JSON (`integrity_check == "ok"`, SHA-256/bytes esperados, formato esperado e um checkpoint quando aplicável).
 4. Abra/promova o path restaurado somente depois das verificações operacionais. Para substituir o path canônico, mova o arquivo antigo para retenção segura e faça a promoção com o runtime parado; o comando deliberadamente não sobrescreve.
 5. Verifique no mínimo:
    - `ActiveMissionRevision` da missão esperada;
@@ -99,5 +113,6 @@ A API equivalente é `sqlite.RestoreTo(ctx, backupPath, newRuntimePath, options)
 - `TestRestoreToRejectsExistingDestinationAndInvalidSource`
 - `TestOnlineBackupRejectsExistingDestination`
 - `TestOnlineBackupEmptyStore`
+- `TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`
 - `TestVerifyBackupRejectsTamperedCheckpointPayload`

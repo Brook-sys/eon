@@ -146,6 +146,7 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Hardening (2026-07-18): `VerifyBackup` audita cópias existentes sem migração, combinando `PRAGMA quick_check`, versão externa, SHA-256/framing e decode integral do checkpoint; o backup online só retorna sucesso após essa verificação e projeta formato/integridade no relatório. Testes adulteram separadamente versão e payload.
   - Operação (2026-07-18): `cmd/sqlite-backup` expõe backup offline fail-closed e verificação independente com relatório JSON, validando argumentos e reutilizando somente `ClosedCopyTo`/`VerifyBackup`; o runbook possui comandos copiáveis e testes end-to-end do CLI.
   - Restauração (2026-07-18): `RestoreTo` e `cmd/sqlite-backup -mode=restore` verificam a origem antes da cópia, restauram somente para path novo, recusam overwrite e verificam novamente o destino; testes reabrem estado lógico, preservam destino existente e rejeitam origem inválida sem artefato parcial.
+  - Identidade de transporte (2026-07-18): relatórios de backup/verificação agora registram bytes + SHA-256 do arquivo completo; `VerifyBackupWithOptions` e `-expected-sha256` permitem confrontar a identidade preservada após cópia, rejeitam digest inválido/divergente e detectam alteração concorrente por hash antes/depois da auditoria SQLite/checkpoint.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -355,6 +356,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 09:20 — Verificação restaurável de backup SQLite — backup online e auditoria offline agora exigem páginas SQLite íntegras, versão externa concordante, digest/framing e decode completo; relatório expõe formato e `quick_check`, com regressões para versão divergente e payload adulterado — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
 2026-07-18 09:40 — Operação de backup SQLite — novo `cmd/sqlite-backup` cria cópia offline sem overwrite ou verifica backup existente, em ambos os casos emitindo JSON; runbook ganhou comandos executáveis e testes cobrem fluxo backup→verify e argumentos fail-closed — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
+
+2026-07-18 10:20 — Identidade de backup SQLite — backup e auditoria emitem tamanho/SHA-256, verificação aceita digest esperado e rejeita transferência divergente ou arquivo mutado durante a auditoria; CLI/runbook tornam copiável o fluxo de conferência pós-transporte — verificação: testes específicos, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
 2026-07-18 10:00 — Restauração SQLite fail-closed — API/CLI verificam backup antes de restaurar, exigem destino novo, revalidam a cópia e preservam paths existentes; runbook formaliza promoção explícita com runtime parado — verificação: testes específicos, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
