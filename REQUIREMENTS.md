@@ -344,7 +344,7 @@ Dado o mesmo estado persistido, eventos e fontes injetadas, recuperação e sele
 
 O primeiro vertical slice SHOULD operar serialmente e MUST limitar goroutines, conexões, resposta HTTP, conteúdo de fonte, tokens e tamanho de agenda por configuração validada.
 
-**Verificação estrutural (2026-07-18):** `internal/architecture/bounded_buffers_test.go` parseia adapters de rede em `internal/provider` e `internal/channel` e rejeita `io.ReadAll` sem `io.LimitReader` direto ou previamente atribuído. A fixture negativa comprova resolução de alias e detecção de leitura integral sem teto. O fake OpenAI compartilhado também limita requests com `http.MaxBytesReader`, rejeita trailing JSON e possui teste adversarial de corpo acima de 1 MiB; limites comportamentais e configuração validada continuam cobertos pelos testes específicos de cada adapter.
+**Verificação estrutural (2026-07-18):** `internal/architecture/bounded_buffers_test.go` parseia adapters de rede em `internal/provider` e `internal/channel` e rejeita `io.ReadAll` sem `io.LimitReader` direto ou previamente atribuído. `internal/architecture/network_timeouts_test.go` rejeita `http.DefaultClient` nesses adapters, impedindo que o caminho padrão deixe conexão/resposta sem deadline total; clientes explicitamente injetados continuam sendo responsabilidade da implantação. As fixtures negativas comprovam resolução de aliases. O fake OpenAI compartilhado também limita requests com `http.MaxBytesReader`, rejeita trailing JSON e possui teste adversarial de corpo acima de 1 MiB; SearXNG e Telegram usam clientes padrão com timeout limitado, e limites comportamentais/configuração validada continuam cobertos pelos testes específicos de cada adapter.
 
 ### NFR-EVOL-001 — Compatibilidade versionada
 

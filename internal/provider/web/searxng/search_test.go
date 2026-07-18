@@ -44,6 +44,7 @@ func TestSearcherClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 		{name: "status", body: "secret diagnostic", status: http.StatusTooManyRequests, kind: searxng.ErrorHTTP},
 		{name: "oversize", body: strings.Repeat("x", 9), limit: 8, kind: searxng.ErrorResponseTooLarge},
 		{name: "invalid", body: `{`, kind: searxng.ErrorInvalidResponse},
+		{name: "trailing", body: `{"results":[]} {}`, kind: searxng.ErrorInvalidResponse},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

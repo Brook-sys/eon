@@ -11,11 +11,15 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"motor-autonomo/internal/port"
 )
 
-const defaultMaxResponseBytes int64 = 1 << 20
+const (
+	defaultMaxResponseBytes int64 = 1 << 20
+	defaultClientTimeout          = 30 * time.Second
+)
 
 type Config struct {
 	BaseURL          string
@@ -69,7 +73,7 @@ func New(config Config) (*Searcher, error) {
 	}
 	client := config.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = &http.Client{Timeout: defaultClientTimeout}
 	}
 	return &Searcher{endpoint: endpoint, client: client, maxResponseBytes: limit}, nil
 }
@@ -114,6 +118,9 @@ func (s *Searcher) Search(ctx context.Context, request port.SearchRequest) (port
 	}
 	decoder := json.NewDecoder(strings.NewReader(string(body)))
 	if err := decoder.Decode(&decoded); err != nil {
+		return port.SearchResult{}, &Error{Kind: ErrorInvalidResponse}
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return port.SearchResult{}, &Error{Kind: ErrorInvalidResponse}
 	}
 	result := port.SearchResult{Provider: "searxng"}

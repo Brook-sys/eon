@@ -25,6 +25,7 @@ const (
 	ChannelName           = "telegram"
 	defaultMaxResponse    = int64(1 << 20)
 	defaultMaxUpdateBytes = int64(1 << 20)
+	defaultClientTimeout  = 60 * time.Second
 )
 
 type Config struct {
@@ -93,7 +94,10 @@ func New(config Config) (*Adapter, error) {
 	}
 	client := config.Client
 	if client == nil {
-		client = http.DefaultClient
+		// The default exceeds Telegram's maximum 50-second long-poll while still
+		// bounding stalled connects, headers, and bodies. Deployments needing a
+		// different transport policy can inject their own client explicitly.
+		client = &http.Client{Timeout: defaultClientTimeout}
 	}
 	destinations := make(map[string]int64, len(config.Destinations))
 	reverse := make(map[int64]string, len(config.Destinations))
