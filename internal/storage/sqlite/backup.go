@@ -154,8 +154,8 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 }
 
 // ClosedCopyTo copies a store that has already been Closed by reopening the
-// source path read-only for the duration of the backup. Prefer BackupTo for
-// online stores. This helper exists for offline runbook paths.
+// source path for the duration of the backup. Prefer BackupTo for online
+// stores. This helper exists for offline runbook paths.
 func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options BackupOptions) (BackupReport, error) {
 	store, err := Open(sourcePath)
 	if err != nil {
@@ -167,6 +167,25 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 		return BackupReport{}, err
 	}
 	report.SourcePath = sourcePath
+	return report, nil
+}
+
+// RestoreTo verifies an existing standalone backup before creating a new
+// canonical runtime database at destPath. Both paths must be offline: callers
+// must stop all writers before restore. The destination must not exist, which
+// keeps replacement of an active or valuable database an explicit operator
+// action rather than an accidental overwrite.
+func RestoreTo(ctx context.Context, backupPath, destPath string, options BackupOptions) (BackupReport, error) {
+	if err := ctx.Err(); err != nil {
+		return BackupReport{}, err
+	}
+	if _, err := VerifyBackup(backupPath); err != nil {
+		return BackupReport{}, fmt.Errorf("verify restore source: %w", err)
+	}
+	report, err := ClosedCopyTo(ctx, backupPath, destPath, options)
+	if err != nil {
+		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
+	}
 	return report, nil
 }
 

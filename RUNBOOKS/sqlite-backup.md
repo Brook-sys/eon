@@ -63,26 +63,40 @@ Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residu
 ## Restauração
 
 1. Pare escritores no destino.
-2. Substitua o arquivo de runtime pelo backup (ou aponte o path do processo para o backup).
-3. `sqlite.Open(backupPath)` deve carregar o checkpoint sem erro.
-4. Verifique no mínimo:
+2. Restaure para **um path novo**. O comando verifica integralmente o backup antes de copiar e recusa overwrite:
+
+```sh
+go run ./cmd/sqlite-backup \
+  -mode=restore \
+  -source=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
+  -destination=/var/lib/motor-autonomo/runtime-restored.sqlite
+```
+
+3. Inspecione o relatório JSON (`integrity_check == "ok"`, formato esperado e um checkpoint quando aplicável).
+4. Abra/promova o path restaurado somente depois das verificações operacionais. Para substituir o path canônico, mova o arquivo antigo para retenção segura e faça a promoção com o runtime parado; o comando deliberadamente não sobrescreve.
+5. Verifique no mínimo:
    - `ActiveMissionRevision` da missão esperada;
    - `Events` recentes / head de commit se aplicável;
    - um `go test` da suite de contrato do backend se o artefato for promovido a dados não descartáveis.
+
+A API equivalente é `sqlite.RestoreTo(ctx, backupPath, newRuntimePath, options)`. Ela executa `VerifyBackup` antes da cópia consistente e verifica novamente o destino por meio de `BackupTo`.
 
 ## O que **não** fazer
 
 - `cp runtime.sqlite backup.sqlite` com o processo ainda em `Update` (risco de checkpoint rasgado / WAL incompleto).
 - Tratar telemetria OTel ou dumps parciais como backup canônico.
 - Restaurar um backup por cima de um store aberto.
+- Automatizar overwrite do banco canônico sem preservar o arquivo anterior e sem promoção explícita.
 
 ## Testes de regressão
 
 - `go test ./cmd/sqlite-backup ./internal/storage/sqlite`
-- `TestRunBackupAndVerify`
+- `TestRunBackupAndVerify` (inclui restore para path novo)
 - `TestRunRejectsUnsafeOrIncompleteArguments`
 - `go test ./internal/storage/sqlite -run Backup`
 - `TestOnlineBackupPreservesCheckpointAndReopens`
+- `TestRestoreToVerifiesAndReopensCheckpoint`
+- `TestRestoreToRejectsExistingDestinationAndInvalidSource`
 - `TestOnlineBackupRejectsExistingDestination`
 - `TestOnlineBackupEmptyStore`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`

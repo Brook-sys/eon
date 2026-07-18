@@ -50,6 +50,24 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if verification.IntegrityCheck != "ok" {
 		t.Fatalf("unexpected verification: %+v", verification)
 	}
+
+	restoredPath := filepath.Join(dir, "restored.sqlite")
+	var restoreOut bytes.Buffer
+	if err := run(context.Background(), []string{
+		"-mode=restore", "-source=" + backupPath, "-destination=" + restoredPath,
+	}, &restoreOut); err != nil {
+		t.Fatal(err)
+	}
+	var restoreReport sqlite.BackupReport
+	if err := json.Unmarshal(restoreOut.Bytes(), &restoreReport); err != nil {
+		t.Fatalf("decode restore report: %v\n%s", err, restoreOut.String())
+	}
+	if restoreReport.SourcePath != backupPath || restoreReport.DestinationPath != restoredPath || restoreReport.IntegrityCheck != "ok" {
+		t.Fatalf("unexpected restore report: %+v", restoreReport)
+	}
+	if _, err := sqlite.VerifyBackup(restoredPath); err != nil {
+		t.Fatalf("verify restored runtime: %v", err)
+	}
 }
 
 func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
@@ -59,6 +77,10 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=-1"},
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=2147483648"},
 		{"-mode=verify"},
+		{"-mode=restore"},
+		{"-mode=restore", "-source=x"},
+		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=-1"},
+		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=2147483648"},
 		{"-mode=unknown"},
 	} {
 		if err := run(context.Background(), args, &bytes.Buffer{}); err == nil {

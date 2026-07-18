@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -90,6 +91,100 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRestoreToVerifiesAndReopensCheckpoint(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "runtime.sqlite")
+	backupPath := filepath.Join(dir, "backup.sqlite")
+	restoredPath := filepath.Join(dir, "restored.sqlite")
+
+	source, err := storage.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 7, 18, 10, 0, 0, 0, time.UTC)
+	mission := domain.MissionRevision{
+		SchemaVersion: 1, ID: "mission_revision_restore", MissionID: "mission_restore", Revision: 1,
+		OriginalText: "restore test", Purpose: "durability", Domains: []string{"storage"},
+		Policies: []string{"verified restore"}, Budget: domain.Budget{ModelCalls: 1, Tokens: 100, Attempts: 1},
+		Status: domain.MissionActive, Provenance: "test", AcceptedAt: now,
+	}
+	if err := source.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		return tx.ActivateMissionRevision(mission.MissionID, mission.ID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := source.BackupTo(context.Background(), backupPath, storage.BackupOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := source.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := storage.RestoreTo(context.Background(), backupPath, restoredPath, storage.BackupOptions{PageSteps: 1})
+	if err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if report.SourcePath != backupPath || report.DestinationPath != restoredPath || report.IntegrityCheck != "ok" {
+		t.Fatalf("restore report = %#v", report)
+	}
+
+	restored, err := storage.Open(restoredPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.View(context.Background(), func(r port.Reader) error {
+		active, err := r.ActiveMissionRevision(mission.MissionID)
+		if err != nil {
+			return err
+		}
+		if active.ID != mission.ID || active.OriginalText != mission.OriginalText {
+			t.Fatalf("restored active = %#v", active)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRestoreToRejectsExistingDestinationAndInvalidSource(t *testing.T) {
+	dir := t.TempDir()
+	backupPath := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	existing := filepath.Join(dir, "existing.sqlite")
+	if err := os.WriteFile(existing, []byte("preserve me"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storage.RestoreTo(context.Background(), backupPath, existing, storage.BackupOptions{}); err == nil {
+		t.Fatal("restore overwrote existing destination")
+	}
+	contents, err := os.ReadFile(existing)
+	if err != nil || string(contents) != "preserve me" {
+		t.Fatalf("existing destination changed: %q, %v", contents, err)
+	}
+
+	invalid := filepath.Join(dir, "invalid.sqlite")
+	if err := os.WriteFile(invalid, []byte("not sqlite"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	destination := filepath.Join(dir, "must-not-exist.sqlite")
+	if _, err := storage.RestoreTo(context.Background(), invalid, destination, storage.BackupOptions{}); err == nil {
+		t.Fatal("invalid restore source accepted")
+	}
+	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("invalid restore left destination: %v", err)
 	}
 }
 

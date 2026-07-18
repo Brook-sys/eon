@@ -1,6 +1,6 @@
-// Command sqlite-backup creates or verifies a standalone backup of the
-// canonical SQLite store. Backup mode is deliberately offline: stop the
-// runtime first so there is a single process responsible for the source path.
+// Command sqlite-backup creates, verifies, or restores a standalone backup of
+// the canonical SQLite store. Mutating modes are deliberately offline: stop
+// the runtime first so there is a single process responsible for each path.
 package main
 
 import (
@@ -26,9 +26,9 @@ func main() {
 func run(ctx context.Context, args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("sqlite-backup", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
-	mode := fs.String("mode", "backup", "operation: backup or verify")
-	source := fs.String("source", "", "source SQLite path (backup mode)")
-	destination := fs.String("destination", "", "new standalone backup path (backup mode)")
+	mode := fs.String("mode", "backup", "operation: backup, verify, or restore")
+	source := fs.String("source", "", "source SQLite path (backup mode) or verified backup path (restore mode)")
+	destination := fs.String("destination", "", "new standalone backup path (backup mode) or new runtime path (restore mode)")
 	pageSteps := fs.Int("page-steps", 0, "pages per sqlite backup step (0 = all remaining)")
 	path := fs.String("path", "", "existing backup path (verify mode)")
 	if err := fs.Parse(args); err != nil {
@@ -71,7 +71,25 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 			return fmt.Errorf("encode verification report: %w", err)
 		}
 		return nil
+	case "restore":
+		if *source == "" {
+			return errors.New("restore mode requires -source")
+		}
+		if *destination == "" {
+			return errors.New("restore mode requires -destination")
+		}
+		if *pageSteps < 0 || *pageSteps > math.MaxInt32 {
+			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
+		}
+		report, err := storage.RestoreTo(ctx, *source, *destination, storage.BackupOptions{PageSteps: int32(*pageSteps)})
+		if err != nil {
+			return fmt.Errorf("restore: %w", err)
+		}
+		if err := encoder.Encode(report); err != nil {
+			return fmt.Errorf("encode restore report: %w", err)
+		}
+		return nil
 	default:
-		return fmt.Errorf("unsupported mode %q (want backup or verify)", *mode)
+		return fmt.Errorf("unsupported mode %q (want backup, verify, or restore)", *mode)
 	}
 }
