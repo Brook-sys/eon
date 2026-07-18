@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "provider": "nvidia_nim",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "max_calls": 1,
+  "max_output_tokens": 16,
+  "status": "ok",
+  "http_status": 200,
+  "latency_ms": 693,
+  "output": "PROBE_OK",
+  "usage": {
+    "prompt_tokens": 21,
+    "total_tokens": 25,
+    "completion_tokens": 4,
+    "prompt_tokens_details": null
+  }
+}

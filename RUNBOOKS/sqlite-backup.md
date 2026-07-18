@@ -63,10 +63,12 @@ go run ./cmd/sqlite-backup \
   -path=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
 ```
 
-A API equivalente é `sqlite.VerifyBackup(path)`. O resultado válido registra
-`IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo completo;
-divergência de versão, adulteração do payload ou framing inválido tornam a
-cópia não restaurável. Preserve o JSON do backup ao lado do artefato ou em
+A API equivalente é `sqlite.VerifyBackup(path)`. A auditoria abre o artefato
+com SQLite `mode=ro&immutable=1`: não cria banco ausente, não executa migração
+ou configuração e não deixa WAL/SHM/journal ao lado do backup. O resultado
+válido registra `IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo
+completo; divergência de versão, adulteração do payload ou framing inválido
+tornam a cópia não restaurável. Preserve o JSON do backup ao lado do artefato ou em
 inventário durável. Depois de copiar o backup para outro volume/host, fixe a
 identidade registrada na verificação:
 
@@ -139,4 +141,5 @@ cópia e verifica o destino por meio de `BackupTo`.
 - `TestVerifyBackupRejectsSymlinkPath`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`
 - `TestVerifyBackupRejectsTamperedCheckpointPayload`
+- `TestVerifyBackupDoesNotMutateSourceOrCreateSidecars`
 - `TestClosedCopyToDoesNotMutateSourceOrCreateSidecars`

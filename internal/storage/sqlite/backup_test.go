@@ -460,6 +460,51 @@ func TestClosedCopyToRejectsMissingAndSymlinkSources(t *testing.T) {
 	}
 }
 
+func TestVerifyBackupDoesNotMutateSourceOrCreateSidecars(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "verify.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	beforeBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeInfo, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verification, err := storage.VerifyBackup(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	afterBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	afterInfo, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(afterBytes, beforeBytes) || afterInfo.Size() != beforeInfo.Size() {
+		t.Fatalf("verification mutated source: before=%d after=%d report=%#v", len(beforeBytes), len(afterBytes), verification)
+	}
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+		if _, err := os.Lstat(path + suffix); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("read-only verification left sidecar %s: %v", suffix, err)
+		}
+	}
+}
+
 func TestClosedCopyToDoesNotMutateSourceOrCreateSidecars(t *testing.T) {
 	dir := t.TempDir()
 	sourcePath := filepath.Join(dir, "offline.sqlite")

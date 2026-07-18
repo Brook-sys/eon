@@ -284,26 +284,8 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 // mode, migrate the checkpoint, or leave WAL/SHM sidecars next to a backup
 // artifact selected for restore.
 func openReadOnlyStore(path string, expectedIdentity os.FileInfo) (*Store, error) {
-	absPath, err := filepath.Abs(path)
+	db, err := openReadOnlyDatabase(path, expectedIdentity)
 	if err != nil {
-		return nil, fmt.Errorf("resolve offline backup source: %w", err)
-	}
-	dsn := (&url.URL{
-		Scheme:   "file",
-		Path:     filepath.ToSlash(absPath),
-		RawQuery: "immutable=1&mode=ro",
-	}).String()
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
-	}
-	if err := requireSameRegularPath(path, expectedIdentity); err != nil {
-		db.Close()
 		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
 	}
 	core, err := load(db)
@@ -312,6 +294,36 @@ func openReadOnlyStore(path string, expectedIdentity os.FileInfo) (*Store, error
 		return nil, err
 	}
 	return &Store{db: db, core: core}, nil
+}
+
+// openReadOnlyDatabase binds SQLite to the already-inspected regular inode and
+// disables creation, journaling and migration. It is shared by offline copy
+// and verification so merely auditing a backup cannot mutate the artifact or
+// leave WAL/SHM sidecars next to it.
+func openReadOnlyDatabase(path string, expectedIdentity os.FileInfo) (*sql.DB, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("resolve backup source: %w", err)
+	}
+	dsn := (&url.URL{
+		Scheme:   "file",
+		Path:     filepath.ToSlash(absPath),
+		RawQuery: "immutable=1&mode=ro",
+	}).String()
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := requireSameRegularPath(path, expectedIdentity); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return db, nil
 }
 
 // RestoreTo verifies an existing standalone backup before creating a new
@@ -369,17 +381,9 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("verify backup digest: got %s, want %s", beforeDigest, expected)
 	}
 
-	db, err := sql.Open("sqlite", path)
+	db, err := openReadOnlyDatabase(path, beforeIdentity)
 	if err != nil {
-		return BackupVerification{}, fmt.Errorf("open backup for verification: %w", err)
-	}
-	if err := requireSameRegularPath(path, beforeIdentity); err != nil {
-		db.Close()
-		return BackupVerification{}, fmt.Errorf("open backup for verification: %w", err)
-	}
-	if _, err := db.Exec(`PRAGMA query_only=ON`); err != nil {
-		db.Close()
-		return BackupVerification{}, fmt.Errorf("set backup verification read-only: %w", err)
+		return BackupVerification{}, fmt.Errorf("open backup for verification read-only: %w", err)
 	}
 	var integrity string
 	if err := db.QueryRow(`PRAGMA quick_check`).Scan(&integrity); err != nil {
