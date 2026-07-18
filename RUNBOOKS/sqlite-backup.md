@@ -49,8 +49,16 @@ Regras:
 go run ./cmd/sqlite-backup \
   -mode=backup \
   -source=/var/lib/motor-autonomo/runtime.sqlite \
-  -destination=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
+  -destination=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
+  -report-path=/var/backups/motor-autonomo/runtime-YYYYMMDD.inventory.json
 ```
+
+`-report-path` é opcional, mas recomendado: publica exatamente o mesmo JSON
+impresso em stdout em um arquivo novo `0600`, por inode temporário sincronizado,
+hard link sem replace e `fsync` do diretório. O comando nunca sobrescreve um
+inventário existente. Assim, o digest físico, identidade lógica, schema e
+inventário de páginas usados numa restauração permanecem juntos do backup sem
+depender de redirecionamento de shell parcialmente gravado.
 
 A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela
 exige que a origem já exista como arquivo regular (não cria banco ausente e não
@@ -66,7 +74,8 @@ Para auditar uma cópia já existente sem migração ou escrita:
 ```sh
 go run ./cmd/sqlite-backup \
   -mode=verify \
-  -path=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
+  -path=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
+  -report-path=/var/backups/motor-autonomo/runtime-YYYYMMDD.verification.json
 ```
 
 A API equivalente é `sqlite.VerifyBackup(path)`. A auditoria abre o artefato
@@ -97,7 +106,8 @@ go run ./cmd/sqlite-backup \
   -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
   -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup> \
   -expected-checkpoint-rows=<checkpoint_rows_emitido_no_backup> \
-  -expected-checkpoint-format=<checkpoint_format_emitido_no_backup>
+  -expected-checkpoint-format=<checkpoint_format_emitido_no_backup> \
+  -report-path=/var/backups/motor-autonomo/runtime-YYYYMMDD.restore.json
 ```
 
 A opção `-expected-sha256` fixa a identidade física transferida;

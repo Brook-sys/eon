@@ -12,6 +12,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	storage "motor-autonomo/internal/storage/sqlite"
@@ -35,6 +36,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify or restore mode)")
 	expectedSchemaSHA256 := fs.String("expected-schema-sha256", "", "expected 64-character runtime schema SHA-256 (verify or restore mode)")
 	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
+	reportPath := fs.String("report-path", "", "optional new path for an atomically published JSON report")
 	var expectedSchemaVersion optionalInt
 	var expectedSchemaObjects optionalInt
 	var expectedPageSize optionalInt
@@ -54,8 +56,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
 	}
 
-	encoder := json.NewEncoder(stdout)
-	encoder.SetIndent("", "  ")
 	switch *mode {
 	case "backup":
 		if *source == "" {
@@ -71,10 +71,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("backup: %w", err)
 		}
-		if err := encoder.Encode(report); err != nil {
-			return fmt.Errorf("encode backup report: %w", err)
-		}
-		return nil
+		return emitReport(stdout, *reportPath, report)
 	case "verify":
 		if *path == "" {
 			return errors.New("verify mode requires -path")
@@ -93,10 +90,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
 		}
-		if err := encoder.Encode(verification); err != nil {
-			return fmt.Errorf("encode verification report: %w", err)
-		}
-		return nil
+		return emitReport(stdout, *reportPath, verification)
 	case "restore":
 		if *source == "" {
 			return errors.New("restore mode requires -source")
@@ -122,13 +116,89 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("restore: %w", err)
 		}
-		if err := encoder.Encode(report); err != nil {
-			return fmt.Errorf("encode restore report: %w", err)
-		}
-		return nil
+		return emitReport(stdout, *reportPath, report)
 	default:
 		return fmt.Errorf("unsupported mode %q (want backup, verify, or restore)", *mode)
 	}
+}
+
+func emitReport(stdout io.Writer, reportPath string, report any) error {
+	payload, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encode report: %w", err)
+	}
+	payload = append(payload, '\n')
+	if reportPath != "" {
+		if err := writeReportAtomic(reportPath, payload); err != nil {
+			return fmt.Errorf("publish report: %w", err)
+		}
+	}
+	if _, err := stdout.Write(payload); err != nil {
+		return fmt.Errorf("write report: %w", err)
+	}
+	return nil
+}
+
+// writeReportAtomic gives the inventory report the same fail-closed publication
+// posture as the backup itself: create a verified temporary inode, fsync it,
+// link it without replacement, then fsync the containing directory.
+func writeReportAtomic(path string, payload []byte) error {
+	path = filepath.Clean(path)
+	if path == "" || path == "." {
+		return errors.New("report path is required")
+	}
+	if _, err := os.Lstat(path); err == nil {
+		return fmt.Errorf("report path already exists: %s", path)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect report path: %w", err)
+	}
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create report parent directory: %w", err)
+	}
+	temp, err := os.CreateTemp(dir, ".sqlite-backup-report-*")
+	if err != nil {
+		return fmt.Errorf("create temporary report: %w", err)
+	}
+	tempPath := temp.Name()
+	removeTemp := true
+	defer func() {
+		if removeTemp {
+			_ = os.Remove(tempPath)
+		}
+	}()
+	if err := temp.Chmod(0o600); err != nil {
+		temp.Close()
+		return fmt.Errorf("restrict report permissions: %w", err)
+	}
+	if _, err := temp.Write(payload); err != nil {
+		temp.Close()
+		return fmt.Errorf("write temporary report: %w", err)
+	}
+	if err := temp.Sync(); err != nil {
+		temp.Close()
+		return fmt.Errorf("sync temporary report: %w", err)
+	}
+	if err := temp.Close(); err != nil {
+		return fmt.Errorf("close temporary report: %w", err)
+	}
+	if err := os.Link(tempPath, path); err != nil {
+		return fmt.Errorf("publish report without replacement: %w", err)
+	}
+	if err := os.Remove(tempPath); err != nil {
+		_ = os.Remove(path)
+		return fmt.Errorf("remove temporary report name: %w", err)
+	}
+	removeTemp = false
+	directory, err := os.Open(dir)
+	if err != nil {
+		return fmt.Errorf("open report directory: %w", err)
+	}
+	defer directory.Close()
+	if err := directory.Sync(); err != nil {
+		return fmt.Errorf("sync report directory: %w", err)
+	}
+	return nil
 }
 
 type optionalInt struct {

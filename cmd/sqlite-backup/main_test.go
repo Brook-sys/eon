@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,6 +16,7 @@ func TestRunBackupAndVerify(t *testing.T) {
 	dir := t.TempDir()
 	sourcePath := filepath.Join(dir, "runtime.sqlite")
 	backupPath := filepath.Join(dir, "backup.sqlite")
+	reportPath := filepath.Join(dir, "inventory", "backup.json")
 
 	store, err := sqlite.Open(sourcePath)
 	if err != nil {
@@ -29,6 +31,7 @@ func TestRunBackupAndVerify(t *testing.T) {
 	var backupOut bytes.Buffer
 	if err := run(context.Background(), []string{
 		"-mode=backup", "-source=" + sourcePath, "-destination=" + backupPath,
+		"-report-path=" + reportPath,
 	}, &backupOut); err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +41,28 @@ func TestRunBackupAndVerify(t *testing.T) {
 	}
 	if report.SourcePath != sourcePath || report.DestinationPath != backupPath || report.IntegrityCheck != "ok" || report.SHA256 == "" || report.FileSize <= 0 {
 		t.Fatalf("unexpected report: %+v", report)
+	}
+	reportBytes, err := os.ReadFile(reportPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(reportBytes, backupOut.Bytes()) {
+		t.Fatalf("durable report differs from stdout\nfile: %s\nout: %s", reportBytes, backupOut.Bytes())
+	}
+	if info, err := os.Stat(reportPath); err != nil {
+		t.Fatal(err)
+	} else if info.Mode().Perm() != 0o600 {
+		t.Fatalf("report mode = %o, want 600", info.Mode().Perm())
+	}
+	if err := run(context.Background(), []string{
+		"-mode=verify", "-path=" + backupPath, "-report-path=" + reportPath,
+	}, &bytes.Buffer{}); err == nil {
+		t.Fatal("existing report path was overwritten")
+	}
+	if after, err := os.ReadFile(reportPath); err != nil {
+		t.Fatal(err)
+	} else if !bytes.Equal(after, reportBytes) {
+		t.Fatal("existing report changed after rejected overwrite")
 	}
 
 	var verifyOut bytes.Buffer
