@@ -87,6 +87,21 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if verification.IntegrityCheck != "ok" || verification.SHA256 != report.SHA256 || verification.FileSize != report.FileSize {
 		t.Fatalf("unexpected verification: %+v", verification)
 	}
+	var inventoryVerifyOut bytes.Buffer
+	if err := run(context.Background(), []string{
+		"-mode=verify", "-path=" + backupPath, "-inventory=" + reportPath,
+	}, &inventoryVerifyOut); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(inventoryVerifyOut.Bytes(), verifyOut.Bytes()) {
+		t.Fatalf("inventory verification differs from explicit verification\ninventory: %s\nexplicit: %s", inventoryVerifyOut.Bytes(), verifyOut.Bytes())
+	}
+	if err := run(context.Background(), []string{
+		"-mode=verify", "-path=" + backupPath, "-inventory=" + reportPath,
+		"-expected-sha256=" + report.SHA256,
+	}, &bytes.Buffer{}); err == nil {
+		t.Fatal("inventory was combined with explicit expectations")
+	}
 	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath, "-expected-sha256=invalid"}, &bytes.Buffer{}); err == nil {
 		t.Fatal("invalid expected digest accepted")
 	}
@@ -117,6 +132,16 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if _, err := sqlite.VerifyBackup(restoredPath); err != nil {
 		t.Fatalf("verify restored runtime: %v", err)
 	}
+	inventoryRestoredPath := filepath.Join(dir, "restored-from-inventory.sqlite")
+	if err := run(context.Background(), []string{
+		"-mode=restore", "-source=" + backupPath, "-destination=" + inventoryRestoredPath,
+		"-inventory=" + reportPath,
+	}, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sqlite.VerifyBackup(inventoryRestoredPath); err != nil {
+		t.Fatalf("verify inventory-restored runtime: %v", err)
+	}
 	if err := run(context.Background(), []string{
 		"-mode=restore", "-source=" + backupPath, "-destination=" + filepath.Join(dir, "wrong-digest.sqlite"),
 		"-expected-sha256=" + string(bytes.Repeat([]byte("0"), 64)),
@@ -131,6 +156,7 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=backup", "-source=x"},
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=-1"},
 		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=2147483648"},
+		{"-mode=backup", "-source=x", "-destination=y", "-inventory=z"},
 		{"-mode=verify"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=not-an-int"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=2"},
@@ -146,6 +172,24 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 	} {
 		if err := run(context.Background(), args, &bytes.Buffer{}); err == nil {
 			t.Fatalf("args %v unexpectedly succeeded", args)
+		}
+	}
+}
+
+func TestLoadInventoryRejectsUntrustedJSON(t *testing.T) {
+	dir := t.TempDir()
+	for name, payload := range map[string]string{
+		"unknown.json":  `{"unknown":true}`,
+		"trailing.json": `{} {}`,
+		"invalid.json":  `{"file_size":1,"page_size":4096,"page_count":1,"application_id":0,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+		"digest.json":   `{"file_size":4096,"page_size":4096,"page_count":1,"application_id":1296127316,"user_version":1,"schema_objects":1,"integrity_check":"ok","foreign_key_check":"ok"}`,
+	} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadInventory(path); err == nil {
+			t.Fatalf("inventory %s unexpectedly accepted", name)
 		}
 	}
 }

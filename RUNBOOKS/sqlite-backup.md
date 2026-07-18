@@ -92,7 +92,23 @@ arquivo SQLite que por acaso possua uma tabela homônima; divergência de versã
 adulteração do payload ou framing inválido
 tornam a cópia não restaurável. Preserve o JSON do backup ao lado do artefato ou em
 inventário durável. Depois de copiar o backup para outro volume/host, fixe a
-identidade registrada na verificação:
+identidade registrada na verificação. A forma preferida carrega diretamente o
+JSON publicado pelo backup:
+
+```sh
+go run ./cmd/sqlite-backup \
+  -mode=verify \
+  -path=/mnt/restore/runtime-YYYYMMDD.sqlite \
+  -inventory=/var/backups/motor-autonomo/runtime-YYYYMMDD.inventory.json \
+  -report-path=/var/backups/motor-autonomo/runtime-YYYYMMDD.verification.json
+```
+
+`-inventory` fixa digest físico, páginas, schema e checkpoint sem transcrição
+manual. O parser é estrito, limitado a 64 KiB, rejeita campos desconhecidos,
+JSON trailing, identidade de aplicação não canônica e inventário sem checks de
+integridade bem-sucedidos. Para evitar seleção ambígua, `-inventory` não pode
+ser combinado com flags `-expected-*`. As flags individuais permanecem
+disponíveis para integrações que transportem os campos separadamente:
 
 ```sh
 go run ./cmd/sqlite-backup \
@@ -143,15 +159,7 @@ go run ./cmd/sqlite-backup \
   -mode=restore \
   -source=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
   -destination=/var/lib/motor-autonomo/runtime-restored.sqlite \
-  -expected-sha256=<sha256_emitido_no_backup> \
-  -expected-page-size=<page_size_emitido_no_backup> \
-  -expected-page-count=<page_count_emitido_no_backup> \
-  -expected-schema-version=<schema_version_emitido_no_backup> \
-  -expected-schema-objects=<schema_objects_emitido_no_backup> \
-  -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
-  -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup> \
-  -expected-checkpoint-rows=<checkpoint_rows_emitido_no_backup> \
-  -expected-checkpoint-format=<checkpoint_format_emitido_no_backup>
+  -inventory=/var/backups/motor-autonomo/runtime-YYYYMMDD.inventory.json
 ```
 
 Os digests, inventário de páginas e campos de framing esperados vinculam a restauração ao arquivo e ao checkpoint

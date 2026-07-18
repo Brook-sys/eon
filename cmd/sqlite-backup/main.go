@@ -37,6 +37,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	expectedSchemaSHA256 := fs.String("expected-schema-sha256", "", "expected 64-character runtime schema SHA-256 (verify or restore mode)")
 	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
 	reportPath := fs.String("report-path", "", "optional new path for an atomically published JSON report")
+	inventoryPath := fs.String("inventory", "", "existing backup inventory JSON whose identities must match (verify or restore mode)")
 	var expectedSchemaVersion optionalInt
 	var expectedSchemaObjects optionalInt
 	var expectedPageSize optionalInt
@@ -54,6 +55,30 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	if fs.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments: %v", fs.Args())
+	}
+	verificationOptions := storage.VerificationOptions{
+		ExpectedSHA256:           *expectedSHA256,
+		ExpectedPageSize:         expectedPageSize.Pointer(),
+		ExpectedPageCount:        expectedPageCount.Pointer(),
+		ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
+		ExpectedSchemaObjects:    expectedSchemaObjects.Pointer(),
+		ExpectedSchemaSHA256:     *expectedSchemaSHA256,
+		ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
+		ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
+		ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
+	}
+	if *inventoryPath != "" {
+		if *mode != "verify" && *mode != "restore" {
+			return errors.New("-inventory is supported only in verify or restore mode")
+		}
+		if hasExplicitExpectations(fs) {
+			return errors.New("-inventory cannot be combined with explicit -expected-* flags")
+		}
+		inventory, err := loadInventory(*inventoryPath)
+		if err != nil {
+			return fmt.Errorf("load inventory: %w", err)
+		}
+		verificationOptions = inventory.verificationOptions()
 	}
 
 	switch *mode {
@@ -76,17 +101,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if *path == "" {
 			return errors.New("verify mode requires -path")
 		}
-		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{
-			ExpectedSHA256:           *expectedSHA256,
-			ExpectedPageSize:         expectedPageSize.Pointer(),
-			ExpectedPageCount:        expectedPageCount.Pointer(),
-			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
-			ExpectedSchemaObjects:    expectedSchemaObjects.Pointer(),
-			ExpectedSchemaSHA256:     *expectedSchemaSHA256,
-			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
-			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
-			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
-		})
+		verification, err := storage.VerifyBackupWithOptions(*path, verificationOptions)
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
 		}
@@ -102,15 +117,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
 		}
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
-			ExpectedSHA256:           *expectedSHA256,
-			ExpectedPageSize:         expectedPageSize.Pointer(),
-			ExpectedPageCount:        expectedPageCount.Pointer(),
-			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
-			ExpectedSchemaObjects:    expectedSchemaObjects.Pointer(),
-			ExpectedSchemaSHA256:     *expectedSchemaSHA256,
-			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
-			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
-			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
+			ExpectedSHA256:           verificationOptions.ExpectedSHA256,
+			ExpectedPageSize:         verificationOptions.ExpectedPageSize,
+			ExpectedPageCount:        verificationOptions.ExpectedPageCount,
+			ExpectedSchemaVersion:    verificationOptions.ExpectedSchemaVersion,
+			ExpectedSchemaObjects:    verificationOptions.ExpectedSchemaObjects,
+			ExpectedSchemaSHA256:     verificationOptions.ExpectedSchemaSHA256,
+			ExpectedCheckpointSHA256: verificationOptions.ExpectedCheckpointSHA256,
+			ExpectedCheckpointRows:   verificationOptions.ExpectedCheckpointRows,
+			ExpectedCheckpointFormat: verificationOptions.ExpectedCheckpointFormat,
 			Backup:                   storage.BackupOptions{PageSteps: int32(*pageSteps)},
 		})
 		if err != nil {
@@ -229,4 +244,104 @@ func (value optionalInt) Pointer() *int {
 	}
 	copy := value.value
 	return &copy
+}
+
+const maxInventoryBytes = 64 << 10
+
+type backupInventory struct {
+	SourcePath       string `json:"source_path"`
+	SourceSHA256     string `json:"source_sha256"`
+	DestinationPath  string `json:"destination_path"`
+	PagesCopied      int64  `json:"pages_copied"`
+	Duration         int64  `json:"duration"`
+	SQLiteVersion    string `json:"sqlite_version"`
+	FileSize         int64  `json:"file_size"`
+	PageSize         int    `json:"page_size"`
+	PageCount        int    `json:"page_count"`
+	SHA256           string `json:"sha256"`
+	ApplicationID    int    `json:"application_id"`
+	UserVersion      int    `json:"user_version"`
+	SchemaVersion    int    `json:"schema_version"`
+	SchemaObjects    int    `json:"schema_objects"`
+	SchemaSHA256     string `json:"schema_sha256"`
+	CheckpointRows   int    `json:"checkpoint_rows"`
+	CheckpointFormat int    `json:"checkpoint_format"`
+	CheckpointSHA256 string `json:"checkpoint_sha256"`
+	IntegrityCheck   string `json:"integrity_check"`
+	ForeignKeyCheck  string `json:"foreign_key_check"`
+}
+
+func loadInventory(path string) (backupInventory, error) {
+	file, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return backupInventory{}, err
+	}
+	defer file.Close()
+	decoder := json.NewDecoder(io.LimitReader(file, maxInventoryBytes+1))
+	decoder.DisallowUnknownFields()
+	var inventory backupInventory
+	if err := decoder.Decode(&inventory); err != nil {
+		return backupInventory{}, fmt.Errorf("decode JSON: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return backupInventory{}, errors.New("inventory contains trailing JSON")
+		}
+		return backupInventory{}, fmt.Errorf("decode trailing JSON: %w", err)
+	}
+	if info, err := file.Stat(); err != nil {
+		return backupInventory{}, err
+	} else if info.Size() > maxInventoryBytes {
+		return backupInventory{}, fmt.Errorf("inventory exceeds %d bytes", maxInventoryBytes)
+	}
+	if inventory.FileSize <= 0 || inventory.PageSize <= 0 || inventory.PageCount <= 0 {
+		return backupInventory{}, errors.New("inventory physical identity is incomplete")
+	}
+	if inventory.FileSize != int64(inventory.PageSize)*int64(inventory.PageCount) {
+		return backupInventory{}, errors.New("inventory page geometry does not match file size")
+	}
+	if inventory.ApplicationID != 0x4d415554 || inventory.UserVersion != 1 {
+		return backupInventory{}, errors.New("inventory application identity is not canonical")
+	}
+	if inventory.SchemaVersion < 0 || inventory.SchemaObjects != 1 || inventory.CheckpointRows < 0 || inventory.CheckpointRows > 1 || inventory.CheckpointFormat < 0 {
+		return backupInventory{}, errors.New("inventory logical identity is invalid")
+	}
+	if inventory.IntegrityCheck != "ok" || inventory.ForeignKeyCheck != "ok" {
+		return backupInventory{}, errors.New("inventory does not record successful integrity checks")
+	}
+	if len(inventory.SHA256) != sha256HexLength || len(inventory.SchemaSHA256) != sha256HexLength ||
+		(inventory.CheckpointRows == 1 && len(inventory.CheckpointSHA256) != sha256HexLength) ||
+		(inventory.CheckpointRows == 0 && inventory.CheckpointSHA256 != "") {
+		return backupInventory{}, errors.New("inventory digest identity is incomplete")
+	}
+	return inventory, nil
+}
+
+func (inventory backupInventory) verificationOptions() storage.VerificationOptions {
+	return storage.VerificationOptions{
+		ExpectedSHA256:           inventory.SHA256,
+		ExpectedPageSize:         intPointer(inventory.PageSize),
+		ExpectedPageCount:        intPointer(inventory.PageCount),
+		ExpectedSchemaVersion:    intPointer(inventory.SchemaVersion),
+		ExpectedSchemaObjects:    intPointer(inventory.SchemaObjects),
+		ExpectedSchemaSHA256:     inventory.SchemaSHA256,
+		ExpectedCheckpointSHA256: inventory.CheckpointSHA256,
+		ExpectedCheckpointRows:   intPointer(inventory.CheckpointRows),
+		ExpectedCheckpointFormat: intPointer(inventory.CheckpointFormat),
+	}
+}
+
+func intPointer(value int) *int { return &value }
+
+const sha256HexLength = 64
+
+func hasExplicitExpectations(fs *flag.FlagSet) bool {
+	found := false
+	fs.Visit(func(entry *flag.Flag) {
+		if len(entry.Name) >= len("expected-") && entry.Name[:len("expected-")] == "expected-" {
+			found = true
+		}
+	})
+	return found
 }
