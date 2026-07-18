@@ -286,6 +286,8 @@ Dashboard e exportadores de telemetria MUST ser dispensáveis para execução, r
 
 **Evidência de aceitação:** fault injection derruba UI/stream/exportador enquanto o runtime persiste progresso e depois permite reconstrução por event log e read models.
 
+**Verificação estrutural (2026-07-18):** `port.ReadStore` publica apenas transações `View` e `inspect.Projector` depende dessa porta de menor autoridade, não de `port.Store`. `internal/architecture/dependencies_test.go` inspeciona código de produção de `internal/inspect` e rejeita referências a `port.Store` ou `port.Transaction`, inclusive quando o import usa alias; assim, adicionar escrita à superfície de inspeção exige violar explicitamente um teste arquitetural.
+
 ### FR-CTRL-008 — Perguntas estruturadas e não bloqueantes
 
 O runtime MAY propor perguntas ao operador para obter preferência, esclarecimento, confirmação ou informação ausente. Toda pergunta entregue MUST possuir identidade persistida, contexto, impacto, opções estáveis quando aplicáveis, resposta livre ou pedido de contexto quando permitido, escopo bloqueado e política de ausência de resposta. Espera por resposta MUST bloquear somente unidades dependentes e MUST NOT interromper scheduling, replenishment ou execução de outras frentes.
