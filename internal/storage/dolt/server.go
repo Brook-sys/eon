@@ -189,7 +189,7 @@ func (s *ServerStore) configureAndLoad() error {
 	if err != nil {
 		return fmt.Errorf("load dolt server checkpoint: %w", err)
 	}
-	if formatVersion != memory.CheckpointFormatVersion {
+	if !memory.SupportsExternalCheckpointFormat(formatVersion) {
 		return fmt.Errorf("load dolt server checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, formatVersion, memory.CheckpointFormatVersion)
 	}
 	core, err := memory.NewFromBinary(payload)

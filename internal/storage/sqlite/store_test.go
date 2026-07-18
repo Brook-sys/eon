@@ -1,7 +1,9 @@
 package sqlite_test
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/gob"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -88,6 +90,73 @@ func TestOpenRejectsCorruptCurrentCheckpoint(t *testing.T) {
 	}
 	if _, err := storage.Open(path); err == nil || errors.Is(err, memory.ErrUnsupportedCheckpointFormat) {
 		t.Fatalf("open error = %v, want checkpoint decode failure", err)
+	}
+}
+
+func TestOpenMigratesV1ExternalVersionOnNextWrite(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var legacyPayload bytes.Buffer
+	if err := gob.NewEncoder(&legacyPayload).Encode(struct {
+		FormatVersion int
+		State         struct{}
+	}{FormatVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
+	// A pre-v2 database may carry table-level format version 1. Its payload is
+	// accepted by the decoder compatibility path and rewritten as v2 after the
+	// next successful durable update.
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO runtime_checkpoint(id, format_version, payload) VALUES(1, 1, ?)`, legacyPayload.Bytes()); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	store, err = storage.Open(path)
+	if err != nil {
+		t.Fatalf("open v1 external checkpoint: %v", err)
+	}
+	if err := store.Update(t.Context(), func(port.Transaction) error { return nil }); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err = sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var version int
+	var payload []byte
+	if err := db.QueryRow(`SELECT format_version, payload FROM runtime_checkpoint WHERE id = 1`).Scan(&version, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if version != memory.CheckpointFormatVersion {
+		t.Fatalf("external version = %d, want %d", version, memory.CheckpointFormatVersion)
+	}
+	// The rewritten payload must be a decodable envelope, not merely a bumped
+	// table column. Decode generically here to avoid coupling to private fields.
+	var envelope struct {
+		FormatVersion int
+	}
+	if err := gob.NewDecoder(bytes.NewReader(payload)).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	if envelope.FormatVersion != memory.CheckpointFormatVersion {
+		t.Fatalf("envelope version = %d, want %d", envelope.FormatVersion, memory.CheckpointFormatVersion)
 	}
 }
 

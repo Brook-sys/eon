@@ -2,6 +2,7 @@ package memory
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -9,11 +10,21 @@ import (
 	"motor-autonomo/internal/domain"
 )
 
-const CheckpointFormatVersion = 1
+const (
+	checkpointFormatV1      = 1
+	CheckpointFormatVersion = 2
+)
 
 var ErrUnsupportedCheckpointFormat = errors.New("unsupported checkpoint format version")
+var ErrCheckpointIntegrity = errors.New("checkpoint integrity verification failed")
 
 type checkpointEnvelope struct {
+	FormatVersion int
+	PayloadDigest [sha256.Size]byte
+	Payload       []byte
+}
+
+type checkpointEnvelopeV1 struct {
 	FormatVersion int
 	State         persistedState
 }
@@ -110,8 +121,18 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ResourceUsages:        cloned.resourceUsages,
 		ModelContextPressures: cloned.modelContextPressures,
 	}
+	var state bytes.Buffer
+	if err := gob.NewEncoder(&state).Encode(p); err != nil {
+		return nil, fmt.Errorf("encode memory checkpoint state: %w", err)
+	}
+	payload := state.Bytes()
+	envelope := checkpointEnvelope{
+		FormatVersion: CheckpointFormatVersion,
+		PayloadDigest: sha256.Sum256(payload),
+		Payload:       payload,
+	}
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(checkpointEnvelope{FormatVersion: CheckpointFormatVersion, State: p}); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(envelope); err != nil {
 		return nil, fmt.Errorf("encode memory checkpoint: %w", err)
 	}
 	return buf.Bytes(), nil
@@ -121,10 +142,25 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 func NewFromBinary(data []byte) (*Store, error) {
 	var envelope checkpointEnvelope
 	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&envelope); err == nil && envelope.FormatVersion != 0 {
-		if envelope.FormatVersion != CheckpointFormatVersion {
+		switch envelope.FormatVersion {
+		case CheckpointFormatVersion:
+			if len(envelope.Payload) == 0 || sha256.Sum256(envelope.Payload) != envelope.PayloadDigest {
+				return nil, ErrCheckpointIntegrity
+			}
+			var p persistedState
+			if err := gob.NewDecoder(bytes.NewReader(envelope.Payload)).Decode(&p); err != nil {
+				return nil, fmt.Errorf("decode memory checkpoint state: %w", err)
+			}
+			return newFromPersistedState(p)
+		case checkpointFormatV1:
+			var legacy checkpointEnvelopeV1
+			if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&legacy); err != nil {
+				return nil, fmt.Errorf("decode v1 memory checkpoint: %w", err)
+			}
+			return newFromPersistedState(legacy.State)
+		default:
 			return nil, fmt.Errorf("%w: got %d, support %d", ErrUnsupportedCheckpointFormat, envelope.FormatVersion, CheckpointFormatVersion)
 		}
-		return newFromPersistedState(envelope.State)
 	}
 
 	// Compatibility path for checkpoints written before the envelope existed.
@@ -133,6 +169,14 @@ func NewFromBinary(data []byte) (*Store, error) {
 		return nil, fmt.Errorf("decode memory checkpoint: %w", err)
 	}
 	return newFromPersistedState(p)
+}
+
+// SupportsExternalCheckpointFormat reports whether a durable adapter may pass
+// a checkpoint with this table-level version to NewFromBinary. Version 1 is
+// retained because pre-envelope databases already wrote format_version=1 and
+// may contain either the unwrapped payload or the v1 envelope.
+func SupportsExternalCheckpointFormat(version int) bool {
+	return version == checkpointFormatV1 || version == CheckpointFormatVersion
 }
 
 func newFromPersistedState(p persistedState) (*Store, error) {

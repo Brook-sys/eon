@@ -352,7 +352,7 @@ Schemas persistidos, `OperationSpec`s, templates, eventos e interfaces públicas
 
 **Verificação estrutural (2026-07-18):** `internal/architecture/domain_validation_test.go` parseia os tipos de produção de `internal/domain` e exige que toda struct com `SchemaVersion` publique ao menos um entrypoint `Validate*() error`. A fixture negativa comprova que schemas versionados sem validação são rejeitados e que tipos não versionados permanecem fora do guard; assim, adicionar estado persistível versionado sem política executável de aceitação deixa de ser silencioso.
 
-**Verificação de checkpoint (2026-07-18):** o checkpoint integral possui envelope gob com `CheckpointFormatVersion`; SQLite e ambos os adapters Dolt persistem e verificam a mesma versão externa antes de decodificar o payload. Versões futuras são rejeitadas fail-closed por erro identificável, payload corrente corrompido não é tratado como store vazio, e o formato legado sem envelope permanece legível para migração automática na próxima escrita bem-sucedida.
+**Verificação de checkpoint (2026-07-18):** o checkpoint integral v2 possui envelope gob com `CheckpointFormatVersion`, payload interno separado e SHA-256 verificado antes da restauração; SQLite e ambos os adapters Dolt persistem e verificam versão externa compatível antes de decodificar. Versões futuras são rejeitadas fail-closed por erro identificável, adulteração do payload produz erro de integridade, payload corrente corrompido não é tratado como store vazio, e formatos v0/v1 permanecem legíveis para migração automática para v2 na próxima escrita bem-sucedida.
 
 ## 8. Matriz inicial de rastreabilidade
 

@@ -110,7 +110,7 @@ func (s *Store) load() (*memory.Store, error) {
 	if len(result.Rows) != 1 {
 		return nil, fmt.Errorf("dolt checkpoint query returned %d rows", len(result.Rows))
 	}
-	if result.Rows[0].FormatVersion != memory.CheckpointFormatVersion {
+	if !memory.SupportsExternalCheckpointFormat(result.Rows[0].FormatVersion) {
 		return nil, fmt.Errorf("load dolt checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, result.Rows[0].FormatVersion, memory.CheckpointFormatVersion)
 	}
 	payload, err := hex.DecodeString(result.Rows[0].PayloadHex)
