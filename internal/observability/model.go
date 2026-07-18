@@ -137,8 +137,22 @@ func unknownProviderProfile(name, detail string) domain.ProviderProfile {
 	}
 }
 
-// Compile-time: decorator exposes the optional capability surface.
-var _ port.ModelCapabilityReporter = (*ModelProvider)(nil)
+// DiscoverModels forwards read-only discovery when supported by the adapter.
+func (p *ModelProvider) DiscoverModels(ctx context.Context) ([]string, error) {
+	if p == nil || p.Inner == nil {
+		return nil, errMissingProvider
+	}
+	if reporter, ok := p.Inner.(port.ModelDiscoveryReporter); ok {
+		return reporter.DiscoverModels(ctx)
+	}
+	return nil, errString("inner model provider does not support model discovery")
+}
+
+// Compile-time: decorator exposes the optional capability surfaces.
+var (
+	_ port.ModelCapabilityReporter = (*ModelProvider)(nil)
+	_ port.ModelDiscoveryReporter  = (*ModelProvider)(nil)
+)
 
 var errMissingProvider = errString("observability model provider is missing")
 

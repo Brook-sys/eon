@@ -21,6 +21,7 @@ type Exchange struct {
 	RequireResponseFormat bool
 	ResponseText          string
 	ResponseModel         string
+	ModelsResponse        []string
 	InputTokens           int
 	OutputTokens          int
 	StatusCode            int
@@ -71,6 +72,10 @@ func (s *Server) Failures() []string {
 func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if r.Method == http.MethodGet && r.URL.Path == "/v1/models" {
+		s.handleModels(w, r)
+		return
+	}
 	if r.Method != http.MethodPost || r.URL.Path != "/v1/chat/completions" {
 		s.failures = append(s.failures, fmt.Sprintf("unexpected request %s %s", r.Method, r.URL.Path))
 		http.Error(w, "not found", http.StatusNotFound)
@@ -164,4 +169,32 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": exchange.ResponseText}}},
 		"usage":   map[string]any{"prompt_tokens": exchange.InputTokens, "completion_tokens": exchange.OutputTokens},
 	})
+}
+
+func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
+	if len(s.script) == 0 {
+		s.failures = append(s.failures, "unexpected extra request for models")
+		http.Error(w, "script exhausted", http.StatusInternalServerError)
+		return
+	}
+	exchange := s.script[0]
+	s.script = s.script[1:]
+	status := exchange.StatusCode
+	if status == 0 {
+		status = http.StatusOK
+	}
+	w.Header().Set("Content-Type", "application/json")
+	for key, value := range exchange.Headers {
+		w.Header().Set(key, value)
+	}
+	w.WriteHeader(status)
+	if exchange.RawBody != "" {
+		_, _ = w.Write([]byte(exchange.RawBody))
+		return
+	}
+	data := make([]map[string]string, len(exchange.ModelsResponse))
+	for i, id := range exchange.ModelsResponse {
+		data[i] = map[string]string{"id": id}
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"data": data})
 }

@@ -43,6 +43,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /commits/{commitID}", a.handleCommit)
 	mux.HandleFunc("GET /provider/profile", a.handleProviderProfile)
 	mux.HandleFunc("GET /provider/profile/probe", a.handleProviderProfileProbe)
+	mux.HandleFunc("GET /provider/models", a.handleProviderModels)
 	mux.HandleFunc("GET /commands/{commandID}", a.handleCommand)
 	mux.HandleFunc("GET /events", a.handleEvents)
 	mux.HandleFunc("GET /events/{eventID}", a.handleEvent)
@@ -221,6 +222,15 @@ func (a *API) handleProviderProfileProbe(w http.ResponseWriter, r *http.Request)
 	view, err := a.Projector.ProviderProfileProbe(r.Context())
 	if err != nil {
 		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, view)
+}
+
+func (a *API) handleProviderModels(w http.ResponseWriter, r *http.Request) {
+	view, err := a.Projector.ProviderModels(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "provider_discovery_failed", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, view)

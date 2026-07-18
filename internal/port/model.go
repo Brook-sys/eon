@@ -60,3 +60,10 @@ type ModelCapabilityReporter interface {
 	DeclaredProfile() domain.ProviderProfile
 	Probe(context.Context) (domain.ProviderProfile, error)
 }
+
+// ModelDiscoveryReporter optionally lists provider-reported model IDs for
+// operator inspection. Discovery is read-only and MUST NOT change routing,
+// bindings, capability grants, or any other canonical authority automatically.
+type ModelDiscoveryReporter interface {
+	DiscoverModels(context.Context) ([]string, error)
+}

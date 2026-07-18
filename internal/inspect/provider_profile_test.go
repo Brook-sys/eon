@@ -179,3 +179,48 @@ func TestProviderProfileAgainstOpenAIAdapter(t *testing.T) {
 		t.Fatalf("budgeted probe loop: profile=%#v requests=%d", again, len(server.Requests()))
 	}
 }
+
+func TestProviderModelsAgainstOpenAIAdapterIsInformationalOnly(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{ModelsResponse: []string{"tiny", "unconfigured"}})
+	t.Cleanup(server.Close)
+	provider, err := openai.New(
+		openai.Config{BaseURL: server.URL(), Model: "tiny", Client: server.Client()},
+		openai.WithAllowedModels("tiny"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := memory.New()
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.SetModelProvider(provider)
+
+	view, err := projector.ProviderModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !view.Configured || len(view.Models) != 1 || view.Models[0] != "tiny" || view.Note == "" {
+		t.Fatalf("models view = %#v", view)
+	}
+
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	httpServer := httptest.NewServer(api.Handler())
+	t.Cleanup(httpServer.Close)
+	resp := mustGET(t, httpServer.URL+"/provider/models")
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("models status = %d", resp.StatusCode)
+	}
+	var got inspect.ProviderModelsView
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Models) != 1 || got.Models[0] != "tiny" {
+		t.Fatalf("http models = %#v", got)
+	}
+}

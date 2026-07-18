@@ -158,3 +158,66 @@ func TestProviderRejectsUnknownResponseFormat(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestProviderDiscoversModelsWithCacheAndAllowlist(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{ModelsResponse: []string{"model-a", "model-b", "unknown-model", ""}},
+		fakeserver.Exchange{ModelsResponse: []string{"model-c"}},
+	)
+	defer server.Close()
+
+	provider, err := openai.New(
+		openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "model-a", Client: server.Client()},
+		openai.WithAllowedModels("model-a", "model-b"),
+		openai.WithModelsCacheTTL(time.Second),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// First call hits the network, filters by allowlist, and caches.
+	models, err := provider.DiscoverModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 2 || models[0] != "model-a" || models[1] != "model-b" {
+		t.Fatalf("unexpected models: %v", models)
+	}
+
+	// Second call hits cache (no network).
+	cached, err := provider.DiscoverModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cached) != 2 {
+		t.Fatalf("unexpected cached models: %v", cached)
+	}
+}
+
+func TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies(t *testing.T) {
+	tests := []struct {
+		name     string
+		exchange fakeserver.Exchange
+		limit    int64
+		kind     openai.ErrorKind
+	}{
+		{"too large", fakeserver.Exchange{RawBody: `{"data":[{"id":"1"}]}`}, 10, openai.ErrorResponseTooLarge},
+		{"invalid json", fakeserver.Exchange{RawBody: `{invalid}`}, 1000, openai.ErrorInvalidResponse},
+		{"http error", fakeserver.Exchange{StatusCode: 401, RawBody: `{"error":"auth"}`}, 1000, openai.ErrorHTTP},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := fakeserver.New(test.exchange)
+			defer server.Close()
+			provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client(), MaxResponseBytes: test.limit})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = provider.DiscoverModels(context.Background())
+			var providerError *openai.Error
+			if !errors.As(err, &providerError) || providerError.Kind != test.kind {
+				t.Fatalf("unexpected error: %#v", err)
+			}
+		})
+	}
+}

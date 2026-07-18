@@ -22,6 +22,8 @@ import (
 const (
 	defaultMaxResponseBytes int64 = 1 << 20
 	defaultHTTPTimeout            = 2 * time.Minute
+	defaultModelsCacheTTL         = 5 * time.Minute
+	maxDiscoveredModels           = 100
 )
 
 type Config struct {
@@ -45,11 +47,16 @@ type Provider struct {
 	name string
 	// contextTokens is the declared context window for budgeting (0 = unknown).
 	contextTokens int
+	// allowedModels is an optional allowlist for discovery. Empty means all are allowed.
+	allowedModels  []string
+	modelsCacheTTL time.Duration
 	// probeBudget is the remaining live Probe allowance (FR-MODEL-005).
-	mu          sync.Mutex
-	probeBudget int
-	lastProbe   domain.ProviderProfile
-	hasProbe    bool
+	mu           sync.Mutex
+	probeBudget  int
+	lastProbe    domain.ProviderProfile
+	hasProbe     bool
+	cachedModels []string
+	modelsTTL    time.Time
 }
 
 // Option configures optional non-secret provider metadata.
@@ -78,6 +85,24 @@ func WithProbeBudget(n int) Option {
 	return func(p *Provider) {
 		if n >= 0 {
 			p.probeBudget = n
+		}
+	}
+}
+
+// WithAllowedModels replaces the discovery allowlist. Empty IDs are ignored;
+// an empty resulting list falls back to the configured model only.
+func WithAllowedModels(models ...string) Option {
+	return func(p *Provider) {
+		p.allowedModels = normalizeModelIDs(models, 0)
+	}
+}
+
+// WithModelsCacheTTL configures successful discovery caching. Non-positive
+// values are ignored; production defaults to five minutes.
+func WithModelsCacheTTL(ttl time.Duration) Option {
+	return func(p *Provider) {
+		if ttl > 0 {
+			p.modelsCacheTTL = ttl
 		}
 	}
 }
@@ -178,12 +203,17 @@ func New(config Config, opts ...Option) (*Provider, error) {
 		maxResponseBytes: limit,
 		client:           client,
 		name:             "openai-compatible",
+		allowedModels:    []string{strings.TrimSpace(config.Model)},
+		modelsCacheTTL:   defaultModelsCacheTTL,
 		probeBudget:      1,
 	}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(p)
 		}
+	}
+	if len(p.allowedModels) == 0 {
+		p.allowedModels = []string{p.model}
 	}
 	return p, nil
 }
@@ -373,6 +403,101 @@ func (p *Provider) Probe(ctx context.Context) (domain.ProviderProfile, error) {
 	return profile, nil
 }
 
+// DiscoverModels fetches available models from the optional /v1/models endpoint,
+// caching the result for the configured TTL to avoid rate limit pressure.
+func (p *Provider) DiscoverModels(ctx context.Context) ([]string, error) {
+	p.mu.Lock()
+	if time.Now().Before(p.modelsTTL) {
+		cached := make([]string, len(p.cachedModels))
+		copy(cached, p.cachedModels)
+		p.mu.Unlock()
+		return cached, nil
+	}
+	p.mu.Unlock()
+
+	endpoint := strings.TrimSuffix(p.endpoint, "/chat/completions") + "/models"
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, &Error{Kind: ErrorInvalidRequest}
+	}
+	if p.apiKey != "" {
+		httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
+	}
+
+	response, err := p.client.Do(httpRequest)
+	if err != nil {
+		return nil, &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, p.maxResponseBytes+1))
+		return nil, &Error{
+			Kind:       ErrorHTTP,
+			StatusCode: response.StatusCode,
+			Retryable:  response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500,
+			RetryAfter: parseRetryAfter(response.Header.Get("Retry-After"), time.Now()),
+		}
+	}
+
+	limited := io.LimitReader(response.Body, p.maxResponseBytes+1)
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, &Error{Kind: ErrorTransport, Retryable: true}
+	}
+	if int64(len(body)) > p.maxResponseBytes {
+		return nil, &Error{Kind: ErrorResponseTooLarge}
+	}
+
+	var payload struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil || payload.Data == nil {
+		return nil, &Error{Kind: ErrorInvalidResponse}
+	}
+
+	allowset := make(map[string]struct{}, len(p.allowedModels))
+	for _, id := range p.allowedModels {
+		allowset[id] = struct{}{}
+	}
+	rawIDs := make([]string, 0, len(payload.Data))
+	for _, item := range payload.Data {
+		id := strings.TrimSpace(item.ID)
+		if _, ok := allowset[id]; ok {
+			rawIDs = append(rawIDs, id)
+		}
+	}
+	allowed := normalizeModelIDs(rawIDs, maxDiscoveredModels)
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.cachedModels = allowed
+	p.modelsTTL = time.Now().Add(p.modelsCacheTTL)
+	copied := make([]string, len(allowed))
+	copy(copied, allowed)
+	return copied, nil
+}
+
+func normalizeModelIDs(raw []string, limit int) []string {
+	seen := make(map[string]struct{}, len(raw))
+	normalized := make([]string, 0, len(raw))
+	for _, id := range raw {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			normalized = append(normalized, id)
+			if limit > 0 && len(normalized) == limit {
+				break
+			}
+		}
+	}
+	return normalized
+}
+
 func classifyProbeError(err error) string {
 	var providerError *Error
 	if errors.As(err, &providerError) {
@@ -388,4 +513,5 @@ func classifyProbeError(err error) string {
 var (
 	_ port.ModelProvider           = (*Provider)(nil)
 	_ port.ModelCapabilityReporter = (*Provider)(nil)
+	_ port.ModelDiscoveryReporter  = (*Provider)(nil)
 )

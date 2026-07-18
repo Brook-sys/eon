@@ -154,6 +154,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `OPENAI_COMPATIBILITY.md` delimita o subconjunto portátil, perfis e contract test por implantação; adapter seleciona explicitamente `max_tokens` ou `max_completion_tokens`, com fake/testes cobrindo ambos sem fallback duplicador.
 - [x] `DONE` Benchmark 2k/4k/8k para operações selecionadas.
   - Evidência: `internal/evaluation` carrega fixtures estritas, compila a matriz contexto × formato pelo mesmo budget do runtime, mede validade/acerto/tokens/latência e gera artefatos atômicos; `cmd/model-benchmark-runner` executa providers OpenAI-compatible reais sem registrar credenciais.
+- [x] `DONE` Descoberta opcional offline via `/v1/models` limitada e sem autoridade automática.
+  - Evidência: `port.ModelDiscoveryReporter` acoplado apenas no loop diagnóstico (`inspect`), nunca no de avanço canônico; `openai.Provider` implementa limite de array (`maxDiscoveredModels=100`), allowlist, cache durável no processo e não vaza schemas/corpos desconhecidos; fakeserver, observability decorator e `GET /provider/models` no HTTP API cobertos por testes (2026-07-17).
 - [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato.
   - Preparado: corpus inicial `cognitive-v1` cobre as quatro operações em escolha, campos delimitados e JSON; relatórios agora agregam acerto, erros e omissões por operação, formato e contexto. Falta executar contra pelo menos um modelo pequeno/local e um baseline superior e interpretar os resultados.
   - Ambiente atual: nenhum node de inferência/Ollama está disponível e não há servidor local em `127.0.0.1:11434`; manter o item `READY` até existir endpoint OpenAI-compatible sem credenciais pagas.

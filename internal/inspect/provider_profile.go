@@ -3,6 +3,7 @@ package inspect
 import (
 	"context"
 	"errors"
+	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
@@ -18,6 +19,16 @@ type ProviderProfileView struct {
 	Live bool `json:"live,omitempty"`
 	// Note is a non-secret explanation when no provider is wired.
 	Note string `json:"note,omitempty"`
+}
+
+// ProviderModelsView is an optional, read-only projection of provider-reported
+// model IDs. The list is informational and never changes model bindings.
+type ProviderModelsView struct {
+	SchemaVersion int       `json:"schema_version"`
+	Configured    bool      `json:"configured"`
+	Models        []string  `json:"models,omitempty"`
+	ObservedAt    time.Time `json:"observed_at,omitempty"`
+	Note          string    `json:"note,omitempty"`
 }
 
 // SetModelProvider installs an optional model provider for capability inspect.
@@ -108,5 +119,32 @@ func (p *Projector) ProviderProfileProbe(ctx context.Context) (ProviderProfileVi
 		Configured:    true,
 		Profile:       &profile,
 		Live:          true,
+	}, nil
+}
+
+// ProviderModels performs optional read-only model discovery. Returned IDs are
+// allowlisted by the adapter and cannot alter canonical model configuration.
+func (p *Projector) ProviderModels(ctx context.Context) (ProviderModelsView, error) {
+	if p == nil {
+		return ProviderModelsView{}, errors.New("projector is nil")
+	}
+	provider := p.ModelProvider()
+	if provider == nil {
+		return ProviderModelsView{SchemaVersion: domain.SchemaVersionV1, Note: "no model provider configured; discovery skipped"}, nil
+	}
+	discoverer, ok := provider.(port.ModelDiscoveryReporter)
+	if !ok {
+		return ProviderModelsView{SchemaVersion: domain.SchemaVersionV1, Configured: true, Note: "provider does not implement ModelDiscoveryReporter"}, nil
+	}
+	models, err := discoverer.DiscoverModels(ctx)
+	if err != nil {
+		return ProviderModelsView{}, err
+	}
+	return ProviderModelsView{
+		SchemaVersion: domain.SchemaVersionV1,
+		Configured:    true,
+		Models:        models,
+		ObservedAt:    time.Now().UTC(),
+		Note:          "informational only; model bindings remain operator-controlled",
 	}, nil
 }
