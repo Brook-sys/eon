@@ -58,6 +58,7 @@ func TestRunBackupAndVerify(t *testing.T) {
 	var restoreOut bytes.Buffer
 	if err := run(context.Background(), []string{
 		"-mode=restore", "-source=" + backupPath, "-destination=" + restoredPath,
+		"-expected-sha256=" + report.SHA256,
 	}, &restoreOut); err != nil {
 		t.Fatal(err)
 	}
@@ -65,11 +66,17 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if err := json.Unmarshal(restoreOut.Bytes(), &restoreReport); err != nil {
 		t.Fatalf("decode restore report: %v\n%s", err, restoreOut.String())
 	}
-	if restoreReport.SourcePath != backupPath || restoreReport.DestinationPath != restoredPath || restoreReport.IntegrityCheck != "ok" {
+	if restoreReport.SourcePath != backupPath || restoreReport.SourceSHA256 != report.SHA256 || restoreReport.DestinationPath != restoredPath || restoreReport.IntegrityCheck != "ok" {
 		t.Fatalf("unexpected restore report: %+v", restoreReport)
 	}
 	if _, err := sqlite.VerifyBackup(restoredPath); err != nil {
 		t.Fatalf("verify restored runtime: %v", err)
+	}
+	if err := run(context.Background(), []string{
+		"-mode=restore", "-source=" + backupPath, "-destination=" + filepath.Join(dir, "wrong-digest.sqlite"),
+		"-expected-sha256=" + string(bytes.Repeat([]byte("0"), 64)),
+	}, &bytes.Buffer{}); err == nil {
+		t.Fatal("restore accepted wrong expected digest")
 	}
 }
 

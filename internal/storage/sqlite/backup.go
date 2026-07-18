@@ -23,6 +23,7 @@ import (
 // with Open after the source store remains online.
 type BackupReport struct {
 	SourcePath       string        `json:"source_path,omitempty"`
+	SourceSHA256     string        `json:"source_sha256,omitempty"`
 	DestinationPath  string        `json:"destination_path"`
 	PagesCopied      int64         `json:"pages_copied"`
 	Duration         time.Duration `json:"duration"`
@@ -56,6 +57,14 @@ type BackupOptions struct {
 	// PageSteps is the number of pages copied per sqlite3_backup_step call.
 	// Zero or negative means copy all remaining pages in one step.
 	PageSteps int32
+}
+
+// RestoreOptions pins the identity of the backup selected by the operator and
+// configures the page copy. Even without an explicit digest, RestoreTo records
+// the verified source digest and rejects source changes during the restore.
+type RestoreOptions struct {
+	ExpectedSHA256 string
+	Backup         BackupOptions
 }
 
 // BackupTo creates a consistent online copy of the store database at destPath
@@ -192,16 +201,29 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 // keeps replacement of an active or valuable database an explicit operator
 // action rather than an accidental overwrite.
 func RestoreTo(ctx context.Context, backupPath, destPath string, options BackupOptions) (BackupReport, error) {
+	return RestoreToWithOptions(ctx, backupPath, destPath, RestoreOptions{Backup: options})
+}
+
+// RestoreToWithOptions verifies and pins the source backup before copying it.
+// The source is verified again after the copy; if it changed, the destination
+// is removed so an offline-restore contract violation cannot be promoted.
+func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, options RestoreOptions) (BackupReport, error) {
 	if err := ctx.Err(); err != nil {
 		return BackupReport{}, err
 	}
-	if _, err := VerifyBackup(backupPath); err != nil {
+	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{ExpectedSHA256: options.ExpectedSHA256})
+	if err != nil {
 		return BackupReport{}, fmt.Errorf("verify restore source: %w", err)
 	}
-	report, err := ClosedCopyTo(ctx, backupPath, destPath, options)
+	report, err := ClosedCopyTo(ctx, backupPath, destPath, options.Backup)
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
 	}
+	if _, err := VerifyBackupWithOptions(backupPath, VerificationOptions{ExpectedSHA256: sourceVerification.SHA256}); err != nil {
+		_ = os.Remove(destPath)
+		return BackupReport{}, fmt.Errorf("reverify restore source: %w", err)
+	}
+	report.SourceSHA256 = sourceVerification.SHA256
 	return report, nil
 }
 

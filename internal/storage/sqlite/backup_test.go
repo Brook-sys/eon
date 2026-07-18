@@ -144,6 +144,9 @@ func TestRestoreToVerifiesAndReopensCheckpoint(t *testing.T) {
 	if report.SourcePath != backupPath || report.DestinationPath != restoredPath || report.IntegrityCheck != "ok" {
 		t.Fatalf("restore report = %#v", report)
 	}
+	if report.SourceSHA256 == "" {
+		t.Fatalf("restore did not record verified source identity: %#v", report)
+	}
 
 	restored, err := storage.Open(restoredPath)
 	if err != nil {
@@ -196,6 +199,46 @@ func TestRestoreToRejectsExistingDestinationAndInvalidSource(t *testing.T) {
 	}
 	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("invalid restore left destination: %v", err)
+	}
+}
+
+func TestRestoreToPinsExpectedSourceDigest(t *testing.T) {
+	dir := t.TempDir()
+	backupPath := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	verification, err := storage.VerifyBackup(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	destination := filepath.Join(dir, "restored.sqlite")
+	wrongDigest := strings.Repeat("0", sha256.Size*2)
+	if wrongDigest == verification.SHA256 {
+		wrongDigest = strings.Repeat("1", sha256.Size*2)
+	}
+	if _, err := storage.RestoreToWithOptions(context.Background(), backupPath, destination, storage.RestoreOptions{
+		ExpectedSHA256: wrongDigest,
+	}); err == nil {
+		t.Fatal("restore accepted a source with the wrong expected digest")
+	}
+	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("digest mismatch left destination: %v", err)
+	}
+
+	report, err := storage.RestoreToWithOptions(context.Background(), backupPath, destination, storage.RestoreOptions{
+		ExpectedSHA256: verification.SHA256,
+	})
+	if err != nil {
+		t.Fatalf("restore with pinned digest: %v", err)
+	}
+	if report.SourceSHA256 != verification.SHA256 {
+		t.Fatalf("source digest = %q, want %q", report.SourceSHA256, verification.SHA256)
 	}
 }
 

@@ -83,17 +83,28 @@ Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residu
 go run ./cmd/sqlite-backup \
   -mode=restore \
   -source=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
-  -destination=/var/lib/motor-autonomo/runtime-restored.sqlite
+  -destination=/var/lib/motor-autonomo/runtime-restored.sqlite \
+  -expected-sha256=<sha256_emitido_no_backup>
 ```
 
-3. Inspecione o relatório JSON (`integrity_check == "ok"`, SHA-256/bytes esperados, formato esperado e um checkpoint quando aplicável).
+O digest esperado vincula a restauração ao artefato selecionado no inventário,
+em vez de apenas a qualquer SQLite estruturalmente válido. A implementação
+também verifica novamente a origem depois da cópia e remove o destino se a
+origem tiver mudado durante a restauração; isso torna verificável a exigência
+de que o backup esteja offline.
+
+3. Inspecione o relatório JSON (`integrity_check == "ok"`, `source_sha256` igual ao digest selecionado, SHA-256/bytes do destino, formato esperado e um checkpoint quando aplicável).
 4. Abra/promova o path restaurado somente depois das verificações operacionais. Para substituir o path canônico, mova o arquivo antigo para retenção segura e faça a promoção com o runtime parado; o comando deliberadamente não sobrescreve.
 5. Verifique no mínimo:
    - `ActiveMissionRevision` da missão esperada;
    - `Events` recentes / head de commit se aplicável;
    - um `go test` da suite de contrato do backend se o artefato for promovido a dados não descartáveis.
 
-A API equivalente é `sqlite.RestoreTo(ctx, backupPath, newRuntimePath, options)`. Ela executa `VerifyBackup` antes da cópia consistente e verifica novamente o destino por meio de `BackupTo`.
+A API equivalente com identidade fixada é `sqlite.RestoreToWithOptions(ctx,
+backupPath, newRuntimePath, sqlite.RestoreOptions{ExpectedSHA256: digest})`.
+`RestoreTo` permanece como atalho compatível, mas ainda fixa internamente o
+digest observado na primeira verificação, verifica novamente a origem após a
+cópia e verifica o destino por meio de `BackupTo`.
 
 ## O que **não** fazer
 

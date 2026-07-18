@@ -31,7 +31,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	destination := fs.String("destination", "", "new standalone backup path (backup mode) or new runtime path (restore mode)")
 	pageSteps := fs.Int("page-steps", 0, "pages per sqlite backup step (0 = all remaining)")
 	path := fs.String("path", "", "existing backup path (verify mode)")
-	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify mode)")
+	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify or restore mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -82,7 +82,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if *pageSteps < 0 || *pageSteps > math.MaxInt32 {
 			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
 		}
-		report, err := storage.RestoreTo(ctx, *source, *destination, storage.BackupOptions{PageSteps: int32(*pageSteps)})
+		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
+			ExpectedSHA256: *expectedSHA256,
+			Backup:         storage.BackupOptions{PageSteps: int32(*pageSteps)},
+		})
 		if err != nil {
 			return fmt.Errorf("restore: %w", err)
 		}
