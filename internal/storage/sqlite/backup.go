@@ -33,6 +33,7 @@ type BackupReport struct {
 	SHA256           string        `json:"sha256"`
 	CheckpointRows   int           `json:"checkpoint_rows"`
 	CheckpointFormat int           `json:"checkpoint_format,omitempty"`
+	CheckpointSHA256 string        `json:"checkpoint_sha256,omitempty"`
 	IntegrityCheck   string        `json:"integrity_check"`
 }
 
@@ -44,6 +45,7 @@ type BackupVerification struct {
 	SHA256           string `json:"sha256"`
 	CheckpointRows   int    `json:"checkpoint_rows"`
 	CheckpointFormat int    `json:"checkpoint_format,omitempty"`
+	CheckpointSHA256 string `json:"checkpoint_sha256,omitempty"`
 	IntegrityCheck   string `json:"integrity_check"`
 }
 
@@ -201,6 +203,7 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		SHA256:           verification.SHA256,
 		CheckpointRows:   verification.CheckpointRows,
 		CheckpointFormat: verification.CheckpointFormat,
+		CheckpointSHA256: verification.CheckpointSHA256,
 		IntegrityCheck:   verification.IntegrityCheck,
 	}, nil
 }
@@ -357,6 +360,12 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
 	}
+	if report.CheckpointRows != sourceVerification.CheckpointRows ||
+		report.CheckpointFormat != sourceVerification.CheckpointFormat ||
+		report.CheckpointSHA256 != sourceVerification.CheckpointSHA256 {
+		_ = os.Remove(destPath)
+		return BackupReport{}, errors.New("restore destination checkpoint identity differs from verified source")
+	}
 	if _, err := VerifyBackupWithOptions(backupPath, VerificationOptions{ExpectedSHA256: sourceVerification.SHA256}); err != nil {
 		_ = os.Remove(destPath)
 		return BackupReport{}, fmt.Errorf("reverify restore source: %w", err)
@@ -442,6 +451,8 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 			return BackupVerification{}, fmt.Errorf("decode backup checkpoint: %w", err)
 		}
 		verification.CheckpointFormat = formatVersion
+		payloadDigest := sha256.Sum256(payload)
+		verification.CheckpointSHA256 = hex.EncodeToString(payloadDigest[:])
 	}
 	if err := db.Close(); err != nil {
 		return BackupVerification{}, fmt.Errorf("close backup verification database: %w", err)

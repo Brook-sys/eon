@@ -57,7 +57,7 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if report.CheckpointRows != 1 {
 		t.Fatalf("checkpoint rows = %d", report.CheckpointRows)
 	}
-	if report.CheckpointFormat != memory.CheckpointFormatVersion || report.IntegrityCheck != "ok" {
+	if report.CheckpointFormat != memory.CheckpointFormatVersion || len(report.CheckpointSHA256) != sha256.Size*2 || report.IntegrityCheck != "ok" {
 		t.Fatalf("backup verification report = %#v", report)
 	}
 	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
@@ -72,7 +72,7 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify pinned digest: %v", err)
 	}
-	if verified.FileSize != report.FileSize || verified.SHA256 != report.SHA256 {
+	if verified.FileSize != report.FileSize || verified.SHA256 != report.SHA256 || verified.CheckpointSHA256 != report.CheckpointSHA256 {
 		t.Fatalf("verification identity = %#v, report = %#v", verified, report)
 	}
 
@@ -151,6 +151,13 @@ func TestRestoreToVerifiesAndReopensCheckpoint(t *testing.T) {
 	}
 	if report.SourceSHA256 == "" {
 		t.Fatalf("restore did not record verified source identity: %#v", report)
+	}
+	sourceVerification, err := storage.VerifyBackup(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.CheckpointSHA256 == "" || report.CheckpointSHA256 != sourceVerification.CheckpointSHA256 {
+		t.Fatalf("restore checkpoint identity = %q, source = %q", report.CheckpointSHA256, sourceVerification.CheckpointSHA256)
 	}
 
 	restored, err := storage.Open(restoredPath)
@@ -244,6 +251,9 @@ func TestRestoreToPinsExpectedSourceDigest(t *testing.T) {
 	}
 	if report.SourceSHA256 != verification.SHA256 {
 		t.Fatalf("source digest = %q, want %q", report.SourceSHA256, verification.SHA256)
+	}
+	if report.CheckpointSHA256 != verification.CheckpointSHA256 {
+		t.Fatalf("checkpoint digest = %q, want %q", report.CheckpointSHA256, verification.CheckpointSHA256)
 	}
 }
 

@@ -16,7 +16,7 @@ store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
 // report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
-// CheckpointRows, CheckpointFormat e IntegrityCheck
+// CheckpointRows, CheckpointFormat, CheckpointSHA256 e IntegrityCheck
 ```
 
 Comportamento:
@@ -24,7 +24,8 @@ Comportamento:
 1. adquire o lock de escrita do adapter (serializa com `Update`);
 2. copia páginas via `modernc.org/sqlite` `NewBackup` / `Step` / `Finish` (`sqlite3_backup_*`);
 3. executa `PRAGMA quick_check` e verifica versão externa, SHA-256, framing e decode integral do `runtime_checkpoint` quando existir;
-4. deixa a origem aberta e utilizável.
+4. registra separadamente o SHA-256 do payload versionado do checkpoint, permitindo confrontar a identidade lógica mesmo quando a cópia SQLite possui bytes físicos diferentes.
+5. deixa a origem aberta e utilizável.
 
 Regras:
 
@@ -109,7 +110,9 @@ O digest esperado vincula a restauração ao artefato selecionado no inventário
 em vez de apenas a qualquer SQLite estruturalmente válido. A implementação
 também verifica novamente a origem depois da cópia e remove o destino se a
 origem tiver mudado durante a restauração; isso torna verificável a exigência
-de que o backup esteja offline.
+de que o backup esteja offline. Além disso, compara contagem, versão e
+`checkpoint_sha256` entre a origem verificada e o destino restaurado; qualquer
+divergência lógica remove o destino antes da publicação operacional.
 
 3. Inspecione o relatório JSON (`integrity_check == "ok"`, `source_sha256` igual ao digest selecionado, SHA-256/bytes do destino, formato esperado e um checkpoint quando aplicável).
 4. Abra/promova o path restaurado somente depois das verificações operacionais. Para substituir o path canônico, mova o arquivo antigo para retenção segura e faça a promoção com o runtime parado; o comando deliberadamente não sobrescreve.
