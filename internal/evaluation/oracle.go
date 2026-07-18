@@ -38,7 +38,7 @@ func EncodeAnswer(format Format, expected map[string]string) (string, error) {
 			if i > 0 {
 				b.WriteByte('\n')
 			}
-			fmt.Fprintf(&b, "%s: %s", key, expected[key])
+			fmt.Fprintf(&b, "%s=%s", key, expected[key])
 		}
 		return b.String(), nil
 	case FormatJSON:

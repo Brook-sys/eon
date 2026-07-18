@@ -386,7 +386,7 @@ func benchmarkInput(c Case, format Format) prompt.Input {
 	case FormatChoice:
 		answer = "Return exactly one line per key as KEY=VALUE. Use only the allowed values."
 	case FormatDelimited:
-		answer = "Return exactly one line per key as KEY: VALUE, with no prose."
+		answer = "Return exactly one line per key as KEY=VALUE, with no prose."
 	case FormatJSON:
 		answer = "Return one JSON object with exactly these string keys: " + strings.Join(keys, ", ")
 	}
@@ -428,9 +428,9 @@ func Parse(format Format, text string, expectedKeys []string) (map[string]string
 			if line == "" {
 				continue
 			}
-			parts := strings.SplitN(line, ":", 2)
+			parts := strings.SplitN(line, "=", 2)
 			if len(parts) != 2 {
-				return nil, errors.New("delimited output must use KEY: VALUE")
+				return nil, errors.New("delimited output must use KEY=VALUE")
 			}
 			if err := addValue(values, parts[0], parts[1]); err != nil {
 				return nil, err

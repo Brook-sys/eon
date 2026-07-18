@@ -58,7 +58,7 @@ func TestParseFormatsStrictly(t *testing.T) {
 		text   string
 	}{
 		{FormatChoice, "a=1\nb=2"},
-		{FormatDelimited, "a: 1\nb: 2"},
+		{FormatDelimited, "a=1\nb=2"},
 		{FormatJSON, `{"a":"1","b":"2"}`},
 		// FR-MODEL-004 local normalization before strict JSON parse.
 		{FormatJSON, "```json\n{\"a\":\"1\",\"b\":\"2\"}\n```"},
@@ -76,7 +76,8 @@ func TestParseFormatsStrictly(t *testing.T) {
 		text   string
 	}{
 		{FormatChoice, "a=1\na=2"},
-		{FormatDelimited, "a: 1"},
+		{FormatDelimited, "a=1"},
+		{FormatDelimited, "a: 1\nb: 2"},
 		{FormatJSON, `{"a":"1","b":"2","c":"3"}`},
 	} {
 		if _, err := Parse(tc.format, tc.text, keys); err == nil {
