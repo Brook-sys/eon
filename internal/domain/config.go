@@ -961,7 +961,9 @@ func DefaultApplicabilityForScope(scope ConfigScope) ConfigApplicability {
 	case ConfigScopeChannels:
 		return ConfigHot
 	case ConfigScopeModels:
-		return ConfigNextCycle
+		// The model executor is assembled from the active catalog at bootstrap;
+		// there is no atomic in-process catalog reload yet.
+		return ConfigRestartRequired
 	case ConfigScopeRuntime:
 		return ConfigRestartRequired
 	default:

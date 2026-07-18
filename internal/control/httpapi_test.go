@@ -1046,6 +1046,23 @@ func TestControlAPIModelPresetEnablementPreviewAfterDisabledApply(t *testing.T) 
 	if readyBody.Preview.Blocked || readyBody.Preview.Candidate == nil || !readyBody.Preview.Candidate.Bindings[0].Enabled {
 		t.Fatalf("ready preview = %#v", readyBody.Preview)
 	}
+	if !readyBody.Preview.IntroducesFirst || !readyBody.Preview.PrimaryChanged || readyBody.Preview.PrimaryAfter != preset.Binding.ID {
+		t.Fatalf("routing preview = %#v", readyBody.Preview)
+	}
+	enableDraft := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/enable-drafts", map[string]any{
+		"schema_version": 1, "based_on_revision": 1, "version": "models.enabled.v1", "reason": "explicitly accept provider and routing risks",
+	})
+	defer enableDraft.Body.Close()
+	if enableDraft.StatusCode != http.StatusAccepted {
+		t.Fatalf("enable draft status = %d body=%s", enableDraft.StatusCode, readBody(t, enableDraft))
+	}
+	var enableBody struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, enableDraft.Body, &enableBody)
+	if enableBody.Draft.Applicability != domain.ConfigRestartRequired || !enableBody.Draft.Models.Bindings[0].Enabled {
+		t.Fatalf("enable draft = %#v", enableBody.Draft)
+	}
 	var drafts []domain.ConfigDraft
 	if err := store.View(context.Background(), func(r port.Reader) error {
 		var err error
@@ -1054,8 +1071,8 @@ func TestControlAPIModelPresetEnablementPreviewAfterDisabledApply(t *testing.T) 
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if len(drafts) != 1 {
-		t.Fatalf("preview must not create an authoritative draft, got %d drafts", len(drafts))
+	if len(drafts) != 2 {
+		t.Fatalf("only explicit enable endpoint may add the second draft, got %d drafts", len(drafts))
 	}
 }
 

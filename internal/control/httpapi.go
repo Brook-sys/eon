@@ -136,6 +136,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /model-presets/{presetID}", a.handleGetModelPreset)
 	mux.HandleFunc("POST /model-presets/{presetID}/drafts", a.handleCreateModelPresetDraft)
 	mux.HandleFunc("POST /model-presets/{presetID}/enablement-preview", a.handlePreviewModelPresetEnablement)
+	mux.HandleFunc("POST /model-presets/{presetID}/enable-drafts", a.handleCreateModelPresetEnableDraft)
 	mux.HandleFunc("GET /missions/{missionID}/active", a.handleGetActiveMission)
 	mux.HandleFunc("POST /missions/amendments/preview", a.handlePreviewMissionAmendment)
 	mux.HandleFunc("POST /missions/amendments/accept", a.handleAcceptMissionAmendment)
@@ -190,6 +191,22 @@ type modelPresetEnablementPreviewRequest struct {
 	Version       string `json:"version"`
 }
 
+func (a *API) activeModelsRevision(ctx context.Context) (*domain.ConfigRevision, error) {
+	var active *domain.ConfigRevision
+	err := a.Events.Store.View(ctx, func(reader port.Reader) error {
+		revision, loadErr := reader.ActiveConfigRevision(domain.ConfigScopeModels)
+		if errors.Is(loadErr, port.ErrNotFound) {
+			return nil
+		}
+		if loadErr != nil {
+			return loadErr
+		}
+		active = &revision
+		return nil
+	})
+	return active, err
+}
+
 func (a *API) handlePreviewModelPresetEnablement(w http.ResponseWriter, r *http.Request) {
 	preset, ok := a.modelPreset(strings.TrimSpace(r.PathValue("presetID")))
 	if !ok {
@@ -210,21 +227,14 @@ func (a *API) handlePreviewModelPresetEnablement(w http.ResponseWriter, r *http.
 		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "unsupported schema_version"})
 		return
 	}
-	var active *domain.ModelsConfig
-	err = a.Events.Store.View(r.Context(), func(reader port.Reader) error {
-		revision, loadErr := reader.ActiveConfigRevision(domain.ConfigScopeModels)
-		if errors.Is(loadErr, port.ErrNotFound) {
-			return nil
-		}
-		if loadErr != nil {
-			return loadErr
-		}
-		active = revision.Models
-		return nil
-	})
+	activeRevision, err := a.activeModelsRevision(r.Context())
 	if err != nil {
 		writeAPIError(w, mapStoreError(err, "config_revision"))
 		return
+	}
+	var active *domain.ModelsConfig
+	if activeRevision != nil {
+		active = activeRevision.Models
 	}
 	preview, err := preset.PreviewEnablement(active, strings.TrimSpace(req.Version))
 	if err != nil {
@@ -232,6 +242,85 @@ func (a *API) handlePreviewModelPresetEnablement(w http.ResponseWriter, r *http.
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"schema_version": domain.SchemaVersionV1, "preview": preview})
+}
+
+func (a *API) handleCreateModelPresetEnableDraft(w http.ResponseWriter, r *http.Request) {
+	preset, ok := a.modelPreset(strings.TrimSpace(r.PathValue("presetID")))
+	if !ok {
+		writeAPIError(w, apiError{status: http.StatusNotFound, code: "not_found", message: "model preset not found"})
+		return
+	}
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req modelPresetDraftRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if req.SchemaVersion == 0 {
+		req.SchemaVersion = domain.SchemaVersionV1
+	}
+	if req.SchemaVersion != domain.SchemaVersionV1 || strings.TrimSpace(req.Reason) == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "supported schema_version and reason are required"})
+		return
+	}
+	active, err := a.activeModelsRevision(r.Context())
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	if active == nil {
+		writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: "preset must first be installed disabled as the active MODELS revision"})
+		return
+	}
+	if req.BasedOnRevision != active.Revision {
+		writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: "based_on_revision is stale"})
+		return
+	}
+	preview, err := preset.PreviewEnablement(active.Models, strings.TrimSpace(req.Version))
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
+		return
+	}
+	if preview.Blocked || preview.Candidate == nil {
+		writeJSON(w, http.StatusConflict, map[string]any{"schema_version": domain.SchemaVersionV1, "preview": preview, "error": errorDetail{Code: "conflict", Message: "preset enablement is blocked"}})
+		return
+	}
+	actorType := req.ActorType
+	if actorType == "" {
+		actorType = a.ActorType
+	}
+	actorID := strings.TrimSpace(req.ActorID)
+	if actorID == "" {
+		actorID = a.DefaultActorID
+	}
+	draftID := req.DraftID
+	if draftID == "" {
+		generated, idErr := a.IDs.NewID("cfgdraft")
+		if idErr != nil {
+			writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "identity_failed", message: "could not assign draft identity"})
+			return
+		}
+		draftID = domain.ConfigDraftID(generated)
+	}
+	draft := domain.ConfigDraft{
+		SchemaVersion: req.SchemaVersion, ID: draftID, Scope: domain.ConfigScopeModels,
+		BasedOnRevision: active.Revision, Applicability: domain.ConfigRestartRequired,
+		Status: domain.ConfigDraftOpen, ActorType: actorType, ActorID: actorID,
+		Reason: strings.TrimSpace(req.Reason), Models: preview.Candidate, CreatedAt: a.Clock.Now().UTC(),
+	}
+	if err := draft.Validate(); err != nil {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
+		return
+	}
+	if err := a.Events.Store.Update(r.Context(), func(tx port.Transaction) error { return tx.CreateConfigDraft(draft) }); err != nil {
+		writeAPIError(w, mapStoreError(err, "config_draft"))
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"schema_version": domain.SchemaVersionV1, "preset_id": preset.ID, "draft": draft, "preview": preview, "accepted": true})
 }
 
 func (a *API) handleCreateModelPresetDraft(w http.ResponseWriter, r *http.Request) {

@@ -461,6 +461,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 		  <button type="button" id="btnPresetRefresh">Carregar presets</button>
 		  <button type="button" id="btnPresetDraft">Criar draft desabilitado</button>
 		  <button type="button" id="btnPresetEnablePreview">Preview de habilitação</button>
+		  <button class="danger" type="button" id="btnPresetEnableDraft">Habilitar via novo draft</button>
 		</div>
 		<div id="modelPresetDetail" class="prebox muted">catálogo não carregado</div>
         <div class="okbox" id="cfgOk"></div>
@@ -1343,6 +1344,33 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 	}
   }
 
+  async function createModelPresetEnableDraft() {
+	const id = el("modelPreset").value;
+	const reason = el("cfgReason").value.trim();
+	if (!id || !reason) { el("cfgErr").textContent = "selecione um preset e informe reason"; return; }
+	const base = Number(el("cfgBasedOn").value || "0");
+	try {
+	  const preview = await postJSON(controlBase + "/model-presets/" + encodeURIComponent(id) + "/enablement-preview", {
+		schema_version: 1, version: "models.preset." + id + ".enabled.v1"
+	  });
+	  if (!preview.preview || preview.preview.blocked) {
+		el("cfgDetail").textContent = pretty(preview);
+		throw new Error("habilitação bloqueada; revise o preview");
+	  }
+	  const primary = preview.preview.primary_after || "nenhum";
+	  if (!window.confirm("Criar draft RESTART_REQUIRED para habilitar " + id + "? Primário após restart: " + primary)) return;
+	  const body = await postJSON(controlBase + "/model-presets/" + encodeURIComponent(id) + "/enable-drafts", {
+		schema_version: 1, based_on_revision: base,
+		version: "models.preset." + id + ".enabled.v1", reason: reason
+	  });
+	  el("cfgDetail").textContent = pretty(body);
+	  el("cfgOk").textContent = "draft de habilitação criado; ainda requer validate/apply e restart coordenado";
+	  await refreshConfig(true);
+	} catch (err) {
+	  el("cfgErr").textContent = String(err.message || err);
+	}
+  }
+
   function showInspPanel(name) {
     const panels = {
       summary: "inspSummary",
@@ -1667,6 +1695,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 	el("btnPresetRefresh").addEventListener("click", refreshModelPresets);
 	el("btnPresetDraft").addEventListener("click", createModelPresetDraft);
 	el("btnPresetEnablePreview").addEventListener("click", previewModelPresetEnablement);
+	el("btnPresetEnableDraft").addEventListener("click", createModelPresetEnableDraft);
 	el("modelPreset").addEventListener("change", function () {
 	  const presets = el("modelPreset")._presets || [];
 	  const preset = presets.find(function (p) { return p.id === el("modelPreset").value; });

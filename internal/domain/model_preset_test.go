@@ -108,6 +108,9 @@ func TestModelPresetEnablementPreviewRequiresExactDisabledInstallation(t *testin
 	if preview.Blocked || preview.Candidate == nil || !preview.Candidate.Bindings[0].Enabled {
 		t.Fatalf("enablement preview = %#v", preview)
 	}
+	if !preview.IntroducesFirst || !preview.PrimaryChanged || preview.PrimaryAfter != preset.Binding.ID {
+		t.Fatalf("routing preview = %#v", preview)
+	}
 	if len(preview.Risks) < 4 || preview.EvidenceSHA256 != preset.EvidenceSHA256 {
 		t.Fatalf("risk/evidence projection = %#v", preview)
 	}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 )
@@ -36,13 +37,21 @@ type ModelPresetCatalog struct {
 // MODELS revision still contains the exact evidence-backed provider and
 // disabled binding from the preset.
 type ModelPresetEnablementPreview struct {
-	PresetID       string        `json:"preset_id"`
-	EvidenceReport string        `json:"evidence_report"`
-	EvidenceSHA256 string        `json:"evidence_sha256"`
-	Blocked        bool          `json:"blocked"`
-	BlockReasons   []string      `json:"block_reasons,omitempty"`
-	Risks          []string      `json:"risks"`
-	Candidate      *ModelsConfig `json:"candidate,omitempty"`
+	PresetID        string        `json:"preset_id"`
+	EvidenceReport  string        `json:"evidence_report"`
+	EvidenceSHA256  string        `json:"evidence_sha256"`
+	Blocked         bool          `json:"blocked"`
+	BlockReasons    []string      `json:"block_reasons,omitempty"`
+	Risks           []string      `json:"risks"`
+	EnabledBefore   int           `json:"enabled_before"`
+	EnabledAfter    int           `json:"enabled_after"`
+	RoutingBefore   []string      `json:"routing_before"`
+	RoutingAfter    []string      `json:"routing_after"`
+	PrimaryBefore   string        `json:"primary_before,omitempty"`
+	PrimaryAfter    string        `json:"primary_after,omitempty"`
+	PrimaryChanged  bool          `json:"primary_changed"`
+	IntroducesFirst bool          `json:"introduces_first_enabled_model"`
+	Candidate       *ModelsConfig `json:"candidate,omitempty"`
 }
 
 func DecodeModelPresetCatalog(r io.Reader, maxBytes int64) (ModelPresetCatalog, error) {
@@ -156,7 +165,7 @@ func (p ModelPreset) PreviewEnablement(active *ModelsConfig, version string) (Mo
 	preview := ModelPresetEnablementPreview{
 		PresetID: p.ID, EvidenceReport: p.EvidenceReport, EvidenceSHA256: p.EvidenceSHA256,
 		Risks: []string{
-			"enables external model calls at the next scheduler cycle boundary",
+			"enables external model calls after the applied MODELS revision is activated by coordinated restart",
 			"sends bounded operation prompts to the configured provider",
 			"consumes provider quota and may trigger cooldown or fallback",
 			"requires the configured API-key environment reference at runtime",
@@ -212,5 +221,37 @@ func (p ModelPreset) PreviewEnablement(active *ModelsConfig, version string) (Mo
 		return ModelPresetEnablementPreview{}, err
 	}
 	preview.Candidate = candidate
+	preview.RoutingBefore = enabledModelRouting(active.Bindings)
+	preview.RoutingAfter = enabledModelRouting(candidate.Bindings)
+	preview.EnabledBefore = len(preview.RoutingBefore)
+	preview.EnabledAfter = len(preview.RoutingAfter)
+	if preview.EnabledBefore > 0 {
+		preview.PrimaryBefore = preview.RoutingBefore[0]
+	}
+	if preview.EnabledAfter > 0 {
+		preview.PrimaryAfter = preview.RoutingAfter[0]
+	}
+	preview.PrimaryChanged = preview.PrimaryBefore != preview.PrimaryAfter
+	preview.IntroducesFirst = preview.EnabledBefore == 0 && preview.EnabledAfter == 1
 	return preview, nil
+}
+
+func enabledModelRouting(bindings []ModelBindingConfig) []string {
+	enabled := make([]ModelBindingConfig, 0, len(bindings))
+	for _, binding := range bindings {
+		if binding.Enabled {
+			enabled = append(enabled, binding)
+		}
+	}
+	sort.SliceStable(enabled, func(i, j int) bool {
+		if enabled[i].Priority == enabled[j].Priority {
+			return enabled[i].ID < enabled[j].ID
+		}
+		return enabled[i].Priority < enabled[j].Priority
+	})
+	result := make([]string, len(enabled))
+	for i := range enabled {
+		result[i] = enabled[i].ID
+	}
+	return result
 }
