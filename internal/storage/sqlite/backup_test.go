@@ -57,7 +57,7 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if report.CheckpointRows != 1 {
 		t.Fatalf("checkpoint rows = %d", report.CheckpointRows)
 	}
-	if report.CheckpointFormat != memory.CheckpointFormatVersion || len(report.CheckpointSHA256) != sha256.Size*2 || report.IntegrityCheck != "ok" {
+	if report.CheckpointFormat != memory.CheckpointFormatVersion || len(report.CheckpointSHA256) != sha256.Size*2 || report.IntegrityCheck != "ok" || report.ForeignKeyCheck != "ok" {
 		t.Fatalf("backup verification report = %#v", report)
 	}
 	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
@@ -475,6 +475,37 @@ func TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects(t *testing.T) {
 				t.Fatalf("verification error = %v, want unexpected schema-object rejection", err)
 			}
 		})
+	}
+}
+
+func TestVerifyBackupRejectsCheckpointConstraintViolation(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`PRAGMA ignore_check_constraints=ON`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO runtime_checkpoint(id, format_version, payload) VALUES(2, 0, X'00')`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := storage.VerifyBackup(path); err == nil || (!strings.Contains(err.Error(), "integrity_check") && !strings.Contains(err.Error(), "total rows")) {
+		t.Fatalf("verification error = %v, want checkpoint constraint rejection", err)
 	}
 }
 

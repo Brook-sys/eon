@@ -38,6 +38,7 @@ type BackupReport struct {
 	CheckpointFormat int           `json:"checkpoint_format,omitempty"`
 	CheckpointSHA256 string        `json:"checkpoint_sha256,omitempty"`
 	IntegrityCheck   string        `json:"integrity_check"`
+	ForeignKeyCheck  string        `json:"foreign_key_check"`
 }
 
 // BackupVerification records both SQLite page-level verification and the
@@ -53,6 +54,7 @@ type BackupVerification struct {
 	CheckpointFormat int    `json:"checkpoint_format,omitempty"`
 	CheckpointSHA256 string `json:"checkpoint_sha256,omitempty"`
 	IntegrityCheck   string `json:"integrity_check"`
+	ForeignKeyCheck  string `json:"foreign_key_check"`
 }
 
 // VerificationOptions optionally pins the digest recorded when the backup was
@@ -229,6 +231,7 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		CheckpointFormat: verification.CheckpointFormat,
 		CheckpointSHA256: verification.CheckpointSHA256,
 		IntegrityCheck:   verification.IntegrityCheck,
+		ForeignKeyCheck:  verification.ForeignKeyCheck,
 	}, nil
 }
 
@@ -448,13 +451,32 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("open backup for verification read-only: %w", err)
 	}
 	var integrity string
-	if err := db.QueryRow(`PRAGMA quick_check`).Scan(&integrity); err != nil {
+	if err := db.QueryRow(`PRAGMA integrity_check(1)`).Scan(&integrity); err != nil {
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages: %w", err)
 	}
 	if integrity != "ok" {
 		db.Close()
-		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages: quick_check=%q", integrity)
+		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages and constraints: integrity_check=%q", integrity)
+	}
+	foreignKeyRows, err := db.Query(`PRAGMA foreign_key_check`)
+	if err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup foreign keys: %w", err)
+	}
+	if foreignKeyRows.Next() {
+		foreignKeyRows.Close()
+		db.Close()
+		return BackupVerification{}, errors.New("verify backup foreign keys: violation found")
+	}
+	if err := foreignKeyRows.Err(); err != nil {
+		foreignKeyRows.Close()
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup foreign keys: %w", err)
+	}
+	if err := foreignKeyRows.Close(); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("close backup foreign-key check: %w", err)
 	}
 	var schemaVersion int
 	if err := db.QueryRow(`PRAGMA schema_version`).Scan(&schemaVersion); err != nil {
@@ -480,19 +502,24 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("verify backup runtime schema: unexpected object type=%q name=%q table=%q", schemaType, schemaName, tableName)
 	}
 	schemaDigest := sha256.Sum256([]byte(schemaSQL))
-	var count int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM runtime_checkpoint WHERE id = 1`).Scan(&count); err != nil {
+	var count, canonicalCount int
+	if err := db.QueryRow(`SELECT COUNT(*), COUNT(*) FILTER (WHERE id = 1) FROM runtime_checkpoint`).Scan(&count, &canonicalCount); err != nil {
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("verify backup checkpoint: %w", err)
 	}
+	if count != canonicalCount {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup checkpoint: got %d total rows but %d canonical id=1 rows", count, canonicalCount)
+	}
 	verification := BackupVerification{
-		FileSize:       beforeSize,
-		SHA256:         beforeDigest,
-		SchemaVersion:  schemaVersion,
-		SchemaObjects:  schemaObjects,
-		SchemaSHA256:   hex.EncodeToString(schemaDigest[:]),
-		CheckpointRows: count,
-		IntegrityCheck: integrity,
+		FileSize:        beforeSize,
+		SHA256:          beforeDigest,
+		SchemaVersion:   schemaVersion,
+		SchemaObjects:   schemaObjects,
+		SchemaSHA256:    hex.EncodeToString(schemaDigest[:]),
+		CheckpointRows:  count,
+		IntegrityCheck:  integrity,
+		ForeignKeyCheck: "ok",
 	}
 	if options.ExpectedSchemaVersion != nil {
 		if *options.ExpectedSchemaVersion < 0 {

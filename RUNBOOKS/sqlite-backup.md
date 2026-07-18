@@ -17,7 +17,7 @@ store, err := sqlite.Open(path)
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
 // report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
 // SchemaVersion, SchemaObjects, SchemaSHA256, CheckpointRows, CheckpointFormat,
-// CheckpointSHA256 e IntegrityCheck
+// CheckpointSHA256, IntegrityCheck e ForeignKeyCheck
 ```
 
 Comportamento:
@@ -68,6 +68,9 @@ go run ./cmd/sqlite-backup \
 ```
 
 A API equivalente é `sqlite.VerifyBackup(path)`. A auditoria abre o artefato
+imutavelmente, executa `PRAGMA integrity_check(1)` (incluindo constraints),
+exige `PRAGMA foreign_key_check` sem violações e confere que toda linha de
+`runtime_checkpoint` usa o único ID canônico `1`. Depois disso,
 com SQLite `mode=ro&immutable=1`: não cria banco ausente, não executa migração
 ou configuração e não deixa WAL/SHM/journal ao lado do backup. O resultado
 válido registra `IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo
