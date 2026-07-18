@@ -52,7 +52,8 @@ type BackupVerification struct {
 // VerificationOptions optionally pins the digest recorded when the backup was
 // created or transferred. Empty means compute and report without comparison.
 type VerificationOptions struct {
-	ExpectedSHA256 string
+	ExpectedSHA256           string
+	ExpectedCheckpointSHA256 string
 }
 
 // BackupOptions configures online backup behavior.
@@ -66,8 +67,9 @@ type BackupOptions struct {
 // configures the page copy. Even without an explicit digest, RestoreTo records
 // the verified source digest and rejects source changes during the restore.
 type RestoreOptions struct {
-	ExpectedSHA256 string
-	Backup         BackupOptions
+	ExpectedSHA256           string
+	ExpectedCheckpointSHA256 string
+	Backup                   BackupOptions
 }
 
 // BackupTo creates a consistent online copy of the store database at destPath
@@ -352,7 +354,10 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	if err := ctx.Err(); err != nil {
 		return BackupReport{}, err
 	}
-	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{ExpectedSHA256: options.ExpectedSHA256})
+	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{
+		ExpectedSHA256:           options.ExpectedSHA256,
+		ExpectedCheckpointSHA256: options.ExpectedCheckpointSHA256,
+	})
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("verify restore source: %w", err)
 	}
@@ -388,6 +393,10 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	expected, err := normalizeExpectedSHA256(options.ExpectedSHA256)
 	if err != nil {
 		return BackupVerification{}, err
+	}
+	expectedCheckpoint, err := normalizeExpectedSHA256(options.ExpectedCheckpointSHA256)
+	if err != nil {
+		return BackupVerification{}, fmt.Errorf("expected checkpoint SHA-256: %w", err)
 	}
 	if err := rejectSQLiteSidecars(path); err != nil {
 		return BackupVerification{}, err
@@ -453,6 +462,10 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		verification.CheckpointFormat = formatVersion
 		payloadDigest := sha256.Sum256(payload)
 		verification.CheckpointSHA256 = hex.EncodeToString(payloadDigest[:])
+	}
+	if expectedCheckpoint != "" && verification.CheckpointSHA256 != expectedCheckpoint {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup checkpoint digest: got %q, want %s", verification.CheckpointSHA256, expectedCheckpoint)
 	}
 	if err := db.Close(); err != nil {
 		return BackupVerification{}, fmt.Errorf("close backup verification database: %w", err)

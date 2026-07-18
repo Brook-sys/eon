@@ -75,6 +75,12 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if verified.FileSize != report.FileSize || verified.SHA256 != report.SHA256 || verified.CheckpointSHA256 != report.CheckpointSHA256 {
 		t.Fatalf("verification identity = %#v, report = %#v", verified, report)
 	}
+	if _, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{
+		ExpectedSHA256:           report.SHA256,
+		ExpectedCheckpointSHA256: report.CheckpointSHA256,
+	}); err != nil {
+		t.Fatalf("verify pinned physical and logical identity: %v", err)
+	}
 
 	// Source must remain usable after backup.
 	if err := source.View(context.Background(), func(r port.Reader) error {
@@ -244,7 +250,8 @@ func TestRestoreToPinsExpectedSourceDigest(t *testing.T) {
 	}
 
 	report, err := storage.RestoreToWithOptions(context.Background(), backupPath, destination, storage.RestoreOptions{
-		ExpectedSHA256: verification.SHA256,
+		ExpectedSHA256:           verification.SHA256,
+		ExpectedCheckpointSHA256: verification.CheckpointSHA256,
 	})
 	if err != nil {
 		t.Fatalf("restore with pinned digest: %v", err)
@@ -254,6 +261,44 @@ func TestRestoreToPinsExpectedSourceDigest(t *testing.T) {
 	}
 	if report.CheckpointSHA256 != verification.CheckpointSHA256 {
 		t.Fatalf("checkpoint digest = %q, want %q", report.CheckpointSHA256, verification.CheckpointSHA256)
+	}
+}
+
+func TestVerifyAndRestoreRejectWrongCheckpointDigest(t *testing.T) {
+	dir := t.TempDir()
+	backupPath := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	verification, err := storage.VerifyBackup(backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrong := strings.Repeat("0", sha256.Size*2)
+	if wrong == verification.CheckpointSHA256 {
+		wrong = strings.Repeat("f", sha256.Size*2)
+	}
+	if _, err := storage.VerifyBackupWithOptions(backupPath, storage.VerificationOptions{
+		ExpectedCheckpointSHA256: wrong,
+	}); err == nil {
+		t.Fatal("verification accepted the wrong checkpoint digest")
+	}
+	destination := filepath.Join(dir, "restored.sqlite")
+	if _, err := storage.RestoreToWithOptions(context.Background(), backupPath, destination, storage.RestoreOptions{
+		ExpectedSHA256:           verification.SHA256,
+		ExpectedCheckpointSHA256: wrong,
+	}); err == nil {
+		t.Fatal("restore accepted the wrong checkpoint digest")
+	}
+	if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("checkpoint mismatch left destination: %v", err)
 	}
 }
 

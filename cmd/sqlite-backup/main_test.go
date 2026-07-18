@@ -40,7 +40,11 @@ func TestRunBackupAndVerify(t *testing.T) {
 	}
 
 	var verifyOut bytes.Buffer
-	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath, "-expected-sha256=" + report.SHA256}, &verifyOut); err != nil {
+	if err := run(context.Background(), []string{
+		"-mode=verify", "-path=" + backupPath,
+		"-expected-sha256=" + report.SHA256,
+		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
+	}, &verifyOut); err != nil {
 		t.Fatal(err)
 	}
 	var verification sqlite.BackupVerification
@@ -59,6 +63,7 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if err := run(context.Background(), []string{
 		"-mode=restore", "-source=" + backupPath, "-destination=" + restoredPath,
 		"-expected-sha256=" + report.SHA256,
+		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
 	}, &restoreOut); err != nil {
 		t.Fatal(err)
 	}

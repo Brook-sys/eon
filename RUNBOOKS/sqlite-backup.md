@@ -79,10 +79,13 @@ identidade registrada na verificação:
 go run ./cmd/sqlite-backup \
   -mode=verify \
   -path=/mnt/restore/runtime-YYYYMMDD.sqlite \
-  -expected-sha256=<sha256_emitido_no_backup>
+  -expected-sha256=<sha256_emitido_no_backup> \
+  -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup>
 ```
 
-A opção `-expected-sha256` rejeita digest malformado ou divergente. A auditoria
+A opção `-expected-sha256` fixa a identidade física transferida e
+`-expected-checkpoint-sha256` fixa a identidade lógica do estado serializado;
+ambas rejeitam digest malformado ou divergente. A auditoria
 calcula o hash antes e depois de `quick_check`/decode e falha se o arquivo mudar
 durante a verificação. O path auditado precisa ser um arquivo regular direto:
 symlinks são recusados, e a identidade do inode é conferida entre hash,
@@ -103,10 +106,12 @@ go run ./cmd/sqlite-backup \
   -mode=restore \
   -source=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
   -destination=/var/lib/motor-autonomo/runtime-restored.sqlite \
-  -expected-sha256=<sha256_emitido_no_backup>
+  -expected-sha256=<sha256_emitido_no_backup> \
+  -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup>
 ```
 
-O digest esperado vincula a restauração ao artefato selecionado no inventário,
+Os dois digests esperados vinculam a restauração ao arquivo e ao checkpoint
+selecionados no inventário,
 em vez de apenas a qualquer SQLite estruturalmente válido. A implementação
 também verifica novamente a origem depois da cópia e remove o destino se a
 origem tiver mudado durante a restauração; isso torna verificável a exigência
@@ -123,6 +128,8 @@ divergência lógica remove o destino antes da publicação operacional.
 
 A API equivalente com identidade fixada é `sqlite.RestoreToWithOptions(ctx,
 backupPath, newRuntimePath, sqlite.RestoreOptions{ExpectedSHA256: digest})`.
+Para fixar também o estado lógico, preencha
+`ExpectedCheckpointSHA256: checkpointDigest`.
 `RestoreTo` permanece como atalho compatível, mas ainda fixa internamente o
 digest observado na primeira verificação, verifica novamente a origem após a
 cópia e verifica o destino por meio de `BackupTo`.

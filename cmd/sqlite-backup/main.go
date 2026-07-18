@@ -32,6 +32,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	pageSteps := fs.Int("page-steps", 0, "pages per sqlite backup step (0 = all remaining)")
 	path := fs.String("path", "", "existing backup path (verify mode)")
 	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify or restore mode)")
+	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -64,7 +65,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		if *path == "" {
 			return errors.New("verify mode requires -path")
 		}
-		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{ExpectedSHA256: *expectedSHA256})
+		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{
+			ExpectedSHA256:           *expectedSHA256,
+			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
+		})
 		if err != nil {
 			return fmt.Errorf("verify: %w", err)
 		}
@@ -83,8 +87,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 			return fmt.Errorf("page-steps must be between 0 and %d", math.MaxInt32)
 		}
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
-			ExpectedSHA256: *expectedSHA256,
-			Backup:         storage.BackupOptions{PageSteps: int32(*pageSteps)},
+			ExpectedSHA256:           *expectedSHA256,
+			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
+			Backup:                   storage.BackupOptions{PageSteps: int32(*pageSteps)},
 		})
 		if err != nil {
 			return fmt.Errorf("restore: %w", err)
