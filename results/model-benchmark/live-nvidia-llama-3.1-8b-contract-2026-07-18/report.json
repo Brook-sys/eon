@@ -1,0 +1,657 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v1",
+  "model": "meta/llama-3.1-8b-instruct",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 178,
+      "duration_millis": 2166,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To extract the publication date and source identifier, we can use the following Python code:\n\n```python\n# Define the facts\nfacts = {\n    \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n    \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n}\n\n# Extract the publication date and source identifier\npublication_date = facts[\"F1\"][\"date\"]\nsource_identifier = facts[\"F1\"][\"source\"]\n\n# Print the results\nprint(\"date={}\".format(publication_date))\nprint(\"source={}\".format(source_identifier))\n```\n\nThis code will output:\n\n```\ndate=2025-11-03\nsource=S-17\n```\n\nThis meets the requirements of returning exactly one line per key as KEY=VALUE, using only the allowed values."
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 178,
+      "duration_millis": 1298,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To extract the publication date and source identifier, we can use the following Python code:\n\n```python\n# Define the facts\nfacts = {\n    \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n    \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n}\n\n# Extract the publication date and source identifier\npublication_date = facts[\"F1\"][\"date\"]\nsource_identifier = facts[\"F1\"][\"source\"]\n\n# Print the results\nprint(\"date={}\".format(publication_date))\nprint(\"source={}\".format(source_identifier))\n```\n\nThis code will output:\n\n```\ndate=2025-11-03\nsource=S-17\n```\n\nThis meets the requirements of returning exactly one line per key as KEY=VALUE, using only the allowed values."
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 175,
+      "duration_millis": 1685,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To extract the publication date and source identifier, we can use the following Python code:\n\n```python\n# Define the facts\nfacts = {\n    \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n    \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n}\n\n# Extract the publication date and source identifier\npublication_date = facts[\"F1\"][\"date\"]\nsource_identifier = facts[\"F1\"][\"source\"]\n\n# Print the results\nprint(\"date=\" + publication_date)\nprint(\"source=\" + source_identifier)\n```\n\nThis code will output:\n\n```\ndate=2025-11-03\nsource=S-17\n```\n\nThis meets the requirements of returning exactly one line per key as KEY=VALUE, using only the allowed values."
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 14,
+      "duration_millis": 428,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 14,
+      "duration_millis": 436,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 14,
+      "duration_millis": 389,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 171,
+      "output_tokens": 256,
+      "duration_millis": 1833,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_date_and_source():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n        dict: A dictionary containing the publication date and source identifier.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"publication_date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"publication_date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"publication_date\"]\n    source = facts[\"F1\"][\"source\"]\n    \n    # Return the extracted information as a JSON object\n    return json.dumps({\"date\": publication_date, \"source\": source})\n\n# Print the extracted information\nprint(extract_publication_date_and_source())\n```\n\nThis code defines a function `extract_publication_date_and_source` that takes no arguments and returns a JSON object containing the publication date and source identifier. The function uses the provided facts to extract the required information and returns it as a JSON object. The `json.dumps` function is used to convert the dictionary into a JSON string"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 171,
+      "output_tokens": 256,
+      "duration_millis": 1618,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_date_and_source():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with the original publication date and source identifier.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"publication_date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"publication_date\": \"2025-11-04\"}\n    }\n    \n    # Extract the original publication date and source identifier\n    publication_date = facts[\"F1\"][\"publication_date\"]\n    source = facts[\"F1\"][\"source\"]\n    \n    # Return the extracted information as a JSON object\n    return json.dumps({\"date\": publication_date, \"source\": source})\n\n# Print the extracted information\nprint(extract_publication_date_and_source())\n```\n\nThis code defines a function `extract_publication_date_and_source` that extracts the original publication date and source identifier from the given facts. It returns a JSON object with the extracted information. The function is then called and the result is printed.\n\nWhen you run this code, it will output:\n```json\n{\"date\": \"2025"
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 171,
+      "output_tokens": 225,
+      "duration_millis": 4068,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\n# Define the facts\nfacts = {\n    \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n    \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n}\n\n# Extract the publication date and source identifier\nfor fact in facts.values():\n    if fact[\"date\"] == \"2025-11-03\":\n        publication_date = fact[\"date\"]\n        source_identifier = fact[\"source\"]\n\n# Create the output JSON object\noutput = {\n    \"date\": publication_date,\n    \"source\": source_identifier\n}\n\n# Print the output\nprint(json.dumps(output, indent=4))\n```\n\nThis code will output:\n```json\n{\n    \"date\": \"2025-11-03\",\n    \"source\": \"S-17\"\n}\n```\n\nThis code iterates over the facts, checks if the date matches the expected date, and then extracts the publication date and source identifier. It then creates a JSON object with the extracted information and prints it."
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 344,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 344,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 381,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 389,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 388,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 159,
+      "output_tokens": 9,
+      "duration_millis": 388,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 157,
+      "output_tokens": 256,
+      "duration_millis": 1803,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the claim and observation.\n\n    Returns:\n    dict: A JSON object with the decisive observation and support status.\n    \"\"\"\n    claim = facts['F1']\n    observation = facts['F2']\n\n    # Check if the observation supports the claim\n    if claim == \"all measured retries completed without duplicate effects\" and observation == \"30 of 30 measured retries completed with exactly one effect\":\n        support = \"YES\"\n    else:\n        support = \"NO\"\n\n    # Return the decisive observation and support status as a JSON object\n    return json.dumps({\n        \"observation\": observation,\n        \"support\": support\n    })\n\n# Example usage:\nfacts = {\n    \"F1\": \"Claim C-4: all measured retries completed without duplicate effects.\",\n    \"F2\": \"Observation O-9: 30 of 30 measured retries completed with exactly one effect.\"\n}\n\nprint(determine_support(facts))\n```\n\nThis code defines a function `determine_support` that takes a dictionary of facts as input. It checks if the observation supports the claim and returns"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 157,
+      "output_tokens": 256,
+      "duration_millis": 2339,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the claim and observation.\n\n    Returns:\n    dict: A JSON object with the decisive observation and support status.\n    \"\"\"\n    claim = facts.get('F1', '')\n    observation = facts.get('F2', '')\n\n    # Check if the claim and observation are provided\n    if not claim or not observation:\n        return {'observation': '', 'support': 'NO'}\n\n    # Check if the observation supports the claim\n    if 'all measured retries completed without duplicate effects' in claim and 'completed with exactly one effect' in observation:\n        return {'observation': observation, 'support': 'YES'}\n    else:\n        return {'observation': '', 'support': 'NO'}\n\n# Example usage\nfacts = {\n    'F1': 'Claim C-4: all measured retries completed without duplicate effects.',\n    'F2': 'Observation O-9: 30 of 30 measured retries completed with exactly one effect.'\n}\n\nresult = determine_support(facts)\nprint(json.dumps(result, indent=4))\n```\n\nThis code defines a function `determine_support`"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 157,
+      "output_tokens": 256,
+      "duration_millis": 2299,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef determine_support(facts):\n    \"\"\"\n    Determine whether the evidence supports the claim and identify the decisive observation.\n\n    Args:\n    facts (dict): A dictionary containing the claim and observation.\n\n    Returns:\n    dict: A JSON object with the decisive observation and support status.\n    \"\"\"\n    claim = facts['F1']\n    observation = facts['F2']\n\n    # Check if the observation supports the claim\n    if claim == \"all measured retries completed without duplicate effects\" and observation == \"30 of 30 measured retries completed with exactly one effect\":\n        support = \"YES\"\n    else:\n        support = \"NO\"\n\n    # Return the decisive observation and support status as a JSON object\n    return {\n        \"observation\": observation,\n        \"support\": support\n    }\n\n# Example usage:\nfacts = {\n    \"F1\": \"all measured retries completed without duplicate effects\",\n    \"F2\": \"30 of 30 measured retries completed with exactly one effect\"\n}\n\nresult = determine_support(facts)\nprint(json.dumps(result, indent=4))\n```\n\nThis code defines a function `determine_support` that takes a dictionary of facts as input. It checks if the observation supports the claim and returns a JSON object with the"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 256,
+      "duration_millis": 1716,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To classify whether the two observations conflict about the same measured property, we can follow these steps:\n\n1. Identify the measured property (in this case, latency p95).\n2. Check if the subject (service) and configuration are the same.\n3. Check if the time is the same.\n4. If all conditions are met, return conflict=YES and the pair of observations.\n\nHere's the Python code to solve this problem:\n\n```python\ndef classify_conflict(facts):\n    # Extract the measured property, subject, configuration, and time from the facts\n    o1_property = facts['F1']['o1']['property']\n    o1_subject = facts['F1']['o1']['subject']\n    o1_config = facts['F1']['o1']['configuration']\n    o1_time = facts['F1']['o1']['time']\n    \n    o2_property = facts['F2']['o2']['property']\n    o2_subject = facts['F2']['o2']['subject']\n    o2_config = facts['F2']['o2']['configuration']\n    o2_time = facts['F2']['o2']['time']\n    \n    # Check if the measured property, subject, configuration, and time are the same\n    if o"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 256,
+      "duration_millis": 2732,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To classify whether the two observations conflict about the same measured property, we can follow these steps:\n\n1. Identify the measured property (in this case, latency p95).\n2. Check if the subject (service) and configuration are the same.\n3. Check if the time is the same.\n4. If all conditions are met, check if the values disagree.\n\nHere's the Python code to solve this problem:\n\n```python\ndef classify_conflict(facts):\n    # Extract the measured property, subject, configuration, and time\n    p1 = facts['F1']['property']\n    p2 = facts['F2']['property']\n    s1 = facts['F1']['subject']\n    s2 = facts['F2']['subject']\n    c1 = facts['F1']['configuration']\n    c2 = facts['F2']['configuration']\n    t1 = facts['F1']['time']\n    t2 = facts['F2']['time']\n    v1 = facts['F1']['value']\n    v2 = facts['F2']['value']\n\n    # Check if the measured property, subject, configuration, and time are the same\n    if p1 == p2 and s1 == s2 and c1 == c2 and t"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 188,
+      "output_tokens": 256,
+      "duration_millis": 2188,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "To classify whether the two observations conflict about the same measured property, we can follow these steps:\n\n1. Identify the measured property (in this case, latency p95).\n2. Check if the subject (service) and configuration are the same.\n3. Check if the time is the same.\n4. If all conditions are met, return conflict=YES and the pair of observations.\n\nHere's a Python function to achieve this:\n\n```python\ndef classify_conflict(facts):\n    # Extract facts\n    o1 = facts['F1']\n    o2 = facts['F2']\n\n    # Extract measured property, subject, configuration, and time\n    p1 = o1.split(' ')[-1].split('=')[1]\n    p2 = o2.split(' ')[-1].split('=')[1]\n    s1 = o1.split(' ')[1]\n    s2 = o2.split(' ')[1]\n    c1 = o1.split(' ')[-2]\n    c2 = o2.split(' ')[-2]\n    t1 = o1.split(' ')[-3]\n    t2 = o2.split(' ')[-3]\n\n    # Check if measured property, subject, configuration, and time are the same\n    if p1"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 186,
+      "output_tokens": 13,
+      "duration_millis": 387,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "pair=O-1/O-2\nconflict=YES",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 186,
+      "output_tokens": 34,
+      "duration_millis": 490,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "property=latency\nsubject=service\nconfiguration=10:00\ntime=10:00\npair=O-1/O-2\nconflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 186,
+      "output_tokens": 13,
+      "duration_millis": 398,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "pair=O-1/O-2\nconflict=YES",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 184,
+      "output_tokens": 256,
+      "duration_millis": 1741,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef classify_conflict(facts):\n    \"\"\"\n    Classify whether the two observations conflict about the same measured property.\n\n    Args:\n    facts (dict): A dictionary containing the facts.\n        Each key is a fact identifier (e.g., F1, F2) and each value is another dictionary.\n        The inner dictionary has the following keys:\n            - o1 (str): The identifier of the first observation.\n            - o2 (str): The identifier of the second observation.\n            - time (str): The time at which the measurements were taken.\n            - property (str): The measured property (e.g., latency p95).\n            - value (str): The measured value.\n\n    Returns:\n    dict: A dictionary with the following keys:\n        - conflict (str): YES if the observations conflict, NO otherwise.\n        - pair (str): The pair of observation identifiers if the observations conflict, otherwise None.\n    \"\"\"\n\n    # Extract the facts\n    f1 = facts['F1']\n    f2 = facts['F2']\n\n    # Check if the observations were taken at the same time\n    if f1['time'] != f2['time']:\n        return {'conflict': 'NO', 'pair"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 184,
+      "output_tokens": 256,
+      "duration_millis": 1730,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef classify_conflict(facts):\n    \"\"\"\n    Classify whether the two observations conflict about the same measured property.\n\n    Args:\n    facts (list): A list of dictionaries, where each dictionary contains a fact.\n                 Each fact should have the following keys: 'o' (observation), 'p' (property), 't' (time), 'v' (value).\n\n    Returns:\n    dict: A dictionary with the keys 'conflict' and 'pair'.\n    \"\"\"\n\n    # Check if there are at least two facts\n    if len(facts) \u003c 2:\n        return {'conflict': 'NO', 'pair': None}\n\n    # Get the properties, subjects, configurations, and times from the facts\n    properties = [fact['p'] for fact in facts]\n    subjects = [fact['o'] for fact in facts]\n    configurations = [fact['c'] for fact in facts]\n    times = [fact['t'] for fact in facts]\n    values = [fact['v'] for fact in facts]\n\n    # Check if the properties, subjects, configurations, and times are the same\n    if len(set(properties)) == 1 and len(set(subjects)) == 1 and len"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 184,
+      "output_tokens": 256,
+      "duration_millis": 1716,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef classify_conflict(facts):\n    \"\"\"\n    Classify whether the two observations conflict about the same measured property.\n\n    Args:\n    facts (list): A list of dictionaries containing the facts.\n                 Each dictionary should have the following keys:\n                 - 'o1' or 'o2': The observation number.\n                 - 'property': The measured property (e.g., 'latency p95').\n                 - 'value': The measured value.\n                 - 'time': The time of measurement.\n\n    Returns:\n    dict: A dictionary with the following keys:\n         - 'conflict': A string indicating whether there is a conflict (YES or NO).\n         - 'pair': A string indicating the pair of observations that conflict (e.g., 'O-1/O-2').\n    \"\"\"\n\n    # Extract the properties, subjects, configurations, and times from the facts\n    o1_property = facts[0]['o1']['property']\n    o1_value = facts[0]['o1']['value']\n    o1_time = facts[0]['o1']['time']\n    o2_property = facts[0]['o2']['property']\n    o2_value = facts[0]['o2']['value']\n    o2_time"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 169,
+      "output_tokens": 17,
+      "duration_millis": 399,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 169,
+      "output_tokens": 17,
+      "duration_millis": 401,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 169,
+      "output_tokens": 17,
+      "duration_millis": 406,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 167,
+      "output_tokens": 183,
+      "duration_millis": 1518,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef repair_quote():\n    # Define the facts\n    fragment = \"The kernel rejected the stale base revision.\"\n    proposal = \"The kernel accepted the stale base revision.\"\n\n    # Repair the proposed quote to match the source fragment\n    repaired_quote = fragment\n\n    # Return the repaired quote and status\n    return json.dumps({\n        \"quote\": repaired_quote,\n        \"status\": \"REPAIRED\"\n    })\n\n# Call the function and print the result\nprint(repair_quote())\n```\n\nThis code defines a function `repair_quote` that takes no arguments and returns a JSON object with the repaired quote and status. The function uses the facts provided to repair the proposed quote, which is then returned as a JSON object. The `json.dumps` function is used to convert the Python dictionary into a JSON string. When the function is called, it prints the result."
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 167,
+      "output_tokens": 256,
+      "duration_millis": 1748,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\ndef repair_quote(fragment):\n    \"\"\"\n    Repair the proposed quote so it exactly matches the source fragment.\n\n    Args:\n        fragment (str): The source fragment.\n\n    Returns:\n        dict: A JSON object with 'quote' and 'status' keys.\n    \"\"\"\n    # Define the facts\n    f1 = \"The kernel rejected the stale base revision.\"\n    f2 = \"The kernel accepted the stale base revision.\"\n\n    # Check if the fragment matches the first fact\n    if fragment == f1:\n        # Return the repaired quote and status\n        return {\"quote\": f1, \"status\": \"REPAIRED\"}\n    # Check if the fragment matches the second fact\n    elif fragment == f2:\n        # Return the repaired quote and status\n        return {\"quote\": f2, \"status\": \"REPAIRED\"}\n    else:\n        # Return an error message if the fragment does not match either fact\n        return {\"quote\": \"Unknown fragment\", \"status\": \"UNKNOWN\"}\n\n# Test the function\nprint(repair_quote(\"The kernel rejected the stale base revision.\"))\nprint(repair_quote(\"The kernel accepted the stale base revision.\"))\nprint(repair_quote(\"Unknown fragment\"))\n```\n\nThis code defines a"
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 167,
+      "output_tokens": 64,
+      "duration_millis": 641,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "```json\n{\n  \"quote\": \"The kernel rejected the stale base revision.\",\n  \"status\": \"REPAIRED\"\n}\n```\n\nThis output exactly matches the source fragment (F1) and is the repaired quote. The status is set to \"REPAIRED\" as per the constraints.",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    }
+  ],
+  "summary": {
+    "total": 33,
+    "compiled": 33,
+    "syntax_valid": 15,
+    "semantically_correct": 15,
+    "input_tokens": 5670,
+    "output_tokens": 4282,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 18
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 2,
+        "semantically_correct": 2,
+        "omitted_facts": 0,
+        "errors": 7
+      },
+      {
+        "label": "EXTRACT",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "REPAIR",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 2
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 6,
+        "semantically_correct": 6,
+        "omitted_facts": 0,
+        "errors": 3
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 9,
+        "compiled": 9,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "DELIMITED",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 11,
+        "semantically_correct": 11,
+        "omitted_facts": 0,
+        "errors": 1
+      },
+      {
+        "label": "JSON",
+        "total": 12,
+        "compiled": 12,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 11
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 5,
+        "semantically_correct": 5,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "4096",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 7
+      },
+      {
+        "label": "8192",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 6,
+        "semantically_correct": 6,
+        "omitted_facts": 0,
+        "errors": 5
+      }
+    ]
+  }
+}
