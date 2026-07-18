@@ -144,6 +144,7 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [x] `DONE` Backup online SQLite + runbook antes de dados não descartáveis.
   - Evidência: `Store.BackupTo` / `ClosedCopyTo` em `internal/storage/sqlite` (API `sqlite3_backup_*` via modernc), testes de reopen/anti-overwrite/store vazio, ADR-0003 §Backup atualizado, `RUNBOOKS/sqlite-backup.md`.
   - Hardening (2026-07-18): `VerifyBackup` audita cópias existentes sem migração, combinando `PRAGMA quick_check`, versão externa, SHA-256/framing e decode integral do checkpoint; o backup online só retorna sucesso após essa verificação e projeta formato/integridade no relatório. Testes adulteram separadamente versão e payload.
+  - Operação (2026-07-18): `cmd/sqlite-backup` expõe backup offline fail-closed e verificação independente com relatório JSON, validando argumentos e reutilizando somente `ClosedCopyTo`/`VerifyBackup`; o runbook possui comandos copiáveis e testes end-to-end do CLI.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -351,6 +352,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 08:40 — Framing/identidade de checkpoint — decoder agora rejeita documentos gob concatenados e os adapters validam concordância entre `format_version` externo e envelope interno antes do restore; compatibilidade v0/v1 ficou fail-closed e explícita — verificação: testes memory/SQLite/Dolt, suite completa, vet e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 09:20 — Verificação restaurável de backup SQLite — backup online e auditoria offline agora exigem páginas SQLite íntegras, versão externa concordante, digest/framing e decode completo; relatório expõe formato e `quick_check`, com regressões para versão divergente e payload adulterado — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
+
+2026-07-18 09:40 — Operação de backup SQLite — novo `cmd/sqlite-backup` cria cópia offline sem overwrite ou verifica backup existente, em ambos os casos emitindo JSON; runbook ganhou comandos executáveis e testes cobrem fluxo backup→verify e argumentos fail-closed — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
 2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 

@@ -1,0 +1,68 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"path/filepath"
+	"testing"
+
+	"motor-autonomo/internal/storage/sqlite"
+)
+
+func TestRunBackupAndVerify(t *testing.T) {
+	dir := t.TempDir()
+	sourcePath := filepath.Join(dir, "runtime.sqlite")
+	backupPath := filepath.Join(dir, "backup.sqlite")
+
+	store, err := sqlite.Open(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Opening and closing creates a valid empty canonical store, which is enough
+	// to exercise the operational command without coupling it to domain fixtures.
+	var backupOut bytes.Buffer
+	if err := run(context.Background(), []string{
+		"-mode=backup", "-source=" + sourcePath, "-destination=" + backupPath,
+	}, &backupOut); err != nil {
+		t.Fatal(err)
+	}
+	var report sqlite.BackupReport
+	if err := json.Unmarshal(backupOut.Bytes(), &report); err != nil {
+		t.Fatalf("decode report: %v\n%s", err, backupOut.String())
+	}
+	if report.SourcePath != sourcePath || report.DestinationPath != backupPath || report.IntegrityCheck != "ok" {
+		t.Fatalf("unexpected report: %+v", report)
+	}
+
+	var verifyOut bytes.Buffer
+	if err := run(context.Background(), []string{"-mode=verify", "-path=" + backupPath}, &verifyOut); err != nil {
+		t.Fatal(err)
+	}
+	var verification sqlite.BackupVerification
+	if err := json.Unmarshal(verifyOut.Bytes(), &verification); err != nil {
+		t.Fatalf("decode verification: %v", err)
+	}
+	if verification.IntegrityCheck != "ok" {
+		t.Fatalf("unexpected verification: %+v", verification)
+	}
+}
+
+func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
+	for _, args := range [][]string{
+		{"-mode=backup"},
+		{"-mode=backup", "-source=x"},
+		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=-1"},
+		{"-mode=backup", "-source=x", "-destination=y", "-page-steps=2147483648"},
+		{"-mode=verify"},
+		{"-mode=unknown"},
+	} {
+		if err := run(context.Background(), args, &bytes.Buffer{}); err == nil {
+			t.Fatalf("args %v unexpectedly succeeded", args)
+		}
+	}
+}

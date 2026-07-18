@@ -35,13 +35,30 @@ Regras:
 ## Procedimento offline
 
 1. Pare o runtime (ou chame `store.Close()`).
-2. `ClosedCopyTo(ctx, sourcePath, destPath, options)` reabre a origem, faz `BackupTo` e fecha.
-3. Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida reabra com `sqlite.Open` e rode contract checks.
+2. Execute o comando operacional, que falha se o destino já existir e imprime o relatório verificado em JSON:
 
-Para auditar uma cópia já existente sem migração ou escrita, use
-`sqlite.VerifyBackup(path)`. O resultado válido registra
+```sh
+go run ./cmd/sqlite-backup \
+  -mode=backup \
+  -source=/var/lib/motor-autonomo/runtime.sqlite \
+  -destination=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
+```
+
+A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela reabre a origem, faz `BackupTo` e fecha.
+
+Para auditar uma cópia já existente sem migração ou escrita:
+
+```sh
+go run ./cmd/sqlite-backup \
+  -mode=verify \
+  -path=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
+```
+
+A API equivalente é `sqlite.VerifyBackup(path)`. O resultado válido registra
 `IntegrityCheck == "ok"`; divergência de versão, adulteração do payload ou
 framing inválido tornam a cópia não restaurável.
+
+Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida verifique a cópia com o comando acima antes de considerá-la restaurável.
 
 ## Restauração
 
@@ -61,6 +78,9 @@ framing inválido tornam a cópia não restaurável.
 
 ## Testes de regressão
 
+- `go test ./cmd/sqlite-backup ./internal/storage/sqlite`
+- `TestRunBackupAndVerify`
+- `TestRunRejectsUnsafeOrIncompleteArguments`
 - `go test ./internal/storage/sqlite -run Backup`
 - `TestOnlineBackupPreservesCheckpointAndReopens`
 - `TestOnlineBackupRejectsExistingDestination`
