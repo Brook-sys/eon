@@ -5,10 +5,13 @@ package fakeserver
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 )
+
+const maxRequestBytes int64 = 1 << 20
 
 type Exchange struct {
 	ExpectedPrompt         string
@@ -91,9 +94,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 			Type string `json:"type"`
 		} `json:"response_format"`
 	}
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBytes))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&body); err != nil || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
+	if err := decoder.Decode(&body); err != nil || decoder.Decode(&struct{}{}) != io.EOF || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
 		s.failures = append(s.failures, "invalid Chat Completions request")
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
