@@ -320,6 +320,8 @@ O núcleo MUST ser implementado em Go e SHOULD produzir binários para as plataf
 
 Domínio e kernel MUST NOT importar adapters concretos de provider ou persistência. Fronteiras substituíveis MUST possuir contract tests reutilizáveis.
 
+**Verificação executável (2026-07-18):** `internal/architecture/dependencies_test.go` parseia imports não-test dos pacotes `internal/domain` e `internal/kernel` e falha se algum alcançar `internal/provider/*` ou `internal/storage/*`. O teste mantém a regra independente de ferramentas externas e inclui fixture negativa que comprova detecção de ambos os grupos de adapters.
+
 ### NFR-TEST-001 — Testabilidade offline
 
 Testes unitários e do kernel MUST executar sem rede, modelo remoto, processo externo ou relógio real. O conjunto aplicável MUST incluir unitários, race detector, vet e fuzz/property tests para parsers e invariantes críticos.
@@ -346,4 +348,4 @@ Schemas persistidos, `OperationSpec`s, templates, eventos e interfaces públicas
 | Modelo fraco | FR-MODEL-001..004 | servidor falso, corpus e fuzz |
 | Continuidade | FR-DUR-001..006 | crash/replay, reconciliação e relógio virtual |
 | Recursos e segurança | FR-RES-001..002, FR-OBS-001..002 | falhas injetadas, taxonomia e redaction |
-| Arquitetura | NFR-* | import checks, contract tests, CI e builds |
+| Arquitetura | NFR-* | import check executável, contract tests, vet e builds |
