@@ -723,6 +723,10 @@ func modelTestSpec() domain.OperationSpec {
 }
 
 func seedModelAgenda(t *testing.T, store port.Store, now time.Time) {
+	seedModelAgendaWithSpec(t, store, now, modelTestSpec())
+}
+
+func seedModelAgendaWithSpec(t *testing.T, store port.Store, now time.Time, spec domain.OperationSpec) {
 	t.Helper()
 	err := store.Update(context.Background(), func(tx port.Transaction) error {
 		revision := domain.MissionRevision{
@@ -734,7 +738,6 @@ func seedModelAgenda(t *testing.T, store port.Store, now time.Time) {
 		if err := tx.AppendMissionRevision(revision); err != nil {
 			return err
 		}
-		spec := modelTestSpec()
 		if err := tx.AppendOperationSpec(spec); err != nil {
 			return err
 		}
@@ -1192,5 +1195,203 @@ func TestModelFailureScopeByProviderKindAndSelectivePermitReporting(t *testing.T
 				t.Fatalf("provider=%+v binding=%+v", providerUsage, bindingUsage)
 			}
 		})
+	}
+}
+
+func TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 18, 9, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	spec := modelTestSpec()
+	spec.Budget.ModelCalls = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_catalog_fallback", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_catalog_fallback", PayloadRef: "payload_catalog_fallback"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fallback", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	primary := fakeserver.New(fakeserver.Exchange{StatusCode: 503, RawBody: `{"error":{"message":"temporarily unavailable"}}`})
+	defer primary.Close()
+	fallback := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fallback-model", InputTokens: 30, OutputTokens: 60})
+	defer fallback.Close()
+	primaryProvider, err := openai.New(openai.Config{BaseURL: primary.URL(), Model: "primary-model", Client: primary.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fallbackProvider, err := openai.New(openai.Config{BaseURL: fallback.URL(), Model: "fallback-model", Client: fallback.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	limit := func(resource domain.ResourceID) domain.ResourceLimit {
+		return domain.ResourceLimit{Resource: resource, MaxConcurrent: 1, MaxPerMinute: 10, FailureThreshold: 1, CooldownBase: time.Minute, CooldownMax: time.Minute}
+	}
+	config := domain.ModelsConfig{
+		Version: "models@test",
+		Providers: []domain.ModelProviderConfig{
+			{ID: "primary", Kind: domain.ProviderKindGroq, BaseURL: primary.URL(), APIKeyEnv: "PRIMARY_API_KEY", Timeout: time.Minute, MaxResponseBytes: 1 << 20, GlobalLimit: limit(domain.ModelProviderResource("primary"))},
+			{ID: "fallback", Kind: domain.ProviderKindNVIDIANIM, BaseURL: fallback.URL(), APIKeyEnv: "FALLBACK_API_KEY", Timeout: time.Minute, MaxResponseBytes: 1 << 20, GlobalLimit: limit(domain.ModelProviderResource("fallback"))},
+		},
+		Bindings: []domain.ModelBindingConfig{
+			{ID: "primary-binding", ProviderRef: "primary", ModelID: "primary-model", Enabled: true, Priority: 0, ContextTokens: 8000, MaxOutputTokens: 500, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: limit(domain.ModelBindingResource("primary-binding"))},
+			{ID: "fallback-binding", ProviderRef: "fallback", ModelID: "fallback-model", Enabled: true, Priority: 1, ContextTokens: 8000, MaxOutputTokens: 500, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: limit(domain.ModelBindingResource("fallback-binding"))},
+		},
+	}
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@model-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, provider := range config.Providers {
+		auth.Limits[provider.GlobalLimit.Resource] = provider.GlobalLimit
+	}
+	for _, binding := range config.Bindings {
+		auth.Limits[binding.Limit.Resource] = binding.Limit
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: primaryProvider,
+		Providers: map[string]port.ModelProvider{"primary-binding": primaryProvider, "fallback-binding": fallbackProvider}, ModelsConfig: &config,
+		Changes: processor, Compiler: prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test", Authorizer: auth,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Completed || result.ModelCalls != 2 {
+		t.Fatalf("want bounded primary failure + fallback success, got %+v", result)
+	}
+	if len(primary.Requests()) != 1 || len(fallback.Requests()) != 1 {
+		t.Fatalf("provider calls primary=%d fallback=%d", len(primary.Requests()), len(fallback.Requests()))
+	}
+	var primaryProviderUsage, primaryBindingUsage, fallbackProviderUsage, fallbackBindingUsage domain.ResourceUsage
+	var events []domain.Event
+	if err := store.View(ctx, func(r port.Reader) error {
+		var readErr error
+		primaryProviderUsage, readErr = r.ResourceUsage(domain.ModelProviderResource("primary"))
+		if readErr == nil {
+			primaryBindingUsage, readErr = r.ResourceUsage(domain.ModelBindingResource("primary-binding"))
+		}
+		if readErr == nil {
+			fallbackProviderUsage, readErr = r.ResourceUsage(domain.ModelProviderResource("fallback"))
+		}
+		if readErr == nil {
+			fallbackBindingUsage, readErr = r.ResourceUsage(domain.ModelBindingResource("fallback-binding"))
+		}
+		if readErr == nil {
+			events, readErr = r.Events(0, 100)
+		}
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if primaryBindingUsage.CircuitOpenUntil == nil || primaryProviderUsage.CircuitOpenUntil != nil {
+		t.Fatalf("503 must cool only failed binding: provider=%+v binding=%+v", primaryProviderUsage, primaryBindingUsage)
+	}
+	for name, usage := range map[string]domain.ResourceUsage{"primary-provider": primaryProviderUsage, "primary-binding": primaryBindingUsage, "fallback-provider": fallbackProviderUsage, "fallback-binding": fallbackBindingUsage} {
+		if usage.InFlight != 0 {
+			t.Fatalf("%s leaked permit: %+v", name, usage)
+		}
+	}
+	routes := 0
+	for _, event := range events {
+		if event.Kind == EventOperationModelRouted && event.OperationID == "operation_model" {
+			routes++
+		}
+	}
+	if routes != 2 {
+		t.Fatalf("want primary and fallback routing events, got %d", routes)
+	}
+}
+
+func TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: `{}`})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "quota-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerResource := domain.ModelProviderResource("quota-provider")
+	bindingResource := domain.ModelBindingResource("quota-binding")
+	limit := func(resource domain.ResourceID) domain.ResourceLimit {
+		return domain.ResourceLimit{Resource: resource, MaxConcurrent: 1, MaxPerMinute: 1}
+	}
+	config := domain.ModelsConfig{
+		Version:   "models@quota-test",
+		Providers: []domain.ModelProviderConfig{{ID: "quota-provider", Kind: domain.ProviderKindGroq, BaseURL: server.URL(), APIKeyEnv: "QUOTA_API_KEY", Timeout: time.Minute, MaxResponseBytes: 1 << 20, GlobalLimit: limit(providerResource)}},
+		Bindings:  []domain.ModelBindingConfig{{ID: "quota-binding", ProviderRef: "quota-provider", ModelID: "quota-model", Enabled: true, Priority: 0, ContextTokens: 8000, MaxOutputTokens: 500, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: limit(bindingResource)}},
+	}
+	window := now.Truncate(time.Minute)
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		if err := tx.SaveResourceUsage(domain.ResourceUsage{Resource: providerResource, MinuteWindowStart: window, MinuteCount: 1}); err != nil {
+			return err
+		}
+		return tx.SaveResourceUsage(domain.ResourceUsage{Resource: bindingResource, MinuteWindowStart: window})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@quota-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth.Limits[providerResource] = limit(providerResource)
+	auth.Limits[bindingResource] = limit(bindingResource)
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@quota-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider,
+		Providers: map[string]port.ModelProvider{"quota-binding": provider}, ModelsConfig: &config,
+		Changes: processor, Compiler: prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@quota-test", Authorizer: auth,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !result.Skipped || result.ModelCalls != 0 || len(server.Requests()) != 0 {
+		t.Fatalf("quota denial must not call provider: result=%+v calls=%d", result, len(server.Requests()))
+	}
+	var operation domain.Operation
+	var providerUsage, bindingUsage domain.ResourceUsage
+	if err := store.View(ctx, func(r port.Reader) error {
+		var readErr error
+		operation, readErr = r.Operation("operation_model")
+		if readErr == nil {
+			providerUsage, readErr = r.ResourceUsage(providerResource)
+		}
+		if readErr == nil {
+			bindingUsage, readErr = r.ResourceUsage(bindingResource)
+		}
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if operation.State != domain.StateWaitingTime || operation.Reevaluation.NotBefore == nil || !operation.Reevaluation.NotBefore.Equal(window.Add(time.Minute)) {
+		t.Fatalf("want WAITING until next window, got state=%s reevaluation=%+v", operation.State, operation.Reevaluation)
+	}
+	if providerUsage.MinuteCount != 1 || providerUsage.InFlight != 0 || bindingUsage.MinuteCount != 0 || bindingUsage.InFlight != 0 {
+		t.Fatalf("denial changed usage unexpectedly: provider=%+v binding=%+v", providerUsage, bindingUsage)
 	}
 }

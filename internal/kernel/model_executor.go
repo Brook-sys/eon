@@ -143,6 +143,32 @@ func (e ModelExecutor) releaseResourcePermitsWithTokens(ctx context.Context, ope
 	_ = e.Authorizer.ReportModelCompleteObserved(ctx, operation, permits, success, retryAfter, observedTokens)
 }
 
+// selectAlternateBinding resolves the next catalog binding after a classified
+// provider failure whose disposition is TRY_NEXT_BINDING. The failed binding is
+// excluded for this Execute even when its configured circuit threshold has not
+// opened yet; durable provider/binding circuits and configured priority still
+// govern every remaining candidate through SelectModelBinding.
+func (e ModelExecutor) selectAlternateBinding(ctx context.Context, operation domain.Operation, spec domain.OperationSpec, failedBindingID string) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
+	if e.ModelsConfig == nil {
+		return domain.ModelBindingConfig{}, domain.ModelRouteDecision{}, errors.New("model catalog is not configured")
+	}
+	config := *e.ModelsConfig
+	config.Bindings = append([]domain.ModelBindingConfig(nil), e.ModelsConfig.Bindings...)
+	for i := range config.Bindings {
+		if config.Bindings[i].ID == failedBindingID {
+			config.Bindings[i].Enabled = false
+		}
+	}
+	binding, decision, err := SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
+	if err != nil {
+		return domain.ModelBindingConfig{}, decision, err
+	}
+	if err := AppendModelRoutingEvent(ctx, e.Store, e.Clock.Now().UTC(), operation, decision); err != nil {
+		return domain.ModelBindingConfig{}, decision, err
+	}
+	return binding, decision, nil
+}
+
 // ModelEligible reports whether an OperationSpec should run on the model path.
 // Continuity/local specs stay on LocalExecutor even if PROPOSE_ONLY.
 // Web/file acquisition specs stay on dedicated executors even if mis-tagged PROPOSE_ONLY.
@@ -560,6 +586,47 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
+			// The failure taxonomy's TRY_NEXT_BINDING disposition is operational,
+			// not merely descriptive. When a catalog and call budget permit, route
+			// the next attempt through the normal durable selector, excluding the
+			// failed binding for this lease. This keeps fallback bounded and avoids
+			// retrying an incompatible/server-failing endpoint inline.
+			if classified && decision.Disposition == domain.ModelFailureTryNextBinding && e.ModelsConfig != nil && budget.ModelCallsUsed < maxCalls {
+				next, _, routeErr := e.selectAlternateBinding(ctx, operation, spec, activeBindingID)
+				if routeErr == nil {
+					provider := e.Providers[next.ID]
+					if provider == nil {
+						lastErr = fmt.Errorf("model binding %s has no provider instance", next.ID)
+						break
+					}
+					activeBindingID = next.ID
+					activeProviderID = next.ProviderRef
+					activeProvider = provider
+					for _, configuredProvider := range e.ModelsConfig.Providers {
+						if configuredProvider.ID == next.ProviderRef {
+							activeKind = configuredProvider.Kind
+							break
+						}
+					}
+					usingFallback = true
+					budget.FallbackModelUsed = true
+					result.RecoveryStages = append(result.RecoveryStages, domain.RecoveryFallbackModel)
+					_ = e.appendRecoveryEvent(ctx, operation, leaseRef, domain.ModelRecoveryDecision{
+						Disposition:         domain.DispositionFallbackModel,
+						Stage:               domain.RecoveryFallbackModel,
+						Reason:              "provider_failure_try_next_binding",
+						RemainingModelCalls: budget.RemainingModelCalls(),
+					}, budget.ModelCallsUsed)
+					// Baseline text is the portable contract for a different binding.
+					plan = domain.AdaptationPlan{Level: domain.AdaptationBaseline, ContextTokens: plan.ContextTokens, Reason: "provider_failure_fallback", Reversible: true}
+					request = compiled.Request
+					if activeKind == domain.ProviderKindNVIDIANIM || activeKind == domain.ProviderKindGroq {
+						request.Prompt = modeltext.AppendDelimitedChangeSetInstruction(request.Prompt)
+					}
+					request.ResponseFormat = domain.ResponseFormatNone
+					continue
+				}
+			}
 			// Confirmed NIM request rejection receives a bounded reduced-context retry.
 			// The retry still consumes the operation's normal model-call budget.
 			if classified && activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest && budget.ModelCallsUsed < maxCalls {
