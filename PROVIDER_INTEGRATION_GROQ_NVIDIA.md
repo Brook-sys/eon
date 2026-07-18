@@ -23,8 +23,8 @@ Isso permite uma chamada simples aos dois serviços, mas **ainda não satisfaz**
 
 ## Lacunas e riscos encontrados
 
-1. **Identidade de recurso excessivamente global.** `model.complete` usa hoje `model:default`. Assim, chamadas de modelos diferentes compartilham o mesmo bucket e o runtime não aproveita limites independentes da Groq.
-2. **Apenas dois bindings.** Primário + fallback único não representam uma lista ordenada de modelos, preferências por tipo de operação, disponibilidade e circuitos independentes.
+1. **Resolvido — identidade de recurso por provider/binding.** O gate usa chaves compostas e mantém quotas/circuitos independentes.
+2. **Resolvido — catálogo multi-binding.** O roteador usa uma lista ordenada de bindings configurados, não apenas primário + fallback fixo.
 3. **Limites não configuráveis no binding.** Os limites de modelo vêm de `DefaultMVPLimits`, não do dashboard/config do provider.
 4. **Timeout HTTP não é explícito.** O adapter usa `http.DefaultClient`; a lease não substitui deadline de rede. Um endpoint lento pode prender a chamada até o contexto externo terminar.
 5. **`Retry-After` não chega ao ResourceGate.** O adapter classifica HTTP 429 como retryable, porém descarta `Retry-After` e os headers de quota. O executor reporta falha com `nil`, desperdiçando a informação mais precisa.
@@ -142,7 +142,8 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 - [x] enriquecer erro OpenAI-compatible com `RetryAfter` padrão parseado sem corpo de erro;
 - [x] configurar timeout HTTP explícito no adapter (default limitado; override por config);
 - [x] propagar `RetryAfter` e delay explícito ao gate/circuit breaker de recursos (FR-RES-001);
-- [ ] adicionar metadados de rate limit allowlisted/redigidos ao log (opcional);
+- [x] adicionar metadados de rate limit allowlisted/redigidos ao log: somente os seis campos Groq conhecidos de limite/restante/reset para requests/tokens são parseados em tipos numéricos e projetados no evento de policy; headers desconhecidos e valores crus são descartados;
+  - Probe live bounded de 2026-07-18 18:20 (`results/model-benchmark/continuous-probe-2026-07-18-1820/`): Groq devolveu `403` sem headers allowlisted; NIM devolveu `200 PROBE_OK` sem esses headers. O comportamento de presença continua coberto deterministicamente pelo fake server, e a ausência live permanece ausência explícita.
 - testes de 429, `Retry-After` delta/data, headers inválidos, timeout e não vazamento.
 
 ### P1 — bindings e rate limit por modelo

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -1130,12 +1131,32 @@ func TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure(t *testing.T) 
 
 type scopedHTTPError struct {
 	status int
+	quota  port.RateLimitMetadata
 }
 
-func (e scopedHTTPError) Error() string                  { return "provider failure" }
-func (e scopedHTTPError) RetryAfterDelay() time.Duration { return time.Minute }
-func (e scopedHTTPError) HTTPStatusCode() int            { return e.status }
-func (e scopedHTTPError) RetryableFailure() bool         { return true }
+func (e scopedHTTPError) Error() string                             { return "provider failure" }
+func (e scopedHTTPError) RetryAfterDelay() time.Duration            { return time.Minute }
+func (e scopedHTTPError) HTTPStatusCode() int                       { return e.status }
+func (e scopedHTTPError) RetryableFailure() bool                    { return true }
+func (e scopedHTTPError) RateLimitMetadata() port.RateLimitMetadata { return e.quota }
+
+func TestSafeRateLimitPayloadProjectsOnlyTypedObservedFields(t *testing.T) {
+	err := scopedHTTPError{status: 429, quota: port.RateLimitMetadata{
+		HasRequestLimit: true, RequestLimit: 30,
+		HasRequestRemaining: true, RequestRemaining: 0,
+		HasRequestReset: true, RequestReset: 1500 * time.Millisecond,
+		HasTokenRemaining: true, TokenRemaining: 42,
+	}}
+	metadata := rateLimitMetadata(fmt.Errorf("wrapped: %w", err))
+	got := safeRateLimitPayload(metadata)
+	want := ";quota_request_limit=30;quota_request_remaining=0;quota_request_reset_ms=1500;quota_token_remaining=42"
+	if got != want {
+		t.Fatalf("payload = %q, want %q", got, want)
+	}
+	if got := safeRateLimitPayload(port.RateLimitMetadata{}); got != "" {
+		t.Fatalf("empty metadata payload = %q", got)
+	}
+}
 
 func TestModelFailureScopeByProviderKindAndSelectivePermitReporting(t *testing.T) {
 	ctx := context.Background()

@@ -582,7 +582,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					budget.ContextPressure = domain.RecordContextPressure(budget.ContextPressure)
 					_ = e.saveContextPressure(ctx, activeBindingID, budget.ContextPressure)
 				}
-				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed)
+				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed, rateLimitMetadata(callErr))
 			}
 			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
@@ -1316,7 +1316,41 @@ func classifyProviderFailure(err error, kind domain.ProviderKind) (domain.ModelB
 	return domain.ModelBindingFailureDecision{}, false
 }
 
-func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int) error {
+func rateLimitMetadata(err error) port.RateLimitMetadata {
+	var rateLimitErr port.ProviderRateLimitError
+	if errors.As(err, &rateLimitErr) {
+		return rateLimitErr.RateLimitMetadata()
+	}
+	return port.RateLimitMetadata{}
+}
+
+func safeRateLimitPayload(metadata port.RateLimitMetadata) string {
+	var fields []string
+	if metadata.HasRequestLimit {
+		fields = append(fields, fmt.Sprintf("quota_request_limit=%d", metadata.RequestLimit))
+	}
+	if metadata.HasRequestRemaining {
+		fields = append(fields, fmt.Sprintf("quota_request_remaining=%d", metadata.RequestRemaining))
+	}
+	if metadata.HasRequestReset {
+		fields = append(fields, fmt.Sprintf("quota_request_reset_ms=%d", metadata.RequestReset.Milliseconds()))
+	}
+	if metadata.HasTokenLimit {
+		fields = append(fields, fmt.Sprintf("quota_token_limit=%d", metadata.TokenLimit))
+	}
+	if metadata.HasTokenRemaining {
+		fields = append(fields, fmt.Sprintf("quota_token_remaining=%d", metadata.TokenRemaining))
+	}
+	if metadata.HasTokenReset {
+		fields = append(fields, fmt.Sprintf("quota_token_reset_ms=%d", metadata.TokenReset.Milliseconds()))
+	}
+	if len(fields) == 0 {
+		return ""
+	}
+	return ";" + strings.Join(fields, ";")
+}
+
+func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int, rateLimit port.RateLimitMetadata) error {
 	return e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operation.ID)
 		if err != nil {
@@ -1330,7 +1364,7 @@ func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operat
 			MissionRevision: op.MissionRevision,
 			InquiryID:       op.InquiryID,
 			OperationID:     op.ID,
-			PayloadRef:      fmt.Sprintf("%s;class=%s;disposition=%s;scope=%s;reason=%s;provider_id=%s;binding_id=%s", leaseRef, decision.Class, decision.Disposition, decision.Scope, decision.Reason, providerID, bindingID),
+			PayloadRef:      fmt.Sprintf("%s;class=%s;disposition=%s;scope=%s;reason=%s;provider_id=%s;binding_id=%s%s", leaseRef, decision.Class, decision.Disposition, decision.Scope, decision.Reason, providerID, bindingID, safeRateLimitPayload(rateLimit)),
 		})
 		return err
 	})

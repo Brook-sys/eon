@@ -345,6 +345,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: catálogo `model-presets.v1.json` referencia apenas Groq Llama 3.3 70B e NVIDIA Mistral Small 4 qualificados live, fixa digest dos relatórios e limites conservadores; decoder estrito/limitado e testes exigem evidência `QUALIFIED`, path seguro, SHA-256 e binding desabilitado. O preset só produz payload de draft `MODELS`, nunca altera routing.
 - [x] `DONE` Fechar o caminho operacional de drafts `MODELS` na Control API e dashboard.
   - Evidência: `POST /config/drafts` agora decodifica e persiste o payload tipado `models`; o dashboard anexa o JSON ao campo correto em vez de rejeitar o escopo já anunciado. Teste HTTP percorre create → validate → apply e comprova que binding desabilitado permanece sem autoridade após virar revisão ativa; teste do HTML protege a integração do formulário.
+- [x] `DONE` Projetar metadados seguros de quota OpenAI-compatible em falhas de modelo.
+  - Evidência: o adapter parseia somente `x-ratelimit-{limit,remaining,reset}-{requests,tokens}` em inteiros/durações não negativos, descarta headers desconhecidos/valores inválidos e expõe projeção provider-neutral; `operation.model_failure_policy` registra apenas os campos tipados observados, sem corpo ou header cru. Probe bounded `results/model-benchmark/continuous-probe-2026-07-18-1820/`: Groq respondeu `403` sem quota allowlisted (bloqueio objetivo da credencial/endpoint neste ciclo) e NVIDIA NIM respondeu `200 PROBE_OK` em 1.568 s, 25 tokens totais, também sem headers de quota; nenhuma ausência foi convertida em zero inventado.
 
 ## Política de seleção
 

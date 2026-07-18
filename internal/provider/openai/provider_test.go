@@ -64,7 +64,7 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 		retryable bool
 		retryWait time.Duration
 	}{
-		{name: "rate limit", exchange: fakeserver.Exchange{StatusCode: http.StatusTooManyRequests, RawBody: `{"error":"prompt secret"}`, Headers: map[string]string{"Retry-After": "42"}}, kind: openai.ErrorHTTP, retryable: true, retryWait: 42 * time.Second},
+		{name: "rate limit", exchange: fakeserver.Exchange{StatusCode: http.StatusTooManyRequests, RawBody: `{"error":"prompt secret"}`, Headers: map[string]string{"Retry-After": "42", "x-ratelimit-limit-requests": "30", "x-ratelimit-remaining-requests": "0", "x-ratelimit-reset-requests": "2m1.5s", "x-ratelimit-limit-tokens": "6000", "x-ratelimit-remaining-tokens": "1234", "x-ratelimit-reset-tokens": "1.25s", "x-secret-quota": "must-not-project"}}, kind: openai.ErrorHTTP, retryable: true, retryWait: 42 * time.Second},
 		{name: "invalid response", exchange: fakeserver.Exchange{RawBody: `{"choices":[]}`}, kind: openai.ErrorInvalidResponse},
 		{name: "too large", exchange: fakeserver.Exchange{RawBody: strings.Repeat("x", 33)}, limit: 32, kind: openai.ErrorResponseTooLarge},
 	}
@@ -83,6 +83,15 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 			}
 			if test.retryWait > 0 && providerError.RetryAfter != test.retryWait {
 				t.Fatalf("retry wait = %v, want %v", providerError.RetryAfter, test.retryWait)
+			}
+			if test.name == "rate limit" {
+				metadata := providerError.RateLimitMetadata()
+				if !metadata.HasRequestLimit || metadata.RequestLimit != 30 || !metadata.HasRequestRemaining || metadata.RequestRemaining != 0 || !metadata.HasRequestReset || metadata.RequestReset != 2*time.Minute+1500*time.Millisecond {
+					t.Fatalf("unexpected request quota metadata: %+v", metadata)
+				}
+				if !metadata.HasTokenLimit || metadata.TokenLimit != 6000 || !metadata.HasTokenRemaining || metadata.TokenRemaining != 1234 || !metadata.HasTokenReset || metadata.TokenReset != 1250*time.Millisecond {
+					t.Fatalf("unexpected token quota metadata: %+v", metadata)
+				}
 			}
 			if strings.Contains(err.Error(), "secret") || strings.Contains(err.Error(), "sensitive") {
 				t.Fatalf("error leaked data: %v", err)

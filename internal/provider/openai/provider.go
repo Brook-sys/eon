@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -139,6 +140,9 @@ type Error struct {
 	// It is parsed only from the standard Retry-After header; response bodies
 	// remain discarded because they may echo prompts or credentials.
 	RetryAfter time.Duration
+	// RateLimit contains only parsed, allowlisted quota fields. Unknown headers
+	// and raw values are never retained or exposed.
+	RateLimit port.RateLimitMetadata
 }
 
 func (e *Error) Error() string {
@@ -151,6 +155,8 @@ func (e *Error) Error() string {
 // RetryAfterDelay exposes bounded provider backpressure without coupling the
 // kernel to this adapter's concrete error type.
 func (e *Error) RetryAfterDelay() time.Duration { return e.RetryAfter }
+
+func (e *Error) RateLimitMetadata() port.RateLimitMetadata { return e.RateLimit }
 
 func (e *Error) HTTPStatusCode() int    { return e.StatusCode }
 func (e *Error) RetryableFailure() bool { return e.Retryable }
@@ -295,6 +301,7 @@ func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest)
 			StatusCode: response.StatusCode,
 			Retryable:  response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500,
 			RetryAfter: parseRetryAfter(response.Header.Get("Retry-After"), time.Now()),
+			RateLimit:  parseRateLimitMetadata(response.Header),
 		}
 	}
 	limited := io.LimitReader(response.Body, p.maxResponseBytes+1)
@@ -331,6 +338,41 @@ func parseRetryAfter(value string, now time.Time) time.Duration {
 		return 0
 	}
 	return when.Sub(now)
+}
+
+func parseRateLimitMetadata(header http.Header) port.RateLimitMetadata {
+	var metadata port.RateLimitMetadata
+	metadata.RequestLimit, metadata.HasRequestLimit = parseNonNegativeInt64(header.Get("x-ratelimit-limit-requests"))
+	metadata.RequestRemaining, metadata.HasRequestRemaining = parseNonNegativeInt64(header.Get("x-ratelimit-remaining-requests"))
+	metadata.RequestReset, metadata.HasRequestReset = parseNonNegativeDuration(header.Get("x-ratelimit-reset-requests"))
+	metadata.TokenLimit, metadata.HasTokenLimit = parseNonNegativeInt64(header.Get("x-ratelimit-limit-tokens"))
+	metadata.TokenRemaining, metadata.HasTokenRemaining = parseNonNegativeInt64(header.Get("x-ratelimit-remaining-tokens"))
+	metadata.TokenReset, metadata.HasTokenReset = parseNonNegativeDuration(header.Get("x-ratelimit-reset-tokens"))
+	return metadata
+}
+
+func parseNonNegativeInt64(value string) (int64, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > 20 {
+		return 0, false
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed < 0 {
+		return 0, false
+	}
+	return parsed, true
+}
+
+func parseNonNegativeDuration(value string) (time.Duration, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > 32 {
+		return 0, false
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil || parsed < 0 {
+		return 0, false
+	}
+	return parsed, true
 }
 
 // DeclaredProfile returns the conservative configuration snapshot without I/O.

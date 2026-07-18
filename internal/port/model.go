@@ -46,6 +46,33 @@ type ProviderHTTPError interface {
 	RetryableFailure() bool
 }
 
+// RateLimitMetadata is an allowlisted, provider-neutral projection of quota
+// headers. Presence flags distinguish an observed zero (for example no calls
+// remaining) from a header the provider did not send. Raw header names and
+// values are deliberately not retained.
+type RateLimitMetadata struct {
+	HasRequestLimit     bool
+	RequestLimit        int64
+	HasRequestRemaining bool
+	RequestRemaining    int64
+	HasRequestReset     bool
+	RequestReset        time.Duration
+	HasTokenLimit       bool
+	TokenLimit          int64
+	HasTokenRemaining   bool
+	TokenRemaining      int64
+	HasTokenReset       bool
+	TokenReset          time.Duration
+}
+
+// ProviderRateLimitError is an optional extension implemented by adapters
+// that can safely project known quota headers without exposing arbitrary
+// provider response metadata.
+type ProviderRateLimitError interface {
+	ProviderError
+	RateLimitMetadata() RateLimitMetadata
+}
+
 // ModelProvider is the minimum text→text contract. Adapters may also implement
 // ModelCapabilityReporter for FR-MODEL-005 discovery without expanding this
 // surface for every test double.
