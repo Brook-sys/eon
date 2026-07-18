@@ -298,6 +298,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `port.ReadStore` expõe somente `View`; `inspect.Projector` deixou de aceitar `port.Store`; guard AST rejeita referências de produção a `port.Store`/`port.Transaction` em `internal/inspect`, inclusive por alias, impedindo que projeções recuperem autoridade de escrita acidentalmente.
 - [x] `DONE` Tornar executável NFR-PERF-001 para buffers de rede limitados.
   - Evidência: `internal/architecture/bounded_buffers_test.go` rejeita `io.ReadAll` sem `io.LimitReader` nos adapters de `internal/provider` e `internal/channel`, resolve aliases e variáveis locais e inclui fixture negativa; fake OpenAI limita request a 1 MiB, rejeita trailing JSON e possui casos adversariais; testes específicos preservam a validação dos tetos configuráveis.
+- [x] `DONE` Tornar executável NFR-PORT-001 para runtime Go sem dependência nativa.
+  - Evidência: `internal/architecture/portability_test.go` rejeita import de `C` em produção de `cmd`/`internal`, com fixture negativa; os quatro comandos compilam com `CGO_ENABLED=0` em Linux, macOS e Windows para `amd64`/`arm64`.
 
 ## Política de seleção
 
@@ -461,3 +463,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 03:40 — NFR-PERF-001 bounded network buffers — guard AST rejeita `io.ReadAll` sem `io.LimitReader` nos adapters provider/channel, incluindo aliases e limitadores atribuídos localmente; duplicatas de FR-CTRL-007 removidas do backlog/log — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — próximo: ampliar limites estruturais apenas quando houver uma propriedade não coberta por testes comportamentais.
 
 2026-07-18 04:00 — NFR-PERF-001 strict fake ingress — fake OpenAI compartilhado passou a limitar request a 1 MiB com `http.MaxBytesReader`, rejeitar segundo valor JSON e testar corpos trailing/oversize; documentação de evidência atualizada — verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — próximo: ampliar limites estruturais somente diante de novo gap observável.
+2026-07-18 04:20 — NFR-PORT-001 portable binaries — guard AST impede cgo em toda produção `cmd`/`internal`, fixture negativa comprova detecção e os quatro comandos compilam com `CGO_ENABLED=0` para Linux/macOS/Windows em amd64/arm64 — verificação: `go test ./...`, `go vet ./...`, `gofmt`, matriz de cross-build e `git diff --check` com Go 1.26.5 — próximo: selecionar novo gap observável em vez de ampliar guards sem evidência.

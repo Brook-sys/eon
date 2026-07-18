@@ -318,6 +318,8 @@ Perguntas propostas por modelo MUST passar por gate determinístico de necessida
 
 O núcleo MUST ser implementado em Go e SHOULD produzir binários para as plataformas oficialmente suportadas sem exigir runtime de linguagem adicional.
 
+**Verificação executável (2026-07-18):** `internal/architecture/portability_test.go` inspeciona todo código de produção em `cmd` e `internal` e rejeita imports de `C`, impedindo que uma dependência cgo silenciosa torne o runtime dependente de toolchain ou runtime nativo. A fixture negativa comprova detecção sem penalizar arquivos de teste. Além disso, todos os quatro comandos compilam com `CGO_ENABLED=0` para Linux (`amd64`, `arm64`), macOS (`amd64`, `arm64`) e Windows (`amd64`, `arm64`) usando Go 1.26.5.
+
 ### NFR-MOD-001 — Desacoplamento
 
 Domínio e kernel MUST NOT importar adapters concretos de provider ou persistência. Fronteiras substituíveis MUST possuir contract tests reutilizáveis.
