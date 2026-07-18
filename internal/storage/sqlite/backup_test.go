@@ -398,3 +398,37 @@ func TestVerifyBackupRejectsTamperedCheckpointPayload(t *testing.T) {
 		t.Fatalf("verification error = %v, want checkpoint integrity failure", err)
 	}
 }
+
+func TestClosedCopyToRejectsMissingAndSymlinkSources(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "missing.sqlite")
+	destination := filepath.Join(dir, "backup.sqlite")
+	if _, err := storage.ClosedCopyTo(context.Background(), missing, destination, storage.BackupOptions{}); err == nil {
+		t.Fatal("ClosedCopyTo accepted missing source")
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Fatalf("missing source was created: %v", err)
+	}
+	if _, err := os.Stat(destination); !os.IsNotExist(err) {
+		t.Fatalf("destination exists after missing source: %v", err)
+	}
+
+	realPath := filepath.Join(dir, "real.sqlite")
+	store, err := storage.Open(realPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	symlinkPath := filepath.Join(dir, "source-link.sqlite")
+	if err := os.Symlink(realPath, symlinkPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storage.ClosedCopyTo(context.Background(), symlinkPath, destination, storage.BackupOptions{}); err == nil {
+		t.Fatal("ClosedCopyTo followed source symlink")
+	}
+	if _, err := os.Stat(destination); !os.IsNotExist(err) {
+		t.Fatalf("destination exists after symlink source: %v", err)
+	}
+}

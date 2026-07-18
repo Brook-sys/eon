@@ -183,6 +183,9 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 	if err != nil {
 		return BackupReport{}, err
 	}
+	if err := syncRegularFile(tempPath); err != nil {
+		return BackupReport{}, fmt.Errorf("sync verified backup: %w", err)
+	}
 	if err := publishBackupNoReplace(tempPath, destPath); err != nil {
 		return BackupReport{}, err
 	}
@@ -212,17 +215,49 @@ func publishBackupNoReplace(tempPath, destPath string) error {
 		}
 		return fmt.Errorf("publish backup without overwrite: %w", err)
 	}
+	if err := syncDirectory(filepath.Dir(destPath)); err != nil {
+		_ = os.Remove(destPath)
+		return fmt.Errorf("sync published backup directory: %w", err)
+	}
 	if err := os.Remove(tempPath); err != nil {
 		_ = os.Remove(destPath)
 		return fmt.Errorf("remove published backup temporary name: %w", err)
 	}
+	if err := syncDirectory(filepath.Dir(destPath)); err != nil {
+		return fmt.Errorf("sync backup temporary-name removal: %w", err)
+	}
 	return nil
+}
+
+func syncRegularFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return file.Sync()
+}
+
+func syncDirectory(path string) error {
+	directory, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	return directory.Sync()
 }
 
 // ClosedCopyTo copies a store that has already been Closed by reopening the
 // source path for the duration of the backup. Prefer BackupTo for online
 // stores. This helper exists for offline runbook paths.
 func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options BackupOptions) (BackupReport, error) {
+	info, err := os.Lstat(sourcePath)
+	if err != nil {
+		return BackupReport{}, fmt.Errorf("inspect offline backup source: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return BackupReport{}, fmt.Errorf("offline backup source is not a regular file: %s", sourcePath)
+	}
 	store, err := Open(sourcePath)
 	if err != nil {
 		return BackupReport{}, err

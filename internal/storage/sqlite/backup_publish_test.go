@@ -54,3 +54,17 @@ func TestPublishBackupNoReplacePublishesRestrictedInode(t *testing.T) {
 		t.Fatalf("published mode = %04o, want 0600", got)
 	}
 }
+
+func TestSyncRegularFileAndDirectory(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backup.sqlite")
+	if err := os.WriteFile(path, []byte("durable backup"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := syncRegularFile(path); err != nil {
+		t.Fatalf("sync regular file: %v", err)
+	}
+	if err := syncDirectory(dir); err != nil {
+		t.Fatalf("sync directory: %v", err)
+	}
+}

@@ -30,8 +30,9 @@ Regras:
 
 - o destino **não** pode existir (fail-closed contra overwrite);
 - a cópia é construída e verificada em arquivo temporário no mesmo diretório,
-  publicada atomicamente sem substituir um path criado concorrentemente e
-  fica com permissão `0600`;
+  sincronizada em disco, publicada atomicamente sem substituir um path criado
+  concorrentemente e fica com permissão `0600`; o diretório é sincronizado
+  depois da publicação e da remoção do nome temporário;
 - diretórios pais são criados;
 - cancelamento de `context` interrompe o step e remove o destino incompleto.
 
@@ -47,7 +48,9 @@ go run ./cmd/sqlite-backup \
   -destination=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite
 ```
 
-A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela reabre a origem, faz `BackupTo` e fecha.
+A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela
+exige que a origem já exista como arquivo regular (não cria banco ausente e não
+segue symlink), reabre a origem, faz `BackupTo` e fecha.
 
 Para auditar uma cópia já existente sem migração ou escrita:
 
