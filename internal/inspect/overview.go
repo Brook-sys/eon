@@ -127,7 +127,7 @@ type Overview struct {
 
 // Projector materializes inspectable views from a store reader.
 type Projector struct {
-	Store   port.Store
+	Store   port.ReadStore
 	Runtime RuntimeIdentity
 	Clock   func() time.Time
 	// continuityCatalog is optional process assembly metadata for the strategy portfolio.
@@ -140,7 +140,7 @@ type Projector struct {
 	telemetry *TelemetryStatus
 }
 
-func NewProjector(store port.Store, runtime RuntimeIdentity) (*Projector, error) {
+func NewProjector(store port.ReadStore, runtime RuntimeIdentity) (*Projector, error) {
 	if store == nil {
 		return nil, errors.New("inspect projector requires store")
 	}

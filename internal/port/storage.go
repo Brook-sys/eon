@@ -267,3 +267,9 @@ type Store interface {
 	View(context.Context, func(Reader) error) error
 	Update(context.Context, func(Transaction) error) error
 }
+
+// ReadStore is the least-authority storage boundary for projections, health
+// checks, and other consumers that must never mutate canonical state.
+type ReadStore interface {
+	View(context.Context, func(Reader) error) error
+}
