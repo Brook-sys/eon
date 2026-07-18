@@ -156,6 +156,7 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Artefato standalone (2026-07-18): verify/backup offline/restore recusam `-wal`, `-shm` ou `-journal` adjacente antes e depois da leitura/cópia, pois `immutable=1` não executa recovery e poderia certificar um main file stale; testes cobrem os três sidecars e ausência de destino parcial.
   - Identidade lógica (2026-07-18): verificação e relatórios registram SHA-256 separado do payload versionado de `runtime_checkpoint`; restore exige igualdade de contagem, formato e digest lógico entre origem verificada e destino, além da identidade física do arquivo, removendo o destino em divergência.
   - Inventário lógico fixado (2026-07-18): verify/restore e o CLI aceitam `expected_checkpoint_sha256` separado do digest físico, permitindo selecionar explicitamente o estado serializado esperado e rejeitar mismatch antes de criar destino.
+  - Identidade de schema (2026-07-18): relatórios registram `PRAGMA schema_version` e SHA-256 do DDL canônico de `runtime_checkpoint`; verify/restore e CLI aceitam ambos como expectativas separadas, detectando drift estrutural mesmo quando páginas e checkpoint ainda são decodificáveis.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -377,6 +378,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 11:20 — Durabilidade de backup SQLite — backup sincroniza conteúdo verificado e entradas de diretório nas fronteiras de publicação; cópia offline agora rejeita origem ausente/symlink/não regular antes de abrir, impedindo criação acidental de store vazio — verificação: testes específicos, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
 
 2026-07-18 11:40 — Identidade de path na auditoria SQLite — verify/restore agora recusam symlink e exigem o mesmo inode regular entre digest inicial, abertura SQLite e digest final, fechando troca de path com conteúdo idêntico — verificação: testes específicos, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
+
+2026-07-18 14:00 — Identidade estrutural de backup SQLite — verify/restore passaram a inventariar e fixar versão + digest do schema canônico, separados das identidades física e lógica; probe live bounded confirmou catálogos Groq 15/NIM 119 sem drift desde a descoberta anterior — verificação: testes específicos, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 12:00 — Imutabilidade da origem offline SQLite — backup/restore não passam mais pelo configurador mutável do store: abrem a origem read-only/immutable, não criam sidecars e confrontam inode+tamanho+digest antes/depois, removendo a cópia se houver mutação concorrente — verificação: teste de não mutação/sidecars, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
 

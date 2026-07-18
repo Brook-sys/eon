@@ -33,11 +33,14 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	pageSteps := fs.Int("page-steps", 0, "pages per sqlite backup step (0 = all remaining)")
 	path := fs.String("path", "", "existing backup path (verify mode)")
 	expectedSHA256 := fs.String("expected-sha256", "", "expected 64-character SHA-256 (verify or restore mode)")
+	expectedSchemaSHA256 := fs.String("expected-schema-sha256", "", "expected 64-character runtime schema SHA-256 (verify or restore mode)")
 	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
+	var expectedSchemaVersion optionalInt
 	var expectedCheckpointRows optionalInt
 	var expectedCheckpointFormat optionalInt
 	fs.Var(&expectedCheckpointRows, "expected-checkpoint-rows", "expected runtime checkpoint row count, 0 or 1 (verify or restore mode)")
 	fs.Var(&expectedCheckpointFormat, "expected-checkpoint-format", "expected non-negative runtime checkpoint format (verify or restore mode)")
+	fs.Var(&expectedSchemaVersion, "expected-schema-version", "expected non-negative SQLite schema version (verify or restore mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -72,6 +75,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{
 			ExpectedSHA256:           *expectedSHA256,
+			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
+			ExpectedSchemaSHA256:     *expectedSchemaSHA256,
 			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
 			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
 			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),
@@ -95,6 +100,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
 			ExpectedSHA256:           *expectedSHA256,
+			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
+			ExpectedSchemaSHA256:     *expectedSchemaSHA256,
 			ExpectedCheckpointSHA256: *expectedCheckpointSHA256,
 			ExpectedCheckpointRows:   expectedCheckpointRows.Pointer(),
 			ExpectedCheckpointFormat: expectedCheckpointFormat.Pointer(),

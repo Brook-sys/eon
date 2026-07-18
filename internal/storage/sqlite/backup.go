@@ -31,6 +31,8 @@ type BackupReport struct {
 	SQLiteVersion    string        `json:"sqlite_version"`
 	FileSize         int64         `json:"file_size"`
 	SHA256           string        `json:"sha256"`
+	SchemaVersion    int           `json:"schema_version"`
+	SchemaSHA256     string        `json:"schema_sha256"`
 	CheckpointRows   int           `json:"checkpoint_rows"`
 	CheckpointFormat int           `json:"checkpoint_format,omitempty"`
 	CheckpointSHA256 string        `json:"checkpoint_sha256,omitempty"`
@@ -43,6 +45,8 @@ type BackupReport struct {
 type BackupVerification struct {
 	FileSize         int64  `json:"file_size"`
 	SHA256           string `json:"sha256"`
+	SchemaVersion    int    `json:"schema_version"`
+	SchemaSHA256     string `json:"schema_sha256"`
 	CheckpointRows   int    `json:"checkpoint_rows"`
 	CheckpointFormat int    `json:"checkpoint_format,omitempty"`
 	CheckpointSHA256 string `json:"checkpoint_sha256,omitempty"`
@@ -53,6 +57,8 @@ type BackupVerification struct {
 // created or transferred. Empty means compute and report without comparison.
 type VerificationOptions struct {
 	ExpectedSHA256           string
+	ExpectedSchemaVersion    *int
+	ExpectedSchemaSHA256     string
 	ExpectedCheckpointSHA256 string
 	// ExpectedCheckpointRows and ExpectedCheckpointFormat pin the logical
 	// framing recorded in an inventory. Nil means report without comparison.
@@ -73,6 +79,8 @@ type BackupOptions struct {
 // the verified source digest and rejects source changes during the restore.
 type RestoreOptions struct {
 	ExpectedSHA256           string
+	ExpectedSchemaVersion    *int
+	ExpectedSchemaSHA256     string
 	ExpectedCheckpointSHA256 string
 	ExpectedCheckpointRows   *int
 	ExpectedCheckpointFormat *int
@@ -210,6 +218,8 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		SQLiteVersion:    version,
 		FileSize:         verification.FileSize,
 		SHA256:           verification.SHA256,
+		SchemaVersion:    verification.SchemaVersion,
+		SchemaSHA256:     verification.SchemaSHA256,
 		CheckpointRows:   verification.CheckpointRows,
 		CheckpointFormat: verification.CheckpointFormat,
 		CheckpointSHA256: verification.CheckpointSHA256,
@@ -363,6 +373,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	}
 	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{
 		ExpectedSHA256:           options.ExpectedSHA256,
+		ExpectedSchemaVersion:    options.ExpectedSchemaVersion,
+		ExpectedSchemaSHA256:     options.ExpectedSchemaSHA256,
 		ExpectedCheckpointSHA256: options.ExpectedCheckpointSHA256,
 		ExpectedCheckpointRows:   options.ExpectedCheckpointRows,
 		ExpectedCheckpointFormat: options.ExpectedCheckpointFormat,
@@ -375,6 +387,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
 	}
 	if report.CheckpointRows != sourceVerification.CheckpointRows ||
+		report.SchemaVersion != sourceVerification.SchemaVersion ||
+		report.SchemaSHA256 != sourceVerification.SchemaSHA256 ||
 		report.CheckpointFormat != sourceVerification.CheckpointFormat ||
 		report.CheckpointSHA256 != sourceVerification.CheckpointSHA256 {
 		_ = os.Remove(destPath)
@@ -407,6 +421,10 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	if err != nil {
 		return BackupVerification{}, fmt.Errorf("expected checkpoint SHA-256: %w", err)
 	}
+	expectedSchema, err := normalizeExpectedSHA256(options.ExpectedSchemaSHA256)
+	if err != nil {
+		return BackupVerification{}, fmt.Errorf("expected schema SHA-256: %w", err)
+	}
 	if err := rejectSQLiteSidecars(path); err != nil {
 		return BackupVerification{}, err
 	}
@@ -431,6 +449,17 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages: quick_check=%q", integrity)
 	}
+	var schemaVersion int
+	if err := db.QueryRow(`PRAGMA schema_version`).Scan(&schemaVersion); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup schema version: %w", err)
+	}
+	var schemaSQL string
+	if err := db.QueryRow(`SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'runtime_checkpoint'`).Scan(&schemaSQL); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup runtime schema: %w", err)
+	}
+	schemaDigest := sha256.Sum256([]byte(schemaSQL))
 	var count int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM runtime_checkpoint WHERE id = 1`).Scan(&count); err != nil {
 		db.Close()
@@ -439,8 +468,24 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	verification := BackupVerification{
 		FileSize:       beforeSize,
 		SHA256:         beforeDigest,
+		SchemaVersion:  schemaVersion,
+		SchemaSHA256:   hex.EncodeToString(schemaDigest[:]),
 		CheckpointRows: count,
 		IntegrityCheck: integrity,
+	}
+	if options.ExpectedSchemaVersion != nil {
+		if *options.ExpectedSchemaVersion < 0 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected schema version must not be negative")
+		}
+		if verification.SchemaVersion != *options.ExpectedSchemaVersion {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup schema version: got %d, want %d", verification.SchemaVersion, *options.ExpectedSchemaVersion)
+		}
+	}
+	if expectedSchema != "" && verification.SchemaSHA256 != expectedSchema {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup schema digest: got %s, want %s", verification.SchemaSHA256, expectedSchema)
 	}
 	if count != 1 {
 		// Empty store still has no checkpoint row until first Update; that is

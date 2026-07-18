@@ -394,6 +394,48 @@ func TestVerifyBackupPinsCheckpointInventoryFields(t *testing.T) {
 	}
 }
 
+func TestVerifyBackupPinsRuntimeSchemaIdentity(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	verification, err := storage.VerifyBackup(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verification.SchemaVersion <= 0 || len(verification.SchemaSHA256) != sha256.Size*2 {
+		t.Fatalf("missing schema identity: %+v", verification)
+	}
+	version := verification.SchemaVersion
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{
+		ExpectedSchemaVersion: &version,
+		ExpectedSchemaSHA256:  verification.SchemaSHA256,
+	}); err != nil {
+		t.Fatalf("verify pinned schema: %v", err)
+	}
+	wrongVersion := version + 1
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSchemaVersion: &wrongVersion}); err == nil {
+		t.Fatal("schema version mismatch accepted")
+	}
+	wrongDigest := strings.Repeat("0", sha256.Size*2)
+	if wrongDigest == verification.SchemaSHA256 {
+		wrongDigest = strings.Repeat("f", sha256.Size*2)
+	}
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSchemaSHA256: wrongDigest}); err == nil {
+		t.Fatal("schema digest mismatch accepted")
+	}
+	invalidVersion := -1
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSchemaVersion: &invalidVersion}); err == nil {
+		t.Fatal("negative schema version accepted")
+	}
+}
+
 func TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "runtime.sqlite")
