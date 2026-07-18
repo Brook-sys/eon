@@ -992,6 +992,73 @@ func TestControlAPIModelPresetCreatesDisabledModelsDraft(t *testing.T) {
 	}
 }
 
+func TestControlAPIModelPresetEnablementPreviewAfterDisabledApply(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 18, 21, 2, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(145)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	preset := validControlModelPreset()
+	api.ModelPresets = &domain.ModelPresetCatalog{Schema: domain.ModelPresetCatalogSchema, Presets: []domain.ModelPreset{preset}}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	blocked := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/enablement-preview", map[string]any{
+		"schema_version": 1, "version": "models.enabled.v1",
+	})
+	defer blocked.Body.Close()
+	if blocked.StatusCode != http.StatusOK {
+		t.Fatalf("blocked preview status = %d body=%s", blocked.StatusCode, readBody(t, blocked))
+	}
+	var blockedBody struct {
+		Preview domain.ModelPresetEnablementPreview `json:"preview"`
+	}
+	decodeJSON(t, blocked.Body, &blockedBody)
+	if !blockedBody.Preview.Blocked || blockedBody.Preview.Candidate != nil {
+		t.Fatalf("blocked preview = %#v", blockedBody.Preview)
+	}
+
+	created := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/drafts", map[string]any{
+		"schema_version": 1, "version": "models.installed.v1", "reason": "install disabled before explicit enablement",
+	})
+	defer created.Body.Close()
+	var createdBody struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &createdBody)
+	validated := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createdBody.Draft.ID)+"/validate", map[string]any{})
+	validated.Body.Close()
+	clock.Advance(time.Second)
+	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createdBody.Draft.ID)+"/apply", map[string]any{})
+	applied.Body.Close()
+
+	ready := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/enablement-preview", map[string]any{
+		"schema_version": 1, "version": "models.enabled.v1",
+	})
+	defer ready.Body.Close()
+	if ready.StatusCode != http.StatusOK {
+		t.Fatalf("ready preview status = %d body=%s", ready.StatusCode, readBody(t, ready))
+	}
+	var readyBody struct {
+		Preview domain.ModelPresetEnablementPreview `json:"preview"`
+	}
+	decodeJSON(t, ready.Body, &readyBody)
+	if readyBody.Preview.Blocked || readyBody.Preview.Candidate == nil || !readyBody.Preview.Candidate.Bindings[0].Enabled {
+		t.Fatalf("ready preview = %#v", readyBody.Preview)
+	}
+	var drafts []domain.ConfigDraft
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		var err error
+		drafts, err = r.ConfigDrafts(domain.ConfigScopeModels, "")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(drafts) != 1 {
+		t.Fatalf("preview must not create an authoritative draft, got %d drafts", len(drafts))
+	}
+}
+
 func TestControlAPIModelPresetFailsClosed(t *testing.T) {
 	store := memory.New()
 	now := time.Date(2026, 7, 18, 21, 5, 0, 0, time.UTC)

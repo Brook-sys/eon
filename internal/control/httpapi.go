@@ -135,6 +135,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /model-presets", a.handleListModelPresets)
 	mux.HandleFunc("GET /model-presets/{presetID}", a.handleGetModelPreset)
 	mux.HandleFunc("POST /model-presets/{presetID}/drafts", a.handleCreateModelPresetDraft)
+	mux.HandleFunc("POST /model-presets/{presetID}/enablement-preview", a.handlePreviewModelPresetEnablement)
 	mux.HandleFunc("GET /missions/{missionID}/active", a.handleGetActiveMission)
 	mux.HandleFunc("POST /missions/amendments/preview", a.handlePreviewMissionAmendment)
 	mux.HandleFunc("POST /missions/amendments/accept", a.handleAcceptMissionAmendment)
@@ -182,6 +183,55 @@ type modelPresetDraftRequest struct {
 	ActorType       domain.ActorType     `json:"actor_type,omitempty"`
 	ActorID         string               `json:"actor_id,omitempty"`
 	Reason          string               `json:"reason"`
+}
+
+type modelPresetEnablementPreviewRequest struct {
+	SchemaVersion int    `json:"schema_version"`
+	Version       string `json:"version"`
+}
+
+func (a *API) handlePreviewModelPresetEnablement(w http.ResponseWriter, r *http.Request) {
+	preset, ok := a.modelPreset(strings.TrimSpace(r.PathValue("presetID")))
+	if !ok {
+		writeAPIError(w, apiError{status: http.StatusNotFound, code: "not_found", message: "model preset not found"})
+		return
+	}
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	var req modelPresetEnablementPreviewRequest
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if req.SchemaVersion != 0 && req.SchemaVersion != domain.SchemaVersionV1 {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "unsupported schema_version"})
+		return
+	}
+	var active *domain.ModelsConfig
+	err = a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+		revision, loadErr := reader.ActiveConfigRevision(domain.ConfigScopeModels)
+		if errors.Is(loadErr, port.ErrNotFound) {
+			return nil
+		}
+		if loadErr != nil {
+			return loadErr
+		}
+		active = revision.Models
+		return nil
+	})
+	if err != nil {
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	preview, err := preset.PreviewEnablement(active, strings.TrimSpace(req.Version))
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"schema_version": domain.SchemaVersionV1, "preview": preview})
 }
 
 func (a *API) handleCreateModelPresetDraft(w http.ResponseWriter, r *http.Request) {

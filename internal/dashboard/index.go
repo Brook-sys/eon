@@ -460,6 +460,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 		  </label>
 		  <button type="button" id="btnPresetRefresh">Carregar presets</button>
 		  <button type="button" id="btnPresetDraft">Criar draft desabilitado</button>
+		  <button type="button" id="btnPresetEnablePreview">Preview de habilitação</button>
 		</div>
 		<div id="modelPresetDetail" class="prebox muted">catálogo não carregado</div>
         <div class="okbox" id="cfgOk"></div>
@@ -1326,6 +1327,22 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 	}
   }
 
+  async function previewModelPresetEnablement() {
+	const id = el("modelPreset").value;
+	if (!id) { el("cfgErr").textContent = "selecione um preset"; return; }
+	try {
+	  const body = await postJSON(controlBase + "/model-presets/" + encodeURIComponent(id) + "/enablement-preview", {
+		schema_version: 1,
+		version: "models.preset." + id + ".enabled.v1"
+	  });
+	  el("cfgDetail").textContent = pretty(body);
+	  el("cfgDetail").className = "prebox";
+	  el("cfgOk").textContent = body.preview && body.preview.blocked ? "habilitação bloqueada; revise os motivos" : "preview pronto; copie candidate para um novo draft explícito";
+	} catch (err) {
+	  el("cfgErr").textContent = String(err.message || err);
+	}
+  }
+
   function showInspPanel(name) {
     const panels = {
       summary: "inspSummary",
@@ -1649,6 +1666,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnCfgCreate").addEventListener("click", createDraft);
 	el("btnPresetRefresh").addEventListener("click", refreshModelPresets);
 	el("btnPresetDraft").addEventListener("click", createModelPresetDraft);
+	el("btnPresetEnablePreview").addEventListener("click", previewModelPresetEnablement);
 	el("modelPreset").addEventListener("change", function () {
 	  const presets = el("modelPreset")._presets || [];
 	  const preset = presets.find(function (p) { return p.id === el("modelPreset").value; });

@@ -31,6 +31,20 @@ type ModelPresetCatalog struct {
 	Presets []ModelPreset `json:"presets"`
 }
 
+// ModelPresetEnablementPreview makes the authority change required to enable
+// an installed preset explicit. Candidate is populated only when the active
+// MODELS revision still contains the exact evidence-backed provider and
+// disabled binding from the preset.
+type ModelPresetEnablementPreview struct {
+	PresetID       string        `json:"preset_id"`
+	EvidenceReport string        `json:"evidence_report"`
+	EvidenceSHA256 string        `json:"evidence_sha256"`
+	Blocked        bool          `json:"blocked"`
+	BlockReasons   []string      `json:"block_reasons,omitempty"`
+	Risks          []string      `json:"risks"`
+	Candidate      *ModelsConfig `json:"candidate,omitempty"`
+}
+
 func DecodeModelPresetCatalog(r io.Reader, maxBytes int64) (ModelPresetCatalog, error) {
 	if r == nil || maxBytes <= 0 {
 		return ModelPresetCatalog{}, errors.New("preset catalog reader and positive byte limit are required")
@@ -127,4 +141,76 @@ func (p ModelPreset) ModelsConfigDraft(version string) (ModelsConfig, error) {
 	binding.Priority = p.RecommendedPriority
 	config := ModelsConfig{Version: version, Providers: []ModelProviderConfig{p.Provider}, Bindings: []ModelBindingConfig{binding}}
 	return config, config.Validate()
+}
+
+// PreviewEnablement produces a candidate MODELS payload but never persists or
+// applies it. Enablement is allowed only after the disabled preset has passed
+// through the ordinary draft/validate/apply lifecycle unchanged.
+func (p ModelPreset) PreviewEnablement(active *ModelsConfig, version string) (ModelPresetEnablementPreview, error) {
+	if err := p.Validate(); err != nil {
+		return ModelPresetEnablementPreview{}, err
+	}
+	if strings.TrimSpace(version) == "" {
+		return ModelPresetEnablementPreview{}, errors.New("models config version is required")
+	}
+	preview := ModelPresetEnablementPreview{
+		PresetID: p.ID, EvidenceReport: p.EvidenceReport, EvidenceSHA256: p.EvidenceSHA256,
+		Risks: []string{
+			"enables external model calls at the next scheduler cycle boundary",
+			"sends bounded operation prompts to the configured provider",
+			"consumes provider quota and may trigger cooldown or fallback",
+			"requires the configured API-key environment reference at runtime",
+		},
+	}
+	if active == nil {
+		preview.Blocked = true
+		preview.BlockReasons = []string{"preset must first be installed disabled and applied as the active MODELS revision"}
+		return preview, nil
+	}
+	if err := active.Validate(); err != nil {
+		return ModelPresetEnablementPreview{}, fmt.Errorf("active models config: %w", err)
+	}
+	providerFound := false
+	for _, provider := range active.Providers {
+		if provider.ID == p.Provider.ID {
+			providerFound = true
+			if provider != p.Provider {
+				preview.BlockReasons = append(preview.BlockReasons, "active provider differs from the evidence-backed preset")
+			}
+			break
+		}
+	}
+	bindingIndex := -1
+	for i, binding := range active.Bindings {
+		if binding.ID != p.Binding.ID {
+			continue
+		}
+		bindingIndex = i
+		expected := p.Binding
+		expected.Priority = p.RecommendedPriority
+		if binding.Enabled {
+			preview.BlockReasons = append(preview.BlockReasons, "preset binding is already enabled")
+		} else if binding != expected {
+			preview.BlockReasons = append(preview.BlockReasons, "active binding differs from the evidence-backed preset")
+		}
+		break
+	}
+	if !providerFound {
+		preview.BlockReasons = append(preview.BlockReasons, "evidence-backed provider is not installed in the active MODELS revision")
+	}
+	if bindingIndex < 0 {
+		preview.BlockReasons = append(preview.BlockReasons, "evidence-backed disabled binding is not installed in the active MODELS revision")
+	}
+	if len(preview.BlockReasons) > 0 {
+		preview.Blocked = true
+		return preview, nil
+	}
+	candidate := cloneModelsConfig(active)
+	candidate.Version = strings.TrimSpace(version)
+	candidate.Bindings[bindingIndex].Enabled = true
+	if err := candidate.Validate(); err != nil {
+		return ModelPresetEnablementPreview{}, err
+	}
+	preview.Candidate = candidate
+	return preview, nil
 }

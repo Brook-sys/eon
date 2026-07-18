@@ -94,3 +94,33 @@ func TestModelPresetRejectsUnsafeEvidenceAndEnabledBinding(t *testing.T) {
 		}
 	}
 }
+
+func TestModelPresetEnablementPreviewRequiresExactDisabledInstallation(t *testing.T) {
+	preset := validModelPreset()
+	installed, err := preset.ModelsConfigDraft("models.installed.v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview, err := preset.PreviewEnablement(&installed, "models.enabled.v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Blocked || preview.Candidate == nil || !preview.Candidate.Bindings[0].Enabled {
+		t.Fatalf("enablement preview = %#v", preview)
+	}
+	if len(preview.Risks) < 4 || preview.EvidenceSHA256 != preset.EvidenceSHA256 {
+		t.Fatalf("risk/evidence projection = %#v", preview)
+	}
+
+	missing, err := preset.PreviewEnablement(nil, "models.enabled.v1")
+	if err != nil || !missing.Blocked || missing.Candidate != nil {
+		t.Fatalf("missing active preview = %#v err=%v", missing, err)
+	}
+	drifted := installed
+	drifted.Bindings = append([]ModelBindingConfig(nil), installed.Bindings...)
+	drifted.Bindings[0].MaxOutputTokens++
+	driftedPreview, err := preset.PreviewEnablement(&drifted, "models.enabled.v1")
+	if err != nil || !driftedPreview.Blocked || driftedPreview.Candidate != nil {
+		t.Fatalf("drifted preview = %#v err=%v", driftedPreview, err)
+	}
+}
