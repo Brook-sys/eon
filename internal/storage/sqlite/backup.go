@@ -252,6 +252,9 @@ func syncDirectory(path string) error {
 // source path for the duration of the backup. Prefer BackupTo for online
 // stores. This helper exists for offline runbook paths.
 func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options BackupOptions) (BackupReport, error) {
+	if err := rejectSQLiteSidecars(sourcePath); err != nil {
+		return BackupReport{}, fmt.Errorf("inspect offline backup source: %w", err)
+	}
 	beforeSize, beforeDigest, beforeIdentity, err := hashBackupFile(sourcePath)
 	if err != nil {
 		return BackupReport{}, fmt.Errorf("inspect offline backup source: %w", err)
@@ -264,6 +267,10 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 	report, err := store.BackupTo(ctx, destPath, options)
 	if err != nil {
 		return BackupReport{}, err
+	}
+	if err := rejectSQLiteSidecars(sourcePath); err != nil {
+		_ = os.Remove(destPath)
+		return BackupReport{}, fmt.Errorf("reinspect offline backup source: %w", err)
 	}
 	afterSize, afterDigest, afterIdentity, err := hashBackupFile(sourcePath)
 	if err != nil {
@@ -373,6 +380,9 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	if err != nil {
 		return BackupVerification{}, err
 	}
+	if err := rejectSQLiteSidecars(path); err != nil {
+		return BackupVerification{}, err
+	}
 	beforeSize, beforeDigest, beforeIdentity, err := hashBackupFile(path)
 	if err != nil {
 		return BackupVerification{}, err
@@ -437,6 +447,9 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("close backup verification database: %w", err)
 	}
 
+	if err := rejectSQLiteSidecars(path); err != nil {
+		return BackupVerification{}, err
+	}
 	afterSize, afterDigest, afterIdentity, err := hashBackupFile(path)
 	if err != nil {
 		return BackupVerification{}, err
@@ -445,6 +458,23 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, errors.New("verify backup digest: file changed during verification")
 	}
 	return verification, nil
+}
+
+// rejectSQLiteSidecars requires a backup selected for offline copy or restore
+// to be a standalone SQLite artifact. A WAL, SHM or rollback journal next to
+// the main file makes its logical state ambiguous: immutable read-only opens
+// deliberately ignore recovery files, so accepting them could certify or copy
+// a stale main database after an unclean shutdown.
+func rejectSQLiteSidecars(path string) error {
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+		sidecar := path + suffix
+		if _, err := os.Lstat(sidecar); err == nil {
+			return fmt.Errorf("backup is not standalone: SQLite sidecar exists: %s", sidecar)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("inspect SQLite sidecar %s: %w", sidecar, err)
+		}
+	}
+	return nil
 }
 
 func normalizeExpectedSHA256(value string) (string, error) {

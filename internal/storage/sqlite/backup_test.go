@@ -460,6 +460,40 @@ func TestClosedCopyToRejectsMissingAndSymlinkSources(t *testing.T) {
 	}
 }
 
+func TestVerifyAndClosedCopyRejectSQLiteSidecars(t *testing.T) {
+	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+		t.Run(strings.TrimPrefix(suffix, "-"), func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "backup.sqlite")
+			store, err := storage.Open(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+				store.Close()
+				t.Fatal(err)
+			}
+			if err := store.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path+suffix, []byte("ambiguous recovery state"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := storage.VerifyBackup(path); err == nil || !strings.Contains(err.Error(), "not standalone") {
+				t.Fatalf("VerifyBackup sidecar error = %v, want standalone rejection", err)
+			}
+			destination := filepath.Join(dir, "copy.sqlite")
+			if _, err := storage.ClosedCopyTo(context.Background(), path, destination, storage.BackupOptions{}); err == nil || !strings.Contains(err.Error(), "not standalone") {
+				t.Fatalf("ClosedCopyTo sidecar error = %v, want standalone rejection", err)
+			}
+			if _, err := os.Stat(destination); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("sidecar rejection left destination: %v", err)
+			}
+		})
+	}
+}
+
 func TestVerifyBackupDoesNotMutateSourceOrCreateSidecars(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "verify.sqlite")

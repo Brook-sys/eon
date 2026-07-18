@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "max_calls": 1,
+  "max_output_tokens": 16,
+  "status": "http_error",
+  "http_status": 403,
+  "latency_ms": 227,
+  "retry_after": ""
+}

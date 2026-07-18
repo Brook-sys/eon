@@ -50,10 +50,12 @@ go run ./cmd/sqlite-backup \
 
 A API equivalente é `ClosedCopyTo(ctx, sourcePath, destPath, options)`: ela
 exige que a origem já exista como arquivo regular (não cria banco ausente e não
-segue symlink), reabre a origem em modo SQLite `read-only`/`immutable`, faz
-`BackupTo` e fecha. O fluxo não executa configuração ou migração na origem,
-não cria WAL/SHM e compara inode, tamanho e SHA-256 antes/depois da cópia;
-qualquer mutação concorrente remove o destino e falha.
+segue symlink), sem arquivos `-wal`, `-shm` ou `-journal` adjacentes, reabre a
+origem em modo SQLite `read-only`/`immutable`, faz `BackupTo` e fecha. A presença
+de sidecar torna o estado lógico ambíguo e exige shutdown/checkpoint limpo antes
+do backup. O fluxo não executa configuração ou migração na origem, não cria
+WAL/SHM e compara inode, tamanho e SHA-256 antes/depois da cópia; qualquer
+mutação concorrente ou sidecar surgido durante a cópia remove o destino e falha.
 
 Para auditar uma cópia já existente sem migração ou escrita:
 
@@ -84,8 +86,11 @@ calcula o hash antes e depois de `quick_check`/decode e falha se o arquivo mudar
 durante a verificação. O path auditado precisa ser um arquivo regular direto:
 symlinks são recusados, e a identidade do inode é conferida entre hash,
 abertura SQLite e hash final para impedir troca de path durante a auditoria.
+A auditoria também exige um artefato standalone: qualquer `-wal`, `-shm` ou
+`-journal` adjacente é recusado antes e depois da leitura, pois o modo immutable
+não executa recovery e não pode certificar com segurança um main file stale.
 
-Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida verifique a cópia com o comando acima antes de considerá-la restaurável.
+Alternativa manual: com o store fechado, confirme que não restaram WAL/SHM/journal e copie o arquivo principal para um diretório frio; em seguida verifique a cópia com o comando acima antes de considerá-la restaurável. Se houver sidecar residual, reabra/feche o store de forma limpa ou faça checkpoint suportado antes de copiar; não promova apenas o main file.
 
 ## Restauração
 
@@ -141,5 +146,6 @@ cópia e verifica o destino por meio de `BackupTo`.
 - `TestVerifyBackupRejectsSymlinkPath`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`
 - `TestVerifyBackupRejectsTamperedCheckpointPayload`
+- `TestVerifyAndClosedCopyRejectSQLiteSidecars`
 - `TestVerifyBackupDoesNotMutateSourceOrCreateSidecars`
 - `TestClosedCopyToDoesNotMutateSourceOrCreateSidecars`
