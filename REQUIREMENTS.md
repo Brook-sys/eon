@@ -320,7 +320,7 @@ O núcleo MUST ser implementado em Go e SHOULD produzir binários para as plataf
 
 Domínio e kernel MUST NOT importar adapters concretos de provider ou persistência. Fronteiras substituíveis MUST possuir contract tests reutilizáveis.
 
-**Verificação executável (2026-07-18):** `internal/architecture/dependencies_test.go` parseia imports não-test dos pacotes `internal/domain` e `internal/kernel` e falha se algum alcançar `internal/provider/*` ou `internal/storage/*`. O teste mantém a regra independente de ferramentas externas e inclui fixture negativa que comprova detecção de ambos os grupos de adapters.
+**Verificação executável (2026-07-18):** `internal/architecture/dependencies_test.go` parseia imports não-test dos pacotes `internal/domain` e `internal/kernel` e falha se algum alcançar `internal/provider/*` ou `internal/storage/*`. O teste mantém a regra independente de ferramentas externas e inclui fixture negativa que comprova detecção de ambos os grupos de adapters. `internal/architecture/contract_coverage_test.go` inspeciona os testes dos stores concretos e exige que memory, SQLite e Dolt invoquem a suite funcional reutilizável e que os backends duráveis invoquem também a suite de reopen/rollback/idempotência; o detector possui fixture negativa contra selectors homônimos de outro pacote.
 
 ### NFR-TEST-001 — Testabilidade offline
 
