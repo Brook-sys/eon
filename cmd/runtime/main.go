@@ -22,17 +22,18 @@ import (
 
 func main() {
 	var (
-		listen         = flag.String("listen", "127.0.0.1:8080", "HTTP bind address for inspect/control/dashboard")
-		storeBackend   = flag.String("store", "memory", "store backend: memory or sqlite")
-		sqlitePath     = flag.String("sqlite-path", "", "SQLite checkpoint path (required for -store=sqlite)")
-		missionID      = flag.String("mission-id", "", "mission ID for the continuity control loop (optional)")
-		runtimeName    = flag.String("runtime-name", "motor-autonomo", "runtime identity name")
-		runtimeVersion = flag.String("runtime-version", "dev", "runtime identity version")
-		dashboard      = flag.Bool("dashboard", true, "serve experimental operator dashboard")
-		otelEnabled    = flag.Bool("otel", false, "enable optional OpenTelemetry export (derived-only)")
-		otelEndpoint   = flag.String("otel-endpoint", "", "OTLP HTTP endpoint host:port (optional)")
-		otelInsecure   = flag.Bool("otel-insecure", false, "disable TLS for OTLP HTTP")
-		otelSample     = flag.Float64("otel-sample", 1, "trace sample ratio in [0,1]")
+		listen             = flag.String("listen", "127.0.0.1:8080", "HTTP bind address for inspect/control/dashboard")
+		storeBackend       = flag.String("store", "memory", "store backend: memory or sqlite")
+		sqlitePath         = flag.String("sqlite-path", "", "SQLite checkpoint path (required for -store=sqlite)")
+		missionID          = flag.String("mission-id", "", "mission ID for the continuity control loop (optional)")
+		runtimeName        = flag.String("runtime-name", "motor-autonomo", "runtime identity name")
+		runtimeVersion     = flag.String("runtime-version", "dev", "runtime identity version")
+		dashboard          = flag.Bool("dashboard", true, "serve experimental operator dashboard")
+		modelPresetCatalog = flag.String("model-preset-catalog", "", "evidence-backed model preset catalog path (optional)")
+		otelEnabled        = flag.Bool("otel", false, "enable optional OpenTelemetry export (derived-only)")
+		otelEndpoint       = flag.String("otel-endpoint", "", "OTLP HTTP endpoint host:port (optional)")
+		otelInsecure       = flag.Bool("otel-insecure", false, "disable TLS for OTLP HTTP")
+		otelSample         = flag.Float64("otel-sample", 1, "trace sample ratio in [0,1]")
 		// Export-buffer retention (disposable queues only; not store GC).
 		otelTraceQueue   = flag.Int("otel-trace-queue", 0, "OTLP span queue size (0 = default 2048)")
 		otelTraceBatch   = flag.Int("otel-trace-batch", 0, "OTLP span export batch size (0 = default 512)")
@@ -82,19 +83,20 @@ func main() {
 	flag.Parse()
 
 	opts := bootstrap.Options{
-		ListenAddr:      *listen,
-		StoreBackend:    bootstrap.StorageBackend(*storeBackend),
-		SQLitePath:      *sqlitePath,
-		MissionID:       domain.MissionID(*missionID),
-		RuntimeName:     *runtimeName,
-		RuntimeVersion:  *runtimeVersion,
-		EnableDashboard: *dashboard,
-		IdleMin:         *idleMin,
-		IdleMax:         *idleMax,
-		MaxInboxBatch:   *maxInboxBatch,
-		DeliveryBatch:   *deliveryBatch,
-		DeliveryLease:   *deliveryLease,
-		DeliveryRetry:   *deliveryRetry,
+		ListenAddr:             *listen,
+		StoreBackend:           bootstrap.StorageBackend(*storeBackend),
+		SQLitePath:             *sqlitePath,
+		MissionID:              domain.MissionID(*missionID),
+		RuntimeName:            *runtimeName,
+		RuntimeVersion:         *runtimeVersion,
+		EnableDashboard:        *dashboard,
+		ModelPresetCatalogPath: *modelPresetCatalog,
+		IdleMin:                *idleMin,
+		IdleMax:                *idleMax,
+		MaxInboxBatch:          *maxInboxBatch,
+		DeliveryBatch:          *deliveryBatch,
+		DeliveryLease:          *deliveryLease,
+		DeliveryRetry:          *deliveryRetry,
 		Observability: observability.Config{
 			Enabled:      *otelEnabled,
 			OTLPEndpoint: *otelEndpoint,

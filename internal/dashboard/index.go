@@ -452,6 +452,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           <button class="primary" type="button" id="btnCfgCreate">Criar draft</button>
           <button type="button" id="btnCfgFillDefault">Preencher default</button>
         </div>
+		<h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Presets de modelo qualificados</h3>
+		<p class="hint">Catálogo opcional validado no startup. Criar um draft preserva <code>enabled=false</code>; validate/apply e habilitação continuam decisões explícitas.</p>
+		<div class="row">
+		  <label>preset
+			<select id="modelPreset"><option value="">(carregar catálogo)</option></select>
+		  </label>
+		  <button type="button" id="btnPresetRefresh">Carregar presets</button>
+		  <button type="button" id="btnPresetDraft">Criar draft desabilitado</button>
+		</div>
+		<div id="modelPresetDetail" class="prebox muted">catálogo não carregado</div>
         <div class="okbox" id="cfgOk"></div>
         <div class="errbox" id="cfgErr"></div>
         <h3 class="muted" style="margin:12px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:0.06em">Detalhe / preview</h3>
@@ -1277,6 +1287,45 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   }
 
+  async function refreshModelPresets() {
+	const select = el("modelPreset");
+	el("cfgErr").textContent = "";
+	try {
+	  const body = await getJSON(controlBase + "/model-presets");
+	  const presets = Array.isArray(body.presets) ? body.presets : [];
+	  select.innerHTML = '<option value="">(selecione)</option>' + presets.map(function (p) {
+		return '<option value="' + esc(p.id) + '">' + esc(p.id) + ' · ' + esc(p.qualification) + '</option>';
+	  }).join("");
+	  select._presets = presets;
+	  el("modelPresetDetail").textContent = pretty(body);
+	  el("modelPresetDetail").className = "prebox";
+	} catch (err) {
+	  el("cfgErr").textContent = String(err.message || err);
+	}
+  }
+
+  async function createModelPresetDraft() {
+	const select = el("modelPreset");
+	const id = select.value;
+	if (!id) { el("cfgErr").textContent = "selecione um preset"; return; }
+	const reason = el("cfgReason").value.trim();
+	if (!reason) { el("cfgErr").textContent = "reason é obrigatório"; return; }
+	try {
+	  const body = await postJSON(controlBase + "/model-presets/" + encodeURIComponent(id) + "/drafts", {
+		schema_version: 1,
+		based_on_revision: Number(el("cfgBasedOn").value || "0"),
+		version: "models.preset." + id + ".v1",
+		reason: reason
+	  });
+	  el("cfgScope").value = "MODELS";
+	  el("cfgOk").textContent = "draft desabilitado criado do preset " + id;
+	  el("cfgDetail").textContent = pretty(body);
+	  await refreshConfig(true);
+	} catch (err) {
+	  el("cfgErr").textContent = String(err.message || err);
+	}
+  }
+
   function showInspPanel(name) {
     const panels = {
       summary: "inspSummary",
@@ -1598,6 +1647,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   el("btnCfgRefresh").addEventListener("click", function () { refreshConfig(true); });
   el("btnCfgCreate").addEventListener("click", createDraft);
+	el("btnPresetRefresh").addEventListener("click", refreshModelPresets);
+	el("btnPresetDraft").addEventListener("click", createModelPresetDraft);
+	el("modelPreset").addEventListener("change", function () {
+	  const presets = el("modelPreset")._presets || [];
+	  const preset = presets.find(function (p) { return p.id === el("modelPreset").value; });
+	  if (preset) el("modelPresetDetail").textContent = pretty(preset);
+	});
   el("btnCfgFillDefault").addEventListener("click", fillDefaultPayload);
   el("cfgScope").addEventListener("change", function () { refreshConfig(true); });
   el("cfgStatus").addEventListener("change", function () { refreshConfig(true); });

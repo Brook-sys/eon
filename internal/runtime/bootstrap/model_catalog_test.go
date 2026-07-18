@@ -2,6 +2,11 @@ package bootstrap
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,6 +14,46 @@ import (
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
 )
+
+func TestLoadModelPresetCatalogVerifiesEvidenceDigest(t *testing.T) {
+	dir := t.TempDir()
+	evidence := []byte(`{"qualified":true}`)
+	if err := os.MkdirAll(filepath.Join(dir, "results"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "results", "report.json"), evidence, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(evidence)
+	preset := domain.ModelPreset{
+		ID:         "qualified-model",
+		Provider:   domain.ModelProviderConfig{ID: "groq", Kind: domain.ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1", APIKeyEnv: "GROQ_API_KEY", Timeout: time.Second, MaxResponseBytes: 1024, GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("groq"), MaxConcurrent: 1}},
+		Binding:    domain.ModelBindingConfig{ID: "qualified-model", ProviderRef: "groq", ModelID: "model", Enabled: false, Priority: 10, ContextTokens: 2048, MaxOutputTokens: 128, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("qualified-model"), MaxConcurrent: 1}},
+		ObservedAt: time.Date(2026, 7, 18, 0, 0, 0, 0, time.UTC), Qualification: "QUALIFIED", EvidenceReport: "results/report.json", EvidenceSHA256: hex.EncodeToString(digest[:]), RecommendedPriority: 10,
+	}
+	catalog := domain.ModelPresetCatalog{Schema: domain.ModelPresetCatalogSchema, Presets: []domain.ModelPreset{preset}}
+	body, err := json.Marshal(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "catalog.json")
+	if err := os.WriteFile(path, body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := loadModelPresetCatalog(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.Presets) != 1 || loaded.Presets[0].ID != preset.ID {
+		t.Fatalf("loaded = %#v", loaded)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "results", "report.json"), []byte("tampered"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadModelPresetCatalog(path); err == nil {
+		t.Fatal("expected evidence digest mismatch")
+	}
+}
 
 func TestBuildModelWiresAllBindingsAndLimits(t *testing.T) {
 	config := domain.ModelsConfig{

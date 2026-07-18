@@ -2,12 +2,16 @@ package bootstrap
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -199,6 +203,17 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
 	controlAPI.ConfigRollback = configApplier
+	if opts.ModelPresetCatalogPath != "" {
+		catalog, loadErr := loadModelPresetCatalog(opts.ModelPresetCatalogPath)
+		if loadErr != nil {
+			_ = telemetry.Shutdown(ctx)
+			if closer != nil {
+				_ = closer.Close()
+			}
+			return nil, fmt.Errorf("load model preset catalog: %w", loadErr)
+		}
+		controlAPI.ModelPresets = &catalog
+	}
 	missionAcceptor := mission.Acceptor{Store: store, Clock: clock, IDs: ids}
 	controlAPI.MissionAccept = control.MissionAmendmentAcceptorFunc(func(ctx context.Context, amendment domain.UserAmendment, provenance string) (control.MissionAmendmentAcceptance, error) {
 		result, err := missionAcceptor.Accept(ctx, amendment, provenance)
@@ -323,6 +338,34 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		cycleTelemetry:  observability.NewCycleInstruments(telemetry),
 		logger:          log.Default(),
 	}, nil
+}
+
+func loadModelPresetCatalog(path string) (domain.ModelPresetCatalog, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return domain.ModelPresetCatalog{}, err
+	}
+	catalog, decodeErr := domain.DecodeModelPresetCatalog(file, 1<<20)
+	closeErr := file.Close()
+	if decodeErr != nil {
+		return domain.ModelPresetCatalog{}, decodeErr
+	}
+	if closeErr != nil {
+		return domain.ModelPresetCatalog{}, closeErr
+	}
+	base := filepath.Dir(path)
+	for _, preset := range catalog.Presets {
+		evidencePath := filepath.Join(base, filepath.FromSlash(preset.EvidenceReport))
+		body, readErr := os.ReadFile(evidencePath)
+		if readErr != nil {
+			return domain.ModelPresetCatalog{}, fmt.Errorf("preset %s evidence: %w", preset.ID, readErr)
+		}
+		digest := sha256.Sum256(body)
+		if hex.EncodeToString(digest[:]) != preset.EvidenceSHA256 {
+			return domain.ModelPresetCatalog{}, fmt.Errorf("preset %s evidence digest mismatch", preset.ID)
+		}
+	}
+	return catalog, nil
 }
 
 // AttachModel wires a PROPOSE_ONLY ModelExecutor into the dispatch path.

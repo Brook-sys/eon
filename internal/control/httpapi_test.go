@@ -950,6 +950,89 @@ func TestControlAPIModelsDraftLifecycle(t *testing.T) {
 	}
 }
 
+func TestControlAPIModelPresetCreatesDisabledModelsDraft(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 18, 21, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(140)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	preset := validControlModelPreset()
+	api.ModelPresets = &domain.ModelPresetCatalog{Schema: domain.ModelPresetCatalogSchema, Presets: []domain.ModelPreset{preset}}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	listed := mustGET(t, server.URL+"/model-presets")
+	defer listed.Body.Close()
+	if listed.StatusCode != http.StatusOK {
+		t.Fatalf("list presets status = %d body=%s", listed.StatusCode, readBody(t, listed))
+	}
+
+	created := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/drafts", map[string]any{
+		"schema_version": 1,
+		"version":        "models.from-preset.v1",
+		"reason":         "operator reviewed live evidence",
+	})
+	defer created.Body.Close()
+	if created.StatusCode != http.StatusAccepted {
+		t.Fatalf("create preset draft status = %d body=%s", created.StatusCode, readBody(t, created))
+	}
+	var response struct {
+		PresetID string             `json:"preset_id"`
+		Draft    domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &response)
+	if response.PresetID != preset.ID || response.Draft.Scope != domain.ConfigScopeModels || response.Draft.Models == nil {
+		t.Fatalf("preset draft response = %#v", response)
+	}
+	if response.Draft.Models.Bindings[0].Enabled {
+		t.Fatal("preset route must keep binding disabled")
+	}
+	if response.Draft.Models.Bindings[0].Priority != preset.RecommendedPriority {
+		t.Fatalf("priority = %d want %d", response.Draft.Models.Bindings[0].Priority, preset.RecommendedPriority)
+	}
+}
+
+func TestControlAPIModelPresetFailsClosed(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 18, 21, 5, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(150)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	unwired := mustGET(t, server.URL+"/model-presets")
+	defer unwired.Body.Close()
+	if unwired.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("unwired status = %d", unwired.StatusCode)
+	}
+
+	api.ModelPresets = &domain.ModelPresetCatalog{Schema: domain.ModelPresetCatalogSchema, Presets: []domain.ModelPreset{validControlModelPreset()}}
+	missing := mustPOSTJSON(t, server.URL+"/model-presets/missing/drafts", map[string]any{"version": "models.v1", "reason": "reviewed"})
+	defer missing.Body.Close()
+	if missing.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing preset status = %d", missing.StatusCode)
+	}
+}
+
+func validControlModelPreset() domain.ModelPreset {
+	return domain.ModelPreset{
+		ID: "groq-qualified",
+		Provider: domain.ModelProviderConfig{
+			ID: "groq", Kind: domain.ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1", APIKeyEnv: "GROQ_API_KEY",
+			Timeout: 30 * time.Second, MaxResponseBytes: 1 << 20,
+			GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("groq"), MaxConcurrent: 1},
+		},
+		Binding: domain.ModelBindingConfig{
+			ID: "groq-qualified", ProviderRef: "groq", ModelID: "llama-3.3-70b-versatile", Enabled: false,
+			Priority: 99, ContextTokens: 8192, MaxOutputTokens: 512, MaxOutputDialect: domain.MaxOutputDialectLegacy,
+			Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("groq-qualified"), MaxConcurrent: 1},
+		},
+		ObservedAt: time.Date(2026, 7, 18, 0, 0, 0, 0, time.UTC), Qualification: "QUALIFIED",
+		EvidenceReport: "results/report.json", EvidenceSHA256: strings.Repeat("a", 64), RecommendedPriority: 10,
+	}
+}
+
 func seedMission(t *testing.T, store port.Store, now time.Time) {
 	t.Helper()
 	mission := domain.MissionRevision{

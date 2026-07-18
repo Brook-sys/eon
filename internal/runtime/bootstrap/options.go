@@ -47,6 +47,9 @@ type Options struct {
 	Observability observability.Config
 	// EnableDashboard mounts the experimental operator UI on the same server.
 	EnableDashboard bool
+	// ModelPresetCatalogPath optionally exposes an evidence-verified preset
+	// catalog through the Control API/dashboard. Empty disables the catalog.
+	ModelPresetCatalogPath string
 
 	// QuestionRoutes seeds the active outbox/reminder routes when no durable
 	// CHANNELS revision is installed. Empty means channel delivery is idle until
@@ -129,11 +132,11 @@ const (
 // non-local PROPOSE_ONLY operations. Secrets stay in process env; durable
 // config must never hold raw API keys.
 type ModelOptions struct {
-	Enabled bool
-	ProviderID string
-	BindingID string
+	Enabled       bool
+	ProviderID    string
+	BindingID     string
 	ProviderLimit domain.ResourceLimit
-	BindingLimit domain.ResourceLimit
+	BindingLimit  domain.ResourceLimit
 	// BaseURL is an absolute HTTP(S) root (without /v1/chat/completions).
 	BaseURL string
 	// Model is the provider model name.
@@ -162,11 +165,11 @@ type ModelOptions struct {
 // ModelFallbackOptions configures one alternate OpenAI-compatible endpoint for
 // recovery step 7. Same secret discipline as ModelOptions (env names only).
 type ModelFallbackOptions struct {
-	Enabled bool
-	ProviderID string
-	BindingID string
+	Enabled       bool
+	ProviderID    string
+	BindingID     string
 	ProviderLimit domain.ResourceLimit
-	BindingLimit domain.ResourceLimit
+	BindingLimit  domain.ResourceLimit
 	// BaseURL is an absolute HTTP(S) root for the alternate endpoint.
 	BaseURL string
 	// Model is the alternate provider model name.
