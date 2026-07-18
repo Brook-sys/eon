@@ -409,12 +409,14 @@ func TestVerifyBackupPinsRuntimeSchemaIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if verification.SchemaVersion <= 0 || len(verification.SchemaSHA256) != sha256.Size*2 {
+	if verification.SchemaVersion <= 0 || verification.SchemaObjects != 1 || len(verification.SchemaSHA256) != sha256.Size*2 {
 		t.Fatalf("missing schema identity: %+v", verification)
 	}
 	version := verification.SchemaVersion
+	objects := verification.SchemaObjects
 	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{
 		ExpectedSchemaVersion: &version,
+		ExpectedSchemaObjects: &objects,
 		ExpectedSchemaSHA256:  verification.SchemaSHA256,
 	}); err != nil {
 		t.Fatalf("verify pinned schema: %v", err)
@@ -433,6 +435,46 @@ func TestVerifyBackupPinsRuntimeSchemaIdentity(t *testing.T) {
 	invalidVersion := -1
 	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSchemaVersion: &invalidVersion}); err == nil {
 		t.Fatal("negative schema version accepted")
+	}
+	invalidObjects := 2
+	if _, err := storage.VerifyBackupWithOptions(path, storage.VerificationOptions{ExpectedSchemaObjects: &invalidObjects}); err == nil {
+		t.Fatal("non-canonical schema object count accepted")
+	}
+}
+
+func TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects(t *testing.T) {
+	for _, statement := range []string{
+		`CREATE TABLE unexpected_table (id INTEGER PRIMARY KEY) STRICT`,
+		`CREATE INDEX unexpected_index ON runtime_checkpoint(format_version)`,
+		`CREATE VIEW unexpected_view AS SELECT id FROM runtime_checkpoint`,
+		`CREATE TRIGGER unexpected_trigger AFTER INSERT ON runtime_checkpoint BEGIN SELECT 1; END`,
+	} {
+		t.Run(strings.Fields(statement)[1], func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "backup.sqlite")
+			store, err := storage.Open(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := store.Close(); err != nil {
+				t.Fatal(err)
+			}
+			db, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(statement); err != nil {
+				db.Close()
+				t.Fatal(err)
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := storage.VerifyBackup(path); err == nil || !strings.Contains(err.Error(), "user objects") {
+				t.Fatalf("verification error = %v, want unexpected schema-object rejection", err)
+			}
+		})
 	}
 }
 

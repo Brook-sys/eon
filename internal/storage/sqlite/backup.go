@@ -32,6 +32,7 @@ type BackupReport struct {
 	FileSize         int64         `json:"file_size"`
 	SHA256           string        `json:"sha256"`
 	SchemaVersion    int           `json:"schema_version"`
+	SchemaObjects    int           `json:"schema_objects"`
 	SchemaSHA256     string        `json:"schema_sha256"`
 	CheckpointRows   int           `json:"checkpoint_rows"`
 	CheckpointFormat int           `json:"checkpoint_format,omitempty"`
@@ -46,6 +47,7 @@ type BackupVerification struct {
 	FileSize         int64  `json:"file_size"`
 	SHA256           string `json:"sha256"`
 	SchemaVersion    int    `json:"schema_version"`
+	SchemaObjects    int    `json:"schema_objects"`
 	SchemaSHA256     string `json:"schema_sha256"`
 	CheckpointRows   int    `json:"checkpoint_rows"`
 	CheckpointFormat int    `json:"checkpoint_format,omitempty"`
@@ -58,6 +60,7 @@ type BackupVerification struct {
 type VerificationOptions struct {
 	ExpectedSHA256           string
 	ExpectedSchemaVersion    *int
+	ExpectedSchemaObjects    *int
 	ExpectedSchemaSHA256     string
 	ExpectedCheckpointSHA256 string
 	// ExpectedCheckpointRows and ExpectedCheckpointFormat pin the logical
@@ -80,6 +83,7 @@ type BackupOptions struct {
 type RestoreOptions struct {
 	ExpectedSHA256           string
 	ExpectedSchemaVersion    *int
+	ExpectedSchemaObjects    *int
 	ExpectedSchemaSHA256     string
 	ExpectedCheckpointSHA256 string
 	ExpectedCheckpointRows   *int
@@ -219,6 +223,7 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 		FileSize:         verification.FileSize,
 		SHA256:           verification.SHA256,
 		SchemaVersion:    verification.SchemaVersion,
+		SchemaObjects:    verification.SchemaObjects,
 		SchemaSHA256:     verification.SchemaSHA256,
 		CheckpointRows:   verification.CheckpointRows,
 		CheckpointFormat: verification.CheckpointFormat,
@@ -374,6 +379,7 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{
 		ExpectedSHA256:           options.ExpectedSHA256,
 		ExpectedSchemaVersion:    options.ExpectedSchemaVersion,
+		ExpectedSchemaObjects:    options.ExpectedSchemaObjects,
 		ExpectedSchemaSHA256:     options.ExpectedSchemaSHA256,
 		ExpectedCheckpointSHA256: options.ExpectedCheckpointSHA256,
 		ExpectedCheckpointRows:   options.ExpectedCheckpointRows,
@@ -388,6 +394,7 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	}
 	if report.CheckpointRows != sourceVerification.CheckpointRows ||
 		report.SchemaVersion != sourceVerification.SchemaVersion ||
+		report.SchemaObjects != sourceVerification.SchemaObjects ||
 		report.SchemaSHA256 != sourceVerification.SchemaSHA256 ||
 		report.CheckpointFormat != sourceVerification.CheckpointFormat ||
 		report.CheckpointSHA256 != sourceVerification.CheckpointSHA256 {
@@ -454,10 +461,23 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("read backup schema version: %w", err)
 	}
-	var schemaSQL string
-	if err := db.QueryRow(`SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'runtime_checkpoint'`).Scan(&schemaSQL); err != nil {
+	var schemaObjects int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'`).Scan(&schemaObjects); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("count backup runtime schema objects: %w", err)
+	}
+	if schemaObjects != 1 {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup runtime schema: got %d user objects, want exactly runtime_checkpoint", schemaObjects)
+	}
+	var schemaType, schemaName, tableName, schemaSQL string
+	if err := db.QueryRow(`SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'`).Scan(&schemaType, &schemaName, &tableName, &schemaSQL); err != nil {
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("read backup runtime schema: %w", err)
+	}
+	if schemaType != "table" || schemaName != "runtime_checkpoint" || tableName != "runtime_checkpoint" || strings.TrimSpace(schemaSQL) == "" {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup runtime schema: unexpected object type=%q name=%q table=%q", schemaType, schemaName, tableName)
 	}
 	schemaDigest := sha256.Sum256([]byte(schemaSQL))
 	var count int
@@ -469,6 +489,7 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		FileSize:       beforeSize,
 		SHA256:         beforeDigest,
 		SchemaVersion:  schemaVersion,
+		SchemaObjects:  schemaObjects,
 		SchemaSHA256:   hex.EncodeToString(schemaDigest[:]),
 		CheckpointRows: count,
 		IntegrityCheck: integrity,
@@ -481,6 +502,16 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		if verification.SchemaVersion != *options.ExpectedSchemaVersion {
 			db.Close()
 			return BackupVerification{}, fmt.Errorf("verify backup schema version: got %d, want %d", verification.SchemaVersion, *options.ExpectedSchemaVersion)
+		}
+	}
+	if options.ExpectedSchemaObjects != nil {
+		if *options.ExpectedSchemaObjects != 1 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected schema objects must be 1 for the canonical runtime schema")
+		}
+		if verification.SchemaObjects != *options.ExpectedSchemaObjects {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup schema objects: got %d, want %d", verification.SchemaObjects, *options.ExpectedSchemaObjects)
 		}
 	}
 	if expectedSchema != "" && verification.SchemaSHA256 != expectedSchema {

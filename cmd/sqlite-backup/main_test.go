@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +44,9 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if err := run(context.Background(), []string{
 		"-mode=verify", "-path=" + backupPath,
 		"-expected-sha256=" + report.SHA256,
+		"-expected-schema-version=" + fmt.Sprint(report.SchemaVersion),
+		"-expected-schema-objects=1",
+		"-expected-schema-sha256=" + report.SchemaSHA256,
 		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
 		"-expected-checkpoint-rows=0",
 		"-expected-checkpoint-format=0",
@@ -65,6 +69,9 @@ func TestRunBackupAndVerify(t *testing.T) {
 	if err := run(context.Background(), []string{
 		"-mode=restore", "-source=" + backupPath, "-destination=" + restoredPath,
 		"-expected-sha256=" + report.SHA256,
+		"-expected-schema-version=" + fmt.Sprint(report.SchemaVersion),
+		"-expected-schema-objects=1",
+		"-expected-schema-sha256=" + report.SchemaSHA256,
 		"-expected-checkpoint-sha256=" + report.CheckpointSHA256,
 		"-expected-checkpoint-rows=0",
 		"-expected-checkpoint-format=0",
@@ -99,6 +106,7 @@ func TestRunRejectsUnsafeOrIncompleteArguments(t *testing.T) {
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=not-an-int"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-rows=2"},
 		{"-mode=verify", "-path=x", "-expected-checkpoint-format=-1"},
+		{"-mode=verify", "-path=x", "-expected-schema-objects=2"},
 		{"-mode=restore"},
 		{"-mode=restore", "-source=x"},
 		{"-mode=restore", "-source=x", "-destination=y", "-page-steps=-1"},

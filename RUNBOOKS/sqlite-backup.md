@@ -16,7 +16,7 @@ store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
 // report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
-// SchemaVersion, SchemaSHA256, CheckpointRows, CheckpointFormat,
+// SchemaVersion, SchemaObjects, SchemaSHA256, CheckpointRows, CheckpointFormat,
 // CheckpointSHA256 e IntegrityCheck
 ```
 
@@ -82,6 +82,7 @@ go run ./cmd/sqlite-backup \
   -path=/mnt/restore/runtime-YYYYMMDD.sqlite \
   -expected-sha256=<sha256_emitido_no_backup> \
   -expected-schema-version=<schema_version_emitido_no_backup> \
+  -expected-schema-objects=<schema_objects_emitido_no_backup> \
   -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
   -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup> \
   -expected-checkpoint-rows=<checkpoint_rows_emitido_no_backup> \
@@ -89,8 +90,11 @@ go run ./cmd/sqlite-backup \
 ```
 
 A opção `-expected-sha256` fixa a identidade física transferida,
-`-expected-schema-version` e `-expected-schema-sha256` fixam a identidade da
-tabela canônica `runtime_checkpoint` observada no inventário,
+`-expected-schema-version`, `-expected-schema-objects` e
+`-expected-schema-sha256` fixam a identidade da tabela canônica
+`runtime_checkpoint` observada no inventário. A auditoria exige exatamente um
+objeto de schema de aplicação — essa tabela — e rejeita tabelas, índices,
+triggers ou views adicionais, mesmo que `runtime_checkpoint` permaneça válida,
 `-expected-checkpoint-sha256` fixa a identidade lógica do estado serializado e
 `-expected-checkpoint-rows`/`-expected-checkpoint-format` fixam o framing do
 inventário, inclusive o caso válido vazio (`0`/`0`). Valores ausentes continuam
@@ -118,6 +122,7 @@ go run ./cmd/sqlite-backup \
   -destination=/var/lib/motor-autonomo/runtime-restored.sqlite \
   -expected-sha256=<sha256_emitido_no_backup> \
   -expected-schema-version=<schema_version_emitido_no_backup> \
+  -expected-schema-objects=<schema_objects_emitido_no_backup> \
   -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
   -expected-checkpoint-sha256=<checkpoint_sha256_emitido_no_backup> \
   -expected-checkpoint-rows=<checkpoint_rows_emitido_no_backup> \
