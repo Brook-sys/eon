@@ -82,21 +82,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("reopen runtime gate store: %w", err)
 	}
-	if err := reopened.View(context.Background(), func(reader port.Reader) error {
-		for _, usage := range report.Usages {
-			persisted, err := reader.ResourceUsage(usage.Resource)
-			if errors.Is(err, port.ErrNotFound) && usage.InFlight == 0 && usage.MinuteCount == 0 && usage.ConsecutiveFailures == 0 && usage.CircuitOpenUntil == nil {
-				continue
-			}
-			if err != nil {
-				return err
-			}
-			if persisted.InFlight != usage.InFlight || persisted.MinuteCount != usage.MinuteCount || persisted.ConsecutiveFailures != usage.ConsecutiveFailures {
-				return fmt.Errorf("durable usage mismatch for %s", usage.Resource)
-			}
-		}
-		return nil
-	}); err != nil {
+	if err := gatecampaign.VerifyRuntimeGateDurability(context.Background(), reopened, report); err != nil {
 		reopened.Close()
 		return err
 	}

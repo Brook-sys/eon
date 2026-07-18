@@ -139,11 +139,17 @@ func (b RuntimeGateBinding) Validate() error {
 }
 
 type RuntimeGateUsage struct {
-	Resource            domain.ResourceID `json:"resource"`
-	InFlight            int               `json:"in_flight"`
-	MinuteCount         int               `json:"minute_count"`
-	ConsecutiveFailures int               `json:"consecutive_failures"`
-	CircuitOpenUntil    *time.Time        `json:"circuit_open_until,omitempty"`
+	Resource               domain.ResourceID `json:"resource"`
+	InFlight               int               `json:"in_flight"`
+	MinuteWindowStart      time.Time         `json:"minute_window_start,omitempty"`
+	MinuteCount            int               `json:"minute_count"`
+	DayWindowStart         time.Time         `json:"day_window_start,omitempty"`
+	DayCount               int               `json:"day_count"`
+	TokenMinuteWindowStart time.Time         `json:"token_minute_window_start,omitempty"`
+	TokenMinuteCount       int               `json:"token_minute_count"`
+	ConsecutiveFailures    int               `json:"consecutive_failures"`
+	CircuitOpenUntil       *time.Time        `json:"circuit_open_until,omitempty"`
+	LastFailureAt          *time.Time        `json:"last_failure_at,omitempty"`
 }
 
 type RuntimeGateCampaignReport struct {
@@ -402,7 +408,96 @@ func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.Mo
 }
 
 func runtimeGateUsage(usage domain.ResourceUsage) RuntimeGateUsage {
-	return RuntimeGateUsage{Resource: usage.Resource, InFlight: usage.InFlight, MinuteCount: usage.MinuteCount, ConsecutiveFailures: usage.ConsecutiveFailures, CircuitOpenUntil: usage.CircuitOpenUntil}
+	return RuntimeGateUsage{
+		Resource: usage.Resource, InFlight: usage.InFlight,
+		MinuteWindowStart: usage.MinuteWindowStart, MinuteCount: usage.MinuteCount,
+		DayWindowStart: usage.DayWindowStart, DayCount: usage.DayCount,
+		TokenMinuteWindowStart: usage.TokenMinuteWindowStart, TokenMinuteCount: usage.TokenMinuteCount,
+		ConsecutiveFailures: usage.ConsecutiveFailures, CircuitOpenUntil: usage.CircuitOpenUntil,
+		LastFailureAt: usage.LastFailureAt,
+	}
+}
+
+// VerifyRuntimeGateDurability proves that reopening the campaign store
+// preserved the complete ResourceGate accounting, the parked quota operation,
+// and the executor audit trail. It deliberately compares window timestamps and
+// token/day counters too: matching only in-flight/minute counters can conceal a
+// checkpoint regression that grants excess capacity after restart.
+func VerifyRuntimeGateDurability(ctx context.Context, store port.ReadStore, report RuntimeGateCampaignReport) error {
+	if store == nil {
+		return errors.New("runtime gate durability verification requires a store")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return store.View(ctx, func(reader port.Reader) error {
+		for _, expected := range report.Usages {
+			persisted, err := reader.ResourceUsage(expected.Resource)
+			if errors.Is(err, port.ErrNotFound) && runtimeGateUsageIsZero(expected) {
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("read durable usage %s: %w", expected.Resource, err)
+			}
+			if actual := runtimeGateUsage(persisted); !runtimeGateUsageEqual(actual, expected) {
+				return fmt.Errorf("durable usage mismatch for %s: got %+v want %+v", expected.Resource, actual, expected)
+			}
+			if persisted.InFlight != 0 {
+				return fmt.Errorf("durable usage %s retained %d in-flight permits", expected.Resource, persisted.InFlight)
+			}
+		}
+		op, err := reader.Operation("operation_runtime_gate_quota")
+		if err != nil {
+			return fmt.Errorf("read durable quota operation: %w", err)
+		}
+		if op.State != report.OperationState || !equalTimePtr(op.Reevaluation.NotBefore, report.SecondAcquireWait) {
+			return fmt.Errorf("durable quota operation mismatch: state=%s wait=%v, want state=%s wait=%v", op.State, op.Reevaluation.NotBefore, report.OperationState, report.SecondAcquireWait)
+		}
+		events, err := reader.Events(0, 100)
+		if err != nil {
+			return fmt.Errorf("read durable runtime gate events: %w", err)
+		}
+		required := map[string]bool{
+			"operation.model_routed":  false,
+			"operation.model_invoked": false,
+			"resource.throttled":      false,
+		}
+		for _, event := range events {
+			if event.OperationID == "operation_runtime_gate" && (event.Kind == "operation.model_routed" || event.Kind == "operation.model_invoked") {
+				required[event.Kind] = true
+			}
+			if event.OperationID == "operation_runtime_gate_quota" && event.Kind == "resource.throttled" {
+				required[event.Kind] = true
+			}
+		}
+		for kind, found := range required {
+			if !found {
+				return fmt.Errorf("durable runtime gate event %s is missing", kind)
+			}
+		}
+		return nil
+	})
+}
+
+func runtimeGateUsageIsZero(usage RuntimeGateUsage) bool {
+	return usage.InFlight == 0 && usage.MinuteWindowStart.IsZero() && usage.MinuteCount == 0 &&
+		usage.DayWindowStart.IsZero() && usage.DayCount == 0 && usage.TokenMinuteWindowStart.IsZero() &&
+		usage.TokenMinuteCount == 0 && usage.ConsecutiveFailures == 0 && usage.CircuitOpenUntil == nil && usage.LastFailureAt == nil
+}
+
+func runtimeGateUsageEqual(a, b RuntimeGateUsage) bool {
+	return a.Resource == b.Resource && a.InFlight == b.InFlight && a.MinuteWindowStart.Equal(b.MinuteWindowStart) &&
+		a.MinuteCount == b.MinuteCount && a.DayWindowStart.Equal(b.DayWindowStart) && a.DayCount == b.DayCount &&
+		a.TokenMinuteWindowStart.Equal(b.TokenMinuteWindowStart) && a.TokenMinuteCount == b.TokenMinuteCount &&
+		a.ConsecutiveFailures == b.ConsecutiveFailures && equalTimePtr(a.CircuitOpenUntil, b.CircuitOpenUntil) &&
+		equalTimePtr(a.LastFailureAt, b.LastFailureAt)
+}
+
+func equalTimePtr(a, b *time.Time) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return a.Equal(*b)
 }
 
 func WriteRuntimeGateCampaignManifest(path string, manifest RuntimeGateCampaignManifest) error {
@@ -433,13 +528,13 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
 	fmt.Fprintf(&md, "\n- Operation state after local throttle: `%s`\n- Durable reopen verified: `%t`\n\n", report.OperationState, report.DurableReopen)
-	md.WriteString("| Resource | In flight | Minute count | Failures | Circuit open until |\n| --- | ---: | ---: | ---: | --- |\n")
+	md.WriteString("| Resource | In flight | Calls/min | Calls/day | Tokens/min | Failures | Circuit open until |\n| --- | ---: | ---: | ---: | ---: | ---: | --- |\n")
 	for _, usage := range report.Usages {
 		until := ""
 		if usage.CircuitOpenUntil != nil {
 			until = usage.CircuitOpenUntil.UTC().Format(time.RFC3339)
 		}
-		fmt.Fprintf(&md, "| %s | %d | %d | %d | %s |\n", usage.Resource, usage.InFlight, usage.MinuteCount, usage.ConsecutiveFailures, until)
+		fmt.Fprintf(&md, "| %s | %d | %d | %d | %d | %d | %s |\n", usage.Resource, usage.InFlight, usage.MinuteCount, usage.DayCount, usage.TokenMinuteCount, usage.ConsecutiveFailures, until)
 	}
 	md.WriteString("\nThe primary circuit and one-call minute quota were seeded control state. No 429 was intentionally induced; any HTTP status or Retry-After above was naturally observed from the single useful provider call. This report has no authority to change runtime bindings.\n")
 	return atomicWrite(directory+"/runtime-gate.md", []byte(md.String()))

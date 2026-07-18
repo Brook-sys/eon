@@ -121,6 +121,50 @@ func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T
 			t.Fatalf("leaked permit: %+v", usage)
 		}
 	}
+	if err := VerifyRuntimeGateDurability(context.Background(), store, report); err != nil {
+		t.Fatalf("durability evidence: %v", err)
+	}
+	var selected RuntimeGateUsage
+	for _, usage := range report.Usages {
+		if usage.Resource == domain.ModelBindingResource("nim-fallback") {
+			selected = usage
+		}
+	}
+	if selected.DayCount != 1 || selected.TokenMinuteCount != 8 || selected.MinuteWindowStart.IsZero() || selected.DayWindowStart.IsZero() || selected.TokenMinuteWindowStart.IsZero() {
+		t.Fatalf("complete quota accounting missing from report: %+v", selected)
+	}
+}
+
+func TestVerifyRuntimeGateDurabilityRejectsIncompleteAccounting(t *testing.T) {
+	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
+	proposal, err := json.Marshal(domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_runtime_gate", MissionRevision: "revision_runtime_gate",
+		OperationID: "operation_runtime_gate", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"manifest"}, Changes: []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "runtime_gate_observation", PayloadRef: "runtime_gate_payload"}},
+		ExpectedDelta: "runtime provider gate evidence", ValidatorIDs: []string{"schema"}, Provenance: "model:fixture", IdempotencyKey: "runtime-gate-campaign",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := memory.New()
+	report, err := (RuntimeGateCampaignRunner{
+		Store: store, Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: string(proposal), InputTokens: 7, OutputTokens: 1}},
+		},
+	}).Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range report.Usages {
+		if report.Usages[i].Resource == domain.ModelBindingResource("nim-fallback") {
+			report.Usages[i].DayCount++
+		}
+	}
+	if err := VerifyRuntimeGateDurability(context.Background(), store, report); err == nil || !strings.Contains(err.Error(), "durable usage mismatch") {
+		t.Fatalf("tampered accounting must fail, got %v", err)
+	}
 }
 
 type providerHTTPError struct{ status int }
