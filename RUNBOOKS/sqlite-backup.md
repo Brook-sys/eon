@@ -15,14 +15,15 @@ Use a API Go de backup online — **não** copie só o arquivo `.sqlite` enquant
 store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
-// report inclui DestinationPath, SQLiteVersion, CheckpointRows
+// report inclui DestinationPath, SQLiteVersion, CheckpointRows,
+// CheckpointFormat e IntegrityCheck
 ```
 
 Comportamento:
 
 1. adquire o lock de escrita do adapter (serializa com `Update`);
 2. copia páginas via `modernc.org/sqlite` `NewBackup` / `Step` / `Finish` (`sqlite3_backup_*`);
-3. verifica legibilidade do destino (`runtime_checkpoint` quando existir);
+3. executa `PRAGMA quick_check` e verifica versão externa, SHA-256, framing e decode integral do `runtime_checkpoint` quando existir;
 4. deixa a origem aberta e utilizável.
 
 Regras:
@@ -36,6 +37,11 @@ Regras:
 1. Pare o runtime (ou chame `store.Close()`).
 2. `ClosedCopyTo(ctx, sourcePath, destPath, options)` reabre a origem, faz `BackupTo` e fecha.
 3. Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida reabra com `sqlite.Open` e rode contract checks.
+
+Para auditar uma cópia já existente sem migração ou escrita, use
+`sqlite.VerifyBackup(path)`. O resultado válido registra
+`IntegrityCheck == "ok"`; divergência de versão, adulteração do payload ou
+framing inválido tornam a cópia não restaurável.
 
 ## Restauração
 
@@ -59,3 +65,5 @@ Regras:
 - `TestOnlineBackupPreservesCheckpointAndReopens`
 - `TestOnlineBackupRejectsExistingDestination`
 - `TestOnlineBackupEmptyStore`
+- `TestVerifyBackupRejectsCheckpointVersionMismatch`
+- `TestVerifyBackupRejectsTamperedCheckpointPayload`

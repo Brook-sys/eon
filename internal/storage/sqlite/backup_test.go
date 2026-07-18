@@ -1,14 +1,22 @@
 package sqlite_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/gob"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/storage/memory"
 	storage "motor-autonomo/internal/storage/sqlite"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
@@ -46,6 +54,9 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	}
 	if report.CheckpointRows != 1 {
 		t.Fatalf("checkpoint rows = %d", report.CheckpointRows)
+	}
+	if report.CheckpointFormat != memory.CheckpointFormatVersion || report.IntegrityCheck != "ok" {
+		t.Fatalf("backup verification report = %#v", report)
 	}
 
 	// Source must remain usable after backup.
@@ -119,4 +130,88 @@ func TestOnlineBackupEmptyStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restored.Close()
+}
+
+func TestVerifyBackupRejectsCheckpointVersionMismatch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE runtime_checkpoint SET format_version = 1 WHERE id = 1`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = storage.VerifyBackup(path)
+	if !errors.Is(err, memory.ErrCheckpointFormatMismatch) {
+		t.Fatalf("verification error = %v, want format mismatch", err)
+	}
+}
+
+func TestVerifyBackupRejectsTamperedCheckpointPayload(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(port.Transaction) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload []byte
+	if err := db.QueryRow(`SELECT payload FROM runtime_checkpoint WHERE id = 1`).Scan(&payload); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	var envelope struct {
+		FormatVersion int
+		PayloadDigest [sha256.Size]byte
+		Payload       []byte
+	}
+	if err := gob.NewDecoder(bytes.NewReader(payload)).Decode(&envelope); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	envelope.Payload[len(envelope.Payload)-1] ^= 0xff
+	var tampered bytes.Buffer
+	if err := gob.NewEncoder(&tampered).Encode(envelope); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE runtime_checkpoint SET payload = ? WHERE id = 1`, tampered.Bytes()); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = storage.VerifyBackup(path)
+	if !errors.Is(err, memory.ErrCheckpointIntegrity) {
+		t.Fatalf("verification error = %v, want checkpoint integrity failure", err)
+	}
 }

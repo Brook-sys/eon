@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"motor-autonomo/internal/storage/memory"
+
 	"modernc.org/sqlite"
 )
 
@@ -16,12 +18,23 @@ import (
 // The destination is a standalone SQLite database file that can be reopened
 // with Open after the source store remains online.
 type BackupReport struct {
-	SourcePath      string        `json:"source_path,omitempty"`
-	DestinationPath string        `json:"destination_path"`
-	PagesCopied     int64         `json:"pages_copied"`
-	Duration        time.Duration `json:"duration"`
-	SQLiteVersion   string        `json:"sqlite_version"`
-	CheckpointRows  int           `json:"checkpoint_rows"`
+	SourcePath       string        `json:"source_path,omitempty"`
+	DestinationPath  string        `json:"destination_path"`
+	PagesCopied      int64         `json:"pages_copied"`
+	Duration         time.Duration `json:"duration"`
+	SQLiteVersion    string        `json:"sqlite_version"`
+	CheckpointRows   int           `json:"checkpoint_rows"`
+	CheckpointFormat int           `json:"checkpoint_format,omitempty"`
+	IntegrityCheck   string        `json:"integrity_check"`
+}
+
+// BackupVerification records both SQLite page-level verification and the
+// runtime checkpoint's framing, digest and decodability. Empty stores are
+// valid and therefore report zero checkpoint rows and format.
+type BackupVerification struct {
+	CheckpointRows   int    `json:"checkpoint_rows"`
+	CheckpointFormat int    `json:"checkpoint_format,omitempty"`
+	IntegrityCheck   string `json:"integrity_check"`
 }
 
 // BackupOptions configures online backup behavior.
@@ -123,18 +136,20 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 	}
 
 	// Verify destination has the checkpoint row and can load.
-	rows, err := verifyBackupFile(destPath)
+	verification, err := VerifyBackup(destPath)
 	if err != nil {
 		_ = os.Remove(destPath)
 		return BackupReport{}, err
 	}
 
 	return BackupReport{
-		DestinationPath: destPath,
-		PagesCopied:     pages,
-		Duration:        time.Since(started),
-		SQLiteVersion:   version,
-		CheckpointRows:  rows,
+		DestinationPath:  destPath,
+		PagesCopied:      pages,
+		Duration:         time.Since(started),
+		SQLiteVersion:    version,
+		CheckpointRows:   verification.CheckpointRows,
+		CheckpointFormat: verification.CheckpointFormat,
+		IntegrityCheck:   verification.IntegrityCheck,
 	}, nil
 }
 
@@ -155,27 +170,57 @@ func ClosedCopyTo(ctx context.Context, sourcePath, destPath string, options Back
 	return report, nil
 }
 
-func verifyBackupFile(path string) (int, error) {
+// VerifyBackup opens a SQLite backup and verifies the database pages plus the
+// runtime checkpoint's external version, integrity digest and complete decode.
+// It performs no migration or write.
+func VerifyBackup(path string) (BackupVerification, error) {
+	if _, err := os.Stat(path); err != nil {
+		return BackupVerification{}, fmt.Errorf("stat backup for verification: %w", err)
+	}
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
-		return 0, fmt.Errorf("open backup for verification: %w", err)
+		return BackupVerification{}, fmt.Errorf("open backup for verification: %w", err)
 	}
 	defer db.Close()
+	if _, err := db.Exec(`PRAGMA query_only=ON`); err != nil {
+		return BackupVerification{}, fmt.Errorf("set backup verification read-only: %w", err)
+	}
+	var integrity string
+	if err := db.QueryRow(`PRAGMA quick_check`).Scan(&integrity); err != nil {
+		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages: %w", err)
+	}
+	if integrity != "ok" {
+		return BackupVerification{}, fmt.Errorf("verify backup sqlite pages: quick_check=%q", integrity)
+	}
 	var count int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM runtime_checkpoint WHERE id = 1`).Scan(&count); err != nil {
-		return 0, fmt.Errorf("verify backup checkpoint: %w", err)
+		return BackupVerification{}, fmt.Errorf("verify backup checkpoint: %w", err)
 	}
 	if count != 1 {
 		// Empty store still has no checkpoint row until first Update; that is
 		// legal. Count 0 is accepted for fresh files.
-		return count, nil
+		if count == 0 {
+			return BackupVerification{IntegrityCheck: integrity}, nil
+		}
+		return BackupVerification{}, fmt.Errorf("verify backup checkpoint: got %d rows, want at most one", count)
 	}
+	var formatVersion int
 	var payload []byte
-	if err := db.QueryRow(`SELECT payload FROM runtime_checkpoint WHERE id = 1`).Scan(&payload); err != nil {
-		return 0, fmt.Errorf("read backup checkpoint payload: %w", err)
+	if err := db.QueryRow(`SELECT format_version, payload FROM runtime_checkpoint WHERE id = 1`).Scan(&formatVersion, &payload); err != nil {
+		return BackupVerification{}, fmt.Errorf("read backup checkpoint payload: %w", err)
 	}
 	if len(payload) == 0 {
-		return 0, errors.New("backup checkpoint payload is empty")
+		return BackupVerification{}, errors.New("backup checkpoint payload is empty")
 	}
-	return count, nil
+	if err := memory.ValidateExternalCheckpoint(formatVersion, payload); err != nil {
+		return BackupVerification{}, fmt.Errorf("validate backup checkpoint: %w", err)
+	}
+	if _, err := memory.NewFromBinary(payload); err != nil {
+		return BackupVerification{}, fmt.Errorf("decode backup checkpoint: %w", err)
+	}
+	return BackupVerification{
+		CheckpointRows:   count,
+		CheckpointFormat: formatVersion,
+		IntegrityCheck:   integrity,
+	}, nil
 }
