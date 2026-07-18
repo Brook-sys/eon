@@ -146,6 +146,8 @@ Janela de contexto maior MUST NOT implicar inclusão automática de histórico i
 
 **Evidência de aceitação:** testes com perfis 2k, 8k e maiores demonstram margens de segurança, seleção localizada de evidência e limites explícitos de expansão.
 
+Pressão confirmada de contexto MAY reduzir temporariamente o teto efetivo por binding. Esse sinal MUST ser limitado, persistido sem conteúdo de prompt ou segredo, reaplicado após restart e recuperado gradualmente após sucessos consecutivos; MUST NOT alterar o contexto declarado, a `OperationSpec`, autoridade ou semântica operacional.
+
 ## 5. Continuidade e execução durável
 
 ### FR-DUR-001 — Estado operacional persistido

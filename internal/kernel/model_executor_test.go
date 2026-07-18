@@ -853,6 +853,79 @@ func TestModelExecutorUsesJSONModeWhenProfileConfirms(t *testing.T) {
 	}
 }
 
+func TestModelExecutorPersistsNIMContextPressureAndRecoversGradually(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 18, 7, 20, 0, 0, time.UTC)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		return tx.SaveModelContextPressure(domain.ModelContextPressure{
+			BindingID: "nim-small",
+			State:     domain.ContextPressureState{Level: 2},
+			UpdatedAt: now,
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fixture"})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: source.NewManualClock(now), IDs: source.NewSequenceIDGenerator(1), PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile := domain.BaselineDeclaredProfile("nim", "fixture", domain.MaxOutputDialectLegacy, 8000, now)
+	exec := ModelExecutor{
+		Store: store, Clock: source.NewManualClock(now), IDs: source.NewSequenceIDGenerator(100), Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test", Profile: profile,
+		PrimaryBindingID: "nim-small", PrimaryProviderKind: domain.ProviderKindNVIDIANIM,
+	}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil || !result.Completed {
+		t.Fatalf("execute result=%+v err=%v", result, err)
+	}
+	var pressure domain.ModelContextPressure
+	var events []domain.Event
+	if err := store.View(ctx, func(r port.Reader) error {
+		pressure, err = r.ModelContextPressure("nim-small")
+		if err == nil {
+			events, err = r.Events(0, 100)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if pressure.State != (domain.ContextPressureState{Level: 2, SuccessesAtLevel: 1}) {
+		t.Fatalf("pressure after one success = %+v", pressure.State)
+	}
+	foundReduced := false
+	for _, event := range events {
+		if event.Kind == "operation.model_adaptation" && strings.Contains(event.PayloadRef, "reason=context_pressure_reduction") && strings.Contains(event.PayloadRef, "ctx=4000") {
+			foundReduced = true
+		}
+	}
+	if !foundReduced {
+		t.Fatalf("missing reduced-context audit event: %#v", events)
+	}
+}
+
 func TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

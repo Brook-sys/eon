@@ -211,6 +211,17 @@ type ResourceWriter interface {
 	SaveResourceUsage(domain.ResourceUsage) error
 }
 
+// ModelContextReader exposes durable, binding-local context pressure. Missing
+// bindings return ErrNotFound and are interpreted by the kernel as zero pressure.
+type ModelContextReader interface {
+	ModelContextPressure(string) (domain.ModelContextPressure, error)
+}
+
+// ModelContextWriter replaces one binding's bounded context-pressure record.
+type ModelContextWriter interface {
+	SaveModelContextPressure(domain.ModelContextPressure) error
+}
+
 // ConfigReader exposes versioned operator configuration drafts and revisions.
 // Active revision is the last applied pointer per scope.
 type ConfigReader interface {
@@ -242,6 +253,7 @@ type Reader interface {
 	ContinuityReader
 	ConfigReader
 	ResourceReader
+	ModelContextReader
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
@@ -256,6 +268,7 @@ type Transaction interface {
 	ContinuityWriter
 	ConfigWriter
 	ResourceWriter
+	ModelContextWriter
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter

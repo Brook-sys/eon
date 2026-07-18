@@ -161,7 +161,7 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 - [x] núcleo puro de roteamento ordenado por preferência/contexto/saúde, com razões auditáveis e hidratação de `ResourceUsage`;
 - [x] integrar o roteador ao executor multi-binding além do primário + fallback;
 - [x] taxonomia de falhas HTTP por binding;
-- [x] redução reversível de contexto para pressão NIM dentro da execução: 400 classificado como request inválido ativa teto de -25% por nível, até -75%, com retry sob o mesmo budget; o sinal não altera o perfil declarado;
+- [x] redução reversível de contexto para pressão NIM: 400 classificado como request inválido ativa teto de -25% por nível, até -75%, com retry sob o mesmo budget; o sinal é persistido por binding, sobrevive a restart e recupera um nível após dois sucessos, sem alterar o perfil declarado;
   - Evidência: `ContextPressureState`, `ReductionForPressure`, recompilação no `ModelExecutor` e eventos `operation.model_adaptation` com `reason=context_pressure_reduction`.
   - Limite deliberado: a recuperação gradual está definida pela política pura, mas o estado ainda não persiste entre dispatches; só promover persistência se avaliação live comprovar pressão recorrente entre operações.
 - [x] eventos/inspect de decisão.

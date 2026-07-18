@@ -474,6 +474,16 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		if budget.ModelCallsUsed >= maxCalls {
 			break
 		}
+		if activeKind == domain.ProviderKindNVIDIANIM && strings.TrimSpace(activeBindingID) != "" {
+			persisted, pressureErr := e.loadContextPressure(ctx, activeBindingID)
+			if pressureErr != nil {
+				lastErr = fmt.Errorf("load model context pressure: %w", pressureErr)
+				break
+			}
+			budget.ContextPressure = persisted
+		} else if strings.TrimSpace(activeBindingID) != "" {
+			budget.ContextPressure = domain.ContextPressureState{}
+		}
 		var permits []*domain.ResourcePermit
 		if e.Authorizer != nil {
 			if budget.ModelCallsUsed == 0 && !usingFallback && len(preflightPermits) > 0 {
@@ -544,6 +554,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				budget.Decisions = append(budget.Decisions, decision)
 				if activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest {
 					budget.ContextPressure = domain.RecordContextPressure(budget.ContextPressure)
+					_ = e.saveContextPressure(ctx, activeBindingID, budget.ContextPressure)
 				}
 				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed)
 			}
@@ -571,6 +582,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		e.releaseResourcePermitsWithTokens(ctx, operation, permits, true, nil, observedTotal)
 		if activeKind == domain.ProviderKindNVIDIANIM {
 			budget.ContextPressure = domain.RecordContextSuccess(budget.ContextPressure)
+			_ = e.saveContextPressure(ctx, activeBindingID, budget.ContextPressure)
 		}
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
@@ -1157,7 +1169,7 @@ func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation doma
 		}
 		_, err = tx.AppendEvent(domain.Event{
 			SchemaVersion:   domain.SchemaVersionV1,
-			ID:              domain.EventID(fmt.Sprintf("%s:model_adaptation:%d:%d:%d", op.ID, op.Attempt, callsUsed, e.Clock.Now().UnixNano())),
+			ID:              domain.EventID(fmt.Sprintf("%s:model_adaptation:%d:%d:%d:%d:%s", op.ID, op.Attempt, callsUsed, plan.ContextTokens, e.Clock.Now().UnixNano(), plan.Reason)),
 			Kind:            "operation.model_adaptation",
 			OccurredAt:      e.Clock.Now().UTC(),
 			MissionRevision: op.MissionRevision,
@@ -1167,6 +1179,35 @@ func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation doma
 		})
 		return err
 	})
+}
+
+func (e ModelExecutor) saveContextPressure(ctx context.Context, bindingID string, state domain.ContextPressureState) error {
+	if strings.TrimSpace(bindingID) == "" {
+		return nil
+	}
+	return e.Store.Update(ctx, func(tx port.Transaction) error {
+		return tx.SaveModelContextPressure(domain.ModelContextPressure{
+			BindingID: bindingID,
+			State:     state,
+			UpdatedAt: e.Clock.Now().UTC(),
+		})
+	})
+}
+
+func (e ModelExecutor) loadContextPressure(ctx context.Context, bindingID string) (domain.ContextPressureState, error) {
+	var state domain.ContextPressureState
+	err := e.Store.View(ctx, func(r port.Reader) error {
+		persisted, err := r.ModelContextPressure(bindingID)
+		if errors.Is(err, port.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		state = persisted.State
+		return nil
+	})
+	return state, err
 }
 
 // safeErrorDetail redacts a validation/provider error to a short operator-safe string.

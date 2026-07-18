@@ -1,8 +1,10 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // AdaptationLevel is the progressive capability ladder for model transport
@@ -77,6 +79,34 @@ func (p ContextBudgetPolicy) ApplyReduction(active bool, allowedTokens int) Cont
 type ContextPressureState struct {
 	Level            int `json:"level"`
 	SuccessesAtLevel int `json:"successes_at_level"`
+}
+
+// ModelContextPressure persists the authority-free pressure signal per model
+// binding. BindingID is intentionally an opaque configuration ID: no prompt,
+// provider body, secret, or policy text is retained in this control record.
+type ModelContextPressure struct {
+	BindingID string               `json:"binding_id"`
+	State     ContextPressureState `json:"state"`
+	UpdatedAt time.Time            `json:"updated_at"`
+}
+
+func (p ModelContextPressure) Validate() error {
+	if strings.TrimSpace(p.BindingID) == "" {
+		return errors.New("model context pressure binding id is required")
+	}
+	if p.State.Level < 0 || p.State.Level > MaxContextPressureLevel {
+		return errors.New("model context pressure level is out of range")
+	}
+	if p.State.SuccessesAtLevel < 0 || p.State.SuccessesAtLevel >= ContextRecoverySuccesses {
+		return errors.New("model context pressure success count is out of range")
+	}
+	if p.State.Level == 0 && p.State.SuccessesAtLevel != 0 {
+		return errors.New("zero model context pressure cannot retain successes")
+	}
+	if p.UpdatedAt.IsZero() {
+		return errors.New("model context pressure updated_at is required")
+	}
+	return nil
 }
 
 const (

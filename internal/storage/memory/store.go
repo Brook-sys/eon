@@ -125,6 +125,7 @@ type state struct {
 	configApplyReceipts       map[domain.ConfigDraftID]domain.ConfigApplyReceipt
 	channelCursors            map[string]domain.ChannelCursor
 	resourceUsages            map[domain.ResourceID]domain.ResourceUsage
+	modelContextPressures     map[string]domain.ModelContextPressure
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -179,6 +180,7 @@ func newState() state {
 		configApplyReceipts:       make(map[domain.ConfigDraftID]domain.ConfigApplyReceipt),
 		channelCursors:            make(map[string]domain.ChannelCursor),
 		resourceUsages:            make(map[domain.ResourceID]domain.ResourceUsage),
+		modelContextPressures:     make(map[string]domain.ModelContextPressure),
 	}
 }
 
@@ -271,6 +273,9 @@ func (t transaction) ResourceUsage(id domain.ResourceID) (domain.ResourceUsage, 
 }
 func (t transaction) ResourceUsages() ([]domain.ResourceUsage, error) {
 	return reader(t).ResourceUsages()
+}
+func (t transaction) ModelContextPressure(bindingID string) (domain.ModelContextPressure, error) {
+	return reader(t).ModelContextPressure(bindingID)
 }
 func (t transaction) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	return reader(t).OperatorCommand(id)
@@ -602,6 +607,18 @@ func (r reader) ResourceUsages() ([]domain.ResourceUsage, error) {
 		return string(out[i].Resource) < string(out[j].Resource)
 	})
 	return out, nil
+}
+
+func (r reader) ModelContextPressure(bindingID string) (domain.ModelContextPressure, error) {
+	key := strings.TrimSpace(bindingID)
+	if key == "" {
+		return domain.ModelContextPressure{}, fmt.Errorf("model context pressure requires binding id")
+	}
+	v, ok := r.state.modelContextPressures[key]
+	if !ok {
+		return domain.ModelContextPressure{}, notFound("model context pressure", key)
+	}
+	return v, nil
 }
 func (r reader) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	v, ok := r.state.operatorCommands[id]
@@ -1716,6 +1733,16 @@ func (t transaction) SaveResourceUsage(next domain.ResourceUsage) error {
 	return nil
 }
 
+func (t transaction) SaveModelContextPressure(next domain.ModelContextPressure) error {
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate model context pressure: %w", err)
+	}
+	next.BindingID = strings.TrimSpace(next.BindingID)
+	next.UpdatedAt = next.UpdatedAt.UTC()
+	t.state.modelContextPressures[next.BindingID] = next
+	return nil
+}
+
 func (t transaction) AppendOperationSpec(v domain.OperationSpec) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate operation spec: %w", err)
@@ -2395,6 +2422,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.resourceUsages {
 		dst.resourceUsages[k] = cloneResourceUsage(v)
+	}
+	for k, v := range src.modelContextPressures {
+		dst.modelContextPressures[k] = v
 	}
 	return dst
 }

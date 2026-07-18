@@ -92,6 +92,28 @@ func TestContextBudgetPolicyReductionAndRecovery(t *testing.T) {
 	}
 }
 
+func TestModelContextPressureValidation(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 7, 18, 7, 0, 0, 0, time.UTC)
+	valid := ModelContextPressure{BindingID: "nim-small", State: ContextPressureState{Level: 2, SuccessesAtLevel: 1}, UpdatedAt: now}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid pressure: %v", err)
+	}
+	for name, row := range map[string]ModelContextPressure{
+		"missing binding":  {State: ContextPressureState{Level: 1}, UpdatedAt: now},
+		"level overflow":   {BindingID: "nim-small", State: ContextPressureState{Level: 4}, UpdatedAt: now},
+		"invalid streak":   {BindingID: "nim-small", State: ContextPressureState{Level: 1, SuccessesAtLevel: 2}, UpdatedAt: now},
+		"zero with streak": {BindingID: "nim-small", State: ContextPressureState{SuccessesAtLevel: 1}, UpdatedAt: now},
+		"missing time":     {BindingID: "nim-small", State: ContextPressureState{Level: 1}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := row.Validate(); err == nil {
+				t.Fatalf("expected validation error for %+v", row)
+			}
+		})
+	}
+}
+
 func TestSelectAdaptationPlanNeverPresumesCapabilities(t *testing.T) {
 	t.Parallel()
 

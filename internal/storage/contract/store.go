@@ -1247,6 +1247,48 @@ func TestStore(t *testing.T, factory Factory) {
 		}
 	})
 
+	t.Run("model context pressure is durable binding-local and replaceable", func(t *testing.T) {
+		store := factory()
+		now := time.Date(2026, 7, 18, 7, 30, 0, 0, time.UTC)
+		first := domain.ModelContextPressure{
+			BindingID: "nim-small", State: domain.ContextPressureState{Level: 2}, UpdatedAt: now,
+		}
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveModelContextPressure(first)
+		}); err != nil {
+			t.Fatalf("save pressure: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ModelContextPressure(first.BindingID)
+			if err != nil || got != first {
+				t.Fatalf("pressure = %#v err=%v", got, err)
+			}
+			if _, err := r.ModelContextPressure("missing"); !errors.Is(err, port.ErrNotFound) {
+				t.Fatalf("missing pressure error = %v", err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		next := first
+		next.State = domain.ContextPressureState{Level: 1, SuccessesAtLevel: 1}
+		next.UpdatedAt = now.Add(time.Minute)
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			return tx.SaveModelContextPressure(next)
+		}); err != nil {
+			t.Fatalf("replace pressure: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ModelContextPressure(next.BindingID)
+			if err != nil || got != next {
+				t.Fatalf("replaced pressure = %#v err=%v", got, err)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("config drafts revisions and apply receipts are durable with sequential activation", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 16, 18, 0, 0, 0, time.UTC)
