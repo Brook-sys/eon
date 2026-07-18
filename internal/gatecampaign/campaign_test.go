@@ -1,0 +1,111 @@
+package gatecampaign
+
+import (
+	"context"
+	"strings"
+	"testing"
+	"time"
+
+	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/storage/memory"
+)
+
+type recordingProvider struct {
+	calls  int
+	result port.CompletionResult
+	err    error
+}
+
+func (p *recordingProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	p.calls++
+	return p.result, p.err
+}
+
+func runtimeGateTestManifest() RuntimeGateCampaignManifest {
+	return RuntimeGateCampaignManifest{
+		SchemaVersion: 1, Name: "bounded-gate", TimeoutSeconds: 10, MaxCalls: 1,
+		MaxOutputTokens: 16, ProbePrompt: "Reply with OK only.", SeedPrimaryCircuitSeconds: 60,
+		Bindings: []RuntimeGateBinding{
+			{Provider: "groq", ProviderKind: domain.ProviderKindGroq, BindingID: "groq-primary", BaseURL: "https://example.invalid/v1", Model: "primary", APIKeyEnvironment: "GROQ_API_KEY", MaxOutputField: "max_tokens", ContextTokens: 2048, Priority: 0},
+			{Provider: "nim", ProviderKind: domain.ProviderKindNVIDIANIM, BindingID: "nim-fallback", BaseURL: "https://example.invalid/v1", Model: "fallback", APIKeyEnvironment: "NVIDIA_NIM_API_KEY", MaxOutputField: "max_tokens", ContextTokens: 2048, Priority: 1},
+		},
+	}
+}
+
+func TestManifestStrictAndBounded(t *testing.T) {
+	manifest := runtimeGateTestManifest()
+	manifest.MaxCalls = 2
+	if err := manifest.Validate(); err == nil {
+		t.Fatal("max_calls above one must fail closed")
+	}
+	_, err := DecodeRuntimeGateCampaignManifest(strings.NewReader(`{"schema_version":1,"name":"x","unknown":true}`), 1024)
+	if err == nil || !strings.Contains(err.Error(), "unknown") {
+		t.Fatalf("strict decode error=%v", err)
+	}
+}
+
+func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T) {
+	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	primary := &recordingProvider{}
+	fallback := &recordingProvider{result: port.CompletionResult{Text: "OK", InputTokens: 7, OutputTokens: 1, Model: "fallback"}}
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: clock,
+		Providers: map[string]port.ModelProvider{"groq-primary": primary, "nim-fallback": fallback},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primary.calls != 0 || fallback.calls != 1 || report.ExternalCalls != 1 {
+		t.Fatalf("calls primary=%d fallback=%d report=%+v", primary.calls, fallback.calls, report)
+	}
+	if report.SelectedBindingID != "nim-fallback" || !report.ProviderSucceeded {
+		t.Fatalf("route/success=%+v", report)
+	}
+	if report.SecondAcquireReason != "resource_resource_rate_limit" || report.SecondAcquireWait == nil || report.OperationState != domain.StateWaitingTime {
+		t.Fatalf("second acquire=%+v", report)
+	}
+	for _, usage := range report.Usages {
+		if usage.InFlight != 0 {
+			t.Fatalf("leaked permit: %+v", usage)
+		}
+	}
+}
+
+type providerHTTPError struct{ status int }
+
+func (e providerHTTPError) Error() string                  { return "provider unavailable" }
+func (e providerHTTPError) RetryAfterDelay() time.Duration { return 20 * time.Second }
+func (e providerHTTPError) HTTPStatusCode() int            { return e.status }
+func (e providerHTTPError) RetryableFailure() bool         { return true }
+
+func TestRunRecordsNaturalProviderThrottleAndReleasesPermits(t *testing.T) {
+	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
+	provider := &recordingProvider{err: providerHTTPError{status: 429}}
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{"groq-primary": &recordingProvider{}, "nim-fallback": provider},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ProviderSucceeded || report.ProviderHTTPStatus != 429 || report.ProviderRetryAfter != 20*time.Second {
+		t.Fatalf("provider evidence=%+v", report)
+	}
+	for _, usage := range report.Usages {
+		if usage.InFlight != 0 {
+			t.Fatalf("leaked permit: %+v", usage)
+		}
+	}
+}
+
+func TestArtifactsRejectOverBudgetReport(t *testing.T) {
+	err := WriteRuntimeGateCampaignArtifacts(t.TempDir(), RuntimeGateCampaignReport{SchemaVersion: 1, MaxCalls: 1, ExternalCalls: 2, Usages: []RuntimeGateUsage{{Resource: "x"}}})
+	if err == nil {
+		t.Fatal("over-budget report must fail")
+	}
+}
