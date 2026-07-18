@@ -152,10 +152,22 @@ func TestModelPresetEnablementPreviewRequiresExactDisabledInstallation(t *testin
 	if len(preview.Risks) < 4 || preview.EvidenceSHA256 != preset.EvidenceSHA256 {
 		t.Fatalf("risk/evidence projection = %#v", preview)
 	}
+	if preview.QuotaSummary == nil || preview.QuotaSummary.BindingResource != ModelBindingResource(preset.Binding.ID) {
+		t.Fatalf("quota summary = %#v", preview.QuotaSummary)
+	}
+	if preview.ContextSummary == nil || preview.ContextSummary.DeclaredContextTokens != preset.Binding.ContextTokens {
+		t.Fatalf("context summary = %#v", preview.ContextSummary)
+	}
+	if preview.ContextSummary.ConservativeWindowHint <= 0 || preview.ContextSummary.ConservativeWindowHint >= preset.Binding.ContextTokens {
+		t.Fatalf("conservative window hint = %#v", preview.ContextSummary)
+	}
 
 	missing, err := preset.PreviewEnablement(nil, "models.enabled.v1")
 	if err != nil || !missing.Blocked || missing.Candidate != nil {
 		t.Fatalf("missing active preview = %#v err=%v", missing, err)
+	}
+	if missing.QuotaSummary == nil || missing.ContextSummary == nil {
+		t.Fatalf("blocked preview must still expose configured summaries: %#v", missing)
 	}
 	drifted := installed
 	drifted.Bindings = append([]ModelBindingConfig(nil), installed.Bindings...)

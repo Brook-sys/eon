@@ -315,6 +315,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="commitErr"></div>
     </section>
     <section>
+      <h2>Resources / context pressure</h2>
+      <p class="hint">Projeções somente-leitura de ResourceGate (GET /resources) e pressão de contexto binding-local (GET /model-context-pressures). Não inventam linhas ausentes; secrets e corpos de provider nunca aparecem.</p>
+      <div class="row">
+        <button class="primary" type="button" id="btnResourcesList">Listar resources</button>
+        <button type="button" id="btnContextPressureList">Listar context pressure</button>
+        <label>resource_id
+          <input id="resourceId" placeholder="model-binding:... / web:http" spellcheck="false" style="min-width:200px"/>
+        </label>
+        <button type="button" id="btnResourceDetail">Resource</button>
+        <label>binding_id
+          <input id="pressureBindingId" placeholder="nim-small" spellcheck="false" style="min-width:160px"/>
+        </label>
+        <button type="button" id="btnPressureDetail">Pressure</button>
+      </div>
+      <div id="resourceList" class="list muted">nenhuma lista de resources</div>
+      <div id="resourceDetail" class="prebox muted" hidden></div>
+      <div class="okbox" id="resourceOk"></div>
+      <div class="errbox" id="resourceErr"></div>
+    </section>
+    <section>
       <h2>Inspetor de execução</h2>
       <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem.</p>
       <div class="row">
@@ -1338,7 +1358,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 	  });
 	  el("cfgDetail").textContent = pretty(body);
 	  el("cfgDetail").className = "prebox";
-	  el("cfgOk").textContent = body.preview && body.preview.blocked ? "habilitação bloqueada; revise os motivos" : "preview pronto; copie candidate para um novo draft explícito";
+	  const p = body.preview || {};
+	  const ctx = p.context_summary || {};
+	  const q = p.quota_summary || {};
+	  let msg = p.blocked ? "habilitação bloqueada; revise os motivos" : "preview pronto; copie candidate para um novo draft explícito";
+	  if (ctx.declared_context_tokens) {
+		msg += " · ctx=" + String(ctx.declared_context_tokens) + "/hint=" + String(ctx.conservative_window_hint || "?");
+	  }
+	  if (q.binding_resource) {
+		msg += " · binding=" + String(q.binding_resource);
+		if (q.binding_max_per_minute) msg += " max/min=" + String(q.binding_max_per_minute);
+	  }
+	  el("cfgOk").textContent = msg;
 	} catch (err) {
 	  el("cfgErr").textContent = String(err.message || err);
 	}
@@ -2041,9 +2072,109 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
   }
 
+  async function listResources() {
+    el("resourceErr").textContent = "";
+    el("resourceOk").textContent = "";
+    try {
+      const body = await getJSON(inspectBase + "/resources");
+      const rows = body.resources || [];
+      let html = "";
+      rows.forEach(function (row) {
+        const id = row.resource || "";
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + (row.circuit_open ? " · CIRCUIT_OPEN" : "") + "</div>";
+        html += '<div class="muted">in_flight=' + esc(String(row.in_flight || 0))
+          + ' · min=' + esc(String(row.minute_count || 0))
+          + ' · day=' + esc(String(row.day_count || 0))
+          + ' · tok/min=' + esc(String(row.token_minute_count || 0))
+          + ' · fails=' + esc(String(row.consecutive_failures || 0)) + "</div>";
+        html += '<div class="ops"><button type="button" data-resource-id="' + esc(id) + '">Detalhe</button></div>';
+        html += "</div>";
+      });
+      el("resourceList").innerHTML = html || '<div class="muted">' + esc(body.note || "sem resources") + "</div>";
+      el("resourceList").className = "list";
+      el("resourceList").querySelectorAll("button[data-resource-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("resourceId").value = btn.getAttribute("data-resource-id") || "";
+          loadResourceDetail();
+        });
+      });
+      el("resourceOk").textContent = "resources count=" + String(body.count || rows.length);
+    } catch (err) {
+      el("resourceErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadResourceDetail() {
+    el("resourceErr").textContent = "";
+    el("resourceOk").textContent = "";
+    const id = el("resourceId").value.trim();
+    if (!id) { el("resourceErr").textContent = "resource_id é obrigatório"; return; }
+    try {
+      const body = await getJSON(inspectBase + "/resources/" + encodeURIComponent(id));
+      el("resourceDetail").hidden = false;
+      el("resourceDetail").textContent = pretty(body);
+      el("resourceDetail").className = "prebox";
+      el("resourceOk").textContent = "resource " + id + (body.circuit_open ? " circuit_open" : "");
+    } catch (err) {
+      el("resourceErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function listContextPressures() {
+    el("resourceErr").textContent = "";
+    el("resourceOk").textContent = "";
+    try {
+      const body = await getJSON(inspectBase + "/model-context-pressures");
+      const rows = body.pressures || [];
+      let html = "";
+      rows.forEach(function (row) {
+        const id = row.binding_id || "";
+        html += '<div class="card">';
+        html += '<div class="id">' + esc(id) + " · level=" + esc(String(row.level || 0)) + "</div>";
+        html += '<div class="muted">successes_at_level=' + esc(String(row.successes_at_level || 0))
+          + (row.reduction_active ? (" · remaining=" + esc(String(row.reduction_fraction || ""))) : "")
+          + (row.updated_at ? (" · updated=" + esc(row.updated_at)) : "") + "</div>";
+        html += '<div class="ops"><button type="button" data-pressure-id="' + esc(id) + '">Detalhe</button></div>';
+        html += "</div>";
+      });
+      el("resourceList").innerHTML = html || '<div class="muted">' + esc(body.note || "sem context pressure") + "</div>";
+      el("resourceList").className = "list";
+      el("resourceList").querySelectorAll("button[data-pressure-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          el("pressureBindingId").value = btn.getAttribute("data-pressure-id") || "";
+          loadContextPressureDetail();
+        });
+      });
+      el("resourceOk").textContent = "context pressures count=" + String(body.count || rows.length);
+    } catch (err) {
+      el("resourceErr").textContent = String(err.message || err);
+    }
+  }
+
+  async function loadContextPressureDetail() {
+    el("resourceErr").textContent = "";
+    el("resourceOk").textContent = "";
+    const id = el("pressureBindingId").value.trim();
+    if (!id) { el("resourceErr").textContent = "binding_id é obrigatório"; return; }
+    try {
+      const body = await getJSON(inspectBase + "/model-context-pressures/" + encodeURIComponent(id));
+      el("resourceDetail").hidden = false;
+      el("resourceDetail").textContent = pretty(body);
+      el("resourceDetail").className = "prebox";
+      el("resourceOk").textContent = "context pressure " + id + " level=" + String(body.level || 0);
+    } catch (err) {
+      el("resourceErr").textContent = String(err.message || err);
+    }
+  }
+
   el("btnCommitList").addEventListener("click", listCommits);
   el("btnProviderProfile").addEventListener("click", function () { loadProviderProfile(false); });
   el("btnProviderProbe").addEventListener("click", function () { loadProviderProfile(true); });
+  el("btnResourcesList").addEventListener("click", listResources);
+  el("btnContextPressureList").addEventListener("click", listContextPressures);
+  el("btnResourceDetail").addEventListener("click", loadResourceDetail);
+  el("btnPressureDetail").addEventListener("click", loadContextPressureDetail);
   el("btnAlertsRefresh").addEventListener("click", loadAlerts);
   el("btnTelemetry").addEventListener("click", loadTelemetry);
 

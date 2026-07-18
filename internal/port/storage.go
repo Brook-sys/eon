@@ -215,6 +215,8 @@ type ResourceWriter interface {
 // bindings return ErrNotFound and are interpreted by the kernel as zero pressure.
 type ModelContextReader interface {
 	ModelContextPressure(string) (domain.ModelContextPressure, error)
+	// ModelContextPressures returns all persisted pressure rows sorted by BindingID.
+	ModelContextPressures() ([]domain.ModelContextPressure, error)
 }
 
 // ModelContextWriter replaces one binding's bounded context-pressure record.

@@ -1266,6 +1266,10 @@ func TestStore(t *testing.T, factory Factory) {
 			if _, err := r.ModelContextPressure("missing"); !errors.Is(err, port.ErrNotFound) {
 				t.Fatalf("missing pressure error = %v", err)
 			}
+			rows, err := r.ModelContextPressures()
+			if err != nil || len(rows) != 1 || rows[0] != first {
+				t.Fatalf("pressure list = %#v err=%v", rows, err)
+			}
 			return nil
 		}); err != nil {
 			t.Fatal(err)

@@ -37,21 +37,53 @@ type ModelPresetCatalog struct {
 // MODELS revision still contains the exact evidence-backed provider and
 // disabled binding from the preset.
 type ModelPresetEnablementPreview struct {
-	PresetID        string        `json:"preset_id"`
-	EvidenceReport  string        `json:"evidence_report"`
-	EvidenceSHA256  string        `json:"evidence_sha256"`
-	Blocked         bool          `json:"blocked"`
-	BlockReasons    []string      `json:"block_reasons,omitempty"`
-	Risks           []string      `json:"risks"`
-	EnabledBefore   int           `json:"enabled_before"`
-	EnabledAfter    int           `json:"enabled_after"`
-	RoutingBefore   []string      `json:"routing_before"`
-	RoutingAfter    []string      `json:"routing_after"`
-	PrimaryBefore   string        `json:"primary_before,omitempty"`
-	PrimaryAfter    string        `json:"primary_after,omitempty"`
-	PrimaryChanged  bool          `json:"primary_changed"`
-	IntroducesFirst bool          `json:"introduces_first_enabled_model"`
-	Candidate       *ModelsConfig `json:"candidate,omitempty"`
+	PresetID        string   `json:"preset_id"`
+	EvidenceReport  string   `json:"evidence_report"`
+	EvidenceSHA256  string   `json:"evidence_sha256"`
+	Blocked         bool     `json:"blocked"`
+	BlockReasons    []string `json:"block_reasons,omitempty"`
+	Risks           []string `json:"risks"`
+	EnabledBefore   int      `json:"enabled_before"`
+	EnabledAfter    int      `json:"enabled_after"`
+	RoutingBefore   []string `json:"routing_before"`
+	RoutingAfter    []string `json:"routing_after"`
+	PrimaryBefore   string   `json:"primary_before,omitempty"`
+	PrimaryAfter    string   `json:"primary_after,omitempty"`
+	PrimaryChanged  bool     `json:"primary_changed"`
+	IntroducesFirst bool     `json:"introduces_first_enabled_model"`
+	// QuotaSummary and ContextSummary are non-authoritative operator aids derived
+	// from the preset's declared limits. They never invent live usage.
+	QuotaSummary   *ModelPresetQuotaSummary   `json:"quota_summary,omitempty"`
+	ContextSummary *ModelPresetContextSummary `json:"context_summary,omitempty"`
+	Candidate      *ModelsConfig              `json:"candidate,omitempty"`
+}
+
+// ModelPresetQuotaSummary surfaces configured ResourceGate ceilings only.
+type ModelPresetQuotaSummary struct {
+	ProviderResource        ResourceID    `json:"provider_resource"`
+	BindingResource         ResourceID    `json:"binding_resource"`
+	ProviderMaxConcurrent   int           `json:"provider_max_concurrent,omitempty"`
+	ProviderMaxPerMinute    int           `json:"provider_max_per_minute,omitempty"`
+	ProviderMaxPerDay       int           `json:"provider_max_per_day,omitempty"`
+	ProviderMaxTokensPerMin int           `json:"provider_max_tokens_per_minute,omitempty"`
+	ProviderCooldownBase    time.Duration `json:"provider_cooldown_base,omitempty"`
+	ProviderCooldownMax     time.Duration `json:"provider_cooldown_max,omitempty"`
+	BindingMaxConcurrent    int           `json:"binding_max_concurrent,omitempty"`
+	BindingMaxPerMinute     int           `json:"binding_max_per_minute,omitempty"`
+	BindingMaxPerDay        int           `json:"binding_max_per_day,omitempty"`
+	BindingMaxTokensPerMin  int           `json:"binding_max_tokens_per_minute,omitempty"`
+	BindingCooldownBase     time.Duration `json:"binding_cooldown_base,omitempty"`
+	BindingCooldownMax      time.Duration `json:"binding_cooldown_max,omitempty"`
+	Note                    string        `json:"note"`
+}
+
+// ModelPresetContextSummary surfaces declared prompt windows only.
+type ModelPresetContextSummary struct {
+	DeclaredContextTokens  int    `json:"declared_context_tokens"`
+	MaxOutputTokens        int    `json:"max_output_tokens"`
+	MaxOutputDialect       string `json:"max_output_dialect"`
+	ConservativeWindowHint int    `json:"conservative_window_hint"`
+	Note                   string `json:"note"`
 }
 
 func DecodeModelPresetCatalog(r io.Reader, maxBytes int64) (ModelPresetCatalog, error) {
@@ -203,6 +235,9 @@ func (p ModelPreset) PreviewEnablement(active *ModelsConfig, version string) (Mo
 			"consumes provider quota and may trigger cooldown or fallback",
 			"requires the configured API-key environment reference at runtime",
 		},
+		// Summaries are authority-free operator aids derived only from the preset.
+		QuotaSummary:   modelPresetQuotaSummary(p),
+		ContextSummary: modelPresetContextSummary(p),
 	}
 	if active == nil {
 		preview.Blocked = true
@@ -267,6 +302,38 @@ func (p ModelPreset) PreviewEnablement(active *ModelsConfig, version string) (Mo
 	preview.PrimaryChanged = preview.PrimaryBefore != preview.PrimaryAfter
 	preview.IntroducesFirst = preview.EnabledBefore == 0 && preview.EnabledAfter == 1
 	return preview, nil
+}
+
+func modelPresetQuotaSummary(p ModelPreset) *ModelPresetQuotaSummary {
+	return &ModelPresetQuotaSummary{
+		ProviderResource:        p.Provider.GlobalLimit.Resource,
+		BindingResource:         p.Binding.Limit.Resource,
+		ProviderMaxConcurrent:   p.Provider.GlobalLimit.MaxConcurrent,
+		ProviderMaxPerMinute:    p.Provider.GlobalLimit.MaxPerMinute,
+		ProviderMaxPerDay:       p.Provider.GlobalLimit.MaxPerDay,
+		ProviderMaxTokensPerMin: p.Provider.GlobalLimit.MaxTokensPerMinute,
+		ProviderCooldownBase:    p.Provider.GlobalLimit.CooldownBase,
+		ProviderCooldownMax:     p.Provider.GlobalLimit.CooldownMax,
+		BindingMaxConcurrent:    p.Binding.Limit.MaxConcurrent,
+		BindingMaxPerMinute:     p.Binding.Limit.MaxPerMinute,
+		BindingMaxPerDay:        p.Binding.Limit.MaxPerDay,
+		BindingMaxTokensPerMin:  p.Binding.Limit.MaxTokensPerMinute,
+		BindingCooldownBase:     p.Binding.Limit.CooldownBase,
+		BindingCooldownMax:      p.Binding.Limit.CooldownMax,
+		Note:                    "configured ceilings only; live usage is projected by GET /resources and is not invented here",
+	}
+}
+
+func modelPresetContextSummary(p ModelPreset) *ModelPresetContextSummary {
+	// Reuse the same conservative default policy the kernel applies offline.
+	hint := DefaultContextBudgetPolicy(p.Binding.ContextTokens).EffectiveContextTokens()
+	return &ModelPresetContextSummary{
+		DeclaredContextTokens:  p.Binding.ContextTokens,
+		MaxOutputTokens:        p.Binding.MaxOutputTokens,
+		MaxOutputDialect:       string(p.Binding.MaxOutputDialect),
+		ConservativeWindowHint: hint,
+		Note:                   "declared window and default conservative compile hint; durable context pressure remains binding-local and reversible",
+	}
 }
 
 func enabledModelRouting(bindings []ModelBindingConfig) []string {

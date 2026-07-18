@@ -277,6 +277,9 @@ func (t transaction) ResourceUsages() ([]domain.ResourceUsage, error) {
 func (t transaction) ModelContextPressure(bindingID string) (domain.ModelContextPressure, error) {
 	return reader(t).ModelContextPressure(bindingID)
 }
+func (t transaction) ModelContextPressures() ([]domain.ModelContextPressure, error) {
+	return reader(t).ModelContextPressures()
+}
 func (t transaction) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	return reader(t).OperatorCommand(id)
 }
@@ -619,6 +622,16 @@ func (r reader) ModelContextPressure(bindingID string) (domain.ModelContextPress
 		return domain.ModelContextPressure{}, notFound("model context pressure", key)
 	}
 	return v, nil
+}
+func (r reader) ModelContextPressures() ([]domain.ModelContextPressure, error) {
+	out := make([]domain.ModelContextPressure, 0, len(r.state.modelContextPressures))
+	for _, v := range r.state.modelContextPressures {
+		out = append(out, v)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].BindingID < out[j].BindingID
+	})
+	return out, nil
 }
 func (r reader) OperatorCommand(id domain.CommandID) (domain.OperatorCommand, error) {
 	v, ok := r.state.operatorCommands[id]

@@ -65,6 +65,8 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /store/retention", a.handleStoreRetention)
 	mux.HandleFunc("GET /resources", a.handleResources)
 	mux.HandleFunc("GET /resources/{resourceID}", a.handleResource)
+	mux.HandleFunc("GET /model-context-pressures", a.handleModelContextPressures)
+	mux.HandleFunc("GET /model-context-pressures/{bindingID}", a.handleModelContextPressure)
 	return mux
 }
 
@@ -549,6 +551,32 @@ func (a *API) handleResource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view, err := a.Projector.ResourceUsage(r.Context(), id)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, view)
+}
+
+// handleModelContextPressures lists durable binding-local context pressure
+// (FR-MODEL-007). Empty lists are valid; missing rows are never invented.
+func (a *API) handleModelContextPressures(w http.ResponseWriter, r *http.Request) {
+	proj, err := a.Projector.ListModelContextPressures(r.Context())
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, proj)
+}
+
+// handleModelContextPressure returns one binding pressure row or 404.
+func (a *API) handleModelContextPressure(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("bindingID"))
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing_binding_id", "bindingID is required")
+		return
+	}
+	view, err := a.Projector.ModelContextPressure(r.Context(), id)
 	if err != nil {
 		writeStoreError(w, err)
 		return
