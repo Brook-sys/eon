@@ -330,6 +330,8 @@ Testes unitários e do kernel MUST executar sem rede, modelo remoto, processo ex
 
 Dado o mesmo estado persistido, eventos e fontes injetadas, recuperação e seleção determinísticas MUST produzir a mesma decisão oficial, salvo desempate explicitamente alimentado por `RandomSource` registrado.
 
+**Verificação estrutural (2026-07-18):** `internal/architecture/determinism_test.go` impede que código de produção em `internal/domain` e `internal/kernel` leia diretamente o relógio de parede ou geradores globais de aleatoriedade; fontes oficiais devem atravessar `port.Clock` e `port.RandomSource`. Testes comportamentais com fontes manuais/sequenciais permanecem responsáveis por provar igualdade de decisão.
+
 ### NFR-PERF-001 — Operação limitada
 
 O primeiro vertical slice SHOULD operar serialmente e MUST limitar goroutines, conexões, resposta HTTP, conteúdo de fonte, tokens e tamanho de agenda por configuração validada.

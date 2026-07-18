@@ -66,7 +66,7 @@ Quando uma mudança local exige evento publicável, estado canônico e `OutboxRe
 
 Transições dependentes de tempo usam somente `Clock`; jitter e desempate não determinístico usam somente `RandomSource` registrado. Recuperação não depende do relógio de teste real nem de ordem de mapa/goroutine.
 
-**Verificação:** mesma entrada e fontes controladas produzem mesma decisão e mesmos instantes lógicos.
+**Verificação executável (2026-07-18):** `internal/architecture/determinism_test.go` aplica parser AST aos pacotes `internal/domain` e `internal/kernel`, detectando usos diretos de `time.Now`, `time.Sleep`, geradores em `math/rand` e `crypto/rand`, rejeitando invocação direta mesmo se apelidada na importação. Falha injetada comprova detecção com mensagem pedindo `port.Clock` ou `port.RandomSource`.
 
 ### INV-DUR-007 — Resposta humana possui correlação canônica única
 
