@@ -146,12 +146,48 @@ type CampaignReport struct {
 	Models        []CampaignModelReport `json:"models"`
 }
 
+// QualificationVerdict is an evidence-only deployment classification. It is
+// deliberately separate from runtime configuration and routing authority.
+type QualificationVerdict string
+
+const (
+	QualificationQualified    QualificationVerdict = "QUALIFIED"
+	QualificationDegraded     QualificationVerdict = "DEGRADED"
+	QualificationIncompatible QualificationVerdict = "INCOMPATIBLE"
+)
+
+type Qualification struct {
+	Verdict QualificationVerdict `json:"verdict"`
+	Reason  string               `json:"reason"`
+}
+
 type CampaignModelReport struct {
-	Provider   string       `json:"provider"`
-	BindingID  string       `json:"binding_id"`
-	Model      string       `json:"model"`
-	Report     Report       `json:"report"`
-	Regression []Regression `json:"regressions,omitempty"`
+	Provider      string        `json:"provider"`
+	BindingID     string        `json:"binding_id"`
+	Model         string        `json:"model"`
+	Report        Report        `json:"report"`
+	Qualification Qualification `json:"qualification"`
+	Regression    []Regression  `json:"regressions,omitempty"`
+}
+
+// QualifyReport applies conservative, reproducible thresholds to one bounded
+// live report. A qualification never enables a binding or changes preference.
+func QualifyReport(report Report) Qualification {
+	if report.SchemaVersion != 1 || report.Summary.Total <= 0 {
+		return Qualification{Verdict: QualificationIncompatible, Reason: "incomplete benchmark report"}
+	}
+	total := report.Summary.Total
+	providerFailures := report.Summary.ProviderErrors + report.Summary.Timeouts
+	if providerFailures*2 >= total {
+		return Qualification{Verdict: QualificationIncompatible, Reason: "provider failures or timeouts affected at least half of runs"}
+	}
+	if report.Summary.SyntaxValid*2 < total {
+		return Qualification{Verdict: QualificationIncompatible, Reason: "strict syntax validity was below 50%"}
+	}
+	if report.Summary.SemanticallyRight*3 >= total*2 && providerFailures == 0 {
+		return Qualification{Verdict: QualificationQualified, Reason: "at least two-thirds correct with no provider failures"}
+	}
+	return Qualification{Verdict: QualificationDegraded, Reason: "compatible enough to observe, but below qualification threshold"}
 }
 
 type Regression struct {
@@ -248,11 +284,12 @@ func WriteCampaignArtifacts(directory string, report CampaignReport) error {
 	}
 	var markdown strings.Builder
 	fmt.Fprintf(&markdown, "# Cognitive campaign\n\n- Name: `%s`\n- Fixture: `%s`\n- Planned/max calls: %d/%d\n- Models: %d\n\n", report.Name, report.FixtureName, report.PlannedCalls, report.MaxCalls, len(report.Models))
-	markdown.WriteString("| Provider | Binding | Model | Correct | Syntax | Provider errors | 429 | Timeouts | Regressions |\n| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+	markdown.WriteString("| Provider | Binding | Model | Qualification | Correct | Syntax | Provider errors | 429 | Timeouts | Regressions |\n| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for _, model := range report.Models {
 		s := model.Report.Summary
-		fmt.Fprintf(&markdown, "| %s | %s | %s | %d/%d | %d/%d | %d | %d | %d | %d |\n", model.Provider, model.BindingID, model.Model, s.SemanticallyRight, s.Total, s.SyntaxValid, s.Total, s.ProviderErrors, s.RateLimited, s.Timeouts, len(model.Regression))
+		fmt.Fprintf(&markdown, "| %s | %s | %s | %s | %d/%d | %d/%d | %d | %d | %d | %d |\n", model.Provider, model.BindingID, model.Model, model.Qualification.Verdict, s.SemanticallyRight, s.Total, s.SyntaxValid, s.Total, s.ProviderErrors, s.RateLimited, s.Timeouts, len(model.Regression))
 	}
+	markdown.WriteString("\nQualification is observational evidence only; it does not enable a binding or change runtime routing.\n")
 	markdown.WriteString("\n## Regressions\n\n")
 	for _, model := range report.Models {
 		for _, regression := range model.Regression {

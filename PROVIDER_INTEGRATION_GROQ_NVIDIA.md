@@ -182,12 +182,20 @@ limites conservadores locais, não afirmações sobre quotas atuais do provedor.
 Política aceita pelo operador (2026-07-18): avaliação live não é uma etapa única. Groq e NVIDIA NIM devem ser exercitados continuamente para detectar regressões, mudanças de catálogo, diferenças entre modelos e comportamento real de quota/recovery. Fakes e oracle offline comprovam determinismo, mas não qualificam sozinhos comportamento cognitivo ou compatibilidade de deployment.
 
 - [x] descoberta opcional de `/v1/models` com allowlist/validação e cache, nunca como autoridade automática;
-- [ ] inventário versionado de modelos observados por provider, data, ID opaco e resultado de qualificação;
+- [x] inventário versionado de modelos observados por provider, data, ID opaco e resultado de qualificação;
 - [ ] presets versionados para modelos prioritários confirmados;
 - [ ] campanhas live recorrentes por binding/modelo/operação/formato/contexto;
 - [ ] campanhas controladas de quota e falha para observar 429, `Retry-After`, timeout, circuit breaker e fallback sem carga ilimitada;
 - [ ] detecção de regressão contra baseline anterior por operação, validade sintática, acerto, tokens e latência;
 - [ ] registrar resultados e ajustar preferência somente por decisão explícita e auditável.
+
+O inventário inicial de 2026-07-18 está em
+`results/model-inventory/2026-07-18`. A classificação reproduzível da campanha
+é `QUALIFIED` somente com pelo menos 2/3 de acerto e zero falha de provider,
+`DEGRADED` quando o deployment ainda é observável mas não alcança esse teto, e
+`INCOMPATIBLE` quando falhas de provider/timeout atingem metade das células ou
+a validade sintática fica abaixo de 50%. Essa classificação é evidência, não
+um preset, toggle de enable ou mudança automática de preferência.
 
 Cada campanha DEVE declarar antes de executar: providers/modelos, fixture e versão, matriz de contexto/formato, teto de chamadas, teto de tokens ou saída, timeout global e critério de interrupção. A campanha DEVE parar em 429/cooldown quando o comportamento pretendido já estiver observado; "esgotar quota" significa testar o limite de maneira bounded e informativa, não consumir capacidade sem propósito.
 

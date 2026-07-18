@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "name": "new-candidates-2026-07-18",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 22,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 5632,
+  "timeout_seconds": 720,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-gpt-oss-120b",
+      "base_url": "https://api.groq.com/openai",
+      "model": "openai/gpt-oss-120b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "baseline_report": "results/model-benchmark/groq-gpt-oss-20b-contract-2026-07-18/report.json"
+    },
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nvidia-mistral-small-4-119b",
+      "base_url": "https://integrate.api.nvidia.com",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

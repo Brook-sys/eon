@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v1",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 170,
+      "output_tokens": 20,
+      "duration_millis": 767,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 168,
+      "output_tokens": 20,
+      "duration_millis": 497,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 166,
+      "output_tokens": 33,
+      "duration_millis": 592,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "```json\n{\n  \"date\": \"2025-11-03\",\n  \"source\": \"S-17\"\n}\n```",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 145,
+      "output_tokens": 11,
+      "duration_millis": 433,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "actual_input_tokens": 143,
+      "output_tokens": 11,
+      "duration_millis": 409,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "actual_input_tokens": 141,
+      "output_tokens": 24,
+      "duration_millis": 558,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "```json\n{\n  \"observation\": \"O-9\",\n  \"support\": \"YES\"\n}\n```",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "actual_input_tokens": 179,
+      "output_tokens": 7,
+      "duration_millis": 400,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "CONFLICT=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "actual_input_tokens": 177,
+      "output_tokens": 5,
+      "duration_millis": 380,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "conflict=YES"
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 175,
+      "output_tokens": 27,
+      "duration_millis": 2987,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "```json\n{\n  \"conflict\": \"YES\",\n  \"pair\": \"O-1/O-2\"\n}\n```",
+      "values": {
+        "conflict": "YES",
+        "pair": "O-1/O-2"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "actual_input_tokens": 150,
+      "output_tokens": 17,
+      "duration_millis": 542,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "actual_input_tokens": 148,
+      "output_tokens": 30,
+      "duration_millis": 595,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "```json\n{\n  \"quote\": \"The kernel rejected the stale base revision.\",\n  \"status\": \"REPAIRED\"\n}\n```",
+      "values": {
+        "quote": "The kernel rejected the stale base revision.",
+        "status": "REPAIRED"
+      }
+    }
+  ],
+  "summary": {
+    "total": 11,
+    "compiled": 11,
+    "syntax_valid": 9,
+    "semantically_correct": 9,
+    "input_tokens": 1762,
+    "output_tokens": 205,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 2,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 2
+      },
+      {
+        "label": "EXTRACT",
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 0
+      },
+      {
+        "label": "REPAIR",
+        "total": 2,
+        "compiled": 2,
+        "syntax_valid": 2,
+        "semantically_correct": 2,
+        "omitted_facts": 0,
+        "errors": 0
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 2,
+        "semantically_correct": 2,
+        "omitted_facts": 0,
+        "errors": 1
+      },
+      {
+        "label": "DELIMITED",
+        "total": 4,
+        "compiled": 4,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 1
+      },
+      {
+        "label": "JSON",
+        "total": 4,
+        "compiled": 4,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 11,
+        "compiled": 11,
+        "syntax_valid": 9,
+        "semantically_correct": 9,
+        "omitted_facts": 0,
+        "errors": 2
+      }
+    ]
+  }
+}

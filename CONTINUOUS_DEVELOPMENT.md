@@ -305,10 +305,10 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [x] `DONE` Instituir campanhas cognitivas live recorrentes para Groq e NVIDIA NIM.
   - Objetivo: transformar avaliação real em política contínua, com manifesto pré-execução, tetos de chamadas/tokens/tempo, artefatos versionados e comparação com baseline anterior por operação/formato/contexto.
   - Evidência: `CampaignManifest` estrito declara fixture, contextos, modelos, referências de segredo e tetos de chamadas/saída/tempo antes da execução; CLI `-campaign` executa múltiplos bindings sequencialmente, preserva manifesto, relatórios individuais e agregado; `Run` projeta apenas status HTTP/`Retry-After`/timeout limitados; `CompareReports` detecta regressões por operação/formato/contexto contra report v1 anterior. Testes cobrem manifesto, bounds, diagnóstico 429, comparação e campanha multi-binding via servidores fake.
-- [ ] `READY` Descobrir e qualificar modelos novos de Groq e NVIDIA NIM.
+- [x] `DONE` Descobrir e qualificar modelos novos de Groq e NVIDIA NIM.
   - Objetivo: consultar `/v1/models` com as credenciais autorizadas, registrar inventário datado e selecionar candidatos ainda não avaliados sem habilitação automática no runtime.
   - Evidência inicial (2026-07-18): inventário live registrou 15 IDs Groq e 119 NVIDIA NIM em `results/model-inventory/2026-07-18`; quatro candidatos novos receberam matriz bounded de 33 chamadas. Groq `openai/gpt-oss-20b` obteve 19/33; NVIDIA `nvidia/nemotron-3-nano-30b-a3b`, 16/33; Groq `qwen/qwen3.6-27b`, 0/33 (22 validações + 11 provider errors); NVIDIA `qwen/qwen3-next-80b-a3b-instruct`, 0/33 provider errors.
-  - Aceite residual: continuar qualificação de candidatos ainda não avaliados usando o manifesto multi-modelo; IDs removidos ou incompatíveis ficam registrados com evidência.
+  - Evidência final (2026-07-18): campanha multi-modelo bounded adicional de 22 chamadas em `results/model-benchmark/new-candidates-2026-07-18` qualificou NVIDIA `mistralai/mistral-small-4-119b-2603` (`QUALIFIED`, 9/11, zero provider errors) e classificou Groq `openai/gpt-oss-120b` como `DEGRADED` (10/11, uma provider failure). `QualifyReport` fixa thresholds reproduzíveis `QUALIFIED`/`DEGRADED`/`INCOMPATIBLE`, escritos no agregado e explicitamente sem autoridade para ativar ou rerotear bindings. Inventário e síntese datados foram atualizados; candidatos incompatíveis permanecem registrados.
 - [ ] `READY` Exercitar quotas, circuit breaker e fallback em campanhas live controladas.
   - Objetivo: observar comportamento real de 429, `Retry-After`, timeout e escopo provider/binding sem busy loop nem consumo sem finalidade.
   - Aceite: campanha possui teto explícito e prova que o gate estaciona/reencaminha corretamente, preservando budget e liberando concorrência.
@@ -336,6 +336,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 ```
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
+
+2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 
 2026-07-15 08:26 — Fase 0/coerência — glossário normativo criado; arquitetura alinhada ao domínio epistemológico; interfaces de persistência separadas — verificação: RFC 2119/8174, grep de resíduos e `git diff --check` — próximo: requisitos rastreáveis e auditoria dos protocolos auxiliares.
 2026-07-15 08:34 — Fase 0/contratos — protocolo de modelo fraco e plano de pesquisa alinhados ao glossário; requisitos FR/NFR rastreáveis consolidados — verificação: grep de termos substituídos e `git diff --check` — próximo: taxonomia de falhas e invariantes formais.

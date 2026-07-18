@@ -79,3 +79,24 @@ func TestCompareReportsUsesRatesAcrossExpandedFixture(t *testing.T) {
 		t.Fatalf("regression totals=%+v", got[0])
 	}
 }
+
+func TestQualifyReportUsesConservativeThresholds(t *testing.T) {
+	tests := []struct {
+		name    string
+		summary Summary
+		want    QualificationVerdict
+	}{
+		{name: "qualified", summary: Summary{Total: 33, SyntaxValid: 30, SemanticallyRight: 24}, want: QualificationQualified},
+		{name: "degraded", summary: Summary{Total: 33, SyntaxValid: 25, SemanticallyRight: 19, ProviderErrors: 4}, want: QualificationDegraded},
+		{name: "provider incompatible", summary: Summary{Total: 33, ProviderErrors: 17}, want: QualificationIncompatible},
+		{name: "syntax incompatible", summary: Summary{Total: 33, SyntaxValid: 16, SemanticallyRight: 10}, want: QualificationIncompatible},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := QualifyReport(Report{SchemaVersion: 1, Summary: tt.summary})
+			if got.Verdict != tt.want || got.Reason == "" {
+				t.Fatalf("qualification=%+v want=%s", got, tt.want)
+			}
+		})
+	}
+}

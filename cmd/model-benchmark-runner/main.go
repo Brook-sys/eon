@@ -149,7 +149,7 @@ func runCampaign(manifestPath, outputDirectory string) error {
 		if err != nil {
 			return fmt.Errorf("binding %s: %w", target.BindingID, err)
 		}
-		modelReport := evaluation.CampaignModelReport{Provider: target.Provider, BindingID: target.BindingID, Model: target.Model, Report: report}
+		modelReport := evaluation.CampaignModelReport{Provider: target.Provider, BindingID: target.BindingID, Model: target.Model, Report: report, Qualification: evaluation.QualifyReport(report)}
 		if strings.TrimSpace(target.BaselineReport) != "" {
 			baseline, err := evaluation.ReadReport(target.BaselineReport)
 			if err != nil {
