@@ -890,6 +890,66 @@ func TestControlAPIConfigValidateApplyRequireWiring(t *testing.T) {
 	}
 }
 
+func TestControlAPIModelsDraftLifecycle(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 18, 20, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(130)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	provider := domain.ModelProviderConfig{
+		ID: "groq", Kind: domain.ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1",
+		APIKeyEnv: "GROQ_API_KEY", Timeout: 30 * time.Second, MaxResponseBytes: 1 << 20,
+		GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("groq"), MaxConcurrent: 1},
+	}
+	binding := domain.ModelBindingConfig{
+		ID: "groq-qualified-disabled", ProviderRef: "groq", ModelID: "llama-3.3-70b-versatile",
+		Enabled: false, Priority: 10, ContextTokens: 8192, MaxOutputTokens: 512,
+		MaxOutputDialect: domain.MaxOutputDialectLegacy,
+		Limit:            domain.ResourceLimit{Resource: domain.ModelBindingResource("groq-qualified-disabled"), MaxConcurrent: 1},
+	}
+	created := mustPOSTJSON(t, server.URL+"/config/drafts", map[string]any{
+		"schema_version": 1,
+		"scope":          "MODELS",
+		"reason":         "install reviewed disabled model preset",
+		"models": domain.ModelsConfig{
+			Version: "models.reviewed.v1", Providers: []domain.ModelProviderConfig{provider}, Bindings: []domain.ModelBindingConfig{binding},
+		},
+	})
+	defer created.Body.Close()
+	if created.StatusCode != http.StatusAccepted {
+		t.Fatalf("create models draft status = %d body=%s", created.StatusCode, readBody(t, created))
+	}
+	var createResp struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &createResp)
+	if createResp.Draft.Scope != domain.ConfigScopeModels || createResp.Draft.Models == nil || createResp.Draft.Models.Bindings[0].Enabled {
+		t.Fatalf("models draft = %#v", createResp.Draft)
+	}
+
+	validated := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createResp.Draft.ID)+"/validate", map[string]any{})
+	defer validated.Body.Close()
+	if validated.StatusCode != http.StatusOK {
+		t.Fatalf("validate models draft status = %d body=%s", validated.StatusCode, readBody(t, validated))
+	}
+	clock.Advance(time.Second)
+	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createResp.Draft.ID)+"/apply", map[string]any{})
+	defer applied.Body.Close()
+	if applied.StatusCode != http.StatusOK {
+		t.Fatalf("apply models draft status = %d body=%s", applied.StatusCode, readBody(t, applied))
+	}
+	var applyResp struct {
+		Revision domain.ConfigRevision `json:"revision"`
+	}
+	decodeJSON(t, applied.Body, &applyResp)
+	if applyResp.Revision.Models == nil || applyResp.Revision.Models.Bindings[0].Enabled {
+		t.Fatalf("applied models revision = %#v", applyResp.Revision)
+	}
+}
+
 func seedMission(t *testing.T, store port.Store, now time.Time) {
 	t.Helper()
 	mission := domain.MissionRevision{

@@ -589,6 +589,7 @@ type configDraftCreateRequest struct {
 	Horizon         *domain.HorizonPolicy             `json:"horizon,omitempty"`
 	Interruption    *domain.InterruptionRuntimePolicy `json:"interruption,omitempty"`
 	Channels        *domain.ChannelsConfig            `json:"channels,omitempty"`
+	Models          *domain.ModelsConfig              `json:"models,omitempty"`
 	CreatedAt       *time.Time                        `json:"created_at,omitempty"`
 }
 
@@ -636,7 +637,7 @@ func (a *API) handleCreateConfigDraft(w http.ResponseWriter, r *http.Request) {
 		BasedOnRevision: req.BasedOnRevision, Applicability: applicability,
 		Status: domain.ConfigDraftOpen, ActorType: actorType, ActorID: actorID,
 		Reason: strings.TrimSpace(req.Reason), Runtime: req.Runtime, Scheduler: req.Scheduler,
-		Horizon: req.Horizon, Interruption: req.Interruption, Channels: req.Channels,
+		Horizon: req.Horizon, Interruption: req.Interruption, Channels: req.Channels, Models: req.Models,
 		CreatedAt: createdAt,
 	}
 	if err := draft.Validate(); err != nil {

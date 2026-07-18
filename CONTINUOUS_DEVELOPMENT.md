@@ -343,6 +343,8 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: formato v2 encapsula estado gob separado com SHA-256 verificado antes do restore; adulteração falha com erro identificável; decoder rejeita trailing/concatenação gob; versão externa e envelope interno precisam concordar; v0 sem envelope e v1 permanecem legíveis somente sob coluna v1; SQLite aceita versão externa v1 e comprova reescrita automática como v2 na próxima transação; adapters Dolt compartilham a mesma política de compatibilidade.
 - [x] `DONE` Publicar presets de modelo versionados sem autoridade automática.
   - Evidência: catálogo `model-presets.v1.json` referencia apenas Groq Llama 3.3 70B e NVIDIA Mistral Small 4 qualificados live, fixa digest dos relatórios e limites conservadores; decoder estrito/limitado e testes exigem evidência `QUALIFIED`, path seguro, SHA-256 e binding desabilitado. O preset só produz payload de draft `MODELS`, nunca altera routing.
+- [x] `DONE` Fechar o caminho operacional de drafts `MODELS` na Control API e dashboard.
+  - Evidência: `POST /config/drafts` agora decodifica e persiste o payload tipado `models`; o dashboard anexa o JSON ao campo correto em vez de rejeitar o escopo já anunciado. Teste HTTP percorre create → validate → apply e comprova que binding desabilitado permanece sem autoridade após virar revisão ativa; teste do HTML protege a integração do formulário.
 
 ## Política de seleção
 
@@ -392,6 +394,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 12:00 — Imutabilidade da origem offline SQLite — backup/restore não passam mais pelo configurador mutável do store: abrem a origem read-only/immutable, não criam sidecars e confrontam inode+tamanho+digest antes/depois, removendo a cópia se houver mutação concorrente — verificação: teste de não mutação/sidecars, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 17:00 — Presets de modelos qualificados — catálogo versionado fixa evidência live por SHA-256 e materializa somente drafts MODELS desabilitados; backlog P4 reconciliado com campanhas, regressão e gate runtime já concluídos; probe live bounded NVIDIA Mistral Small 4 retornou `PROBE_OK` — verificação: testes domain/suite completa, vet, gofmt, validação do catálogo/digests e `git diff --check`; race foi tentado, mas indisponível neste host sem CGO/gcc — commit pendente neste ciclo.
+
+2026-07-18 17:40 — Drafts MODELS operacionais — Control API e dashboard agora transportam o payload MODELS pelo lifecycle tipado, com teste end-to-end preservando binding desabilitado após apply; probe live bounded do preset Groq executou 11/11 chamadas mas recebeu HTTP 401 em todas, registrando credencial indisponível sem alterar preset/routing — verificação: `go test ./...`, `go vet ./...`, gofmt e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 

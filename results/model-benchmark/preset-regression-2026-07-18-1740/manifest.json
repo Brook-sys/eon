@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "name": "preset-regression-2026-07-18-1740",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 11,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 2816,
+  "timeout_seconds": 600,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama-3.3-70b-preset",
+      "base_url": "https://api.groq.com/openai",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "baseline_report": "results/model-benchmark/live-groq-llama-3.3-70b-contract-2026-07-18/report.json"
+    }
+  ]
+}

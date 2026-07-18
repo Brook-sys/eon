@@ -110,6 +110,7 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"<option value=\"MODELS\">MODELS</option>",
 		"model-provider:groq",
 		"replace-with-operator-confirmed-model-id",
+		"body.models = payload",
 		"Inspetor de execução",
 		"btnInspLoad",
 		"/operations/",

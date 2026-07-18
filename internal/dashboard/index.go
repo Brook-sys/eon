@@ -1261,6 +1261,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     else if (scope === "RUNTIME") body.runtime = payload;
     else if (scope === "SCHEDULER") body.scheduler = payload;
     else if (scope === "CHANNELS") body.channels = payload;
+    else if (scope === "MODELS") body.models = payload;
     else {
       el("cfgErr").textContent = "escopo desconhecido";
       return;
