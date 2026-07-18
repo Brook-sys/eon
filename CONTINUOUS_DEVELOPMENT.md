@@ -279,7 +279,12 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Evidência: `CapabilityReserveRequest`/`ReserveCapability`/`ReportCapability` (model helpers como wrappers); custos `WebSearchCost`/`WebFetchCost`/`WebCapabilityEstimatedBudget`; `WebExecutor` READY→lease→search/fetch→artifact/ingest→SUCCEEDED com ResourceGate; conteúdo marcado `untrusted_source_data`; `DispatchExecutor.Web` + skip `requires_web`; `LocalEligible`/`ModelEligible` excluem web; `FileExecutor` confina discover/read a roots autorizadas; `bootstrap.buildWeb`/`buildFile` e flags `-web*`/`-file*` montam os adapters opcionais; replay, throttle e assembly cobertos por testes.
 - [x] `DONE` FR-RES-001 residual de budgets de ciclo/scheduler: cadence durável aplicada no control loop.
   - Evidência: `domain.DefaultSchedulerCadenceConfig`/`WithinCycleBudget`; `kernel.ActiveSchedulerCadence`/`ResolveSchedulerCadence` (fallback + revisão `SCHEDULER`); `ProcessCycle` multi-step sob `MaxDispatches` e soft deadline `MaxCycleDuration`, contando skips `requires_*` no budget; `RunControlLoop` refresca idle min/max da cadence; `CycleResult` expõe `SchedulerSteps`/`DispatchBudgetHit`/`CycleBudgetHit`/`CadenceVersion`; testes domain/kernel/bootstrap (`TestProcessCycleHonorsMaxDispatchesCadence`). Residual residual: eval cognitiva live bloqueada sem endpoint local.
-- [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato (live; bloqueado sem endpoint OpenAI-compatible local).
+- [x] `DONE` Integrar deadline da Lease ao cancelamento de rede OpenAI-compatible.
+  - Evidência: `ModelExecutor` deriva `providerCtx` da deadline persistida em `LeaseRef` e usa esse contexto em toda chamada/fallback; `openai.Provider` já propaga o contexto com `http.NewRequestWithContext`, portanto socket, body read e retries não sobrevivem à autoridade da Lease. Verificação Go bloqueada neste heartbeat porque o toolchain `go` não está disponível no host; `git diff --check` executado.
+- [ ] `READY` Adequar routing conservador para modelos menores baseando formato em fallback DELIMITED.
+  - Contexto: Validação falhou 25/33 no LLama 3.1 8B primariamente por JSON truncado ou over-token.
+  - Requisito: Mudar perfil do router/executor cognitivo para evitar formato `JSON` e preferir sintaxe reduzida quando o fallback para perfil NIM/Groq estiver acionado.
+- [ ] `READY` Avaliar extração, síntese, conflito e reparo por modelo/formato (live via NIM/Groq).
 
 ## Política de seleção
 

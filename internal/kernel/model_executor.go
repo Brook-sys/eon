@@ -389,6 +389,18 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return result, nil
 	}
 
+	// The persisted lease is also the hard upper bound for provider network I/O.
+	// http.NewRequestWithContext in the OpenAI adapter propagates this deadline
+	// down to the transport, preventing a stalled socket from outliving its
+	// authority to execute. Keep the parent cancellation semantics intact.
+	leaseDeadline, ok := ParseLeaseDeadline(leaseRef)
+	if !ok {
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		return result, fmt.Errorf("invalid lease ref deadline format: %s", leaseRef)
+	}
+	providerCtx, cancelProvider := context.WithDeadline(ctx, leaseDeadline)
+	defer cancelProvider()
+
 	// Phase 2: compile + model call(s) outside the write transaction.
 	// FR-MODEL-004: at most Budget.ModelCalls Complete invocations; prefer short
 	// correction / simpler format over full replan loops; exhaust when spent.
@@ -508,7 +520,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
 
-		completion, callErr := activeProvider.Complete(ctx, request)
+		completion, callErr := activeProvider.Complete(providerCtx, request)
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
