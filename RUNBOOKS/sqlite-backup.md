@@ -55,7 +55,10 @@ go run ./cmd/sqlite-backup \
 
 `-report-path` é opcional, mas recomendado: publica exatamente o mesmo JSON
 impresso em stdout em um arquivo novo `0600`, por inode temporário sincronizado,
-hard link sem replace e `fsync` do diretório. O comando nunca sobrescreve um
+hard link sem replace e `fsync` do diretório. A publicação mantém o diretório
+aberto por descritor, exige que o path continue apontando para o mesmo inode e
+faz link/remoção relativos a esse descritor; renomear ou substituir o diretório
+pai durante a operação falha fechado e remove o link parcial. O comando nunca sobrescreve um
 inventário existente. Assim, o digest físico, identidade lógica, schema e
 inventário de páginas usados numa restauração permanecem juntos do backup sem
 depender de redirecionamento de shell parcialmente gravado. A CLI rejeita flags

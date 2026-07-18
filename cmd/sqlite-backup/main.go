@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"motor-autonomo/internal/safepublish"
 	storage "motor-autonomo/internal/storage/sqlite"
 )
 
@@ -304,22 +305,10 @@ func writeReportAtomic(path string, payload []byte) error {
 	if err := temp.Close(); err != nil {
 		return fmt.Errorf("close temporary report: %w", err)
 	}
-	if err := os.Link(tempPath, path); err != nil {
-		return fmt.Errorf("publish report without replacement: %w", err)
-	}
-	if err := os.Remove(tempPath); err != nil {
-		_ = os.Remove(path)
-		return fmt.Errorf("remove temporary report name: %w", err)
+	if err := safepublish.NoReplace(tempPath, path, "report"); err != nil {
+		return err
 	}
 	removeTemp = false
-	directory, err := os.Open(dir)
-	if err != nil {
-		return fmt.Errorf("open report directory: %w", err)
-	}
-	defer directory.Close()
-	if err := directory.Sync(); err != nil {
-		return fmt.Errorf("sync report directory: %w", err)
-	}
 	return nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"motor-autonomo/internal/safepublish"
 	"motor-autonomo/internal/storage/memory"
 
 	"modernc.org/sqlite"
@@ -261,24 +262,7 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 // destPath after the initial validation; removing the temporary name leaves
 // the published inode and its restrictive permissions intact.
 func publishBackupNoReplace(tempPath, destPath string) error {
-	if err := os.Link(tempPath, destPath); err != nil {
-		if _, statErr := os.Lstat(destPath); statErr == nil {
-			return fmt.Errorf("backup destination already exists: %s", destPath)
-		}
-		return fmt.Errorf("publish backup without overwrite: %w", err)
-	}
-	if err := syncDirectory(filepath.Dir(destPath)); err != nil {
-		_ = os.Remove(destPath)
-		return fmt.Errorf("sync published backup directory: %w", err)
-	}
-	if err := os.Remove(tempPath); err != nil {
-		_ = os.Remove(destPath)
-		return fmt.Errorf("remove published backup temporary name: %w", err)
-	}
-	if err := syncDirectory(filepath.Dir(destPath)); err != nil {
-		return fmt.Errorf("sync backup temporary-name removal: %w", err)
-	}
-	return nil
+	return safepublish.NoReplace(tempPath, destPath, "backup")
 }
 
 func syncRegularFile(path string) error {
