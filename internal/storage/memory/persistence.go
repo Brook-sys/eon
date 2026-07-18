@@ -3,10 +3,20 @@ package memory
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 
 	"motor-autonomo/internal/domain"
 )
+
+const CheckpointFormatVersion = 1
+
+var ErrUnsupportedCheckpointFormat = errors.New("unsupported checkpoint format version")
+
+type checkpointEnvelope struct {
+	FormatVersion int
+	State         persistedState
+}
 
 // persistedState is an internal, versioned-independent transport used by disk
 // adapters to checkpoint the complete in-memory reference model. Domain schema
@@ -66,7 +76,9 @@ type persistedState struct {
 	ModelContextPressures     map[string]domain.ModelContextPressure
 }
 
-// MarshalBinary returns an isolated checkpoint of the reference store.
+// MarshalBinary returns an isolated, versioned checkpoint of the reference
+// store. NewFromBinary still accepts the legacy unwrapped v0 gob so existing
+// MVP databases can be upgraded on their next successful write.
 func (s *Store) MarshalBinary() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -99,7 +111,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ModelContextPressures: cloned.modelContextPressures,
 	}
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(p); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(checkpointEnvelope{FormatVersion: CheckpointFormatVersion, State: p}); err != nil {
 		return nil, fmt.Errorf("encode memory checkpoint: %w", err)
 	}
 	return buf.Bytes(), nil
@@ -107,10 +119,23 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 
 // NewFromBinary restores a checkpoint produced by MarshalBinary.
 func NewFromBinary(data []byte) (*Store, error) {
+	var envelope checkpointEnvelope
+	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&envelope); err == nil && envelope.FormatVersion != 0 {
+		if envelope.FormatVersion != CheckpointFormatVersion {
+			return nil, fmt.Errorf("%w: got %d, support %d", ErrUnsupportedCheckpointFormat, envelope.FormatVersion, CheckpointFormatVersion)
+		}
+		return newFromPersistedState(envelope.State)
+	}
+
+	// Compatibility path for checkpoints written before the envelope existed.
 	var p persistedState
 	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&p); err != nil {
 		return nil, fmt.Errorf("decode memory checkpoint: %w", err)
 	}
+	return newFromPersistedState(p)
+}
+
+func newFromPersistedState(p persistedState) (*Store, error) {
 	base := newState()
 	base.missionRevisions = nonNil(p.MissionRevisions, base.missionRevisions)
 	base.activeMissions = nonNil(p.ActiveMissions, base.activeMissions)

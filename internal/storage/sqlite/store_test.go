@@ -1,12 +1,17 @@
 package sqlite_test
 
 import (
+	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/contract"
+	"motor-autonomo/internal/storage/memory"
 	storage "motor-autonomo/internal/storage/sqlite"
+
+	_ "modernc.org/sqlite"
 )
 
 func TestStoreContract(t *testing.T) {
@@ -33,6 +38,57 @@ func TestDurableStoreContract(t *testing.T) {
 		}
 		return &harness{t: t, path: path, store: store}
 	})
+}
+
+func TestOpenRejectsUnsupportedCheckpointFormatBeforeDecodingPayload(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO runtime_checkpoint(id, format_version, payload) VALUES(1, ?, X'00')`, memory.CheckpointFormatVersion+1); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	_, err = storage.Open(path)
+	if !errors.Is(err, memory.ErrUnsupportedCheckpointFormat) {
+		t.Fatalf("open error = %v, want unsupported checkpoint format", err)
+	}
+}
+
+func TestOpenRejectsCorruptCurrentCheckpoint(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO runtime_checkpoint(id, format_version, payload) VALUES(1, ?, X'00')`, memory.CheckpointFormatVersion); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := storage.Open(path); err == nil || errors.Is(err, memory.ErrUnsupportedCheckpointFormat) {
+		t.Fatalf("open error = %v, want checkpoint decode failure", err)
+	}
 }
 
 type harness struct {

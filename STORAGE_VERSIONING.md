@@ -192,6 +192,15 @@ O desenho deve avaliar ainda:
 
 `ACCEPTED — SQLITE + EVENT LOG IS THE MVP CANONICAL BACKEND.`
 
+### Compatibilidade do checkpoint do MVP
+
+O blob integral usado pelos adapters é um formato interno versionado, não uma API de serialização estável. A versão corrente é registrada duas vezes de modo deliberado:
+
+- na coluna `runtime_checkpoint.format_version`, para rejeição antes da decodificação;
+- no envelope gob, para que cópias do payload preservem a própria identidade de formato.
+
+Os adapters MUST rejeitar versões futuras ou desconhecidas sem tentar interpretá-las. Payload inválido na versão corrente MUST falhar a abertura, nunca inicializar silenciosamente um store vazio. O checkpoint gob legado sem envelope é aceito como formato v0 somente para leitura compatível e será substituído pelo envelope corrente na próxima atualização durável. Mudanças incompatíveis futuras exigem função de migração explícita e testes com fixtures da versão anterior; alterar apenas a constante não constitui migração.
+
 Dolt 2.2.0 foi rejeitado na configuração `sql-server` medida porque 30/30 crashes entre `SQL COMMIT` e `DOLT_COMMIT` produziram `INVALID_PARTIAL`, violando `FR-KNOW-004`. Sua reconsideração exige eliminar ou reconciliar essa janela e repetir o protocolo. A decisão está registrada em `ADRS/0003-versioned-storage.md`.
 
 Fonte inicial oficial sobre Dolt:

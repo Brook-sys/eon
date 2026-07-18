@@ -179,14 +179,18 @@ func (s *ServerStore) configureAndLoad() error {
 			return fmt.Errorf("commit dolt server schema: %w", err)
 		}
 	}
+	var formatVersion int
 	var payload []byte
-	err := s.db.QueryRow(`SELECT payload FROM runtime_checkpoint WHERE id = ?`, checkpointID).Scan(&payload)
+	err := s.db.QueryRow(`SELECT format_version, payload FROM runtime_checkpoint WHERE id = ?`, checkpointID).Scan(&formatVersion, &payload)
 	if errors.Is(err, sql.ErrNoRows) {
 		s.core = memory.New()
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("load dolt server checkpoint: %w", err)
+	}
+	if formatVersion != memory.CheckpointFormatVersion {
+		return fmt.Errorf("load dolt server checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, formatVersion, memory.CheckpointFormatVersion)
 	}
 	core, err := memory.NewFromBinary(payload)
 	if err != nil {
@@ -238,8 +242,8 @@ func (s *ServerStore) Update(ctx context.Context, fn func(port.Transaction) erro
 	}
 	defer tx.Rollback()
 	if _, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
-		VALUES(?, 1, ?)
-		ON DUPLICATE KEY UPDATE format_version=VALUES(format_version), payload=VALUES(payload)`, checkpointID, payload); err != nil {
+		VALUES(?, ?, ?)
+		ON DUPLICATE KEY UPDATE format_version=VALUES(format_version), payload=VALUES(payload)`, checkpointID, memory.CheckpointFormatVersion, payload); err != nil {
 		return fmt.Errorf("write dolt server checkpoint: %w", err)
 	}
 	if s.failpoint != nil {

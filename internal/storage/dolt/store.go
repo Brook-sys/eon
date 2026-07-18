@@ -91,13 +91,14 @@ func (s *Store) configure() error {
 
 func (s *Store) load() (*memory.Store, error) {
 	output, err := s.run(context.Background(), "sql", "-r", "json", "-q",
-		fmt.Sprintf("SELECT HEX(payload) AS payload_hex FROM runtime_checkpoint WHERE id = %d", checkpointID))
+		fmt.Sprintf("SELECT format_version, HEX(payload) AS payload_hex FROM runtime_checkpoint WHERE id = %d", checkpointID))
 	if err != nil {
 		return nil, fmt.Errorf("load dolt checkpoint: %w", err)
 	}
 	var result struct {
 		Rows []struct {
-			PayloadHex string `json:"payload_hex"`
+			FormatVersion int    `json:"format_version"`
+			PayloadHex    string `json:"payload_hex"`
 		} `json:"rows"`
 	}
 	if err := json.Unmarshal(output, &result); err != nil {
@@ -108,6 +109,9 @@ func (s *Store) load() (*memory.Store, error) {
 	}
 	if len(result.Rows) != 1 {
 		return nil, fmt.Errorf("dolt checkpoint query returned %d rows", len(result.Rows))
+	}
+	if result.Rows[0].FormatVersion != memory.CheckpointFormatVersion {
+		return nil, fmt.Errorf("load dolt checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, result.Rows[0].FormatVersion, memory.CheckpointFormatVersion)
 	}
 	payload, err := hex.DecodeString(result.Rows[0].PayloadHex)
 	if err != nil {
@@ -159,10 +163,10 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 	}
 	encoded := strings.ToUpper(hex.EncodeToString(payload))
 	query := fmt.Sprintf(`INSERT INTO runtime_checkpoint(id, format_version, payload)
-		VALUES(%d, 1, UNHEX('%s'))
+		VALUES(%d, %d, UNHEX('%s'))
 		ON DUPLICATE KEY UPDATE format_version=VALUES(format_version), payload=VALUES(payload);
 		CALL DOLT_ADD('-A');
-		CALL DOLT_COMMIT('--skip-empty', '-m', 'runtime checkpoint');`, checkpointID, encoded)
+		CALL DOLT_COMMIT('--skip-empty', '-m', 'runtime checkpoint');`, checkpointID, memory.CheckpointFormatVersion, encoded)
 	if s.failpoint != nil {
 		s.failpoint(FailpointBeforeSQLAndDoltCommit)
 	}
