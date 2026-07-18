@@ -30,6 +30,8 @@ type BackupReport struct {
 	Duration         time.Duration `json:"duration"`
 	SQLiteVersion    string        `json:"sqlite_version"`
 	FileSize         int64         `json:"file_size"`
+	PageSize         int           `json:"page_size"`
+	PageCount        int           `json:"page_count"`
 	SHA256           string        `json:"sha256"`
 	ApplicationID    int           `json:"application_id"`
 	UserVersion      int           `json:"user_version"`
@@ -48,6 +50,8 @@ type BackupReport struct {
 // valid and therefore report zero checkpoint rows and format.
 type BackupVerification struct {
 	FileSize         int64  `json:"file_size"`
+	PageSize         int    `json:"page_size"`
+	PageCount        int    `json:"page_count"`
 	SHA256           string `json:"sha256"`
 	ApplicationID    int    `json:"application_id"`
 	UserVersion      int    `json:"user_version"`
@@ -65,6 +69,8 @@ type BackupVerification struct {
 // created or transferred. Empty means compute and report without comparison.
 type VerificationOptions struct {
 	ExpectedSHA256           string
+	ExpectedPageSize         *int
+	ExpectedPageCount        *int
 	ExpectedSchemaVersion    *int
 	ExpectedSchemaObjects    *int
 	ExpectedSchemaSHA256     string
@@ -88,6 +94,8 @@ type BackupOptions struct {
 // the verified source digest and rejects source changes during the restore.
 type RestoreOptions struct {
 	ExpectedSHA256           string
+	ExpectedPageSize         *int
+	ExpectedPageCount        *int
 	ExpectedSchemaVersion    *int
 	ExpectedSchemaObjects    *int
 	ExpectedSchemaSHA256     string
@@ -162,7 +170,6 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 	}
 	defer conn.Close()
 
-	var pages int64
 	err = conn.Raw(func(driverConn any) error {
 		backuper, ok := driverConn.(interface {
 			NewBackup(string) (*sqlite.Backup, error)
@@ -187,13 +194,6 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 			more, err := backup.Step(steps)
 			if err != nil {
 				return fmt.Errorf("sqlite backup step: %w", err)
-			}
-			// Step(-1) copies all remaining pages; when steps > 0 we approximate
-			// progress by counting successful calls until done.
-			if steps < 0 {
-				pages = 1
-			} else {
-				pages++
 			}
 			if !more {
 				break
@@ -223,10 +223,12 @@ func (s *Store) BackupTo(ctx context.Context, destPath string, options BackupOpt
 
 	return BackupReport{
 		DestinationPath:  destPath,
-		PagesCopied:      pages,
+		PagesCopied:      int64(verification.PageCount),
 		Duration:         time.Since(started),
 		SQLiteVersion:    version,
 		FileSize:         verification.FileSize,
+		PageSize:         verification.PageSize,
+		PageCount:        verification.PageCount,
 		SHA256:           verification.SHA256,
 		ApplicationID:    verification.ApplicationID,
 		UserVersion:      verification.UserVersion,
@@ -387,6 +389,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 	}
 	sourceVerification, err := VerifyBackupWithOptions(backupPath, VerificationOptions{
 		ExpectedSHA256:           options.ExpectedSHA256,
+		ExpectedPageSize:         options.ExpectedPageSize,
+		ExpectedPageCount:        options.ExpectedPageCount,
 		ExpectedSchemaVersion:    options.ExpectedSchemaVersion,
 		ExpectedSchemaObjects:    options.ExpectedSchemaObjects,
 		ExpectedSchemaSHA256:     options.ExpectedSchemaSHA256,
@@ -402,6 +406,8 @@ func RestoreToWithOptions(ctx context.Context, backupPath, destPath string, opti
 		return BackupReport{}, fmt.Errorf("restore verified backup: %w", err)
 	}
 	if report.CheckpointRows != sourceVerification.CheckpointRows ||
+		report.PageSize != sourceVerification.PageSize ||
+		report.PageCount != sourceVerification.PageCount ||
 		report.ApplicationID != sourceVerification.ApplicationID ||
 		report.UserVersion != sourceVerification.UserVersion ||
 		report.SchemaVersion != sourceVerification.SchemaVersion ||
@@ -487,6 +493,27 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("close backup foreign-key check: %w", err)
 	}
 	var applicationID, userVersion int
+	var pageSize, pageCount int
+	if err := db.QueryRow(`PRAGMA page_size`).Scan(&pageSize); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup page size: %w", err)
+	}
+	if pageSize <= 0 {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup page size: got %d, want positive", pageSize)
+	}
+	if err := db.QueryRow(`PRAGMA page_count`).Scan(&pageCount); err != nil {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("read backup page count: %w", err)
+	}
+	if pageCount <= 0 {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup page count: got %d, want positive", pageCount)
+	}
+	if int64(pageSize)*int64(pageCount) != beforeSize {
+		db.Close()
+		return BackupVerification{}, fmt.Errorf("verify backup page inventory: page_size=%d page_count=%d imply %d bytes, file has %d", pageSize, pageCount, int64(pageSize)*int64(pageCount), beforeSize)
+	}
 	if err := db.QueryRow(`PRAGMA application_id`).Scan(&applicationID); err != nil {
 		db.Close()
 		return BackupVerification{}, fmt.Errorf("read backup application id: %w", err)
@@ -538,6 +565,8 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	}
 	verification := BackupVerification{
 		FileSize:        beforeSize,
+		PageSize:        pageSize,
+		PageCount:       pageCount,
 		SHA256:          beforeDigest,
 		ApplicationID:   applicationID,
 		UserVersion:     userVersion,
@@ -547,6 +576,26 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		CheckpointRows:  count,
 		IntegrityCheck:  integrity,
 		ForeignKeyCheck: "ok",
+	}
+	if options.ExpectedPageSize != nil {
+		if *options.ExpectedPageSize <= 0 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected page size must be positive")
+		}
+		if verification.PageSize != *options.ExpectedPageSize {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup page size: got %d, want %d", verification.PageSize, *options.ExpectedPageSize)
+		}
+	}
+	if options.ExpectedPageCount != nil {
+		if *options.ExpectedPageCount <= 0 {
+			db.Close()
+			return BackupVerification{}, errors.New("expected page count must be positive")
+		}
+		if verification.PageCount != *options.ExpectedPageCount {
+			db.Close()
+			return BackupVerification{}, fmt.Errorf("verify backup page count: got %d, want %d", verification.PageCount, *options.ExpectedPageCount)
+		}
 	}
 	if options.ExpectedSchemaVersion != nil {
 		if *options.ExpectedSchemaVersion < 0 {

@@ -37,12 +37,16 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	expectedCheckpointSHA256 := fs.String("expected-checkpoint-sha256", "", "expected 64-character runtime checkpoint payload SHA-256 (verify or restore mode)")
 	var expectedSchemaVersion optionalInt
 	var expectedSchemaObjects optionalInt
+	var expectedPageSize optionalInt
+	var expectedPageCount optionalInt
 	var expectedCheckpointRows optionalInt
 	var expectedCheckpointFormat optionalInt
 	fs.Var(&expectedCheckpointRows, "expected-checkpoint-rows", "expected runtime checkpoint row count, 0 or 1 (verify or restore mode)")
 	fs.Var(&expectedCheckpointFormat, "expected-checkpoint-format", "expected non-negative runtime checkpoint format (verify or restore mode)")
 	fs.Var(&expectedSchemaVersion, "expected-schema-version", "expected non-negative SQLite schema version (verify or restore mode)")
 	fs.Var(&expectedSchemaObjects, "expected-schema-objects", "expected canonical runtime schema object count, exactly 1 (verify or restore mode)")
+	fs.Var(&expectedPageSize, "expected-page-size", "expected positive SQLite page size in bytes (verify or restore mode)")
+	fs.Var(&expectedPageCount, "expected-page-count", "expected positive SQLite page count (verify or restore mode)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -77,6 +81,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 		verification, err := storage.VerifyBackupWithOptions(*path, storage.VerificationOptions{
 			ExpectedSHA256:           *expectedSHA256,
+			ExpectedPageSize:         expectedPageSize.Pointer(),
+			ExpectedPageCount:        expectedPageCount.Pointer(),
 			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
 			ExpectedSchemaObjects:    expectedSchemaObjects.Pointer(),
 			ExpectedSchemaSHA256:     *expectedSchemaSHA256,
@@ -103,6 +109,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 		report, err := storage.RestoreToWithOptions(ctx, *source, *destination, storage.RestoreOptions{
 			ExpectedSHA256:           *expectedSHA256,
+			ExpectedPageSize:         expectedPageSize.Pointer(),
+			ExpectedPageCount:        expectedPageCount.Pointer(),
 			ExpectedSchemaVersion:    expectedSchemaVersion.Pointer(),
 			ExpectedSchemaObjects:    expectedSchemaObjects.Pointer(),
 			ExpectedSchemaSHA256:     *expectedSchemaSHA256,

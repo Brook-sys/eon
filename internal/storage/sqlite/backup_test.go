@@ -66,6 +66,9 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	if report.FileSize <= 0 || len(report.SHA256) != sha256.Size*2 {
 		t.Fatalf("backup identity = %#v", report)
 	}
+	if report.PageSize <= 0 || report.PageCount <= 0 || report.PagesCopied != int64(report.PageCount) || int64(report.PageSize)*int64(report.PageCount) != report.FileSize {
+		t.Fatalf("backup page inventory = %#v", report)
+	}
 	if info, err := os.Stat(destPath); err != nil {
 		t.Fatal(err)
 	} else if got := info.Mode().Perm(); got != 0o600 {
@@ -80,9 +83,23 @@ func TestOnlineBackupPreservesCheckpointAndReopens(t *testing.T) {
 	}
 	if _, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{
 		ExpectedSHA256:           report.SHA256,
+		ExpectedPageSize:         &report.PageSize,
+		ExpectedPageCount:        &report.PageCount,
 		ExpectedCheckpointSHA256: report.CheckpointSHA256,
 	}); err != nil {
 		t.Fatalf("verify pinned physical and logical identity: %v", err)
+	}
+	wrongPageSize := report.PageSize * 2
+	if _, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{ExpectedPageSize: &wrongPageSize}); err == nil {
+		t.Fatal("verification accepted wrong expected page size")
+	}
+	wrongPageCount := report.PageCount + 1
+	if _, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{ExpectedPageCount: &wrongPageCount}); err == nil {
+		t.Fatal("verification accepted wrong expected page count")
+	}
+	invalidPageInventory := 0
+	if _, err := storage.VerifyBackupWithOptions(destPath, storage.VerificationOptions{ExpectedPageSize: &invalidPageInventory}); err == nil {
+		t.Fatal("verification accepted non-positive expected page size")
 	}
 
 	// Source must remain usable after backup.

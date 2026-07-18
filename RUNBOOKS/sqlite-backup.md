@@ -15,7 +15,8 @@ Use a API Go de backup online — **não** copie só o arquivo `.sqlite` enquant
 store, err := sqlite.Open(path)
 // ...
 report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
-// report inclui DestinationPath, SQLiteVersion, FileSize, SHA256,
+// report inclui DestinationPath, SQLiteVersion, FileSize, PageSize, PageCount,
+// PagesCopied, SHA256,
 // ApplicationID, UserVersion, SchemaVersion, SchemaObjects, SchemaSHA256,
 // CheckpointRows, CheckpointFormat,
 // CheckpointSHA256, IntegrityCheck e ForeignKeyCheck
@@ -24,7 +25,7 @@ report, err := store.BackupTo(ctx, destPath, sqlite.BackupOptions{})
 Comportamento:
 
 1. adquire o lock de escrita do adapter (serializa com `Update`);
-2. copia páginas via `modernc.org/sqlite` `NewBackup` / `Step` / `Finish` (`sqlite3_backup_*`);
+2. copia páginas via `modernc.org/sqlite` `NewBackup` / `Step` / `Finish` (`sqlite3_backup_*`) e registra `pages_copied` como a contagem real de páginas do artefato verificado, não como quantidade de chamadas a `Step`;
 3. executa `PRAGMA integrity_check(1)` e `foreign_key_check`, exige os marcadores de header `application_id=0x4d415554` (`MAUT`) e `user_version=1`, e verifica versão externa, SHA-256, framing e decode integral do `runtime_checkpoint` quando existir;
 4. registra separadamente o SHA-256 do payload versionado do checkpoint, permitindo confrontar a identidade lógica mesmo quando a cópia SQLite possui bytes físicos diferentes.
 5. deixa a origem aberta e utilizável.
@@ -74,8 +75,9 @@ exige `PRAGMA foreign_key_check` sem violações e confere que toda linha de
 `runtime_checkpoint` usa o único ID canônico `1`. Depois disso,
 com SQLite `mode=ro&immutable=1`: não cria banco ausente, não executa migração
 ou configuração e não deixa WAL/SHM/journal ao lado do backup. O resultado
-válido registra `IntegrityCheck == "ok"`, `file_size` e o SHA-256 do arquivo
-completo. A auditoria também exige os marcadores SQLite `application_id`
+válido registra `IntegrityCheck == "ok"`, `file_size`, `page_size`,
+`page_count` e o SHA-256 do arquivo completo; também exige que
+`page_size * page_count == file_size`. A auditoria também exige os marcadores SQLite `application_id`
 (`MAUT`) e `user_version` canônico, distinguindo um banco do runtime de outro
 arquivo SQLite que por acaso possua uma tabela homônima; divergência de versão,
 adulteração do payload ou framing inválido
@@ -88,6 +90,8 @@ go run ./cmd/sqlite-backup \
   -mode=verify \
   -path=/mnt/restore/runtime-YYYYMMDD.sqlite \
   -expected-sha256=<sha256_emitido_no_backup> \
+  -expected-page-size=<page_size_emitido_no_backup> \
+  -expected-page-count=<page_count_emitido_no_backup> \
   -expected-schema-version=<schema_version_emitido_no_backup> \
   -expected-schema-objects=<schema_objects_emitido_no_backup> \
   -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
@@ -96,7 +100,9 @@ go run ./cmd/sqlite-backup \
   -expected-checkpoint-format=<checkpoint_format_emitido_no_backup>
 ```
 
-A opção `-expected-sha256` fixa a identidade física transferida,
+A opção `-expected-sha256` fixa a identidade física transferida;
+`-expected-page-size` e `-expected-page-count` fixam o inventário físico
+SQLite e tornam auditável a contagem real registrada em `pages_copied`;
 `-expected-schema-version`, `-expected-schema-objects` e
 `-expected-schema-sha256` fixam a identidade da tabela canônica
 `runtime_checkpoint` observada no inventário. A auditoria exige exatamente um
@@ -128,6 +134,8 @@ go run ./cmd/sqlite-backup \
   -source=/var/backups/motor-autonomo/runtime-YYYYMMDD.sqlite \
   -destination=/var/lib/motor-autonomo/runtime-restored.sqlite \
   -expected-sha256=<sha256_emitido_no_backup> \
+  -expected-page-size=<page_size_emitido_no_backup> \
+  -expected-page-count=<page_count_emitido_no_backup> \
   -expected-schema-version=<schema_version_emitido_no_backup> \
   -expected-schema-objects=<schema_objects_emitido_no_backup> \
   -expected-schema-sha256=<schema_sha256_emitido_no_backup> \
@@ -136,12 +144,12 @@ go run ./cmd/sqlite-backup \
   -expected-checkpoint-format=<checkpoint_format_emitido_no_backup>
 ```
 
-Os digests e campos de framing esperados vinculam a restauração ao arquivo e ao checkpoint
+Os digests, inventário de páginas e campos de framing esperados vinculam a restauração ao arquivo e ao checkpoint
 selecionados no inventário,
 em vez de apenas a qualquer SQLite estruturalmente válido. A implementação
 também verifica novamente a origem depois da cópia e remove o destino se a
 origem tiver mudado durante a restauração; isso torna verificável a exigência
-de que o backup esteja offline. Além disso, compara contagem, versão e
+de que o backup esteja offline. Além disso, compara tamanho/contagem de páginas, contagem de checkpoint, versão e
 `checkpoint_sha256` entre a origem verificada e o destino restaurado; qualquer
 divergência lógica remove o destino antes da publicação operacional.
 
@@ -154,6 +162,8 @@ divergência lógica remove o destino antes da publicação operacional.
 
 A API equivalente com identidade fixada é `sqlite.RestoreToWithOptions(ctx,
 backupPath, newRuntimePath, sqlite.RestoreOptions{ExpectedSHA256: digest})`.
+Para fixar o inventário físico, preencha `ExpectedPageSize` e
+`ExpectedPageCount`.
 Para fixar também o estado lógico e seu framing, preencha
 `ExpectedCheckpointSHA256`, `ExpectedCheckpointRows` e
 `ExpectedCheckpointFormat` com os valores do relatório inventariado.
