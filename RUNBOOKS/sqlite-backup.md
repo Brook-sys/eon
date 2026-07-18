@@ -76,7 +76,9 @@ go run ./cmd/sqlite-backup \
 
 A opção `-expected-sha256` rejeita digest malformado ou divergente. A auditoria
 calcula o hash antes e depois de `quick_check`/decode e falha se o arquivo mudar
-durante a verificação.
+durante a verificação. O path auditado precisa ser um arquivo regular direto:
+symlinks são recusados, e a identidade do inode é conferida entre hash,
+abertura SQLite e hash final para impedir troca de path durante a auditoria.
 
 Alternativa manual: com o store fechado, copie o arquivo principal (e WAL residual se existir) para um diretório frio; em seguida verifique a cópia com o comando acima antes de considerá-la restaurável.
 
@@ -131,5 +133,6 @@ cópia e verifica o destino por meio de `BackupTo`.
 - `TestOnlineBackupRejectsExistingDestination`
 - `TestOnlineBackupEmptyStore`
 - `TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation`
+- `TestVerifyBackupRejectsSymlinkPath`
 - `TestVerifyBackupRejectsCheckpointVersionMismatch`
 - `TestVerifyBackupRejectsTamperedCheckpointPayload`

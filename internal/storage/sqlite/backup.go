@@ -318,7 +318,7 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 	if err != nil {
 		return BackupVerification{}, err
 	}
-	beforeSize, beforeDigest, err := hashBackupFile(path)
+	beforeSize, beforeDigest, beforeIdentity, err := hashBackupFile(path)
 	if err != nil {
 		return BackupVerification{}, err
 	}
@@ -328,6 +328,10 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
+		return BackupVerification{}, fmt.Errorf("open backup for verification: %w", err)
+	}
+	if err := requireSameRegularPath(path, beforeIdentity); err != nil {
+		db.Close()
 		return BackupVerification{}, fmt.Errorf("open backup for verification: %w", err)
 	}
 	if _, err := db.Exec(`PRAGMA query_only=ON`); err != nil {
@@ -386,11 +390,11 @@ func VerifyBackupWithOptions(path string, options VerificationOptions) (BackupVe
 		return BackupVerification{}, fmt.Errorf("close backup verification database: %w", err)
 	}
 
-	afterSize, afterDigest, err := hashBackupFile(path)
+	afterSize, afterDigest, afterIdentity, err := hashBackupFile(path)
 	if err != nil {
 		return BackupVerification{}, err
 	}
-	if afterSize != beforeSize || afterDigest != beforeDigest {
+	if !os.SameFile(beforeIdentity, afterIdentity) || afterSize != beforeSize || afterDigest != beforeDigest {
 		return BackupVerification{}, errors.New("verify backup digest: file changed during verification")
 	}
 	return verification, nil
@@ -408,22 +412,46 @@ func normalizeExpectedSHA256(value string) (string, error) {
 	return value, nil
 }
 
-func hashBackupFile(path string) (int64, string, error) {
+func hashBackupFile(path string) (int64, string, os.FileInfo, error) {
+	pathInfo, err := os.Lstat(path)
+	if err != nil {
+		return 0, "", nil, fmt.Errorf("inspect backup path for digest: %w", err)
+	}
+	if pathInfo.Mode()&os.ModeSymlink != 0 || !pathInfo.Mode().IsRegular() {
+		return 0, "", nil, fmt.Errorf("backup path is not a regular file: %s", path)
+	}
 	file, err := os.Open(path)
 	if err != nil {
-		return 0, "", fmt.Errorf("open backup for digest: %w", err)
+		return 0, "", nil, fmt.Errorf("open backup for digest: %w", err)
 	}
 	defer file.Close()
 	info, err := file.Stat()
 	if err != nil {
-		return 0, "", fmt.Errorf("stat backup for digest: %w", err)
+		return 0, "", nil, fmt.Errorf("stat backup for digest: %w", err)
 	}
-	if !info.Mode().IsRegular() {
-		return 0, "", fmt.Errorf("backup path is not a regular file: %s", path)
+	if !info.Mode().IsRegular() || !os.SameFile(pathInfo, info) {
+		return 0, "", nil, fmt.Errorf("backup path changed before digest: %s", path)
 	}
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
-		return 0, "", fmt.Errorf("hash backup: %w", err)
+		return 0, "", nil, fmt.Errorf("hash backup: %w", err)
 	}
-	return info.Size(), hex.EncodeToString(hash.Sum(nil)), nil
+	if err := requireSameRegularPath(path, info); err != nil {
+		return 0, "", nil, fmt.Errorf("hash backup: %w", err)
+	}
+	return info.Size(), hex.EncodeToString(hash.Sum(nil)), info, nil
+}
+
+func requireSameRegularPath(path string, expected os.FileInfo) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("reinspect backup path: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return fmt.Errorf("backup path is not a regular file: %s", path)
+	}
+	if expected == nil || !os.SameFile(expected, info) {
+		return fmt.Errorf("backup path identity changed: %s", path)
+	}
+	return nil
 }

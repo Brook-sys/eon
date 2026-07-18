@@ -150,6 +150,7 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
   - Restauração identificada (2026-07-18): `RestoreToWithOptions` e o CLI aceitam o SHA-256 selecionado no inventário, registram `source_sha256` separado da identidade do destino e revalidam a origem depois da cópia; mudança durante restore remove o destino fail-closed.
   - Publicação segura (2026-07-18): backup/restore escrevem e verificam inode temporário `0600` no diretório de destino e só então publicam por hard link atômico sem replace; corrida que cria o destino após o preflight preserva o arquivo existente e remove o temporário.
   - Durabilidade de publicação (2026-07-18): o inode verificado recebe `fsync` antes do link e o diretório recebe `fsync` após publicar e remover o nome temporário; o fluxo offline rejeita origem ausente, não regular ou symlink antes de `Open`, evitando criar silenciosamente um banco vazio no path errado.
+  - Identidade do path verificado (2026-07-18): verificação/restore recusam symlink e vinculam hash inicial, abertura SQLite e hash final ao mesmo inode regular, detectando substituição de path mesmo quando os bytes permanecem iguais.
 
 ### Fase 5 — fontes reais e avaliação cognitiva
 
@@ -369,6 +370,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 11:00 — Publicação segura de backup SQLite — cópias verificadas passam a usar inode temporário `0600` e publicação atômica sem replace, eliminando a janela TOCTOU entre checar e criar o destino; testes preservam destino concorrente e conferem permissões — verificação: testes específicos, suite completa, vet e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 11:20 — Durabilidade de backup SQLite — backup sincroniza conteúdo verificado e entradas de diretório nas fronteiras de publicação; cópia offline agora rejeita origem ausente/symlink/não regular antes de abrir, impedindo criação acidental de store vazio — verificação: testes específicos, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` com Go 1.26.5 — commit pendente neste ciclo.
+
+2026-07-18 11:40 — Identidade de path na auditoria SQLite — verify/restore agora recusam symlink e exigem o mesmo inode regular entre digest inicial, abertura SQLite e digest final, fechando troca de path com conteúdo idêntico — verificação: testes específicos, suite completa, vet, gofmt e `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 06:00 — Descoberta/qualificação live — campanha bounded de 22 chamadas avaliou GPT-OSS 120B Groq (10/11, `DEGRADED` por uma provider failure) e Mistral Small 4 119B NIM (9/11, `QUALIFIED`); classifier reproduzível adicionado ao agregado sem habilitação automática — verificação: campanha real, testes evaluation/CLI, `go test ./...`, `go vet ./...`, `git diff --check` — próximo: exercitar quotas/circuit breaker/fallback live de forma controlada.
 

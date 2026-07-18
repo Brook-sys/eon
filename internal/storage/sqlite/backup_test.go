@@ -315,6 +315,33 @@ func TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation(t *testing.T) {
 	}
 }
 
+func TestVerifyBackupRejectsSymlinkPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "backup.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "backup-link.sqlite")
+	if err := os.Symlink(path, link); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := storage.VerifyBackup(link); err == nil || !strings.Contains(err.Error(), "not a regular file") {
+		t.Fatalf("verify symlink error = %v, want regular-file rejection", err)
+	}
+	restored := filepath.Join(dir, "restored.sqlite")
+	if _, err := storage.RestoreTo(context.Background(), link, restored, storage.BackupOptions{}); err == nil {
+		t.Fatal("restore accepted symlink source")
+	}
+	if _, err := os.Stat(restored); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("symlink restore left destination: %v", err)
+	}
+}
+
 func TestVerifyBackupRejectsCheckpointVersionMismatch(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "runtime.sqlite")
