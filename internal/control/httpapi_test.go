@@ -992,6 +992,69 @@ func TestControlAPIModelPresetCreatesDisabledModelsDraft(t *testing.T) {
 	}
 }
 
+func TestControlAPIModelPresetDraftPreservesActiveCatalogAndRequiresFreshBase(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 18, 21, 1, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(142)
+	api := newControlAPIWithConfig(t, store, clock, ids)
+	preset := validControlModelPreset()
+	api.ModelPresets = &domain.ModelPresetCatalog{Schema: domain.ModelPresetCatalogSchema, Presets: []domain.ModelPreset{preset}}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	provider := domain.ModelProviderConfig{
+		ID: "nim", Kind: domain.ProviderKindNVIDIANIM, BaseURL: "https://integrate.api.nvidia.com/v1", APIKeyEnv: "NVIDIA_NIM_API_KEY",
+		Timeout: 30 * time.Second, MaxResponseBytes: 1 << 20,
+		GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("nim"), MaxConcurrent: 1},
+	}
+	binding := domain.ModelBindingConfig{
+		ID: "nim-active", ProviderRef: "nim", ModelID: "mistralai/mistral-small", Enabled: true, Priority: 20,
+		ContextTokens: 8192, MaxOutputTokens: 512, MaxOutputDialect: domain.MaxOutputDialectLegacy,
+		Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("nim-active"), MaxConcurrent: 1},
+	}
+	created := mustPOSTJSON(t, server.URL+"/config/drafts", map[string]any{
+		"schema_version": 1, "scope": "MODELS", "reason": "seed active model",
+		"models": domain.ModelsConfig{Version: "models.active.v1", Providers: []domain.ModelProviderConfig{provider}, Bindings: []domain.ModelBindingConfig{binding}},
+	})
+	defer created.Body.Close()
+	var createdBody struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, created.Body, &createdBody)
+	validated := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createdBody.Draft.ID)+"/validate", map[string]any{})
+	validated.Body.Close()
+	clock.Advance(time.Second)
+	applied := mustPOSTJSON(t, server.URL+"/config/drafts/"+string(createdBody.Draft.ID)+"/apply", map[string]any{})
+	applied.Body.Close()
+
+	stale := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/drafts", map[string]any{
+		"schema_version": 1, "based_on_revision": 0, "version": "models.merged.v1", "reason": "reviewed preset",
+	})
+	defer stale.Body.Close()
+	if stale.StatusCode != http.StatusConflict {
+		t.Fatalf("stale base status = %d body=%s", stale.StatusCode, readBody(t, stale))
+	}
+
+	merged := mustPOSTJSON(t, server.URL+"/model-presets/"+preset.ID+"/drafts", map[string]any{
+		"schema_version": 1, "based_on_revision": 1, "version": "models.merged.v1", "reason": "reviewed preset",
+	})
+	defer merged.Body.Close()
+	if merged.StatusCode != http.StatusAccepted {
+		t.Fatalf("merged draft status = %d body=%s", merged.StatusCode, readBody(t, merged))
+	}
+	var mergedBody struct {
+		Draft domain.ConfigDraft `json:"draft"`
+	}
+	decodeJSON(t, merged.Body, &mergedBody)
+	if len(mergedBody.Draft.Models.Providers) != 2 || len(mergedBody.Draft.Models.Bindings) != 2 {
+		t.Fatalf("merged draft = %#v", mergedBody.Draft.Models)
+	}
+	if !mergedBody.Draft.Models.Bindings[0].Enabled || mergedBody.Draft.Models.Bindings[1].Enabled {
+		t.Fatalf("routing changed = %#v", mergedBody.Draft.Models.Bindings)
+	}
+}
+
 func TestControlAPIModelPresetEnablementPreviewAfterDisabledApply(t *testing.T) {
 	store := memory.New()
 	now := time.Date(2026, 7, 18, 21, 2, 0, 0, time.UTC)

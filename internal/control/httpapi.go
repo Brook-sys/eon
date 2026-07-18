@@ -342,9 +342,27 @@ func (a *API) handleCreateModelPresetDraft(w http.ResponseWriter, r *http.Reques
 	if req.SchemaVersion == 0 {
 		req.SchemaVersion = domain.SchemaVersionV1
 	}
-	models, err := preset.ModelsConfigDraft(strings.TrimSpace(req.Version))
+	active, err := a.activeModelsRevision(r.Context())
 	if err != nil {
-		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
+		writeAPIError(w, mapStoreError(err, "config_revision"))
+		return
+	}
+	if active == nil {
+		if req.BasedOnRevision != 0 {
+			writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: "based_on_revision is stale"})
+			return
+		}
+	} else if req.BasedOnRevision != active.Revision {
+		writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: "based_on_revision is stale"})
+		return
+	}
+	var activeModels *domain.ModelsConfig
+	if active != nil {
+		activeModels = active.Models
+	}
+	models, err := preset.ModelsConfigDraftFromActive(activeModels, strings.TrimSpace(req.Version))
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusConflict, code: "conflict", message: sanitizeValidationMessage(err)})
 		return
 	}
 	reason := strings.TrimSpace(req.Reason)

@@ -172,6 +172,7 @@ Aplicabilidade: mudanças de preferência/limite podem ser `NEXT_OPERATION`; bas
 - [x] novo escopo versionado `MODELS`, com providers/bindings sem segredos;
 - [x] API/config draft, validação, diff, apply/rollback;
 - [x] UI de configuração e projeções operacionais: o dashboard lista `MODELS`, oferece template seguro desabilitado, usa somente `api_key_env` e reaproveita preview/diff/histórico/rollback genéricos;
+- [x] instalação incremental de presets preserva providers, bindings e rotas da revisão MODELS ativa, exige `based_on_revision` atual e falha fechado em colisão/drift de IDs;
 - [x] smoke E2E do wiring com catálogo Groq/NIM fake: testes de bootstrap montam múltiplos bindings/adapters e limites compostos sem acessar rede.
 
 O template da UI é deliberadamente não executável até o operador substituir o

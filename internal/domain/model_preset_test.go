@@ -81,6 +81,44 @@ func TestModelPresetRequiresQualifiedEvidenceAndStaysDisabled(t *testing.T) {
 	}
 }
 
+func TestModelPresetDraftMergesActiveCatalogWithoutChangingRoutes(t *testing.T) {
+	preset := validModelPreset()
+	active := ModelsConfig{
+		Version: "models.active.v1",
+		Providers: []ModelProviderConfig{{
+			ID: "nim", Kind: ProviderKindNVIDIANIM, BaseURL: "https://integrate.api.nvidia.com/v1", APIKeyEnv: "NVIDIA_NIM_API_KEY",
+			Timeout: 90 * time.Second, MaxResponseBytes: 1 << 20,
+			GlobalLimit: ResourceLimit{Resource: ModelProviderResource("nim"), MaxConcurrent: 1},
+		}},
+		Bindings: []ModelBindingConfig{{
+			ID: "nim-active", ProviderRef: "nim", ModelID: "mistralai/mistral-small", Enabled: true, Priority: 20,
+			ContextTokens: 8192, MaxOutputTokens: 512, MaxOutputDialect: MaxOutputDialectLegacy,
+			Limit: ResourceLimit{Resource: ModelBindingResource("nim-active"), MaxConcurrent: 1},
+		}},
+	}
+	merged, err := preset.ModelsConfigDraftFromActive(&active, "models.merged.v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(merged.Providers) != 2 || len(merged.Bindings) != 2 {
+		t.Fatalf("merged catalog = %#v", merged)
+	}
+	if !merged.Bindings[0].Enabled || merged.Bindings[1].Enabled {
+		t.Fatalf("existing route changed or preset enabled = %#v", merged.Bindings)
+	}
+	if active.Version != "models.active.v1" || len(active.Providers) != 1 || len(active.Bindings) != 1 {
+		t.Fatalf("active catalog mutated = %#v", active)
+	}
+
+	collision := active
+	collision.Providers = append([]ModelProviderConfig(nil), active.Providers...)
+	collision.Providers = append(collision.Providers, preset.Provider)
+	collision.Providers[1].BaseURL = "https://example.invalid/v1"
+	if _, err := preset.ModelsConfigDraftFromActive(&collision, "models.collision.v1"); err == nil {
+		t.Fatal("expected provider collision to fail closed")
+	}
+}
+
 func TestModelPresetRejectsUnsafeEvidenceAndEnabledBinding(t *testing.T) {
 	for _, mutate := range []func(*ModelPreset){
 		func(p *ModelPreset) { p.EvidenceReport = "../secret" },

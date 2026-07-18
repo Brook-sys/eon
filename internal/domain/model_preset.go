@@ -139,16 +139,49 @@ func (c ModelPresetCatalog) Validate() error {
 
 // ModelsConfigDraft materializes a disabled, non-authoritative config payload.
 func (p ModelPreset) ModelsConfigDraft(version string) (ModelsConfig, error) {
+	return p.ModelsConfigDraftFromActive(nil, version)
+}
+
+// ModelsConfigDraftFromActive installs a disabled preset without discarding an
+// existing MODELS catalog. Identifier collisions fail closed: an operator must
+// resolve provider/binding drift through the ordinary explicit config editor.
+func (p ModelPreset) ModelsConfigDraftFromActive(active *ModelsConfig, version string) (ModelsConfig, error) {
 	if err := p.Validate(); err != nil {
 		return ModelsConfig{}, err
 	}
-	if strings.TrimSpace(version) == "" {
+	version = strings.TrimSpace(version)
+	if version == "" {
 		return ModelsConfig{}, errors.New("models config version is required")
+	}
+	config := ModelsConfig{Version: version}
+	if active != nil {
+		if err := active.Validate(); err != nil {
+			return ModelsConfig{}, fmt.Errorf("active models config: %w", err)
+		}
+		config = *cloneModelsConfig(active)
+		config.Version = version
+	}
+	for _, provider := range config.Providers {
+		if provider.ID != p.Provider.ID {
+			continue
+		}
+		if provider != p.Provider {
+			return ModelsConfig{}, errors.New("active provider identifier collides with a different preset configuration")
+		}
+		goto providerReady
+	}
+	config.Providers = append(config.Providers, p.Provider)
+
+providerReady:
+	for _, binding := range config.Bindings {
+		if binding.ID == p.Binding.ID {
+			return ModelsConfig{}, errors.New("preset binding is already installed in the active MODELS revision")
+		}
 	}
 	binding := p.Binding
 	binding.Enabled = false
 	binding.Priority = p.RecommendedPriority
-	config := ModelsConfig{Version: version, Providers: []ModelProviderConfig{p.Provider}, Bindings: []ModelBindingConfig{binding}}
+	config.Bindings = append(config.Bindings, binding)
 	return config, config.Validate()
 }
 
