@@ -7,12 +7,16 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
+	"motor-autonomo/internal/storage/sqlite"
 )
 
 func TestLoadModelPresetCatalogVerifiesEvidenceDigest(t *testing.T) {
@@ -148,5 +152,119 @@ func TestModelOptionsFromCatalogWithNoEnabledBindingsDisablesModel(t *testing.T)
 	}
 	if got != nil {
 		t.Fatalf("expected nil options, got %+v", got)
+	}
+}
+
+func TestSQLiteReopenRestoresEnabledPresetAndRouter(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "runtime.db")
+	preset := domain.ModelPreset{
+		ID: "sqlite-smoke",
+		Provider: domain.ModelProviderConfig{
+			ID: "nim", Kind: domain.ProviderKindNVIDIANIM, BaseURL: "https://example.invalid/v1", APIKeyEnv: "NVIDIA_NIM_API_KEY",
+			Timeout: 45 * time.Second, MaxResponseBytes: 2 << 20, GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("nim"), MaxConcurrent: 2},
+		},
+		Binding: domain.ModelBindingConfig{
+			ID: "sqlite-smoke", ProviderRef: "nim", ModelID: "mistral-smoke", Enabled: false, Priority: 50,
+			ContextTokens: 32768, MaxOutputTokens: 1024, MaxOutputDialect: domain.MaxOutputDialectCompletion,
+			Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("sqlite-smoke"), MaxConcurrent: 4},
+		},
+		ObservedAt: time.Date(2026, 7, 18, 22, 40, 0, 0, time.UTC), Qualification: "QUALIFIED",
+		EvidenceReport: "results/smoke.json", EvidenceSHA256: strings.Repeat("a", 64), RecommendedPriority: 10,
+	}
+	installed, err := preset.ModelsConfigDraft("models.installed.v1")
+	if err != nil {
+		t.Fatalf("materialize disabled preset: %v", err)
+	}
+
+	store, err := sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	now := time.Date(2026, 7, 18, 22, 40, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	applier, err := kernel.NewConfigApplier(store, clock, source.NewSequenceIDGenerator(1))
+	if err != nil {
+		t.Fatalf("new config applier: %v", err)
+	}
+	apply := func(id domain.ConfigDraftID, basedOn uint64, config domain.ModelsConfig) {
+		t.Helper()
+		draft := domain.ConfigDraft{
+			SchemaVersion: domain.SchemaVersionV1, ID: id, Scope: domain.ConfigScopeModels, BasedOnRevision: basedOn,
+			Applicability: domain.ConfigRestartRequired, Status: domain.ConfigDraftOpen,
+			ActorType: domain.ActorOperator, ActorID: "operator_1", Reason: "review preset through normal authority path",
+			Models: &config, CreatedAt: clock.Now(),
+		}
+		if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateConfigDraft(draft) }); err != nil {
+			t.Fatalf("create models draft: %v", err)
+		}
+		if _, _, err := applier.ValidateDraft(ctx, draft.ID); err != nil {
+			t.Fatalf("validate models draft: %v", err)
+		}
+		clock.Advance(time.Second)
+		if _, _, err := applier.ApplyDraft(ctx, draft.ID); err != nil {
+			t.Fatalf("apply models draft: %v", err)
+		}
+		clock.Advance(time.Second)
+	}
+	apply("draft_models_install", 0, installed)
+	preview, err := preset.PreviewEnablement(&installed, "models.enabled.v1")
+	if err != nil {
+		t.Fatalf("preview preset enablement: %v", err)
+	}
+	if preview.Blocked || preview.Candidate == nil {
+		t.Fatalf("enablement preview blocked: %+v", preview)
+	}
+	apply("draft_models_enable", 1, *preview.Candidate)
+	if err := store.Close(); err != nil {
+		t.Fatalf("close sqlite before restart: %v", err)
+	}
+
+	rt, err := Open(ctx, Options{
+		StoreBackend: StorageSQLite,
+		SQLitePath:   dbPath,
+		Model: &ModelOptions{
+			Enabled: true, BaseURL: "http://unused.invalid/v1", Model: "unused",
+			ContextTokens: 1024, MaxResponseBytes: 1024, Timeout: time.Second, LeaseTTL: time.Minute,
+		},
+	})
+	if err != nil {
+		t.Fatalf("reopen runtime: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(context.Background()) })
+	if rt.Model == nil || rt.Model.ModelsConfig == nil {
+		t.Fatalf("reopened runtime did not restore models catalog: %#v", rt.Model)
+	}
+	if rt.Model.ModelsConfig.Version != "models.enabled.v1" {
+		t.Fatalf("restored version = %q", rt.Model.ModelsConfig.Version)
+	}
+	if rt.Model.PrimaryProviderID != preset.Provider.ID || rt.Model.PrimaryBindingID != preset.Binding.ID {
+		t.Fatalf("restored routing = provider %q binding %q", rt.Model.PrimaryProviderID, rt.Model.PrimaryBindingID)
+	}
+	provider := rt.Model.Providers[preset.Binding.ID]
+	if provider == nil {
+		t.Fatal("restored router missing preset provider")
+	}
+	reporter, ok := provider.(port.ModelCapabilityReporter)
+	if !ok {
+		t.Fatalf("restored provider does not report declared capabilities: %T", provider)
+	}
+	profile := reporter.DeclaredProfile()
+	if profile.Name != string(preset.Provider.Kind)+":"+preset.Binding.ID || profile.Model != preset.Binding.ModelID || profile.MaxContextTokens != preset.Binding.ContextTokens || profile.MaxOutputDialect != preset.Binding.MaxOutputDialect {
+		t.Fatalf("restored provider profile = %+v", profile)
+	}
+	for _, resource := range []domain.ResourceID{
+		domain.ModelProviderResource(preset.Provider.ID), domain.ModelBindingResource(preset.Binding.ID),
+	} {
+		if _, ok := rt.Model.Authorizer.Limits[resource]; !ok {
+			t.Errorf("restored authorizer missing limit for %s", resource)
+		}
+	}
+	selected, decision, err := kernel.SelectModelBinding(ctx, rt.Store, *rt.Model.ModelsConfig, 128, clock.Now())
+	if err != nil {
+		t.Fatalf("select restored binding: %v", err)
+	}
+	if selected.ID != preset.Binding.ID || decision.SelectedProviderID != preset.Provider.ID {
+		t.Fatalf("restored routing decision = %+v / %+v", selected, decision)
 	}
 }
