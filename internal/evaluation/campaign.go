@@ -155,17 +155,19 @@ type CampaignModelReport struct {
 }
 
 type Regression struct {
-	Dimension string `json:"dimension"`
-	Label     string `json:"label"`
-	Metric    string `json:"metric"`
-	Baseline  int    `json:"baseline"`
-	Current   int    `json:"current"`
-	Delta     int    `json:"delta"`
+	Dimension     string `json:"dimension"`
+	Label         string `json:"label"`
+	Metric        string `json:"metric"`
+	Baseline      int    `json:"baseline"`
+	Current       int    `json:"current"`
+	Delta         int    `json:"delta"`
+	BaselineTotal int    `json:"baseline_total,omitempty"`
+	CurrentTotal  int    `json:"current_total,omitempty"`
 }
 
 func CompareReports(baseline, current Report) ([]Regression, error) {
-	if baseline.SchemaVersion != 1 || current.SchemaVersion != 1 || baseline.FixtureName != current.FixtureName {
-		return nil, errors.New("baseline and current reports must use the same supported fixture")
+	if baseline.SchemaVersion != 1 || current.SchemaVersion != 1 {
+		return nil, errors.New("baseline and current reports must use the supported report schema")
 	}
 	var regressions []Regression
 	compare := func(dimension string, before, after []Aggregate) {
@@ -185,8 +187,10 @@ func CompareReports(baseline, current Report) ([]Regression, error) {
 				{"syntax_valid", old.SyntaxValid, aggregate.SyntaxValid},
 				{"semantically_correct", old.SemanticallyRight, aggregate.SemanticallyRight},
 			} {
-				if metric.c < metric.b {
-					regressions = append(regressions, Regression{Dimension: dimension, Label: aggregate.Label, Metric: metric.name, Baseline: metric.b, Current: metric.c, Delta: metric.c - metric.b})
+				// Compare rates by cross multiplication so an expanded corpus does
+				// not look better merely because it contains more matrix cells.
+				if old.Total > 0 && aggregate.Total > 0 && metric.c*old.Total < metric.b*aggregate.Total {
+					regressions = append(regressions, Regression{Dimension: dimension, Label: aggregate.Label, Metric: metric.name, Baseline: metric.b, Current: metric.c, Delta: metric.c - metric.b, BaselineTotal: old.Total, CurrentTotal: aggregate.Total})
 				}
 			}
 		}
@@ -252,7 +256,7 @@ func WriteCampaignArtifacts(directory string, report CampaignReport) error {
 	markdown.WriteString("\n## Regressions\n\n")
 	for _, model := range report.Models {
 		for _, regression := range model.Regression {
-			fmt.Fprintf(&markdown, "- `%s` %s/%s %s: %d → %d (%+d)\n", model.BindingID, regression.Dimension, regression.Label, regression.Metric, regression.Baseline, regression.Current, regression.Delta)
+			fmt.Fprintf(&markdown, "- `%s` %s/%s %s: %d/%d → %d/%d\n", model.BindingID, regression.Dimension, regression.Label, regression.Metric, regression.Baseline, regression.BaselineTotal, regression.Current, regression.CurrentTotal)
 		}
 	}
 	return atomicWrite(filepath.Join(directory, "campaign.md"), []byte(markdown.String()))

@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "name": "cognitive-v2",
+  "cases": [
+    {
+      "id": "extract-date",
+      "operation": "EXTRACT",
+      "task": "Extract the publication date and source identifier.",
+      "required_facts": [
+        {"id": "fragment-1", "text": "Source S-17 was published on 2025-11-03. The later review did not change the original publication date.", "priority": 10}
+      ],
+      "optional_facts": [
+        {"id": "noise-1", "text": "A separate source S-18 was published on 2025-11-04.", "priority": 1}
+      ],
+      "constraints": ["Return the original publication date."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"date": "2025-11-03", "source": "S-17"}
+    },
+    {
+      "id": "extract-qualified-date",
+      "operation": "EXTRACT",
+      "task": "Extract the measurement date and source identifier, not the correction or publication date.",
+      "required_facts": [
+        {"id": "fragment-2", "text": "Source S-21 was published on 2026-01-09 and reports measurements collected on 2025-12-17. A correction issued on 2026-01-12 changed a unit label but states that the measurement date remains 2025-12-17.", "priority": 10}
+      ],
+      "optional_facts": [
+        {"id": "noise-2", "text": "Source S-22 was measured and published on 2025-12-18.", "priority": 1}
+      ],
+      "constraints": ["DATE must be the measurement date explicitly attributed to S-21."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"date": "2025-12-17", "source": "S-21"}
+    },
+    {
+      "id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "task": "Determine whether the evidence supports the claim and identify the decisive observation.",
+      "required_facts": [
+        {"id": "claim", "text": "Claim C-4: all measured retries completed without duplicate effects.", "priority": 10},
+        {"id": "observation", "text": "Observation O-9: 30 of 30 measured retries completed with exactly one effect.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["SUPPORT is either YES or NO."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"observation": "O-9", "support": "YES"}
+    },
+    {
+      "id": "synthesize-counterexample",
+      "operation": "SYNTHESIZE",
+      "task": "Determine whether all observations support the universal claim and identify the decisive observation.",
+      "required_facts": [
+        {"id": "claim-2", "text": "Claim C-8: every measured restart resumed without duplicating an external effect.", "priority": 10},
+        {"id": "observation-2", "text": "Observation O-11: 29 measured restarts resumed with exactly one external effect.", "priority": 10},
+        {"id": "observation-3", "text": "Observation O-12: one measured restart produced two external effects after recovery.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["A single counterexample defeats the universal claim.", "SUPPORT is either YES or NO."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"observation": "O-12", "support": "NO"}
+    },
+    {
+      "id": "detect-conflict",
+      "operation": "CONFLICT",
+      "task": "Classify whether the two observations conflict about the same measured property.",
+      "required_facts": [
+        {"id": "o1", "text": "O-1 measured the service at 10:00 and found latency p95=120ms.", "priority": 10},
+        {"id": "o2", "text": "O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["CONFLICT is YES only when the same property, subject, configuration, and time disagree."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"conflict": "YES", "pair": "O-1/O-2"}
+    },
+    {
+      "id": "distinguish-temporal-change",
+      "operation": "CONFLICT",
+      "task": "Classify whether the observations conflict or instead describe a change across different measurement times.",
+      "required_facts": [
+        {"id": "o3", "text": "O-3 measured service A with configuration R at 10:00 and found latency p95=120ms.", "priority": 10},
+        {"id": "o4", "text": "O-4 measured service A with configuration R at 11:00 after traffic increased and found latency p95=410ms.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Different measurement times do not constitute a direct conflict.", "CONFLICT is either YES or NO."],
+      "formats": ["CHOICE", "DELIMITED", "JSON"],
+      "expected": {"conflict": "NO", "pair": "O-3/O-4"}
+    },
+    {
+      "id": "repair-anchor",
+      "operation": "REPAIR",
+      "task": "Repair the proposed quote so it exactly matches the source fragment.",
+      "required_facts": [
+        {"id": "fragment", "text": "F-2 exact text: The kernel rejected the stale base revision.", "priority": 10},
+        {"id": "proposal", "text": "Proposed quote: The kernel accepted the stale base revision.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["STATUS is REPAIRED when an exact quote is recoverable from the fragment."],
+      "formats": ["DELIMITED", "JSON"],
+      "expected": {"quote": "The kernel rejected the stale base revision.", "status": "REPAIRED"}
+    },
+    {
+      "id": "repair-unrecoverable",
+      "operation": "REPAIR",
+      "task": "Determine whether the proposed quote can be repaired to an exact quote that supports the same proposition.",
+      "required_facts": [
+        {"id": "fragment-3", "text": "F-7 exact text: The scheduler recorded the operation as waiting for authorization.", "priority": 10},
+        {"id": "proposal-2", "text": "Proposed quote: The scheduler completed the operation successfully.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Do not substitute a topically related sentence that changes the proposition.", "When no supporting exact quote exists, return STATUS=UNRECOVERABLE and QUOTE=NONE."],
+      "formats": ["DELIMITED", "JSON"],
+      "expected": {"quote": "NONE", "status": "UNRECOVERABLE"}
+    }
+  ]
+}

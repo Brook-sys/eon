@@ -20,7 +20,7 @@ import (
 func main() {
 	var fixturePath, outputDirectory, baseURL, model, contexts, maxField, apiKeyEnvironment, mode, campaignPath string
 	var timeout time.Duration
-	flag.StringVar(&fixturePath, "fixtures", "internal/evaluation/testdata/cognitive-v1.json", "fixture JSON path")
+	flag.StringVar(&fixturePath, "fixtures", "internal/evaluation/testdata/cognitive-v2.json", "fixture JSON path")
 	flag.StringVar(&outputDirectory, "out", "results/model-benchmark", "artifact directory")
 	flag.StringVar(&baseURL, "base-url", "", "OpenAI-compatible base URL (required for mode=live)")
 	flag.StringVar(&model, "model", "", "provider model identifier (required for mode=live)")

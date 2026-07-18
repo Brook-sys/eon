@@ -13,6 +13,9 @@ import (
 //go:embed testdata/cognitive-v1.json
 var embeddedCognitiveV1 []byte
 
+//go:embed testdata/cognitive-v2.json
+var embeddedCognitiveV2 []byte
+
 // OfflineModelLabel is recorded on compile-only reports so they never look like
 // a provider baseline.
 const OfflineModelLabel = "offline-compile"
@@ -27,6 +30,12 @@ func DefaultCognitiveMatrix() Matrix {
 // filesystem I/O. Callers still validate via DecodeFixtures.
 func LoadEmbeddedCognitiveV1() (FixtureSet, error) {
 	return DecodeFixtures(bytes.NewReader(embeddedCognitiveV1), 1<<20)
+}
+
+// LoadEmbeddedCognitiveV2 returns the expanded adversarial corpus without
+// filesystem I/O. V1 remains available for replaying historical baselines.
+func LoadEmbeddedCognitiveV2() (FixtureSet, error) {
+	return DecodeFixtures(bytes.NewReader(embeddedCognitiveV2), 1<<20)
 }
 
 // CompileMatrix exercises the same prompt budget path as Runner.Run but never

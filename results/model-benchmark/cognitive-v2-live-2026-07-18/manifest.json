@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "cognitive-v2-live-2026-07-18",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v2.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 44,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 11264,
+  "timeout_seconds": 900,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama-3.3-70b",
+      "base_url": "https://api.groq.com/openai",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "baseline_report": "results/model-benchmark/live-groq-llama-3.3-70b-contract-2026-07-18/report.json"
+    },
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nvidia-llama-3.1-8b",
+      "base_url": "https://integrate.api.nvidia.com",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "baseline_report": "results/model-benchmark/live-nvidia-llama-3.1-8b-contract-2026-07-18/report.json"
+    }
+  ]
+}

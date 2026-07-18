@@ -42,6 +42,32 @@ func TestDecodeFixtures(t *testing.T) {
 	}
 }
 
+func TestCognitiveV2ExpandsEveryOperationAndPassesOracle(t *testing.T) {
+	set, err := LoadEmbeddedCognitiveV2()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if set.Name != "cognitive-v2" || len(set.Cases) != 8 {
+		t.Fatalf("unexpected expanded fixtures: name=%q cases=%d", set.Name, len(set.Cases))
+	}
+	counts := map[Operation]int{}
+	for _, c := range set.Cases {
+		counts[c.Operation]++
+	}
+	for _, operation := range []Operation{OperationExtract, OperationSynthesize, OperationConflict, OperationRepair} {
+		if counts[operation] < 2 {
+			t.Fatalf("operation %s has only %d cases", operation, counts[operation])
+		}
+	}
+	report, err := RunOracle(context.Background(), set, DefaultCognitiveMatrix(), prompt.ConservativeEstimator{}, DefaultOperationSpec())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Summary.Total != 66 || report.Summary.SemanticallyRight != 66 || report.Summary.ValidationErrors != 0 {
+		t.Fatalf("unexpected v2 oracle report: %+v", report.Summary)
+	}
+}
+
 func TestDecodeFixturesRejectsUnknownAndDuplicate(t *testing.T) {
 	for _, input := range []string{
 		`{"schema_version":1,"name":"x","cases":[],"unknown":true}`,

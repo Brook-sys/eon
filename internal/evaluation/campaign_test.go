@@ -59,3 +59,23 @@ func TestCompareReportsFindsPerDimensionRegression(t *testing.T) {
 		t.Fatalf("first regression=%+v", got[0])
 	}
 }
+
+func TestCompareReportsUsesRatesAcrossExpandedFixture(t *testing.T) {
+	baselineRun := Run{CaseID: "old", Operation: OperationExtract, Format: FormatJSON, ContextTokens: 2048, Compiled: true, SyntaxValid: true, SemanticallyCorrect: true}
+	currentRuns := []Run{
+		{CaseID: "old", Operation: OperationExtract, Format: FormatJSON, ContextTokens: 2048, Compiled: true, SyntaxValid: true, SemanticallyCorrect: true},
+		{CaseID: "new", Operation: OperationExtract, Format: FormatJSON, ContextTokens: 2048, Compiled: true, SyntaxValid: false, SemanticallyCorrect: false, ErrorKind: "VALIDATION"},
+	}
+	baseline := Report{SchemaVersion: 1, FixtureName: "cognitive-v1", Runs: []Run{baselineRun}, Breakdown: summarizeRuns([]Run{baselineRun})}
+	current := Report{SchemaVersion: 1, FixtureName: "cognitive-v2", Runs: currentRuns, Breakdown: summarizeRuns(currentRuns)}
+	got, err := CompareReports(baseline, current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 6 {
+		t.Fatalf("regressions=%+v", got)
+	}
+	if got[0].BaselineTotal != 1 || got[0].CurrentTotal != 2 {
+		t.Fatalf("regression totals=%+v", got[0])
+	}
+}

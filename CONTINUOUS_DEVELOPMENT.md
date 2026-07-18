@@ -312,9 +312,9 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [ ] `READY` Exercitar quotas, circuit breaker e fallback em campanhas live controladas.
   - Objetivo: observar comportamento real de 429, `Retry-After`, timeout e escopo provider/binding sem busy loop nem consumo sem finalidade.
   - Aceite: campanha possui teto explícito e prova que o gate estaciona/reencaminha corretamente, preservando budget e liberando concorrência.
-- [ ] `READY` Expandir o corpus cognitivo e detectar regressões por operação.
+- [x] `DONE` Expandir o corpus cognitivo e detectar regressões por operação.
   - Objetivo: evitar overfitting aos quatro casos atuais, adicionando casos adversariais e múltiplos exemplos de EXTRACT, SYNTHESIZE, CONFLICT e REPAIR.
-  - Aceite: fixtures versionadas, oracle offline, execução live nos modelos ativos e comparação objetiva com baseline anterior.
+  - Evidência: `cognitive-v2` dobra o corpus para oito casos, com ao menos dois exemplos por operação e adversariais de datas qualificadas, counterexample universal, mudança temporal sem conflito e reparo irrecuperável; oracle offline fecha 66/66 na matriz 2k/4k/8k. `CompareReports` passou a comparar taxas por dimensão entre fixtures de tamanhos diferentes. Campanha live bounded de 44 chamadas em `results/model-benchmark/cognitive-v2-live-2026-07-18`: Groq Llama 3.3 70B 19/22 (sem provider errors) e NVIDIA Llama 3.1 8B 11/22 (cinco 503), com regressões objetivas em JSON e REPAIR para o 8B; resultados não alteram routing automaticamente.
 
 ## Política de seleção
 
@@ -484,3 +484,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-18 05:30 — Política de avaliação live contínua — HEARTBEAT e contrato Groq/NIM passam a exigir evidência real bounded em mudanças cognitivas; inventário descobriu 15 modelos Groq/119 NIM; campanhas novas: GPT-OSS-20B 19/33, Nemotron-3-Nano 16/33, Qwen3.6 0/33 e Qwen3-Next 0/33 — verificação: quatro matrizes live completas, artefatos JSON/Markdown e `git diff --check` — próximo: harness multi-modelo agregado, análise de provider errors/429 e expansão do corpus.
 2026-07-18 05:45 — Campanhas cognitivas multi-modelo — manifesto JSON estrito declara modelos e budgets de chamadas/tokens/tempo sem conter segredos; runner preserva modo single-model e adiciona campanha sequencial com artefatos individuais/agregado, baseline por operação/formato/contexto e diagnóstico limitado de HTTP/429/Retry-After/timeout — verificação: testes unitários e CLI fake multi-binding, `go vet` focal, `gofmt`, `git diff --check` — próximo: executar campanha live bounded em novos candidatos e ampliar corpus/regressões com falhas observadas.
+2026-07-18 06:05 — Corpus cognitivo v2 + regressão comparável — corpus passou de quatro para oito casos com adversariais em todas as operações; oracle offline obteve 66/66; comparação usa taxas entre fixtures expandidas; campanha live bounded obteve Groq 70B 19/22 e NVIDIA 8B 11/22, expondo regressão de JSON/REPAIR e cinco HTTP 503 no NIM — verificação: testes evaluation/CLI, vet focal, `git diff --check`, 44 chamadas live sob manifesto 900s/11.264 output tokens — próximo: caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga.
