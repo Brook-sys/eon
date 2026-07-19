@@ -235,6 +235,18 @@ type chatRequest struct {
 	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
 	Temperature         float64         `json:"temperature"`
 	ResponseFormat      *responseFormat `json:"response_format,omitempty"`
+	Tools               []chatTool      `json:"tools,omitempty"`
+}
+
+type chatTool struct {
+	Type     string       `json:"type"`
+	Function chatFunction `json:"function"`
+}
+
+type chatFunction struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Parameters  json.RawMessage `json:"parameters,omitempty"`
 }
 
 type responseFormat struct {
@@ -258,10 +270,31 @@ type chatResponse struct {
 }
 
 func (p *Provider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
+	return p.complete(ctx, request, nil)
+}
+
+// CompleteWithTools sends a bounded kernel-owned tool catalog using the
+// OpenAI-compatible functions wire format. Tool execution remains outside the
+// adapter; this method only transports definitions.
+func (p *Provider) CompleteWithTools(ctx context.Context, request port.CompletionRequest, definitions []port.ToolDefinition) (port.CompletionResult, error) {
+	tools := make([]chatTool, 0, len(definitions))
+	for _, definition := range definitions {
+		if strings.TrimSpace(definition.Name) == "" || len(definition.Parameters) == 0 || !json.Valid(definition.Parameters) {
+			return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
+		}
+		tools = append(tools, chatTool{Type: "function", Function: chatFunction{
+			Name: definition.Name, Description: definition.Description,
+			Parameters: append(json.RawMessage(nil), definition.Parameters...),
+		}})
+	}
+	return p.complete(ctx, request, tools)
+}
+
+func (p *Provider) complete(ctx context.Context, request port.CompletionRequest, tools []chatTool) (port.CompletionResult, error) {
 	if strings.TrimSpace(request.Prompt) == "" || request.MaxOutputTokens < 0 || request.Temperature < 0 || request.Temperature > 2 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
-	chatReq := chatRequest{Model: p.model, Messages: []chatMessage{{Role: "user", Content: request.Prompt}}, Temperature: request.Temperature}
+	chatReq := chatRequest{Model: p.model, Messages: []chatMessage{{Role: "user", Content: request.Prompt}}, Temperature: request.Temperature, Tools: tools}
 	if p.maxOutputField == MaxOutputTokensCompletion {
 		chatReq.MaxCompletionTokens = request.MaxOutputTokens
 	} else {

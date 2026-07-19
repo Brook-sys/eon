@@ -80,6 +80,13 @@ type ModelProvider interface {
 	Complete(context.Context, CompletionRequest) (CompletionResult, error)
 }
 
+// ModelToolProvider extends ModelProvider with support for tool definitions
+// (functions) during completion requests.
+type ModelToolProvider interface {
+	ModelProvider
+	CompleteWithTools(context.Context, CompletionRequest, []ToolDefinition) (CompletionResult, error)
+}
+
 // ModelCapabilityReporter exposes versioned provider/model capability snapshots.
 // DeclaredProfile must not perform network I/O. Probe may perform a budgeted,
 // cacheable check and MUST NOT loop or invent support for unknown features.
