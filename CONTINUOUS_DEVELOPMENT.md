@@ -671,3 +671,10 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 06:23 — HEARTBEAT — O `ModelExecutor` no `kernel` foi atualizado para verificar se a interface abstrata `port.ModelToolProvider` está suportada no provedor corrente para a binding. Caso o adapter a implemente e exista um catálogo bound (propriedade `Tools tool.Provider` e calls `Definitions()`), o dispatch delega com a interface que envia metadata de functions na request. (Lote Dispatch - passo inicial).
 2026-07-19 06:24 — HEARTBEAT — Adicionado suporte ao retorno interceptado de ToolCalls no loop cognitivo do `ModelExecutor`. Em vez de prosseguir para verificação de resposta em texto livre, o framework agora pausa e devolve requests mapeados. Fallbacks estão mapeados para integração subsequente em `executeTools`. Lote 2 da Fase 12 (Dispatch nativo) concluído.
 2026-07-19 09:48 — HEARTBEAT — Adicionada validação de pre-flight JSON no `tool.Dispatcher` e um mecanismo `DispatchError` permitindo envolver erros (como JSON quebrado, miss tool ou fail_validation) e extrair hints (FallbackPrompt) para realimentar o compilador na próxima interação com o modelo dentro de `ModelExecutor`. Testes cobrindo validação, rotas falhas e malformed JSON passaram. Fase 12 concluída.
+
+### Fase 13 — Integração e Verificação Multi-Turn com Ferramentas
+
+- [ ] `READY` Elaborar `executeTools` para processar a execução de multiplas tools interceptadas simultaneamente e mapear o resultado para a próxima chamada.
+- [ ] `READY` Integrar os resultados formatados (como `tool_calls` e `tool_responses`) no envelope de prompt na próxima iteração do modelo.
+- [ ] `READY` Realizar teste de ponta-a-ponta (multi-turn tool loop) determinístico provando que o modelo pode solicitar a mesma ferramenta ou diferentes até atingir uma resposta sem invocações pendentes.
+- [ ] `READY` Validar fallback de tool invalid loop limitation: evitar que chamadas inválidas cíclicas exaurem o budget silenciosamente.
