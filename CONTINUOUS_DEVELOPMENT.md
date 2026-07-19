@@ -685,7 +685,12 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 10:45 — HEARTBEAT — Concluído Lote Completo da Fase 13. O loop do ModelExecutor agora compila, despacha e reinjeta dados ou falhas operacionais das chamadas das ferramentas até a conclusão com segurança dentro do limite do budget.
 
-### Fase 15 — Adapter de Tool Execution Genérica e Integração FS/Exec
+### Fase 16 — Adaptação Inicial de Execução de Comandos (Shell/Exec)
+
+- [ ] `READY` Elaborar tool `exec_command`: execução de binários via exec em ambiente de shell não interativo, capturando stdout, stderr e código de retorno.
+- [ ] `READY` Implementar validação e segurança em `exec_command` com flag/configuração explícita de `allow_exec` no default workspace options para evitar chamadas de processo por engano.
+- [ ] `READY` Adicionar testes demonstrando isolamento de output longo e retorno de código não nulo ao modelo.
+- [ ] `READY` Registrar a nova tool no provider durante o bootstrap quando ativado na política (opt-in).
 
 - [x] `DONE` Adaptador `tool.Adapter`: interface de registro que instancie implementações baseadas no catálogo.
 - [x] `DONE` Elaborar tool `read_file`: leitura de conteúdo de arquivos controlada por jail/chroot.
@@ -696,3 +701,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 10:46 — HEARTBEAT — Fase 14.2 concluída. O Kernel foi alterado para realizar pre-flight do `model_capability_profile` no `MemoryStore` e delegar para `SelectSkilledModelBinding` as operações. Isso aplica Skill-Based Routing real, permitindo que operações requeiram perfis de capacidade.
 
 2026-07-19 10:47 — HEARTBEAT — Fase 15 implementada com a adição das tools fs (read_file, write_file, list_dir) que possibilitam manipulação do sistema de arquivos e estão injetadas e prontas no kernel via bootstrap.
+
+2026-07-19 10:48 — HEARTBEAT — Fases 13, 14.2 e 15 integradas sem interrupção. O runtime nativo de tool-use (Fase 13) e o isolamento de routing (Fase 14.2) fornecem infraestrutura enquanto as ferramentas do SO (Fase 15) fornecem braços ao modelo autônomo. A Fase 16 (Adaptação Inicial de Execução de Comandos) foi mapeada para as próximas interações.
