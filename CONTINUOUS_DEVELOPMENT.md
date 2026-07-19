@@ -603,6 +603,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
+- [x] `DONE` Consolidar métricas de context pressure e limits/usage em uma única projeção por binding.
 - [x] `DONE` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
 - [x] `DONE` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
 - [x] `DONE` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
@@ -614,3 +615,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 03:30 — Live probe campaign script correction: Runner manifest validation was failing due to max_calls planning logic. Fixed schema and validated by executing a 44-call bounded baseline probe. Results documented.
 \n2026-07-19 03:40 — Safepublish directory identity — Added os.Root-based directory pin to prevent concurrent rename/symlink attacks during backup publish. Verified by executing tests under unix.\n\n2026-07-19 03:45 — Cognitive evaluation hardening — We ran a new 44-call bounded baseline probe with the v2 corpus across fallback configurations. The new dataset incorporates error conditions observed in earlier multi-model attempts, hardening JSON output parsing and quote anchoring against typical regressions.\n
+2026-07-19 06:50 — Correlated metric projection by binding — Confirmed that the `ListModelBindingPostures` API now successfully projects active catalog limits along with durable ResourceGate usage and context pressure into a single view without granting authority. All bindings correctly retain priority ordering, and missing evidence is faithfully reported rather than invented.
