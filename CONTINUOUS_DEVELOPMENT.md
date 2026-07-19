@@ -603,7 +603,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
-- [ ] `READY` Otimizar o log de eventos duráveis do ResourceGate durante fallback iterativo.
+- [x] `DONE` Otimizar o log de eventos duráveis do ResourceGate durante fallback iterativo.
 
 - [x] `DONE` Elaborar smoke test completo de SQLite bootstrap com recarga de catálogo ativo.
 
