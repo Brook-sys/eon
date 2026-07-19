@@ -43,7 +43,7 @@ func (t *ListDirTool) Execute(ctx context.Context, args json.RawMessage) (string
 	}
 
 	fullPath := filepath.Join(t.baseDir, cleanPath)
-	
+
 	entries, err := os.ReadDir(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {

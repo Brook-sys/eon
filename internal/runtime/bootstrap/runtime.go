@@ -204,7 +204,8 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
 	controlAPI.ConfigRollback = configApplier
-	controlAPI.SemanticMemory = store
+	controlAPI.SemanticMemoryWriter = store
+	controlAPI.SemanticMemoryReader = store
 	if opts.ModelPresetCatalogPath != "" {
 		catalog, loadErr := loadModelPresetCatalog(opts.ModelPresetCatalogPath)
 		if loadErr != nil {

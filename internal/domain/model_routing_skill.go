@@ -86,7 +86,7 @@ func SelectSkilledModelBinding(
 		} else {
 			// Baseline score for unprofiled to allow discovery, but low enough
 			// not to preempt proven models.
-			score = 10 
+			score = 10
 		}
 		scored = append(scored, scoredCandidate{Candidate: v, Score: score})
 	}

@@ -19,21 +19,21 @@ func TestRuntimeReloadModelExecutorIfNeeded(t *testing.T) {
 	store := memory.New()
 	clock := source.NewManualClock(time.Now())
 	ids := source.NewSequenceIDGenerator(1)
-	
+
 	opts := Options{
 		Model: &ModelOptions{
-			Enabled: true,
+			Enabled:       true,
 			PolicyVersion: "v1",
-			BaseURL: "http://localhost",
-			Model: "test-model",
+			BaseURL:       "http://localhost",
+			Model:         "test-model",
 		},
 	}
-	
+
 	rt := &Runtime{
-		Opts: opts,
-		Store: store,
-		Clock: clock,
-		IDs: ids,
+		Opts:   opts,
+		Store:  store,
+		Clock:  clock,
+		IDs:    ids,
 		logger: log.New(io.Discard, "", 0),
 	}
 
@@ -60,39 +60,45 @@ func TestRuntimeReloadModelExecutorIfNeeded(t *testing.T) {
 			},
 		}
 		hash, _ := domain.ConfigPayloadHash(domain.ConfigScopeModels, nil, nil, nil, nil, nil, models)
-		
+
 		draft := domain.ConfigDraft{
-		    SchemaVersion: 1,
-		    ID: "draft_1",
-		    Scope: domain.ConfigScopeModels,
-		    Applicability: domain.ConfigHot,
-		    ActorType: domain.ActorOperator,
-		    ActorID: "test",
-		    Reason: "test",
-		    Status: domain.ConfigDraftOpen,
-		    Models: models,
-		    CreatedAt: time.Now(),
+			SchemaVersion: 1,
+			ID:            "draft_1",
+			Scope:         domain.ConfigScopeModels,
+			Applicability: domain.ConfigHot,
+			ActorType:     domain.ActorOperator,
+			ActorID:       "test",
+			Reason:        "test",
+			Status:        domain.ConfigDraftOpen,
+			Models:        models,
+			CreatedAt:     time.Now(),
 		}
-		if err := tx.CreateConfigDraft(draft); err != nil { return err }
+		if err := tx.CreateConfigDraft(draft); err != nil {
+			return err
+		}
 		draft.Status = domain.ConfigDraftValidated
 		draft.ValidatedAt = time.Now()
-		if err := tx.SaveConfigDraft(draft); err != nil { return err }
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
 		draft.Status = domain.ConfigDraftApplied
-		if err := tx.SaveConfigDraft(draft); err != nil { return err }
+		if err := tx.SaveConfigDraft(draft); err != nil {
+			return err
+		}
 
 		rev := domain.ConfigRevision{
 			SchemaVersion: 1,
-			ID: "rev-1",
-			Scope: domain.ConfigScopeModels,
-			DraftID: "draft_1",
-			Revision: 1,
+			ID:            "rev-1",
+			Scope:         domain.ConfigScopeModels,
+			DraftID:       "draft_1",
+			Revision:      1,
 			Applicability: domain.ConfigHot,
-			ActorType: domain.ActorOperator,
-			ActorID: "test",
-			Reason: "test",
-			AcceptedAt: time.Now(),
-			Models: models,
-			ContentHash: hash,
+			ActorType:     domain.ActorOperator,
+			ActorID:       "test",
+			Reason:        "test",
+			AcceptedAt:    time.Now(),
+			Models:        models,
+			ContentHash:   hash,
 		}
 		if err := tx.AppendConfigRevision(rev); err != nil {
 			return err

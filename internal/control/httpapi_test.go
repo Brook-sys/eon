@@ -1244,18 +1244,19 @@ func TestControlAPISubmitMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("api: %v", err)
 	}
-	api.SemanticMemory = store
+	api.SemanticMemoryWriter = store
+	api.SemanticMemoryReader = store
 	handler := api.Handler()
-	
+
 	reqBody := `{"id":"mem1","key":"memory-key","scope":"agent","value":"learned something"}`
 	req := httptest.NewRequest("POST", "/memories", strings.NewReader(reqBody))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	
+
 	if got, want := rec.Code, http.StatusCreated; got != want {
 		t.Fatalf("status = %d, want %d (%s)", got, want, rec.Body.String())
 	}
-	
+
 	var res domain.LongTermMemory
 	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -1263,7 +1264,7 @@ func TestControlAPISubmitMemory(t *testing.T) {
 	if res.ID != "mem1" || res.Key != "memory-key" || res.Scope != domain.MemoryScopeAgent || res.Value != "learned something" {
 		t.Fatalf("unexpected memory saved: %+v", res)
 	}
-	
+
 	saved, err := store.LongTermMemory("memory-key")
 	if err != nil {
 		t.Fatalf("read memory: %v", err)

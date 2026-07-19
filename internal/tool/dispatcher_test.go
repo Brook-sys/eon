@@ -28,7 +28,7 @@ func TestDispatcher_RoutesCorrectlyAndHandlesErrors(t *testing.T) {
 	if results[0].CallID != "1" || results[0].Error != nil || results[0].Result != "ok" {
 		t.Errorf("expected success for valid_tool, got %+v", results[0])
 	}
-	
+
 	if results[1].CallID != "2" || results[1].Error == nil {
 		t.Errorf("expected error for missing_tool, got %+v", results[1])
 	} else {

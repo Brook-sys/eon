@@ -29,4 +29,3 @@ func TestSessionsYieldTool(t *testing.T) {
 		t.Errorf("expected status YIELDED, got %s", resp["status"])
 	}
 }
-

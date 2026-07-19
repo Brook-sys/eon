@@ -43,7 +43,7 @@ func (t *WriteFileTool) Execute(ctx context.Context, args json.RawMessage) (stri
 	}
 
 	fullPath := filepath.Join(t.baseDir, cleanPath)
-	
+
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return "", err
 	}

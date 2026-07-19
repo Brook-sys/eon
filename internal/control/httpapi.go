@@ -94,7 +94,8 @@ type API struct {
 	// MODELS draft and never changes routing authority directly.
 	ModelPresets *domain.ModelPresetCatalog
 	// SemanticMemory exposing direct retrieval and injection to Operator API
-	SemanticMemory port.MemoryWriter
+	SemanticMemoryWriter port.MemoryWriter
+	SemanticMemoryReader port.MemoryReader
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -143,6 +144,8 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /missions/amendments/preview", a.handlePreviewMissionAmendment)
 	mux.HandleFunc("POST /missions/amendments/accept", a.handleAcceptMissionAmendment)
 	mux.HandleFunc("POST /memories", a.handleSubmitMemory)
+	mux.HandleFunc("GET /memories", a.handleListMemories)
+	mux.HandleFunc("DELETE /memories/{id}", a.handleDeleteMemory)
 	return mux
 }
 
@@ -1503,7 +1506,7 @@ type memorySubmitRequest struct {
 }
 
 func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
-	if a.SemanticMemory == nil {
+	if a.SemanticMemoryWriter == nil {
 		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
 		return
 	}
@@ -1526,9 +1529,75 @@ func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
-	if err := a.SemanticMemory.SaveMemory(mem); err != nil {
+	if err := a.SemanticMemoryWriter.SaveMemory(mem); err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
 		return
 	}
 	writeJSON(w, http.StatusCreated, mem)
+}
+func (a *API) handleListMemories(w http.ResponseWriter, r *http.Request) {
+	if a.SemanticMemoryReader == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
+		return
+	}
+
+	scopeParam := r.URL.Query().Get("scope")
+
+	var memories []domain.LongTermMemory
+	var err error
+
+	if scopeParam != "" {
+		scope := domain.MemoryScope(scopeParam)
+		if scope != domain.MemoryScopeMission && scope != domain.MemoryScopeStrategy && scope != domain.MemoryScopeAgent {
+			writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "invalid memory scope"})
+			return
+		}
+		memories, err = a.SemanticMemoryReader.ListMemoriesByScope(scope)
+	} else {
+		// As there is no list all method in the MemoryReader yet,
+		// we fetch each scope explicitly and combine them if no scope is provided.
+		mission, err1 := a.SemanticMemoryReader.ListMemoriesByScope(domain.MemoryScopeMission)
+		strategy, err2 := a.SemanticMemoryReader.ListMemoriesByScope(domain.MemoryScopeStrategy)
+		agent, err3 := a.SemanticMemoryReader.ListMemoriesByScope(domain.MemoryScopeAgent)
+
+		if err1 == nil && err2 == nil && err3 == nil {
+			memories = append(memories, mission...)
+			memories = append(memories, strategy...)
+			memories = append(memories, agent...)
+		} else {
+			err = errors.New("failed to read multiple scopes")
+		}
+	}
+
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "failed to list memories"})
+		return
+	}
+
+	if memories == nil {
+		memories = make([]domain.LongTermMemory, 0)
+	}
+
+	writeJSON(w, http.StatusOK, memories)
+}
+
+func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
+	if a.SemanticMemoryWriter == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "missing memory ID"})
+		return
+	}
+
+	err := a.SemanticMemoryWriter.DeleteMemory(domain.MemoryID(id))
+	if err != nil {
+		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "failed to delete memory"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -46,7 +46,7 @@ type Options struct {
 	// Observability is optional derived export; zero value keeps it disabled.
 	Observability observability.Config
 	// EnableDashboard mounts the experimental operator UI on the same server.
-	AllowExec bool
+	AllowExec       bool
 	EnableDashboard bool
 	// ModelPresetCatalogPath optionally exposes an evidence-verified preset
 	// catalog through the Control API/dashboard. Empty disables the catalog.
@@ -72,7 +72,7 @@ type Options struct {
 	Web *WebOptions
 	// File, when non-nil and enabled, wires file.discover / file.read under
 	// authorized absolute roots (FR-RES-001/002). Requires at least one root.
-	File *FileOptions
+	File     *FileOptions
 	Subagent *SubagentOptions
 }
 

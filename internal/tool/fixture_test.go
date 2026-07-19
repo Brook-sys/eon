@@ -3,13 +3,13 @@ package tool_test
 import (
 	"context"
 	"encoding/json"
-	"strings"
-	"testing"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/tool"
+	"strings"
+	"testing"
 )
 
-type searchTool struct {}
+type searchTool struct{}
 
 func (searchTool) Definition() port.ToolDefinition {
 	return port.ToolDefinition{
@@ -29,15 +29,13 @@ func (searchTool) Execute(ctx context.Context, payload json.RawMessage) (string,
 	return "Result for " + args.Query, nil
 }
 
-
-
-type readTool struct {}
+type readTool struct{}
 
 func (readTool) Definition() port.ToolDefinition {
 	return port.ToolDefinition{
-		Name: "read_file",
+		Name:        "read_file",
 		Description: "Read a file",
-		Parameters: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`),
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}`),
 	}
 }
 
@@ -74,7 +72,7 @@ func TestToolFixtures(t *testing.T) {
 	if res != "Result for test" {
 		t.Fatalf("unexpected result: %q", res)
 	}
-	
+
 	read, ok := catalog.Find("read_file")
 	if !ok {
 		t.Fatal("read_file tool not found")

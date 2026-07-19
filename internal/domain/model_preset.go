@@ -79,12 +79,12 @@ type ModelPresetQuotaSummary struct {
 
 // ModelPresetContextSummary surfaces declared prompt windows only.
 type ModelPresetContextSummary struct {
-	DeclaredContextTokens  int    `json:"declared_context_tokens"`
-	MaxOutputTokens        int    `json:"max_output_tokens"`
-	MaxOutputDialect       string `json:"max_output_dialect"`
-	ConservativeWindowHint int    `json:"conservative_window_hint"`
+	DeclaredContextTokens  int                   `json:"declared_context_tokens"`
+	MaxOutputTokens        int                   `json:"max_output_tokens"`
+	MaxOutputDialect       string                `json:"max_output_dialect"`
+	ConservativeWindowHint int                   `json:"conservative_window_hint"`
 	ObservedPressure       *ModelContextPressure `json:"observed_pressure,omitempty"`
-	Note                   string `json:"note"`
+	Note                   string                `json:"note"`
 }
 
 func DecodeModelPresetCatalog(r io.Reader, maxBytes int64) (ModelPresetCatalog, error) {

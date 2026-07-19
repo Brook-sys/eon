@@ -358,7 +358,6 @@ func AdvanceExternalEventDisposition(current, next ExternalEventDisposition) err
 	}
 }
 
-
 type SubagentCompletionPayload struct {
 	SubagentID string `json:"subagent_id"`
 	State      string `json:"state"`

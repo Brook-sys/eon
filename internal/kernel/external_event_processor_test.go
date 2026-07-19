@@ -315,7 +315,7 @@ func TestExternalEventProcessorWakesSubagentCompletion(t *testing.T) {
 		SchemaVersion: domain.SchemaVersionV1, ID: "ext_subagent", DeduplicationKey: "subagent:complete:sub_123",
 		Source: "session_manager", SourceActorID: "sys", Kind: domain.ExternalSubagentCompletion, MissionID: mission.MissionID,
 		CorrelationID: "sub_123",
-		Content: domain.ExternalContent{MediaType: "application/json", Text: "{}"}, ReceivedAt: now,
+		Content:       domain.ExternalContent{MediaType: "application/json", Text: "{}"}, ReceivedAt: now,
 	}
 	if _, err := inbox.SubmitExternalEvent(signal); err != nil {
 		t.Fatal(err)

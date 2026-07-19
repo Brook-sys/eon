@@ -53,8 +53,8 @@ type Scheduler struct {
 	MemoryStore port.MemoryReader
 	Clock       source.Clock
 	Strategies  []ContinuityStrategy
-	Registry   *StrategyRegistry
-	Policy     domain.HorizonPolicy
+	Registry    *StrategyRegistry
+	Policy      domain.HorizonPolicy
 	// IDs is optional; when set, ContinuityBlocked diagnosis ids are generated with it.
 	IDs source.IDGenerator
 	// Cooldowns, when set, skip families that recently expanded without delta

@@ -43,7 +43,9 @@ func (p SubagentCompletionProcessor) ProcessCompletedSessions(ctx context.Contex
 
 			if status.State == SessionStateComplete || status.State == SessionStateFailed {
 				eventID, err := p.IDs.NewID("event")
-				if err != nil { return err }
+				if err != nil {
+					return err
+				}
 				ev := domain.ExternalEvent{
 					SchemaVersion:    1,
 					ID:               domain.ExternalEventID(eventID),
@@ -57,7 +59,7 @@ func (p SubagentCompletionProcessor) ProcessCompletedSessions(ctx context.Contex
 				}
 				disp := domain.ExternalEventDisposition{
 					EventID: ev.ID,
-					State: domain.ExternalEventReceived,
+					State:   domain.ExternalEventReceived,
 				}
 				// If already exists due to deduplication, CreateExternalEvent may err or just skip, handle gracefully
 				err = tx.CreateExternalEvent(ev, disp)

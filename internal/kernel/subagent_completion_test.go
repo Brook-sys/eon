@@ -1,9 +1,9 @@
 package kernel
 
 import (
-	"testing"
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"testing"
 )
 
 func TestSubagentCompletionProcessor(t *testing.T) {

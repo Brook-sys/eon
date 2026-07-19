@@ -62,7 +62,7 @@ func (d *Dispatcher) Dispatch(ctx context.Context, calls []port.ToolCall) []Disp
 			results = append(results, DispatchResult{CallID: call.ID, Error: dispatchErr})
 			continue
 		}
-	
+
 		res, err := target.Execute(ctx, json.RawMessage(call.Arguments))
 		results = append(results, DispatchResult{CallID: call.ID, Result: res, Error: err})
 	}

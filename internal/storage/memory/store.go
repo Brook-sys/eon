@@ -104,37 +104,37 @@ func (s *Store) SetActiveConfig(ctx context.Context, scope domain.ConfigScope, v
 }
 
 type state struct {
-	missionRevisions          map[domain.MissionRevisionID]domain.MissionRevision
-	activeMissions            map[domain.MissionID]domain.MissionRevisionID
-	operationSpecs            map[domain.OperationSpecID]domain.OperationSpec
-	questions                 map[domain.QuestionID]domain.Question
-	operatorQuestions         map[domain.OperatorQuestionID]domain.OperatorQuestion
-	operatorAnswers           map[domain.OperatorAnswerID]domain.UserAnswer
-	answerByTransport         map[string]domain.OperatorAnswerID
-	questionDeliveries        map[domain.QuestionDeliveryID]domain.QuestionDelivery
-	deliveryByRoute           map[string]domain.QuestionDeliveryID
-	deliveryByTransport       map[string]domain.QuestionDeliveryID
-	questionGateDecisions     map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
-	gateDecisionByQuestion    map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
-	candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
-	inquiries                 map[domain.InquiryID]domain.Inquiry
-	operations                map[domain.OperationID]domain.Operation
-	events                    []domain.Event
-	eventIDs                  map[domain.EventID]uint64
-	idempotency               map[domain.IdempotencyKey]domain.IdempotencyRecord
-	sources                   map[domain.SourceID]domain.Source
-	sourceVersions            map[domain.SourceVersionID]domain.SourceVersion
-	sourceSnapshots           map[domain.SourceVersionID]domain.SourceSnapshot
-	sourceFragments           map[domain.SourceFragmentID]domain.SourceFragment
-	observations              map[domain.ObservationID]domain.Observation
-	claims                    map[domain.ClaimID]domain.Claim
-	evidenceLinks             map[domain.EvidenceLinkID]domain.EvidenceLink
-	artifacts                 map[domain.ArtifactID]domain.KnowledgeArtifact
-	rawModelOutputs           map[domain.ArtifactID]domain.RawModelOutput
-	proposedChanges           map[domain.ChangeSetID]domain.ProposedChangeSet
-	acceptedChanges           map[domain.ChangeSetID]domain.AcceptedChangeSet
-	receipts                  map[domain.ReceiptID]domain.ValidationReceipt
-	memories                  map[string]domain.LongTermMemory
+	missionRevisions       map[domain.MissionRevisionID]domain.MissionRevision
+	activeMissions         map[domain.MissionID]domain.MissionRevisionID
+	operationSpecs         map[domain.OperationSpecID]domain.OperationSpec
+	questions              map[domain.QuestionID]domain.Question
+	operatorQuestions      map[domain.OperatorQuestionID]domain.OperatorQuestion
+	operatorAnswers        map[domain.OperatorAnswerID]domain.UserAnswer
+	answerByTransport      map[string]domain.OperatorAnswerID
+	questionDeliveries     map[domain.QuestionDeliveryID]domain.QuestionDelivery
+	deliveryByRoute        map[string]domain.QuestionDeliveryID
+	deliveryByTransport    map[string]domain.QuestionDeliveryID
+	questionGateDecisions  map[domain.QuestionGateDecisionID]domain.QuestionGateDecisionRecord
+	gateDecisionByQuestion map[domain.OperatorQuestionID]domain.QuestionGateDecisionID
+	candidates             map[domain.InquiryCandidateID]domain.InquiryCandidate
+	inquiries              map[domain.InquiryID]domain.Inquiry
+	operations             map[domain.OperationID]domain.Operation
+	events                 []domain.Event
+	eventIDs               map[domain.EventID]uint64
+	idempotency            map[domain.IdempotencyKey]domain.IdempotencyRecord
+	sources                map[domain.SourceID]domain.Source
+	sourceVersions         map[domain.SourceVersionID]domain.SourceVersion
+	sourceSnapshots        map[domain.SourceVersionID]domain.SourceSnapshot
+	sourceFragments        map[domain.SourceFragmentID]domain.SourceFragment
+	observations           map[domain.ObservationID]domain.Observation
+	claims                 map[domain.ClaimID]domain.Claim
+	evidenceLinks          map[domain.EvidenceLinkID]domain.EvidenceLink
+	artifacts              map[domain.ArtifactID]domain.KnowledgeArtifact
+	rawModelOutputs        map[domain.ArtifactID]domain.RawModelOutput
+	proposedChanges        map[domain.ChangeSetID]domain.ProposedChangeSet
+	acceptedChanges        map[domain.ChangeSetID]domain.AcceptedChangeSet
+	receipts               map[domain.ReceiptID]domain.ValidationReceipt
+	memories               map[string]domain.LongTermMemory
 
 	commitReceipts            map[domain.ReceiptID]domain.CommitReceipt
 	commits                   map[domain.CommitID]domain.Commit

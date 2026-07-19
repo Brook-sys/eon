@@ -780,7 +780,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					lastErr = fmt.Errorf("maximum tool call loop depth exceeded (limit: 15)")
 					break
 				}
-				
+
 				// Increase maxCalls by 1 so the next model loop can actually run
 				// Otherwise budget=1 will immediately fail on tools.
 				maxCalls++

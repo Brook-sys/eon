@@ -44,11 +44,11 @@ const defaultSourceFreshnessMaxAge = 7 * 24 * time.Hour
 //   - harness_evaluation: offline compile of cognitive-v1 matrix (no provider)
 //   - frontier_management: signature/depth/family hygiene inventory
 type LocalExecutor struct {
-	Store    port.Store
-	Clock    source.Clock
-	IDs      source.IDGenerator
+	Store       port.Store
+	Clock       source.Clock
+	IDs         source.IDGenerator
 	MemoryStore port.MemoryReader
-	LeaseTTL time.Duration
+	LeaseTTL    time.Duration
 }
 
 // ExecuteResult summarizes one Execute call.

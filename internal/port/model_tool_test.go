@@ -2,11 +2,11 @@ package port_test
 
 import (
 	"context"
-	"testing"
 	"motor-autonomo/internal/port"
+	"testing"
 )
 
-type mockModelToolProvider struct {}
+type mockModelToolProvider struct{}
 
 func (m mockModelToolProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
 	return port.CompletionResult{}, nil
