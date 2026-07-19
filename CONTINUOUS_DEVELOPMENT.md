@@ -681,6 +681,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 ### Fase 14.2 — Integração do Skill-based Routing no Kernel
 
 - [x] `DONE` Domínio: implementar `SelectSkilledModelBinding` agregando os scores de habilidade para sobrepujar e complementar a prioridade estática, honrando *circuit breakers* duráveis. Testes garantem fallback para modelo mais fraco em caso de API sobrecarregada (429/Timeout) apesar do GAP de inteligência.
-- [ ] `READY` Scheduler/Kernel: inicializar e ler o estado `Memory` persistente extraindo o `ModelCapabilityProfile` para todos os *bindings* e repassar à função `SelectSkilledModelBinding` injetada, em vez de depender exclusivamente do `SelectModelBinding` base.
+- [x] `DONE` Scheduler/Kernel: inicializar e ler o estado `Memory` persistente extraindo o `ModelCapabilityProfile` para todos os *bindings* e repassar à função `SelectSkilledModelBinding` injetada, em vez de depender exclusivamente do `SelectModelBinding` base.
 
 2026-07-19 10:45 — HEARTBEAT — Concluído Lote Completo da Fase 13. O loop do ModelExecutor agora compila, despacha e reinjeta dados ou falhas operacionais das chamadas das ferramentas até a conclusão com segurança dentro do limite do budget.
+
+2026-07-19 10:46 — HEARTBEAT — Fase 14.2 concluída. O Kernel foi alterado para realizar pre-flight do `model_capability_profile` no `MemoryStore` e delegar para `SelectSkilledModelBinding` as operações. Isso aplica Skill-Based Routing real, permitindo que operações requeiram perfis de capacidade.
