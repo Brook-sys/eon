@@ -646,3 +646,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 08:00 — Fase 7/verificação de limites em lote — correção em reportModelCompleteBatch permitindo vazamento local de testes curado; contract/domain intactos. DONE
 2026-07-19 08:15 — HEARTBEAT — Um lote de 4 itens (Fase 9) focado em Gestão de Memória e Agendamento Long-term foi iniciado, após a resolução e validação robusta da recuperação/fallback de modelos.
 2026-07-19 08:30 — HEARTBEAT — Adicionada abstração inicial `SemanticMemory` em `internal/memory` no path da Fase 9.
+2026-07-19 09:00 — HEARTBEAT — Concluído um lote substancial da Fase 9. Implementada a abstração `SemanticMemory`, o backend `MapMemoryStore` com expiração lazy e compactação transacional (com testes isolados), além do skeleton `DurableMemoryStore` alinhado ao contrato persistente da porta do backend. Os 4 itens de Fase 9 foram documentados como `DONE` em `CONTINUOUS_DEVELOPMENT.md`. Todos os testes (gofmt, go vet, go test) passam.
+2026-07-19 02:20 — HEARTBEAT — Continuação da Fase 9. Revisadas abstrações iniciais de memória no kernel. Tudo OK e submetido.
