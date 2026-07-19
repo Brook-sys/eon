@@ -603,6 +603,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
+- [ ] `READY` Elaborar contrato de swap e drenagem de chamadas em voo para a recarga atômica de MODELS.
+
 - [x] `DONE` Consolidar métricas de context pressure e limits/usage em uma única projeção por binding.
 - [x] `DONE` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
 - [x] `DONE` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
