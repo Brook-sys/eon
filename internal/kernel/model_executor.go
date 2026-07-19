@@ -161,7 +161,27 @@ func (e ModelExecutor) selectAlternateBinding(ctx context.Context, operation dom
 			config.Bindings[i].Enabled = false
 		}
 	}
-	binding, decision, err := SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
+	
+	// Try skilled binding first if capability profile is loaded
+	var capabilityProfile *domain.ModelCapabilityProfile
+	if e.MemoryStore != nil {
+		if mem, err := e.MemoryStore.ReadMemory(ctx, "model_capability_profile"); err == nil && mem != nil {
+			if mem.CapabilityProfile != nil {
+				capabilityProfile = mem.CapabilityProfile
+			}
+		}
+	}
+	
+	var binding domain.ModelBindingConfig
+	var decision domain.ModelRouteDecision
+	var err error
+	
+	if capabilityProfile != nil {
+		binding, decision, err = SelectSkilledModelBinding(ctx, e.Store, config, spec, *capabilityProfile, e.Clock.Now().UTC())
+	} else {
+		binding, decision, err = SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
+	}
+	
 	if err != nil {
 		return domain.ModelBindingConfig{}, decision, err
 	}
@@ -258,7 +278,25 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	// The conservative preflight requirement is output capacity; compilation below
 	// validates the full prompt against the selected binding context before a call.
 	if e.ModelsConfig != nil {
-		binding, decision, routeErr := SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
+		var capabilityProfile *domain.ModelCapabilityProfile
+		if e.MemoryStore != nil {
+			if mem, profileErr := e.MemoryStore.ReadMemory(ctx, "model_capability_profile"); profileErr == nil && mem != nil {
+				if mem.CapabilityProfile != nil {
+					capabilityProfile = mem.CapabilityProfile
+				}
+			}
+		}
+		
+		var binding domain.ModelBindingConfig
+		var decision domain.ModelRouteDecision
+		var routeErr error
+		
+		if capabilityProfile != nil {
+			binding, decision, routeErr = SelectSkilledModelBinding(ctx, e.Store, *e.ModelsConfig, spec, *capabilityProfile, e.Clock.Now().UTC())
+		} else {
+			binding, decision, routeErr = SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
+		}
+		
 		if routeErr != nil {
 			result.Skipped = true
 			result.SkipReason = "model_route_unavailable"
