@@ -718,3 +718,10 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 16:40 — Reparo do Lote 14.2 (Skill-based Routing) — Corrigida a regressão estrutural documentada às 10:00 e restaurada a integração do `SelectSkilledModelBinding` no kernel. O `ModelExecutor` agora extrai explicitamente o `RequiredCapability` a partir da `OperationSpec` (Format e OperationGroup) e compila o map de `ModelCapabilityProfile` consultando o `MemoryStore` instanciado (escopo `MemoryScopeAgent`). A compilação Go, os testes unitários da arquitetura e as suítes multi-turn passam. (Commit `a0c25bd`).
 
 2026-07-19 16:45 — Probe de integridade base via oracle offline — Testado o framework de run (cmd/model-benchmark-runner) com a config `-mode=offline-oracle` (fixtures `cognitive-v2`). O parser de avaliação cognitiva isolou perfeitamente `66/66` runs como `PASS`. Este teste substitui um probe de provedor `live` (visto que falta as flags e parâmetros exatos da credencial live neste contexto de ambiente) cobrindo e exercitando toda a máquina de interpretação JSON/DELIMITED com segurança e mantendo as asserções locais ativas.
+
+### Fase 17 — Orquestração de Agentes (Subagentes)
+
+- [x] `DONE` Elaborar abstração no kernel (ex: `kernel.SessionManager`) capaz de iniciar, interromper e monitorar ciclos delegados de subagentes isolados, garantindo que o agente pai possa prosseguir assincronamente.
+- [x] `DONE` Adicionar capability de `sessions_spawn` ao registry (similar a file/web) com budget dedicado, submetido ao ResourceGate e Authority, documentando os limites e a integração multi-turn.
+- [ ] `READY` Atualizar o bootstrap e as opções (`-subagents`) para acionar o `SessionManager` real e as delegators de spawn/yield.
+

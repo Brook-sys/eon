@@ -73,6 +73,7 @@ type Options struct {
 	// File, when non-nil and enabled, wires file.discover / file.read under
 	// authorized absolute roots (FR-RES-001/002). Requires at least one root.
 	File *FileOptions
+	Subagent *SubagentOptions
 }
 
 // WebOptions configures optional READ_ONLY web acquisition adapters.
