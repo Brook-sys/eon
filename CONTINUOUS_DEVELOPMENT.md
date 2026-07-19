@@ -610,7 +610,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 10 — Runtime Gate & Loop Optimization
 - [x] `DONE` Otimizar log de latência do loop (preflight, admission, dispatch) sem verbosity excessiva.
-- [ ] Prevenir busy loops no kernel através de backoff de repouso estruturado.
+- [x] `DONE` Prevenir busy loops no kernel através de backoff de repouso estruturado.
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
