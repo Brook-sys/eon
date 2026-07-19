@@ -77,6 +77,8 @@ type ModelExecuteResult struct {
 	// Exhausted is true when the operation reached terminal EXHAUSTED after
 	// FR-MODEL-004 recovery budget ran out (no further Complete allowed).
 	Exhausted bool
+	Done      bool
+	ToolCalls []port.ToolCall
 	CommitID  domain.CommitID
 	LeaseRef  string
 	// ModelCalls counts Complete invocations performed in this Execute.
@@ -667,6 +669,17 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
 		}
+
+		// if this response was a tool request, do NOT advance to VERIFYING or attempt to parse as final text proposal.
+		if len(completion.ToolCalls) > 0 {
+			// We're delegating tool dispatch upward or into a recursive loop.
+			// For now, since Phase 12 dispatch isn't wired fully into the loop flow,
+			// we just return the tool calls up in the result to verify wiring works.
+			result.ToolCalls = completion.ToolCalls
+			result.Done = true
+			break
+		}
+
 		lastRaw = completion.Text
 		// Preserve exact provider text for Process raw artifact; work on a copy for lineage.
 		working := completion
