@@ -16,6 +16,8 @@ import (
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/provider/openai"
 	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/tool"
+	"motor-autonomo/internal/tool/fs"
 )
 
 // BuildModelExecutor assembles the runtime's optional PROPOSE_ONLY executor.
@@ -94,6 +96,21 @@ func BuildModelExecutor(
 	if err != nil {
 		return nil, fmt.Errorf("changeset processor: %w", err)
 	}
+	// Register default internal tools
+	workspacePath := os.Getenv("WORKSPACE_PATH")
+	if workspacePath == "" {
+		workspacePath = "/home/node/.openclaw/workspace" // Default fallback
+	}
+	
+	toolCatalog, catalogErr := tool.NewCatalog(
+		fs.NewReadFileTool(workspacePath),
+		fs.NewWriteFileTool(workspacePath),
+		fs.NewListDirTool(workspacePath),
+	)
+	if catalogErr != nil {
+		return nil, fmt.Errorf("tool catalog: %w", catalogErr)
+	}
+	
 	exec := &kernel.ModelExecutor{
 		Store:            store,
 		Clock:            clock,
@@ -101,6 +118,7 @@ func BuildModelExecutor(
 		Provider:         modelProvider,
 		FallbackProvider: fallbackProvider,
 		Providers:        providersByBinding,
+		Tools:            toolCatalog,
 		Changes:          processor,
 		Compiler: prompt.Compiler{
 			Estimator:             prompt.ConservativeEstimator{},
