@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "cognitive-tool-v1",
+  "cases": [
+    {
+      "id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "task": "Use the search tool to find the exact version number mentioned.",
+      "required_facts": [
+        {"id": "search-prompt", "text": "You must call the tool 'search_memory' with query 'version number' to find the answer.", "priority": 10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Emit a tool call for 'search_memory' instead of plain text."],
+      "formats": ["JSON"],
+      "expected": {"tool_call_name": "search_memory"}
+    }
+  ]
+}

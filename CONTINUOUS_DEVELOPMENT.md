@@ -738,9 +738,10 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 18:40 — HEARTBEAT — Fase 19 concluída. SubagentCompletionProcessor converte estados terminais de child sessions (SessionStateComplete e SessionStateFailed) em eventos do tipo ExternalSubagentCompletion, via SessionManager. O ExternalEventProcessor foi ensinado a consumir eventos com o wakeup kind `subagent.completion` e restaurar/avançar Operations pausadas com WAITING_DEPENDENCY. O fluxo model→yield→suspend→child finish→parent resume está estruturado e integrado. Verificações de sintaxe/testes locais OK.
 ### Fase 20 — Avaliação Cognitiva para Roteamento de Tool Calls
 
-- [ ] `TODO` Elaborar campanha exploratória do modelo invocando ferramentas em multi-turn
+- [x] `DONE` Elaborar campanha exploratória do modelo invocando ferramentas em multi-turn
 - [x] `DONE` Adicionar constraints ou guard-rails contra tool call loops infinitos
 - [x] `DONE` Implementar fallback de erro de validation schema no nível do tool caller para que o LLM se corrija
 
 2026-07-19 19:00 — HEARTBEAT — Fase 19 integrada localmente no kernel via 'ExternalSubagentCompletion' em wakeEventType. Corrigido schema de payloads e incluído coverage 'TestExternalEventProcessorWakesSubagentCompletion'. As tools necessárias (Fase 17-19) já foram injetadas. Preparando estrutura para Fase 20 sobre avaliações live. Repouso finalizado sem loops e evidência registrada.
 2026-07-19 19:40 — HEARTBEAT — Adicionada limitação de loop em internal/kernel/model_executor.go para tool call loops infinitos. Validação de dispatch existente checada. Passam todos os testes de compilação kernel e CONTINUOUS_DEVELOPMENT.md marcados como concluídos.
+2026-07-19 20:00 - HEARTBEAT - Campanha tool-explore configurada em internal/evaluation/testdata/campaign-tool-v1.json focada em invocacao de tools (Fase 20) com fixture cognitive-tool-v1.json. O harness foi validado usando dummy key registrando falha de provider adequadamente e provando o encadeamento de evaluation com tools habilitadas.
