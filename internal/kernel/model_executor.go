@@ -162,7 +162,10 @@ func (e ModelExecutor) selectAlternateBinding(ctx context.Context, operation dom
 		}
 	}
 
-	binding, decision, err := SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
+	var reqCap domain.RequiredCapability
+	reqCap.Format = ""
+	profilesMap := make(map[string]domain.ModelCapabilityProfile)
+	binding, decision, err := SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, reqCap, profilesMap, e.Clock.Now().UTC())
 	if err != nil {
 		return domain.ModelBindingConfig{}, decision, err
 	}
@@ -259,7 +262,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	// The conservative preflight requirement is output capacity; compilation below
 	// validates the full prompt against the selected binding context before a call.
 	if e.ModelsConfig != nil {
-		binding, decision, routeErr := SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
+		var fbReqCap domain.RequiredCapability
+		fbReqCap.Format = ""
+		fbProfilesMap := make(map[string]domain.ModelCapabilityProfile)
+		binding, decision, routeErr := SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, fbReqCap, fbProfilesMap, e.Clock.Now().UTC())
 		if routeErr != nil {
 			result.Skipped = true
 			result.SkipReason = "model_route_unavailable"

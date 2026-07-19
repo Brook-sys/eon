@@ -32,7 +32,9 @@ func TestSelectModelBindingReadsUsageAndRoutes(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
-	selected, decision, err := SelectModelBinding(ctx, store, config, 1024, now)
+	var reqCap domain.RequiredCapability
+	profilesMap := make(map[string]domain.ModelCapabilityProfile)
+	selected, decision, err := SelectModelBinding(ctx, store, config, 1024, reqCap, profilesMap, now)
 	if err != nil {
 		t.Fatalf("select: %v", err)
 	}
@@ -66,7 +68,9 @@ func TestSelectModelBindingSkipsProviderCircuitOpen(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	selected, decision, err := SelectModelBinding(ctx, store, config, 1024, now)
+	var reqCap domain.RequiredCapability
+	profilesMap := make(map[string]domain.ModelCapabilityProfile)
+	selected, decision, err := SelectModelBinding(ctx, store, config, 1024, reqCap, profilesMap, now)
 	if err != nil {
 		t.Fatal(err)
 	}

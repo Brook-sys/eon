@@ -260,7 +260,9 @@ func TestSQLiteReopenRestoresEnabledPresetAndRouter(t *testing.T) {
 			t.Errorf("restored authorizer missing limit for %s", resource)
 		}
 	}
-	selected, decision, err := kernel.SelectModelBinding(ctx, rt.Store, *rt.Model.ModelsConfig, 128, clock.Now())
+	var reqCap domain.RequiredCapability
+	profilesMap := make(map[string]domain.ModelCapabilityProfile)
+	selected, decision, err := kernel.SelectModelBinding(ctx, rt.Store, *rt.Model.ModelsConfig, 128, reqCap, profilesMap, clock.Now())
 	if err != nil {
 		t.Fatalf("select restored binding: %v", err)
 	}

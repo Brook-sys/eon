@@ -36,7 +36,7 @@ func AppendModelRoutingEvent(ctx context.Context, store port.Store, now time.Tim
 
 // SelectModelBinding applies domain.SelectModelBinding after hydrating durable ResourceUsage
 // for each candidate binding. This separates routing decisions from resource persistence.
-func SelectModelBinding(ctx context.Context, store port.Store, config domain.ModelsConfig, requiredTokens int, now time.Time) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
+func SelectModelBinding(ctx context.Context, store port.Store, config domain.ModelsConfig, requiredTokens int, requiredCapability domain.RequiredCapability, profiles map[string]domain.ModelCapabilityProfile, now time.Time) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
 	if err := config.Validate(); err != nil {
 		return domain.ModelBindingConfig{}, domain.ModelRouteDecision{}, fmt.Errorf("config: %w", err)
 	}
@@ -75,5 +75,5 @@ func SelectModelBinding(ctx context.Context, store port.Store, config domain.Mod
 		return domain.ModelBindingConfig{}, domain.ModelRouteDecision{}, err
 	}
 
-	return domain.SelectModelBinding(candidates, requiredTokens, now)
+	return domain.SelectSkilledModelBinding(candidates, profiles, requiredCapability, requiredTokens, now)
 }
