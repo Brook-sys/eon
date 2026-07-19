@@ -743,3 +743,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [x] `DONE` Implementar fallback de erro de validation schema no nível do tool caller para que o LLM se corrija
 
 2026-07-19 19:00 — HEARTBEAT — Fase 19 integrada localmente no kernel via 'ExternalSubagentCompletion' em wakeEventType. Corrigido schema de payloads e incluído coverage 'TestExternalEventProcessorWakesSubagentCompletion'. As tools necessárias (Fase 17-19) já foram injetadas. Preparando estrutura para Fase 20 sobre avaliações live. Repouso finalizado sem loops e evidência registrada.
+2026-07-19 19:40 — HEARTBEAT — Adicionada limitação de loop em internal/kernel/model_executor.go para tool call loops infinitos. Validação de dispatch existente checada. Passam todos os testes de compilação kernel e CONTINUOUS_DEVELOPMENT.md marcados como concluídos.
