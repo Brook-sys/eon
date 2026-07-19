@@ -14,4 +14,3 @@ type SemanticMemory interface {
 }
 
 var ErrNotFound = errors.New("memory: item not found")
-

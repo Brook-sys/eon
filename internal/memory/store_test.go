@@ -57,7 +57,7 @@ func TestMapMemoryStore(t *testing.T) {
 	_, k2Exists := ms.items["k2"]
 	_, k1Exists := ms.items["k1"]
 	ms.mu.RUnlock()
-	
+
 	if k2Exists {
 		t.Errorf("k2 should be compacted")
 	}

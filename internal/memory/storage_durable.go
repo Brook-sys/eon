@@ -20,9 +20,9 @@ func NewDurableMemoryStore(store port.Store, clock func() time.Time) SemanticMem
 }
 
 func (d *DurableMemoryStore) StoreMemory(ctx context.Context, key, value string, expiration time.Time) error {
-	// For now, this is a placeholder. 
+	// For now, this is a placeholder.
 	// To actually store this we'd need domain objects for LongTermMemory
-	// and to append them to the event log. 
+	// and to append them to the event log.
 	return nil
 }
 
