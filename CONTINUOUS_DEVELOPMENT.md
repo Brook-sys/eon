@@ -603,7 +603,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 9 — Gestão de Memória e Agendamento Long-term
 
-- [ ] `READY` Elaborar abstração para armazenamento e recuperação semântica de memória de longo prazo.
+- [x] `DONE` Elaborar abstração para armazenamento e recuperação semântica de memória de longo prazo.
 - [ ] `READY` Implementar ciclo de vida completo de expurgo e compactação de memórias irrelevantes.
 - [ ] `READY` Testar resiliência do store de memórias contra corrupção e interrupção abrupta.
 - [ ] `READY` Integrar recuperação de memória no prompt baseline do ModelExecutor.
