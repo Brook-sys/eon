@@ -531,13 +531,107 @@ func (a *CapabilityAuthorizer) ReportModelCompleteObserved(
 	retryAfter *time.Time,
 	observedTokens int,
 ) error {
-	var lastErr error
-	for _, permit := range permits {
-		if err := a.ReportCapabilityObserved(ctx, operation, permit, success, retryAfter, observedTokens); err != nil {
-			lastErr = err
+	return a.reportModelCompleteBatch(ctx, operation, permits, func(*domain.ResourcePermit) bool { return success }, retryAfter, observedTokens)
+}
+
+// ReportModelCompleteScopedFailure atomically releases every composite model
+// permit while applying the failure only to the classified provider/binding
+// scope. A model attempt therefore produces one durable release event and one
+// store transaction instead of one of each per ResourceGate bucket.
+func (a *CapabilityAuthorizer) ReportModelCompleteScopedFailure(
+	ctx context.Context,
+	operation domain.Operation,
+	permits []*domain.ResourcePermit,
+	scope string,
+	retryAfter *time.Time,
+) error {
+	return a.reportModelCompleteBatch(ctx, operation, permits, func(permit *domain.ResourcePermit) bool {
+		switch scope {
+		case "provider":
+			return !strings.HasPrefix(string(permit.Resource), "model-provider:")
+		case "binding":
+			return !strings.HasPrefix(string(permit.Resource), "model-binding:")
+		default:
+			return false
 		}
+	}, retryAfter, 0)
+}
+
+func (a *CapabilityAuthorizer) reportModelCompleteBatch(
+	ctx context.Context,
+	operation domain.Operation,
+	permits []*domain.ResourcePermit,
+	succeeded func(*domain.ResourcePermit) bool,
+	retryAfter *time.Time,
+	observedTokens int,
+) error {
+	if a == nil || len(permits) == 0 {
+		return nil
 	}
-	return lastErr
+	if a.Store == nil || a.Clock == nil {
+		return errors.New("capability authorizer requires store and clock")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	now := a.Clock.Now().UTC()
+	return a.Store.Update(ctx, func(tx port.Transaction) error {
+		outcomes := make([]string, 0, len(permits))
+		resources := make([]domain.ResourceID, 0, len(permits))
+		for _, permit := range permits {
+			if permit == nil {
+				continue
+			}
+			resource := permit.Resource
+			usage, err := tx.ResourceUsage(resource)
+			if errors.Is(err, port.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			limit, hasLimit := a.Limits[resource]
+			if !hasLimit {
+				limit = domain.ResourceLimit{Resource: resource}
+			}
+			success := succeeded(permit)
+			var next domain.ResourceUsage
+			if success {
+				next, err = domain.ReportSuccess(usage, permit.Cost, now)
+				if err == nil && observedTokens > 0 {
+					next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observedTokens, now)
+				}
+			} else {
+				next, err = domain.ReportFailure(usage, limit, permit.Cost, retryAfter, now)
+			}
+			if err != nil {
+				return err
+			}
+			if err := tx.SaveResourceUsage(next); err != nil {
+				return err
+			}
+			outcome := "failure"
+			if success {
+				outcome = "success"
+			}
+			resources = append(resources, resource)
+			outcomes = append(outcomes, string(resource)+"="+outcome)
+		}
+		if len(resources) == 0 {
+			return nil
+		}
+		_, err := tx.AppendEvent(domain.Event{
+			SchemaVersion:   domain.SchemaVersionV1,
+			ID:              domain.EventID(fmt.Sprintf("%s:resource_released:%s:%d", operation.ID, resourceEventKey(resources), now.UnixNano())),
+			Kind:            EventResourceReleased,
+			OccurredAt:      now,
+			MissionRevision: operation.MissionRevision,
+			InquiryID:       operation.InquiryID,
+			OperationID:     operation.ID,
+			PayloadRef:      strings.Join(outcomes, ","),
+		})
+		return err
+	})
 }
 
 // DefaultMVPLimits returns conservative ResourceGate ceilings for MVP resources.

@@ -123,15 +123,11 @@ func (e ModelExecutor) releaseFailedResourcePermits(ctx context.Context, operati
 	if e.Authorizer == nil {
 		return
 	}
-	for _, permit := range permits {
-		failure := true
-		if classified && decision.Scope == "provider" {
-			failure = strings.HasPrefix(string(permit.Resource), "model-provider:")
-		} else if classified && decision.Scope == "binding" {
-			failure = strings.HasPrefix(string(permit.Resource), "model-binding:")
-		}
-		_ = e.Authorizer.ReportCapability(ctx, operation, permit, !failure, retryAfter)
+	if classified {
+		_ = e.Authorizer.ReportModelCompleteScopedFailure(ctx, operation, permits, decision.Scope, retryAfter)
+		return
 	}
+	_ = e.Authorizer.ReportModelComplete(ctx, operation, permits, false, retryAfter)
 }
 
 // releaseResourcePermitsWithTokens replaces the conservative acquire estimate

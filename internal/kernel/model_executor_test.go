@@ -1328,13 +1328,20 @@ func TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit(t *tes
 		}
 	}
 	routes := 0
+	releases := 0
 	for _, event := range events {
 		if event.Kind == EventOperationModelRouted && event.OperationID == "operation_model" {
 			routes++
 		}
+		if event.Kind == EventResourceReleased && event.OperationID == "operation_model" {
+			releases++
+		}
 	}
 	if routes != 2 {
 		t.Fatalf("want primary and fallback routing events, got %d", routes)
+	}
+	if releases != 2 {
+		t.Fatalf("want one durable release event per model attempt, got %d", releases)
 	}
 }
 
