@@ -774,6 +774,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				// currently doesn't have a History/Messages field since it's "baseline text→text"
 				// For the MVP, we just inject the tool responses as Facts into the next prompt compilation.
 
+				// FR-MODEL-010: Guard-rails contra infinite tool loops.
+				// Não incrementamos maxCalls infinitamente. Limitamos a profundidade.
+				if maxCalls-spec.Budget.ModelCalls >= 15 {
+					lastErr = fmt.Errorf("maximum tool call loop depth exceeded (limit: 15)")
+					break
+				}
+				
 				// Increase maxCalls by 1 so the next model loop can actually run
 				// Otherwise budget=1 will immediately fail on tools.
 				maxCalls++
