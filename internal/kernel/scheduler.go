@@ -108,6 +108,8 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 	if err := policy.Validate(); err != nil {
 		return Decision{}, fmt.Errorf("horizon policy: %w", err)
 	}
+	preflightStart := s.Clock.Now().UTC()
+	_ = preflightStart // preflight metrics can be published securely later
 	if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
 		return decision, err
 	}

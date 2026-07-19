@@ -609,6 +609,9 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 09:35 — HEARTBEAT — Concluído o endpoint `POST /memories` na Control API, que recebe artefatos de memória e os salva na `SemanticMemory`. O `API` struct foi estendido para incluir a interface `MemoryWriter`, devidamente inicializada pelo bootstrap no `kernel.Scheduler` e instanciada para `control.NewAPI`. Os testes estruturais foram ajustados (`httpapi_test.go`, usando `DefaultReceiptFactory/DispositionFactory` refatorados de mocks diretos) e passam validando toda a interface HTTP/domain. O lote da Fase 9 está integralmente concluído, encerrando a arquitetura base de Memória e Agendamento guiado por dados longitudinais.
 
 ### Fase 10 — Runtime Gate & Loop Optimization
+- [x] `DONE` Otimizar log de latência do loop (preflight, admission, dispatch) sem verbosity excessiva.
+- [ ] Prevenir busy loops no kernel através de backoff de repouso estruturado.
+
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
 - [x] `DONE` Otimizar o log de eventos duráveis do ResourceGate durante fallback iterativo.
