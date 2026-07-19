@@ -678,3 +678,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [ ] `READY` Integrar os resultados formatados (como `tool_calls` e `tool_responses`) no envelope de prompt na próxima iteração do modelo.
 - [ ] `READY` Realizar teste de ponta-a-ponta (multi-turn tool loop) determinístico provando que o modelo pode solicitar a mesma ferramenta ou diferentes até atingir uma resposta sem invocações pendentes.
 - [ ] `READY` Validar fallback de tool invalid loop limitation: evitar que chamadas inválidas cíclicas exaurem o budget silenciosamente.
+### Fase 14.2 — Integração do Skill-based Routing no Kernel
+
+- [x] `DONE` Domínio: implementar `SelectSkilledModelBinding` agregando os scores de habilidade para sobrepujar e complementar a prioridade estática, honrando *circuit breakers* duráveis. Testes garantem fallback para modelo mais fraco em caso de API sobrecarregada (429/Timeout) apesar do GAP de inteligência.
+- [ ] `READY` Scheduler/Kernel: inicializar e ler o estado `Memory` persistente extraindo o `ModelCapabilityProfile` para todos os *bindings* e repassar à função `SelectSkilledModelBinding` injetada, em vez de depender exclusivamente do `SelectModelBinding` base.
