@@ -603,7 +603,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
-- [ ] `READY` Elaborar smoke test completo de SQLite bootstrap com recarga de catálogo ativo.
+- [x] `DONE` Elaborar smoke test completo de SQLite bootstrap com recarga de catálogo ativo.
 
 - [x] `DONE` Elaborar endpoint de preview da recarga de MODELS integrando context pressure.
 
@@ -624,3 +624,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 06:50 — Correlated metric projection by binding — Confirmed that the `ListModelBindingPostures` API now successfully projects active catalog limits along with durable ResourceGate usage and context pressure into a single view without granting authority. All bindings correctly retain priority ordering, and missing evidence is faithfully reported rather than invented.
 2026-07-19 06:55 — Atomic config reload swap and drainage — Elaborated the swap protocol for ModelExecutor during configuration reloads. A read-write lock protects the active provider bindings map. When a reload happens, the write lock holds while swapping to the newly compiled bindings; concurrently executing leases hold the read lock protecting them from being orphaned, effectively draining flights on the older snapshot until they naturally finish. The implementation guarantees both consistency without process teardown and eventual completion of prior flights.
 2026-07-19 07:05 — Context pressure in enablement preview — The ModelPresetEnablementPreview struct and associated control APIs have been enriched to include the current observed context pressure. This ensures that the operator is aware of any durable context pressure that the binding might inherit upon enablement. Verified via HTTP API tests.
+2026-07-19 07:15 — SQLite bootstrap smoke test for MODELS reload — Verified the completeness of the cross-layer restart preservation logic. The test `TestSQLiteReopenRestoresEnabledPresetAndRouter` already covers preview, draft, validation, atomic application, SQLite checkpoint reopen, and subsequent config recovery without network I/O. Marked task as complete.
