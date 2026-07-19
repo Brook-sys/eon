@@ -685,4 +685,14 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 10:45 — HEARTBEAT — Concluído Lote Completo da Fase 13. O loop do ModelExecutor agora compila, despacha e reinjeta dados ou falhas operacionais das chamadas das ferramentas até a conclusão com segurança dentro do limite do budget.
 
+### Fase 15 — Adapter de Tool Execution Genérica e Integração FS/Exec
+
+- [x] `DONE` Adaptador `tool.Adapter`: interface de registro que instancie implementações baseadas no catálogo.
+- [x] `DONE` Elaborar tool `read_file`: leitura de conteúdo de arquivos controlada por jail/chroot.
+- [x] `DONE` Elaborar tool `write_file`: escrita/atomic overwrite.
+- [x] `DONE` Elaborar tool `list_dir`: exploração de caminhos.
+- [x] `DONE` Registrar as novas tools no `tool.Provider` default do engine local.
+
 2026-07-19 10:46 — HEARTBEAT — Fase 14.2 concluída. O Kernel foi alterado para realizar pre-flight do `model_capability_profile` no `MemoryStore` e delegar para `SelectSkilledModelBinding` as operações. Isso aplica Skill-Based Routing real, permitindo que operações requeiram perfis de capacidade.
+
+2026-07-19 10:47 — HEARTBEAT — Fase 15 implementada com a adição das tools fs (read_file, write_file, list_dir) que possibilitam manipulação do sistema de arquivos e estão injetadas e prontas no kernel via bootstrap.
