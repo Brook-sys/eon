@@ -593,3 +593,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 00:20 — HEARTBEAT — Continua o bloqueio por indisponibilidade de chaves de API (NVIDIA NIM e Groq) impedindo a avaliação da recarga atômica de configuração de MODELS. Não houve alteração no código neste ciclo. Aguardando a provisão de credenciais ou autorização de um provider local (e.g. Ollama) para prosseguir.
 
+2026-07-18 21:40 — HEARTBEAT — Continua o bloqueio por indisponibilidade de chaves de API (NVIDIA NIM e Groq) impedindo a avaliação da recarga atômica de configuração de MODELS e o avanço da experimentação live. Nenhum avanço no código. Aguardando a provisão de credenciais ou autorização de um provider local (e.g. Ollama) para prosseguir.
