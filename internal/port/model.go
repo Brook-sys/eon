@@ -23,9 +23,17 @@ type CompletionRequest struct {
 
 type CompletionResult struct {
 	Text         string
+	ToolCalls    []ToolCall
 	InputTokens  int
 	OutputTokens int
 	Model        string
+}
+
+// ToolCall represents a model's request to execute a tool.
+type ToolCall struct {
+	ID        string
+	Name      string
+	Arguments string
 }
 
 // ProviderError represents an active rejection from the provider.

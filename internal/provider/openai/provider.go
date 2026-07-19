@@ -254,8 +254,18 @@ type responseFormat struct {
 }
 
 type chatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role      string         `json:"role"`
+	Content   string         `json:"content"`
+	ToolCalls []chatToolCall `json:"tool_calls,omitempty"`
+}
+
+type chatToolCall struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
 }
 
 type chatResponse struct {
@@ -346,10 +356,22 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		return port.CompletionResult{}, &Error{Kind: ErrorResponseTooLarge}
 	}
 	var decoded chatResponse
-	if err := json.Unmarshal(body, &decoded); err != nil || len(decoded.Choices) != 1 || decoded.Choices[0].Message.Role != "assistant" || decoded.Choices[0].Message.Content == "" || decoded.Usage.PromptTokens < 0 || decoded.Usage.CompletionTokens < 0 {
+	if err := json.Unmarshal(body, &decoded); err != nil || len(decoded.Choices) != 1 || decoded.Choices[0].Message.Role != "assistant" || (decoded.Choices[0].Message.Content == "" && len(decoded.Choices[0].Message.ToolCalls) == 0) || decoded.Usage.PromptTokens < 0 || decoded.Usage.CompletionTokens < 0 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse}
 	}
-	return port.CompletionResult{Text: decoded.Choices[0].Message.Content, InputTokens: decoded.Usage.PromptTokens, OutputTokens: decoded.Usage.CompletionTokens, Model: decoded.Model}, nil
+
+	var toolCalls []port.ToolCall
+	for _, call := range decoded.Choices[0].Message.ToolCalls {
+		if call.Type == "function" {
+			toolCalls = append(toolCalls, port.ToolCall{
+				ID:        call.ID,
+				Name:      call.Function.Name,
+				Arguments: call.Function.Arguments,
+			})
+		}
+	}
+
+	return port.CompletionResult{Text: decoded.Choices[0].Message.Content, ToolCalls: toolCalls, InputTokens: decoded.Usage.PromptTokens, OutputTokens: decoded.Usage.CompletionTokens, Model: decoded.Model}, nil
 }
 
 // parseRetryAfter accepts both forms from RFC 9110: delay-seconds and an HTTP
