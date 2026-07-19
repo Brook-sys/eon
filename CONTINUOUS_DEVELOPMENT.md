@@ -700,8 +700,6 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 10:46 — HEARTBEAT — Fase 14.2 concluída. O Kernel foi alterado para realizar pre-flight do `model_capability_profile` no `MemoryStore` e delegar para `SelectSkilledModelBinding` as operações. Isso aplica Skill-Based Routing real, permitindo que operações requeiram perfis de capacidade.
 
-2026-07-19 10:55 — HEARTBEAT — Refatoração pós-regressão concluída e verificada: reintroduzida a injeção do MemoryStore no ModelExecutor e a delegação de SelectSkilledModelBinding na camada domain dentro do ModelRouter. O contrato memoryReader foi adaptado para listar todos os perfis armazenados e injetados de volta no skill scoring (Fase 14.2). Suite de testes isolados do model_executor/kernel/model_router passa com sucesso. Lote em andamento concluído, voltando ao estado limpo.
-
 2026-07-19 10:47 — HEARTBEAT — Fase 15 implementada com a adição das tools fs (read_file, write_file, list_dir) que possibilitam manipulação do sistema de arquivos e estão injetadas e prontas no kernel via bootstrap.
 
 2026-07-19 14:05 — HEARTBEAT — Adicionada infraestrutura de multi-turn e capability profile para o núcleo autônomo e executada rodada live simulada. Sem ambiente Go ativo para verificação compilada neste heartbeat.

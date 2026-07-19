@@ -75,13 +75,5 @@ func SelectModelBinding(ctx context.Context, store port.Store, config domain.Mod
 		return domain.ModelBindingConfig{}, domain.ModelRouteDecision{}, err
 	}
 
-	profiles := make(map[string]domain.ModelCapabilityProfile)
-	
-	if memoryReader, ok := store.(port.MemoryReader); ok {
-		memories, _ := memoryReader.ListMemoriesByScope(domain.MemoryScopeAgent)
-		_ = memories
-	}
-	
-	req := domain.RequiredCapability{}
-	return domain.SelectSkilledModelBinding(candidates, profiles, req, requiredTokens, now)
+	return domain.SelectModelBinding(candidates, requiredTokens, now)
 }
