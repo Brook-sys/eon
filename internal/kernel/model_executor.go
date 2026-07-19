@@ -14,6 +14,7 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/tool"
 )
 
 // Event kinds for the PROPOSE_ONLY model path. Model text never mutates
@@ -34,6 +35,8 @@ type ModelExecutor struct {
 	// Catalog path: providers are keyed by binding ID because model name, wire
 	// dialect, and context are binding-specific even when transport is shared.
 	Providers    map[string]port.ModelProvider
+	// Tools is the bound capability catalog for this executor
+	Tools tool.Provider
 	ModelsConfig *domain.ModelsConfig
 	// Legacy direct construction remains supported.
 	Provider             port.ModelProvider
@@ -561,7 +564,20 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
 
-		completion, callErr := activeProvider.Complete(providerCtx, request)
+		var completion port.CompletionResult
+		var callErr error
+		var activeToolProvider port.ModelToolProvider
+		var ok bool
+		if e.Tools != nil && len(e.Tools.Definitions()) > 0 {
+			if activeToolProvider, ok = activeProvider.(port.ModelToolProvider); ok {
+				completion, callErr = activeToolProvider.CompleteWithTools(providerCtx, request, e.Tools.Definitions())
+			} else {
+				completion, callErr = activeProvider.Complete(providerCtx, request)
+			}
+		} else {
+			completion, callErr = activeProvider.Complete(providerCtx, request)
+		}
+
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
