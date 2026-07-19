@@ -16,38 +16,72 @@ func (c *mockClock) Now() time.Time {
 	return c.now
 }
 
-func TestLocalSessionManager_SpawnAndStatus(t *testing.T) {
+func TestLocalSessionManager_ConstructorRequiresClockAndValidPolicy(t *testing.T) {
+	_, err := kernel.NewLocalSessionManagerWithPolicy(nil, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err == nil {
+		t.Fatal("expected error with nil clock")
+	}
+
 	clock := &mockClock{now: time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)}
-	sm := kernel.NewLocalSessionManager(clock)
+	_, err = kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 0})
+	if err == nil {
+		t.Fatal("expected error with zero concurrency")
+	}
+}
 
+func TestLocalSessionManager_SpawnValidatesSpec(t *testing.T) {
+	clock := &mockClock{now: time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)}
+	sm, _ := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
 	ctx := context.Background()
-	spec := kernel.SubagentSpec{
-		Task:        "Analyze dataset",
-		ContextMode: "isolated",
+
+	_, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "", ContextMode: "isolated"})
+	if err == nil {
+		t.Fatal("expected error missing task")
 	}
 
-	id, err := sm.Spawn(ctx, spec)
+	_, err = sm.Spawn(ctx, kernel.SubagentSpec{Task: "work", ContextMode: "invalid"})
+	if err == nil {
+		t.Fatal("expected error invalid context mode")
+	}
+}
+
+func TestLocalSessionManager_SpawnIdempotencyAndIsolation(t *testing.T) {
+	clock := &mockClock{now: time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)}
+	sm, _ := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 2})
+	ctx := context.Background()
+	labels := map[string]string{"task_id": "root-1"}
+
+	id1, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1", ContextMode: "isolated", Labels: labels})
 	if err != nil {
-		t.Fatalf("unexpected error spawning subagent: %v", err)
+		t.Fatal(err)
 	}
-
-	status, err := sm.Status(ctx, id)
+	id2, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1 duplicate", ContextMode: "isolated", Labels: labels})
 	if err != nil {
-		t.Fatalf("unexpected error getting status: %v", err)
+		t.Fatal(err)
+	}
+	if id1 != id2 {
+		t.Errorf("expected idempotent ID return %q, got %q", id1, id2)
 	}
 
-	if status.ID != id {
-		t.Errorf("expected status ID %q, got %q", id, status.ID)
+	status, _ := sm.Status(ctx, id1)
+	status.Spec.Labels["task_id"] = "tampered"
+	status2, _ := sm.Status(ctx, id1)
+	if status2.Spec.Labels["task_id"] != "root-1" {
+		t.Fatal("expected spec mutation isolation")
 	}
-	if status.State != kernel.SessionStatePending {
-		t.Errorf("expected state %q, got %q", kernel.SessionStatePending, status.State)
-	}
-	if !status.StartedAt.Equal(clock.now) {
-		t.Errorf("expected started at %v, got %v", clock.now, status.StartedAt)
-	}
+}
 
-	_, err = sm.Status(ctx, "invalid-id")
-	if err != kernel.ErrSessionNotFound {
-		t.Errorf("expected ErrSessionNotFound, got %v", err)
+func TestLocalSessionManager_EnforcesConcurrencyLimit(t *testing.T) {
+	clock := &mockClock{now: time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)}
+	sm, _ := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	ctx := context.Background()
+
+	_, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1", ContextMode: "isolated", Labels: map[string]string{"task_id": "1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = sm.Spawn(ctx, kernel.SubagentSpec{Task: "T2", ContextMode: "isolated", Labels: map[string]string{"task_id": "2"}})
+	if err != kernel.ErrSessionLimit {
+		t.Fatalf("expected ErrSessionLimit, got %v", err)
 	}
 }

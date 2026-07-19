@@ -3,9 +3,9 @@ package kernel
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
-
 )
 
 // SessionID represents a unique identifier for a subagent session.
@@ -24,7 +24,7 @@ const (
 // SubagentSpec defines the parameters for spawning a new subagent.
 type SubagentSpec struct {
 	Task        string
-	ContextMode string // e.g. "isolated" or "fork"
+	ContextMode string // "isolated" or "fork"
 	Labels      map[string]string
 }
 
@@ -38,72 +38,135 @@ type SubagentStatus struct {
 	Error     error
 }
 
+// SessionPolicy bounds delegation performed by a SessionManager.
+type SessionPolicy struct {
+	MaxConcurrent int
+}
+
+func (p SessionPolicy) validate() error {
+	if p.MaxConcurrent <= 0 {
+		return errors.New("max concurrent subagents must be positive")
+	}
+	return nil
+}
+
 // SessionManager defines the contract for coordinating child subagents.
 type SessionManager interface {
-	// Spawn initiates a new subagent session and returns its ID.
 	Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error)
-	// Status retrieves the current status of a spawned session.
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
-	// Wait blocks until the session completes, fails, or the context is canceled.
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
 }
 
-// ErrSessionNotFound is returned when querying an unknown session ID.
-var ErrSessionNotFound = errors.New("session not found")
+var (
+	ErrSessionNotFound = errors.New("session not found")
+	ErrSessionLimit    = errors.New("subagent concurrency limit reached")
+)
 
-// localSessionManager is a naive in-memory implementation of SessionManager
-// intended primarily for testing or isolated local boundaries.
+// localSessionManager is a deterministic in-memory implementation intended for
+// tests and isolated local boundaries. Production transports can implement the
+// same interface while preserving the policy at their own authority boundary.
 type localSessionManager struct {
 	mu       sync.RWMutex
 	sessions map[SessionID]*SubagentStatus
+	byTaskID map[string]SessionID
 	clock    interface{ Now() time.Time }
-	nextID   int
+	policy   SessionPolicy
+	nextID   uint64
 }
 
-// NewLocalSessionManager creates an in-memory session manager.
+// NewLocalSessionManager creates a manager with a conservative default limit.
 func NewLocalSessionManager(clock interface{ Now() time.Time }) SessionManager {
+	manager, err := NewLocalSessionManagerWithPolicy(clock, SessionPolicy{MaxConcurrent: 4})
+	if err != nil {
+		panic(err)
+	}
+	return manager
+}
+
+// NewLocalSessionManagerWithPolicy creates a bounded in-memory session manager.
+func NewLocalSessionManagerWithPolicy(clock interface{ Now() time.Time }, policy SessionPolicy) (SessionManager, error) {
+	if clock == nil {
+		return nil, errors.New("session clock is required")
+	}
+	if err := policy.validate(); err != nil {
+		return nil, err
+	}
 	return &localSessionManager{
 		sessions: make(map[SessionID]*SubagentStatus),
+		byTaskID: make(map[string]SessionID),
 		clock:    clock,
+		policy:   policy,
 		nextID:   1,
-	}
+	}, nil
 }
 
-// Spawn implements SessionManager.Spawn.
 func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if spec.Task == "" {
+		return "", errors.New("subagent task is required")
+	}
+	if spec.ContextMode != "isolated" && spec.ContextMode != "fork" {
+		return "", errors.New("subagent context mode must be isolated or fork")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	id := SessionID(string(rune(m.nextID + '0'))) // simplistic ID generation
-	m.nextID++
-
-	status := &SubagentStatus{
-		ID:        id,
-		State:     SessionStatePending,
-		Spec:      spec,
-		StartedAt: m.clock.Now(),
+	// task_id is an idempotency key supplied by the continuity frontier. A retry
+	// after spawn-but-before-checkpoint returns the original session.
+	if taskID := spec.Labels["task_id"]; taskID != "" {
+		if id, ok := m.byTaskID[taskID]; ok {
+			return id, nil
+		}
 	}
+	active := 0
+	for _, status := range m.sessions {
+		if status.State == SessionStatePending || status.State == SessionStateRunning {
+			active++
+		}
+	}
+	if active >= m.policy.MaxConcurrent {
+		return "", ErrSessionLimit
+	}
+
+	id := SessionID(fmt.Sprintf("subagent-%d", m.nextID))
+	m.nextID++
+	status := &SubagentStatus{ID: id, State: SessionStatePending, Spec: cloneSubagentSpec(spec), StartedAt: m.clock.Now()}
 	m.sessions[id] = status
+	if taskID := spec.Labels["task_id"]; taskID != "" {
+		m.byTaskID[taskID] = id
+	}
 	return id, nil
 }
 
-// Status implements SessionManager.Status.
 func (m *localSessionManager) Status(ctx context.Context, id SessionID) (SubagentStatus, error) {
+	if err := ctx.Err(); err != nil {
+		return SubagentStatus{}, err
+	}
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
 	status, ok := m.sessions[id]
 	if !ok {
 		return SubagentStatus{}, ErrSessionNotFound
 	}
-	return *status, nil
+	copy := *status
+	copy.Spec = cloneSubagentSpec(status.Spec)
+	return copy, nil
 }
 
-// Wait implements SessionManager.Wait (blocking is mocked/naive here).
 func (m *localSessionManager) Wait(ctx context.Context, id SessionID) (SubagentStatus, error) {
-	// For the naive local manager, we just check status immediately.
-	// A real implementation would block on a signal channel.
 	return m.Status(ctx, id)
 }
 
-
+func cloneSubagentSpec(spec SubagentSpec) SubagentSpec {
+	copy := spec
+	if spec.Labels != nil {
+		copy.Labels = make(map[string]string, len(spec.Labels))
+		for key, value := range spec.Labels {
+			copy.Labels[key] = value
+		}
+	}
+	return copy
+}
