@@ -723,5 +723,6 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 - [x] `DONE` Elaborar abstração no kernel (ex: `kernel.SessionManager`) capaz de iniciar, interromper e monitorar ciclos delegados de subagentes isolados, garantindo que o agente pai possa prosseguir assincronamente.
 - [x] `DONE` Adicionar capability de `sessions_spawn` ao registry (similar a file/web) com budget dedicado, submetido ao ResourceGate e Authority, documentando os limites e a integração multi-turn.
-- [ ] `READY` Atualizar o bootstrap e as opções (`-subagents`) para acionar o `SessionManager` real e as delegators de spawn/yield.
+- [x] `DONE` Atualizar o bootstrap e as opções (`-subagents`) para acionar o `SessionManager` real e as delegators de spawn/yield.
 
+2026-07-19 17:20 — HEARTBEAT — Fase 17 concluída. Orquestração de sub-agentes com sessions_spawn/yield/SessionManager nativo introduzida no kernel e acoplada via flag -subagents no cmd/runtime. Build compilou sem erros e a pipeline de testes passou na íntegra com isolamento determinístico temporal recuperado.
