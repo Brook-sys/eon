@@ -6,7 +6,7 @@ import (
 )
 
 func TestLongTermMemory_Basic(t *testing.T) {
-	now := time.Now()
+	now := time.Unix(1710000000, 0)
 	mem := LongTermMemory{
 		ID:         "mem-123",
 		Key:        "test_key",

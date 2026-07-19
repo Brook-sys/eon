@@ -1,18 +1,29 @@
 package memory
 
 import (
-	"motor-autonomo/internal/domain"
 	"errors"
+	"motor-autonomo/internal/domain"
 	"time"
 )
 
+func (t transaction) LongTermMemory(key string) (domain.LongTermMemory, error) {
+	return reader(t).LongTermMemory(key)
+}
+
+func (t transaction) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTermMemory, error) {
+	return reader(t).ListMemoriesByScope(scope)
+}
+
+func (t transaction) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, error) {
+	return reader(t).ListExpiredMemories(now)
+}
 
 func (t transaction) SaveMemory(mem domain.LongTermMemory) error {
 	t.state.memories[mem.Key] = mem
 	return nil
 }
 
-func (t transaction) DeleteMemory(id domain.ID) error {
+func (t transaction) DeleteMemory(id domain.MemoryID) error {
 	for k, v := range t.state.memories {
 		if v.ID == id {
 			delete(t.state.memories, k)

@@ -5,7 +5,6 @@ import (
 	"time"
 )
 
-
 // MemoryReader exposes access to stored long-term memory
 type MemoryReader interface {
 	LongTermMemory(key string) (domain.LongTermMemory, error)
@@ -16,5 +15,5 @@ type MemoryReader interface {
 // MemoryWriter exposes mutations for semantic memory
 type MemoryWriter interface {
 	SaveMemory(domain.LongTermMemory) error
-	DeleteMemory(domain.ID) error
+	DeleteMemory(domain.MemoryID) error
 }

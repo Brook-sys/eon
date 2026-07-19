@@ -8,14 +8,14 @@ import (
 type MemoryScope string
 
 const (
-	MemoryScopeMission   MemoryScope = "mission"
-	MemoryScopeStrategy  MemoryScope = "strategy"
-	MemoryScopeAgent     MemoryScope = "agent"
+	MemoryScopeMission  MemoryScope = "mission"
+	MemoryScopeStrategy MemoryScope = "strategy"
+	MemoryScopeAgent    MemoryScope = "agent"
 )
 
 // LongTermMemory represents a semantic memory element that can be retrieved and eventually expired.
 type LongTermMemory struct {
-	ID         ID
+	ID         MemoryID
 	Key        string
 	Scope      MemoryScope
 	Value      string

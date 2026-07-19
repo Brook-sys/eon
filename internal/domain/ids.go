@@ -23,6 +23,7 @@ type (
 	ChangeSetID            string
 	CommitID               string
 	FailureID              string
+	MemoryID               string
 	EventID                string
 	ReceiptID              string
 	CommandID              string
