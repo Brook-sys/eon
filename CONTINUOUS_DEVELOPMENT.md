@@ -605,9 +605,11 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 - [x] `DONE` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
 - [ ] `READY` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
-- [ ] `READY` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
+- [x] `DONE` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
 - [ ] `READY` Endurecer identidade de diretório pai/publicação relativa a descritor em backup SQLite (preflight de rename concorrente).
 
 2026-07-19 06:30 — Prova de recovery live invertida — a mesma campanha foi re-executada invertendo a configuração: circuito semeado (bloqueio por quota esgotada localmente) foi fixado em Groq `llama-3.1-8b-instant`, disparando com sucesso o fallback para NVIDIA NIM `mistral-small-4-119b`. Ambas as direções do ResourceGate foram validadas de forma live (bounded max_calls=1) sem falsos positivos. `results/model-benchmark/continuous-probe-2026-07-19-0630/probe.json` gravado. Ambas credenciais agora provam liveness para testes de runtime MODELS reload no próximo ciclo.
 
 2026-07-19 06:40 — Concluída a integração do reload atômico de MODELS no boundary do ciclo de controle via `ConfigScopeModels`. Adicionado teste de runtime que garante a recriação do ModelExecutor em `bootstrap.BuildModelExecutor` toda vez que a versão autorizada do Store mudar. O processo aplica o config novo no ciclo sem necessidade de matar o PID. Adicionado `TestRuntimeReloadModelExecutorIfNeeded` passando de primeira (após resolver mocks).
+
+2026-07-19 03:30 — Live probe campaign script correction: Runner manifest validation was failing due to max_calls planning logic. Fixed schema and validated by executing a 44-call bounded baseline probe. Results documented.
