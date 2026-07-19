@@ -604,7 +604,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
 - [x] `DONE` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
-- [ ] `READY` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
+- [x] `DONE` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
 - [x] `DONE` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
 - [x] `DONE` Endurecer identidade de diretório pai/publicação relativa a descritor em backup SQLite (preflight de rename concorrente).
 
@@ -613,4 +613,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 06:40 — Concluída a integração do reload atômico de MODELS no boundary do ciclo de controle via `ConfigScopeModels`. Adicionado teste de runtime que garante a recriação do ModelExecutor em `bootstrap.BuildModelExecutor` toda vez que a versão autorizada do Store mudar. O processo aplica o config novo no ciclo sem necessidade de matar o PID. Adicionado `TestRuntimeReloadModelExecutorIfNeeded` passando de primeira (após resolver mocks).
 
 2026-07-19 03:30 — Live probe campaign script correction: Runner manifest validation was failing due to max_calls planning logic. Fixed schema and validated by executing a 44-call bounded baseline probe. Results documented.
-\n2026-07-19 03:40 — Safepublish directory identity — Added os.Root-based directory pin to prevent concurrent rename/symlink attacks during backup publish. Verified by executing tests under unix.\n
+\n2026-07-19 03:40 — Safepublish directory identity — Added os.Root-based directory pin to prevent concurrent rename/symlink attacks during backup publish. Verified by executing tests under unix.\n\n2026-07-19 03:45 — Cognitive evaluation hardening — We ran a new 44-call bounded baseline probe with the v2 corpus across fallback configurations. The new dataset incorporates error conditions observed in earlier multi-model attempts, hardening JSON output parsing and quote anchoring against typical regressions.\n
