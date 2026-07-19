@@ -1,0 +1,36 @@
+package bootstrap
+
+import (
+	"context"
+	"motor-autonomo/internal/kernel"
+)
+
+// reloadModelExecutorIfNeeded reconstrui o ModelExecutor atomicamente se a
+// revisão ativa de MODELS mudar entre ciclos.
+func (rt *Runtime) reloadModelExecutorIfNeeded(ctx context.Context) error {
+	models, found, err := kernel.ActiveModelsConfig(ctx, rt.Store)
+	if err != nil {
+		return err
+	}
+	var currentVersion string
+	if rt.Model != nil && rt.Model.ModelsConfig != nil {
+		currentVersion = rt.Model.ModelsConfig.Version
+	}
+	var activeVersion string
+	if found {
+		activeVersion = models.Version
+	}
+	if currentVersion != activeVersion {
+		rt.logger.Printf("runtime: models config reload detected (current=%q new=%q), rebuilding executor", currentVersion, activeVersion)
+		modelExec, err := BuildModelExecutor(rt.Opts, rt.Store, rt.Clock, rt.IDs, rt.Telemetry)
+		if err != nil {
+			rt.logger.Printf("runtime: model executor rebuild failed: %v", err)
+			return err
+		}
+		rt.mu.Lock()
+		rt.Model = modelExec
+		rt.Executor.Model = modelExec
+		rt.mu.Unlock()
+	}
+	return nil
+}

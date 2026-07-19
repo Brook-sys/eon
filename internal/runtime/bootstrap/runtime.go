@@ -507,6 +507,7 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 
 	var result CycleResult
 	cycleStarted := rt.Clock.Now().UTC()
+	_ = rt.reloadModelExecutorIfNeeded(ctx)
 	ctx, span := rt.Telemetry.TraceControl(ctx, "runtime.control_cycle", "control_cycle", string(rt.Opts.MissionID), "")
 	defer func() {
 		outcome := "idle"
