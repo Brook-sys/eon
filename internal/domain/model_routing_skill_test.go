@@ -6,7 +6,7 @@ import (
 )
 
 func TestSelectSkilledModelBinding(t *testing.T) {
-	now := time.Now()
+	now := time.Date(2026, 7, 19, 14, 0, 0, 0, time.UTC)
 
 	limit := ResourceLimit{Resource: "model-binding:test", MaxPerMinute: 10, MaxTokensPerMinute: 1000}
 
@@ -21,33 +21,33 @@ func TestSelectSkilledModelBinding(t *testing.T) {
 
 	profiles := map[string]ModelCapabilityProfile{
 		"weak-fast": {
-			SkillScores: map[string]int{"EXTRACT": 90, "CONFLICT": 10}, 
+			SkillScores:      map[string]int{"EXTRACT": 90, "CONFLICT": 10},
 			SyntaxCompliance: map[string]int{"JSON": 30},
 		},
 		"strong-slow": {
-			SkillScores: map[string]int{"EXTRACT": 85, "CONFLICT": 95}, 
+			SkillScores:      map[string]int{"EXTRACT": 85, "CONFLICT": 95},
 			SyntaxCompliance: map[string]int{"JSON": 100},
 		},
 	}
 
 	tests := []struct {
-		name          string
-		req           RequiredCapability
-		expectedID    string
+		name       string
+		req        RequiredCapability
+		expectedID string
 	}{
 		{
-			name: "Simple EXTRACT prefers fast model because it scored higher (90 vs 85)",
-			req: RequiredCapability{OperationGroup: "EXTRACT"},
+			name:       "Simple EXTRACT prefers fast model because it scored higher (90 vs 85)",
+			req:        RequiredCapability{OperationGroup: "EXTRACT"},
 			expectedID: "weak-fast",
 		},
 		{
-			name: "Complex CONFLICT routes to strong model (95 vs 10)",
-			req: RequiredCapability{OperationGroup: "CONFLICT"},
+			name:       "Complex CONFLICT routes to strong model (95 vs 10)",
+			req:        RequiredCapability{OperationGroup: "CONFLICT"},
 			expectedID: "strong-slow",
 		},
 		{
-			name: "Strict JSON requirement shifts weight to strong model",
-			req: RequiredCapability{OperationGroup: "EXTRACT", Format: "JSON"},
+			name:       "Strict JSON requirement shifts weight to strong model",
+			req:        RequiredCapability{OperationGroup: "EXTRACT", Format: "JSON"},
 			expectedID: "strong-slow",
 		},
 	}
@@ -66,14 +66,14 @@ func TestSelectSkilledModelBinding(t *testing.T) {
 }
 
 func TestSelectSkilledModelBinding_CircuitBreaker(t *testing.T) {
-	now := time.Now()
+	now := time.Date(2026, 7, 19, 14, 0, 0, 0, time.UTC)
 	future := now.Add(1 * time.Minute)
 
 	limit := ResourceLimit{Resource: "model-binding:test", MaxPerMinute: 10, MaxTokensPerMinute: 1000}
 
 	candidates := []ModelRouteCandidate{
 		{
-			Binding: ModelBindingConfig{ID: "strong", ProviderRef: "groq", ModelID: "llama", Enabled: true, ContextTokens: 8000, MaxOutputTokens: 1024, MaxOutputDialect: MaxOutputDialectLegacy, Limit: limit},
+			Binding:      ModelBindingConfig{ID: "strong", ProviderRef: "groq", ModelID: "llama", Enabled: true, ContextTokens: 8000, MaxOutputTokens: 1024, MaxOutputDialect: MaxOutputDialectLegacy, Limit: limit},
 			BindingUsage: ResourceUsage{CircuitOpenUntil: &future}, // OVERLOADED/429!
 		},
 		{
@@ -82,7 +82,7 @@ func TestSelectSkilledModelBinding_CircuitBreaker(t *testing.T) {
 	}
 
 	profiles := map[string]ModelCapabilityProfile{
-		"strong": {SkillScores: map[string]int{"CONFLICT": 100}},
+		"strong":        {SkillScores: map[string]int{"CONFLICT": 100}},
 		"weak-fallback": {SkillScores: map[string]int{"CONFLICT": 40}},
 	}
 

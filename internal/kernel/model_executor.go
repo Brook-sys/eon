@@ -34,9 +34,9 @@ type ModelExecutor struct {
 	IDs   source.IDGenerator
 	// Catalog path: providers are keyed by binding ID because model name, wire
 	// dialect, and context are binding-specific even when transport is shared.
-	Providers    map[string]port.ModelProvider
+	Providers map[string]port.ModelProvider
 	// Tools is the bound capability catalog for this executor
-	Tools tool.Provider
+	Tools        tool.Provider
 	ModelsConfig *domain.ModelsConfig
 	// Legacy direct construction remains supported.
 	Provider             port.ModelProvider
@@ -161,27 +161,8 @@ func (e ModelExecutor) selectAlternateBinding(ctx context.Context, operation dom
 			config.Bindings[i].Enabled = false
 		}
 	}
-	
-	// Try skilled binding first if capability profile is loaded
-	var capabilityProfile *domain.ModelCapabilityProfile
-	if e.MemoryStore != nil {
-		if mem, err := e.MemoryStore.ReadMemory(ctx, "model_capability_profile"); err == nil && mem != nil {
-			if mem.CapabilityProfile != nil {
-				capabilityProfile = mem.CapabilityProfile
-			}
-		}
-	}
-	
-	var binding domain.ModelBindingConfig
-	var decision domain.ModelRouteDecision
-	var err error
-	
-	if capabilityProfile != nil {
-		binding, decision, err = SelectSkilledModelBinding(ctx, e.Store, config, spec, *capabilityProfile, e.Clock.Now().UTC())
-	} else {
-		binding, decision, err = SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
-	}
-	
+
+	binding, decision, err := SelectModelBinding(ctx, e.Store, config, spec.MaxOutputTokens, e.Clock.Now().UTC())
 	if err != nil {
 		return domain.ModelBindingConfig{}, decision, err
 	}
@@ -278,25 +259,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	// The conservative preflight requirement is output capacity; compilation below
 	// validates the full prompt against the selected binding context before a call.
 	if e.ModelsConfig != nil {
-		var capabilityProfile *domain.ModelCapabilityProfile
-		if e.MemoryStore != nil {
-			if mem, profileErr := e.MemoryStore.ReadMemory(ctx, "model_capability_profile"); profileErr == nil && mem != nil {
-				if mem.CapabilityProfile != nil {
-					capabilityProfile = mem.CapabilityProfile
-				}
-			}
-		}
-		
-		var binding domain.ModelBindingConfig
-		var decision domain.ModelRouteDecision
-		var routeErr error
-		
-		if capabilityProfile != nil {
-			binding, decision, routeErr = SelectSkilledModelBinding(ctx, e.Store, *e.ModelsConfig, spec, *capabilityProfile, e.Clock.Now().UTC())
-		} else {
-			binding, decision, routeErr = SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
-		}
-		
+		binding, decision, routeErr := SelectModelBinding(ctx, e.Store, *e.ModelsConfig, spec.MaxOutputTokens, e.Clock.Now().UTC())
 		if routeErr != nil {
 			result.Skipped = true
 			result.SkipReason = "model_route_unavailable"
@@ -607,10 +570,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		var completion port.CompletionResult
 		var callErr error
 		var activeToolProvider port.ModelToolProvider
-			if activeProvider == nil {
-				lastErr = fmt.Errorf("active provider is nil")
-				break
-			}
+		if activeProvider == nil {
+			lastErr = fmt.Errorf("active provider is nil")
+			break
+		}
 		var ok bool
 		if e.Tools != nil && len(e.Tools.Definitions()) > 0 {
 			if activeToolProvider, ok = activeProvider.(port.ModelToolProvider); ok {
@@ -738,11 +701,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			if e.Tools != nil {
 				dispatcher := tool.NewDispatcher(e.Tools)
 				dispatchResults := dispatcher.Dispatch(ctx, completion.ToolCalls)
-				
+
 				// We check for any tool level errors that should be sent back to model
 				var hasToolError bool
 				var toolErrorText string
-				
+
 				for _, res := range dispatchResults {
 					if res.Error != nil {
 						var dErr tool.DispatchError
@@ -756,7 +719,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 						}
 					}
 				}
-				
+
 				if hasToolError {
 					if budget.ModelCallsUsed >= maxCalls {
 						lastErr = fmt.Errorf("tool execution failed and loop exhausted")
@@ -781,23 +744,22 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					compileInput = nextInput
 					continue
 				}
-				
-				// All tools succeeded! 
-				// We need to recompile with tool responses, but our CompletionRequest 
+
+				// All tools succeeded!
+				// We need to recompile with tool responses, but our CompletionRequest
 				// currently doesn't have a History/Messages field since it's "baseline text→text"
 				// For the MVP, we just inject the tool responses as Facts into the next prompt compilation.
-				
-				
+
 				// Increase maxCalls by 1 so the next model loop can actually run
 				// Otherwise budget=1 will immediately fail on tools.
 				maxCalls++
 				spec.Budget.ModelCalls = maxCalls
-				
+
 				if budget.ModelCallsUsed >= maxCalls {
 					lastErr = fmt.Errorf("tool loop budget exhausted")
 					break
 				}
-				
+
 				// Inject the tool responses as facts for the next iteration
 				nextInput := compileInput
 				nextInput.Facts = append([]prompt.Fact(nil), compileInput.Facts...)
@@ -809,7 +771,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 						Priority: 90,
 					})
 				}
-				
+
 				var compileErr error
 				compiled, compileErr = compiler.Compile(spec, nextInput)
 				if compileErr != nil {
@@ -819,7 +781,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				request = compiled.Request
 				request.ResponseFormat = plan.ResponseFormat
 				compileInput = nextInput
-				
+
 				continue
 			} else {
 				// We're delegating tool dispatch upward because no tools are configured.

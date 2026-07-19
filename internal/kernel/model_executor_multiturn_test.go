@@ -39,7 +39,7 @@ func (p *multiTurnToolProvider) Complete(ctx context.Context, req port.Completio
 
 func (p *multiTurnToolProvider) CompleteWithTools(ctx context.Context, req port.CompletionRequest, tools []port.ToolDefinition) (port.CompletionResult, error) {
 	p.calls++
-	
+
 	if p.calls == 1 {
 		// Turn 1: model wants to use the weather tool
 		return port.CompletionResult{
@@ -54,18 +54,18 @@ func (p *multiTurnToolProvider) CompleteWithTools(ctx context.Context, req port.
 		}, nil
 	} else if p.calls == 2 {
 		// Turn 2: model sees weather tool result, wants to use the search tool
-		
+
 		foundWeatherFact := false
 		for _, fact := range req.Prompt {
 			// Facts append to the prompt.
 			_ = fact
 			foundWeatherFact = true
 		}
-		
+
 		if !foundWeatherFact {
 			return port.CompletionResult{}, port.ErrConflict // fake error
 		}
-		
+
 		return port.CompletionResult{
 			Model: "multiturn-fake",
 			ToolCalls: []port.ToolCall{
@@ -80,7 +80,7 @@ func (p *multiTurnToolProvider) CompleteWithTools(ctx context.Context, req port.
 		// Turn 3: model sees both tools, produces a final proposal
 		return port.CompletionResult{
 			Model: "multiturn-fake",
-			Text: `{"changes":[{"type":"add","entity_type":"observation","entity_id":"obs_final","payload_ref":"payload"}]}`,
+			Text:  `{"changes":[{"kind":"ADD","entity_type":"observation","entity_id":"obs_final","payload_ref":"payload"}],"expected_delta":"one observation","validator_ids":["schema"]}`,
 		}, nil
 	}
 }
@@ -89,37 +89,40 @@ type dummyTool struct {
 	def port.ToolDefinition
 	res string
 }
+
 func (d *dummyTool) Definition() port.ToolDefinition { return d.def }
-func (d *dummyTool) Execute(ctx context.Context, args json.RawMessage) (string, error) { return d.res, nil }
+func (d *dummyTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
+	return d.res, nil
+}
 
 func TestModelExecutorMultiTurn(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Date(2026, 7, 19, 14, 0, 0, 0, time.UTC).UTC()
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	
+
 	ctx := context.Background()
 	seedModelAgenda(t, store, now)
-	
+
 	prov := &multiTurnToolProvider{}
 	processor, _ := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
-	
+
 	// Catalog setup
 	weatherDef := port.ToolDefinition{
-		Name: "get_weather",
+		Name:        "get_weather",
 		Description: "Get weather",
-		Parameters: []byte(`{"type":"object","properties":{"location":{"type":"string"}}}`),
+		Parameters:  []byte(`{"type":"object","properties":{"location":{"type":"string"}}}`),
 	}
 	searchDef := port.ToolDefinition{
-		Name: "search_web",
+		Name:        "search_web",
 		Description: "Search web",
-		Parameters: []byte(`{"type":"object","properties":{"query":{"type":"string"}}}`),
+		Parameters:  []byte(`{"type":"object","properties":{"query":{"type":"string"}}}`),
 	}
 	tools, _ := tool.NewCatalog(
 		&dummyTool{def: weatherDef, res: "Sunny, 72F"},
 		&dummyTool{def: searchDef, res: "Hotel A, Hotel B"},
 	)
-	
+
 	e := ModelExecutor{
 		Store:               store,
 		Clock:               clock,
@@ -132,23 +135,26 @@ func TestModelExecutorMultiTurn(t *testing.T) {
 		Providers: map[string]port.ModelProvider{
 			"b1": prov,
 		},
-		Changes:  processor,
+		Changes: processor,
 		Compiler: prompt.Compiler{
-			Estimator:           prompt.ConservativeEstimator{},
+			Estimator:             prompt.ConservativeEstimator{},
 			ProviderContextTokens: 4096,
 		},
 		Tools: tools,
 	}
-	
+
 	res, err := e.Execute(ctx, "operation_model")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	
-	if !res.Done {
-		t.Errorf("expected Done=true, got false")
+
+	if !res.Completed {
+		t.Errorf("expected Completed=true, got result %#v", res)
 	}
-	
+	if res.Done {
+		t.Errorf("expected Done=false because tool calls were handled internally")
+	}
+
 	if res.ModelCalls != 3 {
 		t.Errorf("expected 3 model calls, got %d", res.ModelCalls)
 	}
@@ -159,7 +165,9 @@ type infiniteLoopToolProvider struct {
 }
 
 func (p *infiniteLoopToolProvider) ID() string { return "inf-fake" }
-func (p *infiniteLoopToolProvider) Kind() domain.ProviderKind { return domain.ProviderKindOpenAICompatible }
+func (p *infiniteLoopToolProvider) Kind() domain.ProviderKind {
+	return domain.ProviderKindOpenAICompatible
+}
 func (p *infiniteLoopToolProvider) Profile() domain.ProviderProfile {
 	return domain.ProviderProfile{MaxOutputTokens: 1024, MaxContextTokens: 4096}
 }
@@ -177,24 +185,24 @@ func (p *infiniteLoopToolProvider) CompleteWithTools(ctx context.Context, req po
 }
 
 func TestModelExecutorInfiniteLoopToolPrevention(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Date(2026, 7, 19, 14, 0, 0, 0, time.UTC).UTC()
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	
+
 	ctx := context.Background()
 	seedModelAgenda(t, store, now)
-	
+
 	prov := &infiniteLoopToolProvider{}
 	processor, _ := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
-	
+
 	weatherDef := port.ToolDefinition{
-		Name: "get_weather",
+		Name:        "get_weather",
 		Description: "Get weather",
-		Parameters: []byte(`{"type":"object","properties":{"location":{"type":"string"}}}`),
+		Parameters:  []byte(`{"type":"object","properties":{"location":{"type":"string"}}}`),
 	}
 	tools, _ := tool.NewCatalog(&dummyTool{def: weatherDef, res: "Sunny, 72F"})
-	
+
 	e := ModelExecutor{
 		Store:               store,
 		Clock:               clock,
@@ -207,19 +215,19 @@ func TestModelExecutorInfiniteLoopToolPrevention(t *testing.T) {
 		Providers: map[string]port.ModelProvider{
 			"b2": prov,
 		},
-		Changes:  processor,
+		Changes: processor,
 		Compiler: prompt.Compiler{
-			Estimator:           prompt.ConservativeEstimator{},
+			Estimator:             prompt.ConservativeEstimator{},
 			ProviderContextTokens: 4096,
 		},
 		Tools: tools,
 	}
-	
+
 	res, err := e.Execute(ctx, "operation_model")
 	if err == nil {
 		t.Fatalf("expected error from exhaustion, got nil")
 	}
-	
+
 	if res.Done {
 		t.Errorf("expected Done=false on exhaustion, got true")
 	}
