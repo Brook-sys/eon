@@ -88,7 +88,7 @@ type ModelExecuteResult struct {
 	RawArtifact    domain.ArtifactID
 }
 
-func (e ModelExecutor) validateDeps() error {
+func (e *ModelExecutor) validateDeps() error {
 	if e.Store == nil || e.Clock == nil || e.IDs == nil {
 		return errors.New("model executor dependencies are incomplete")
 	}
@@ -107,7 +107,7 @@ func (e ModelExecutor) validateDeps() error {
 	return nil
 }
 
-func (e ModelExecutor) leaseTTL() time.Duration {
+func (e *ModelExecutor) leaseTTL() time.Duration {
 	if e.LeaseTTL <= 0 {
 		return 15 * time.Minute
 	}
@@ -116,7 +116,7 @@ func (e ModelExecutor) leaseTTL() time.Duration {
 
 // releaseResourcePermit reports ResourceGate success/failure when an authorizer
 // reserved a slot. Best-effort: never overrides the primary Execute error path.
-func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time) {
+func (e *ModelExecutor) releaseResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time) {
 	if e.Authorizer == nil || len(permits) == 0 {
 		return
 	}
@@ -125,7 +125,7 @@ func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation dom
 
 // releaseFailedResourcePermits applies a classified cooldown only to its scope;
 // other composite permits are released as successes so their circuits are not contaminated.
-func (e ModelExecutor) releaseFailedResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, decision domain.ModelBindingFailureDecision, classified bool, retryAfter *time.Time) {
+func (e *ModelExecutor) releaseFailedResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, decision domain.ModelBindingFailureDecision, classified bool, retryAfter *time.Time) {
 	if e.Authorizer == nil {
 		return
 	}
@@ -138,7 +138,7 @@ func (e ModelExecutor) releaseFailedResourcePermits(ctx context.Context, operati
 
 // releaseResourcePermitsWithTokens replaces the conservative acquire estimate
 // with provider-observed input+output tokens on a successful attempt.
-func (e ModelExecutor) releaseResourcePermitsWithTokens(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time, observedTokens int) {
+func (e *ModelExecutor) releaseResourcePermitsWithTokens(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time, observedTokens int) {
 	if e.Authorizer == nil || len(permits) == 0 {
 		return
 	}
@@ -150,7 +150,7 @@ func (e ModelExecutor) releaseResourcePermitsWithTokens(ctx context.Context, ope
 // excluded for this Execute even when its configured circuit threshold has not
 // opened yet; durable provider/binding circuits and configured priority still
 // govern every remaining candidate through SelectModelBinding.
-func (e ModelExecutor) selectAlternateBinding(ctx context.Context, operation domain.Operation, spec domain.OperationSpec, failedBindingID string) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
+func (e *ModelExecutor) selectAlternateBinding(ctx context.Context, operation domain.Operation, spec domain.OperationSpec, failedBindingID string) (domain.ModelBindingConfig, domain.ModelRouteDecision, error) {
 	if e.ModelsConfig == nil {
 		return domain.ModelBindingConfig{}, domain.ModelRouteDecision{}, errors.New("model catalog is not configured")
 	}
@@ -190,7 +190,7 @@ func ModelEligible(spec domain.OperationSpec) bool {
 
 // Execute runs one READY, model-eligible operation. Non-eligible ops are skipped
 // (not errors) so the control loop can try LocalExecutor or wait.
-func (e ModelExecutor) Execute(ctx context.Context, operationID domain.OperationID) (ModelExecuteResult, error) {
+func (e *ModelExecutor) Execute(ctx context.Context, operationID domain.OperationID) (ModelExecuteResult, error) {
 	if err := e.validateDeps(); err != nil {
 		return ModelExecuteResult{}, err
 	}
@@ -1092,7 +1092,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	return result, failErr
 }
 
-func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.OperationSpec, baseCommit domain.CommitID) (prompt.Input, error) {
+func (e *ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.OperationSpec, baseCommit domain.CommitID) (prompt.Input, error) {
 	task := strings.TrimSpace(operation.ExpectedOutput)
 	if task == "" {
 		task = "propose a single ProposedChangeSet JSON object"
@@ -1232,15 +1232,15 @@ func ensureProposalLineage(text string, operation domain.Operation, baseCommit d
 	return string(encoded), nil
 }
 
-func (e ModelExecutor) failRunning(ctx context.Context, operation domain.Operation, leaseRef string, cause error) error {
+func (e *ModelExecutor) failRunning(ctx context.Context, operation domain.Operation, leaseRef string, cause error) error {
 	return e.failWith(ctx, operation.ID, leaseRef, domain.StateRunning, cause)
 }
 
-func (e ModelExecutor) failVerifying(ctx context.Context, operation domain.Operation, leaseRef string, cause error) error {
+func (e *ModelExecutor) failVerifying(ctx context.Context, operation domain.Operation, leaseRef string, cause error) error {
 	return e.failWith(ctx, operation.ID, leaseRef, domain.StateVerifying, cause)
 }
 
-func (e ModelExecutor) failWith(ctx context.Context, operationID domain.OperationID, leaseRef string, expect domain.OperationalState, cause error) error {
+func (e *ModelExecutor) failWith(ctx context.Context, operationID domain.OperationID, leaseRef string, expect domain.OperationalState, cause error) error {
 	failErr := e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operationID)
 		if err != nil {
@@ -1289,7 +1289,7 @@ func (e ModelExecutor) failWith(ctx context.Context, operationID domain.Operatio
 
 // exhaustOperation terminals the operation as EXHAUSTED (FR-MODEL-004 step 8).
 // Used when recovery budget is spent so always-invalid models cannot loop.
-func (e ModelExecutor) exhaustOperation(ctx context.Context, operation domain.Operation, leaseRef string, cause error, decision domain.ModelRecoveryDecision) error {
+func (e *ModelExecutor) exhaustOperation(ctx context.Context, operation domain.Operation, leaseRef string, cause error, decision domain.ModelRecoveryDecision) error {
 	expect := operation.State
 	if expect != domain.StateRunning && expect != domain.StateVerifying {
 		expect = domain.StateVerifying
@@ -1333,7 +1333,7 @@ func (e ModelExecutor) exhaustOperation(ctx context.Context, operation domain.Op
 	return fmt.Errorf("model recovery exhausted: %w", cause)
 }
 
-func (e ModelExecutor) appendRecoveryEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelRecoveryDecision, callsUsed int) error {
+func (e *ModelExecutor) appendRecoveryEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelRecoveryDecision, callsUsed int) error {
 	return e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operation.ID)
 		if err != nil {
@@ -1356,7 +1356,7 @@ func (e ModelExecutor) appendRecoveryEvent(ctx context.Context, operation domain
 
 // resolveProfile returns the configured capability snapshot or a conservative
 // declared baseline derived from the compiler window (never invents tools/JSON).
-func (e ModelExecutor) resolveProfile() domain.ProviderProfile {
+func (e *ModelExecutor) resolveProfile() domain.ProviderProfile {
 	if e.Profile.SchemaVersion == domain.SchemaVersionV1 && strings.TrimSpace(e.Profile.Name) != "" {
 		if err := e.Profile.Validate(); err == nil {
 			return e.Profile
@@ -1370,7 +1370,7 @@ func (e ModelExecutor) resolveProfile() domain.ProviderProfile {
 	return domain.BaselineDeclaredProfile("model-executor", "", domain.MaxOutputDialectLegacy, ctxTokens, now)
 }
 
-func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation domain.Operation, leaseRef string, plan domain.AdaptationPlan, callsUsed int) error {
+func (e *ModelExecutor) appendAdaptationEvent(ctx context.Context, operation domain.Operation, leaseRef string, plan domain.AdaptationPlan, callsUsed int) error {
 	return e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operation.ID)
 		if err != nil {
@@ -1390,7 +1390,7 @@ func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation doma
 	})
 }
 
-func (e ModelExecutor) saveContextPressure(ctx context.Context, bindingID string, state domain.ContextPressureState) error {
+func (e *ModelExecutor) saveContextPressure(ctx context.Context, bindingID string, state domain.ContextPressureState) error {
 	if strings.TrimSpace(bindingID) == "" {
 		return nil
 	}
@@ -1403,7 +1403,7 @@ func (e ModelExecutor) saveContextPressure(ctx context.Context, bindingID string
 	})
 }
 
-func (e ModelExecutor) loadContextPressure(ctx context.Context, bindingID string) (domain.ContextPressureState, error) {
+func (e *ModelExecutor) loadContextPressure(ctx context.Context, bindingID string) (domain.ContextPressureState, error) {
 	var state domain.ContextPressureState
 	err := e.Store.View(ctx, func(r port.Reader) error {
 		persisted, err := r.ModelContextPressure(bindingID)
@@ -1492,7 +1492,7 @@ func safeRateLimitPayload(metadata port.RateLimitMetadata) string {
 	return ";" + strings.Join(fields, ";")
 }
 
-func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int, rateLimit port.RateLimitMetadata) error {
+func (e *ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int, rateLimit port.RateLimitMetadata) error {
 	return e.Store.Update(ctx, func(tx port.Transaction) error {
 		op, err := tx.Operation(operation.ID)
 		if err != nil {
