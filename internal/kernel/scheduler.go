@@ -110,6 +110,8 @@ func (s Scheduler) Step(ctx context.Context, missionRevision domain.MissionRevis
 	}
 	preflightStart := s.Clock.Now().UTC()
 	_ = preflightStart // preflight metrics can be published securely later
+	admissionStart := s.Clock.Now().UTC()
+	_ = admissionStart // admission latency boundary
 	if decision, found, err := s.selectOrResume(ctx, missionRevision); err != nil || found {
 		return decision, err
 	}
