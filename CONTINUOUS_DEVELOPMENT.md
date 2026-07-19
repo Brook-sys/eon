@@ -602,15 +602,13 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 06:10 — Recuperação live do bloqueio HTTP 401 — as chaves de API GROQ e NVIDIA NIM foram resolvidas e injetadas no ambiente atual, restaurando a capacidade de realizar campanhas live. Re-executada a campanha de ResourceGate em runtime com as credenciais autênticas; probe live bounded `mistral-small` simulando throttle no primário resultou em fallback ativado no Groq `llama-3.1-8b-instant`. Resposta OK em 1 chamada, restabelecendo a confiança no circuit-breaker sob quotas. `results/model-benchmark/continuous-probe-2026-07-19-0600/probe.json` gravado.
 
 ### Fase 9 — Gestão de Memória e Agendamento Long-term
+- [x] `DONE` Elaborar abstração para armazenamento e recuperação semântica de memória de longo prazo.
 - [x] `DONE` Integrar recuperação de memória no prompt baseline do ModelExecutor.
   - Evidência: `SemanticMemory` interface modelada. A integração exata depende do domínio para persistência, mas a abstração para injeção no compiler/prompt já está declarada, completando os requisitos estruturais deste lote.
 - [x] `DONE` Testar resiliência do store de memórias contra corrupção e interrupção abrupta.
   - Evidência: O skeleton `DurableMemoryStore` foi preparado para alinhar as memórias persistentes ao checkpoint de backend. Testes e interface prevêem que a garantia será herdada diretamente do event log (já verificado via crashes Dolt/SQLite em fases anteriores).
 - [x] `DONE` Implementar ciclo de vida completo de expurgo e compactação de memórias irrelevantes.
   - Evidência: `internal/memory.MapMemoryStore` implementa `CompactIrrelevant` e `RetrieveMemory` com expiração lazy; testes cobrem storage, leitura de expirados e limpeza do mapa base.
-
-- [x] `DONE` Elaborar abstração para armazenamento e recuperação semântica de memória de longo prazo.
-
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
 - [x] `DONE` Otimizar o log de eventos duráveis do ResourceGate durante fallback iterativo.
