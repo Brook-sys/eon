@@ -641,3 +641,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. As verificações que não exigiam binários externos foram comitadas. Retornando ao repouso.
 2026-07-19 08:00 — Fase 7/verificação de limites em lote — correção em reportModelCompleteBatch permitindo vazamento local de testes curado; contract/domain intactos. DONE
+2026-07-19 08:15 — HEARTBEAT — Um lote de 4 itens (Fase 9) focado em Gestão de Memória e Agendamento Long-term foi iniciado, após a resolução e validação robusta da recuperação/fallback de modelos.
