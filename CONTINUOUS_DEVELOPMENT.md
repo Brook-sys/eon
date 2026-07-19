@@ -371,6 +371,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
 
+2026-07-19 20:20 — Endpoints de leitura/remoção de Semantic Memory — HTTP Control API agora expõe `GET /memories` (com filtro por scope) e `DELETE /memories/{id}`, utilizando `port.MemoryReader` e `port.MemoryWriter`; bootstrap atualizado para injetar as duas portas — verificação: testes de integração da API adicionados, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` — commit `feat(control): add semantic memory retrieve and delete endpoints`.
+
 2026-07-18 07:20 — Gate runtime live — campanha agora usa o `ModelExecutor` real do bootstrap; circuito Groq roteou para NIM Mistral Small 4, 1/1 chamada completada, segunda operação estacionada por quota sem I/O, permits zerados e SQLite reaberto; recorder compartilhado fecha o teto entre bindings — verificação: campanha live, `go test ./...`, `go vet ./...`, `git diff --check` — commit pendente neste ciclo.
 
 2026-07-18 08:20 — Integridade/migração de checkpoint — formato v2 separa payload e valida SHA-256 antes do restore; v0/v1 continuam legíveis e SQLite reescreve v1 como v2 no próximo commit, com política compartilhada pelos adapters Dolt — verificação: testes memory/SQLite/Dolt, suite completa, vet e `git diff --check` — commit pendente neste ciclo.
