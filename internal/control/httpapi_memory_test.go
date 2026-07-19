@@ -27,7 +27,7 @@ func TestSemanticMemoryEndpoints(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	api.SemanticMemoryWriter = store
+	api.SemanticMemory, _ = control.NewSemanticMemory(store, source.NewManualClock(time.Now()), source.NewSequenceIDGenerator(100))
 	api.SemanticMemoryReader = store
 
 	server := httptest.NewServer(api.Handler())

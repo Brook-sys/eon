@@ -1244,7 +1244,7 @@ func TestControlAPISubmitMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("api: %v", err)
 	}
-	api.SemanticMemoryWriter = store
+	api.SemanticMemory, _ = control.NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(100))
 	api.SemanticMemoryReader = store
 	handler := api.Handler()
 

@@ -204,7 +204,15 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	controlAPI.ConfigValidate = configApplier
 	controlAPI.ConfigApply = configApplier
 	controlAPI.ConfigRollback = configApplier
-	controlAPI.SemanticMemoryWriter = store
+	semanticMemory, err := control.NewSemanticMemory(store, clock, ids)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, err
+	}
+	controlAPI.SemanticMemory = semanticMemory
 	controlAPI.SemanticMemoryReader = store
 	if opts.ModelPresetCatalogPath != "" {
 		catalog, loadErr := loadModelPresetCatalog(opts.ModelPresetCatalogPath)

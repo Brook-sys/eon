@@ -371,6 +371,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
 
+2026-07-19 20:42 — Atomicidade e durabilidade de Semantic Memory — escrita/remoção da visão corrente agora compartilham transação com eventos canônicos `memory.stored`/`memory.compacted`, sem expor o valor no audit log; checkpoint passou a incluir memórias e clone transacional deixou de perdê-las em updates não relacionados. Testes cobrem rollback por evento duplicado, delete ausente sem evento e reopen do checkpoint. Probe live bounded NVIDIA NIM `meta/llama-3.1-8b-instruct`: 22 chamadas, 13/22 corretas, 0 provider errors, DELIMITED 7/8 versus JSON 2/8; artefatos em `results/model-benchmark/continuous-probe-2026-07-19-2042-nim/`. Verificação: `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` — commit pendente.
+
 2026-07-19 20:20 — Endpoints de leitura/remoção de Semantic Memory — HTTP Control API agora expõe `GET /memories` (com filtro por scope) e `DELETE /memories/{id}`, utilizando `port.MemoryReader` e `port.MemoryWriter`; bootstrap atualizado para injetar as duas portas — verificação: testes de integração da API adicionados, `go test ./...`, `go vet ./...`, `gofmt`, `git diff --check` — commit `feat(control): add semantic memory retrieve and delete endpoints`.
 
 2026-07-18 07:20 — Gate runtime live — campanha agora usa o `ModelExecutor` real do bootstrap; circuito Groq roteou para NIM Mistral Small 4, 1/1 chamada completada, segunda operação estacionada por quota sem I/O, permits zerados e SQLite reaberto; recorder compartilhado fecha o teto entre bindings — verificação: campanha live, `go test ./...`, `go vet ./...`, `git diff --check` — commit pendente neste ciclo.

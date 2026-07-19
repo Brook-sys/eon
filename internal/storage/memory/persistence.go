@@ -51,6 +51,7 @@ type persistedState struct {
 	Candidates                map[domain.InquiryCandidateID]domain.InquiryCandidate
 	Inquiries                 map[domain.InquiryID]domain.Inquiry
 	Operations                map[domain.OperationID]domain.Operation
+	Memories                  map[string]domain.LongTermMemory
 	Events                    []domain.Event
 	EventIDs                  map[domain.EventID]uint64
 	Idempotency               map[domain.IdempotencyKey]domain.IdempotencyRecord
@@ -105,7 +106,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		DeliveryByTransport:   cloned.deliveryByTransport,
 		QuestionGateDecisions: cloned.questionGateDecisions, GateDecisionByQuestion: cloned.gateDecisionByQuestion,
 		Candidates: cloned.candidates, Inquiries: cloned.inquiries, Operations: cloned.operations,
-		Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
+		Memories: cloned.memories, Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
 		Sources: cloned.sources, SourceVersions: cloned.sourceVersions, SourceSnapshots: cloned.sourceSnapshots,
 		SourceFragments: cloned.sourceFragments, Observations: cloned.observations, Claims: cloned.claims,
 		EvidenceLinks: cloned.evidenceLinks, Artifacts: cloned.artifacts, RawModelOutputs: cloned.rawModelOutputs,
@@ -262,6 +263,7 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	base.candidates = nonNil(p.Candidates, base.candidates)
 	base.inquiries = nonNil(p.Inquiries, base.inquiries)
 	base.operations = nonNil(p.Operations, base.operations)
+	base.memories = nonNil(p.Memories, base.memories)
 	base.events = append([]domain.Event(nil), p.Events...)
 	base.eventIDs = nonNil(p.EventIDs, base.eventIDs)
 	base.idempotency = nonNil(p.Idempotency, base.idempotency)

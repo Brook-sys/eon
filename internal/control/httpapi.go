@@ -93,8 +93,8 @@ type API struct {
 	// read-only evidence-backed inputs; selecting one only creates a disabled
 	// MODELS draft and never changes routing authority directly.
 	ModelPresets *domain.ModelPresetCatalog
-	// SemanticMemory exposing direct retrieval and injection to Operator API
-	SemanticMemoryWriter port.MemoryWriter
+	// SemanticMemory atomically updates the current view and append-only audit log.
+	SemanticMemory       *SemanticMemory
 	SemanticMemoryReader port.MemoryReader
 }
 
@@ -1506,7 +1506,7 @@ type memorySubmitRequest struct {
 }
 
 func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
-	if a.SemanticMemoryWriter == nil {
+	if a.SemanticMemory == nil {
 		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
 		return
 	}
@@ -1529,7 +1529,7 @@ func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
-	if err := a.SemanticMemoryWriter.SaveMemory(mem); err != nil {
+	if err := a.SemanticMemory.SaveMemory(mem); err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
 		return
 	}
@@ -1582,7 +1582,7 @@ func (a *API) handleListMemories(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
-	if a.SemanticMemoryWriter == nil {
+	if a.SemanticMemory == nil {
 		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
 		return
 	}
@@ -1593,9 +1593,13 @@ func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := a.SemanticMemoryWriter.DeleteMemory(domain.MemoryID(id))
+	deleted, err := a.SemanticMemory.DeleteMemory(domain.MemoryID(id), "operator_deleted")
 	if err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "failed to delete memory"})
+		return
+	}
+	if !deleted {
+		writeAPIError(w, apiError{status: http.StatusNotFound, code: "not_found", message: "memory not found"})
 		return
 	}
 

@@ -2365,6 +2365,9 @@ func cloneState(src state) state {
 	for k, v := range src.operations {
 		dst.operations[k] = cloneOperation(v)
 	}
+	for k, v := range src.memories {
+		dst.memories[k] = v
+	}
 	dst.events = append([]domain.Event(nil), src.events...)
 	for k, v := range src.eventIDs {
 		dst.eventIDs[k] = v
