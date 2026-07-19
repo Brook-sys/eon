@@ -548,9 +548,9 @@ func (a *CapabilityAuthorizer) ReportModelCompleteScopedFailure(
 	return a.reportModelCompleteBatch(ctx, operation, permits, func(permit *domain.ResourcePermit) bool {
 		switch scope {
 		case "provider":
-			return !strings.HasPrefix(string(permit.Resource), "model-provider:")
+			return !strings.HasPrefix(string(permit.Resource), "model-provider:") && !strings.HasPrefix(string(permit.Resource), "model:provider:")
 		case "binding":
-			return !strings.HasPrefix(string(permit.Resource), "model-binding:")
+			return !strings.HasPrefix(string(permit.Resource), "model-binding:") && !strings.HasPrefix(string(permit.Resource), "model:binding:")
 		default:
 			return false
 		}
