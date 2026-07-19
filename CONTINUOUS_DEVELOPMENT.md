@@ -603,6 +603,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
+- [x] `DONE` Elaborar endpoint de preview da recarga de MODELS integrando context pressure.
+
 - [x] `DONE` Elaborar contrato de swap e drenagem de chamadas em voo para a recarga atômica de MODELS.
 
 - [x] `DONE` Consolidar métricas de context pressure e limits/usage em uma única projeção por binding.
@@ -619,3 +621,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 \n2026-07-19 03:40 — Safepublish directory identity — Added os.Root-based directory pin to prevent concurrent rename/symlink attacks during backup publish. Verified by executing tests under unix.\n\n2026-07-19 03:45 — Cognitive evaluation hardening — We ran a new 44-call bounded baseline probe with the v2 corpus across fallback configurations. The new dataset incorporates error conditions observed in earlier multi-model attempts, hardening JSON output parsing and quote anchoring against typical regressions.\n
 2026-07-19 06:50 — Correlated metric projection by binding — Confirmed that the `ListModelBindingPostures` API now successfully projects active catalog limits along with durable ResourceGate usage and context pressure into a single view without granting authority. All bindings correctly retain priority ordering, and missing evidence is faithfully reported rather than invented.
 2026-07-19 06:55 — Atomic config reload swap and drainage — Elaborated the swap protocol for ModelExecutor during configuration reloads. A read-write lock protects the active provider bindings map. When a reload happens, the write lock holds while swapping to the newly compiled bindings; concurrently executing leases hold the read lock protecting them from being orphaned, effectively draining flights on the older snapshot until they naturally finish. The implementation guarantees both consistency without process teardown and eventual completion of prior flights.
+2026-07-19 07:05 — Context pressure in enablement preview — The ModelPresetEnablementPreview struct and associated control APIs have been enriched to include the current observed context pressure. This ensures that the operator is aware of any durable context pressure that the binding might inherit upon enablement. Verified via HTTP API tests.

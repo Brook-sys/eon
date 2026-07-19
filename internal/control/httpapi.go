@@ -237,6 +237,14 @@ func (a *API) handlePreviewModelPresetEnablement(w http.ResponseWriter, r *http.
 		active = activeRevision.Models
 	}
 	preview, err := preset.PreviewEnablement(active, strings.TrimSpace(req.Version))
+	if err == nil && a.Events.Store != nil {
+		a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+			if pressure, pressureErr := reader.ModelContextPressure(preset.Binding.ID); pressureErr == nil && preview.ContextSummary != nil {
+				preview.ContextSummary.ObservedPressure = &pressure
+			}
+			return nil
+		})
+	}
 	if err != nil {
 		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
 		return
@@ -281,6 +289,14 @@ func (a *API) handleCreateModelPresetEnableDraft(w http.ResponseWriter, r *http.
 		return
 	}
 	preview, err := preset.PreviewEnablement(active.Models, strings.TrimSpace(req.Version))
+	if err == nil && a.Events.Store != nil {
+		a.Events.Store.View(r.Context(), func(reader port.Reader) error {
+			if pressure, pressureErr := reader.ModelContextPressure(preset.Binding.ID); pressureErr == nil && preview.ContextSummary != nil {
+				preview.ContextSummary.ObservedPressure = &pressure
+			}
+			return nil
+		})
+	}
 	if err != nil {
 		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)})
 		return

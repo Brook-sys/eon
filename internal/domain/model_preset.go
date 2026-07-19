@@ -83,6 +83,7 @@ type ModelPresetContextSummary struct {
 	MaxOutputTokens        int    `json:"max_output_tokens"`
 	MaxOutputDialect       string `json:"max_output_dialect"`
 	ConservativeWindowHint int    `json:"conservative_window_hint"`
+	ObservedPressure       *ModelContextPressure `json:"observed_pressure,omitempty"`
 	Note                   string `json:"note"`
 }
 
