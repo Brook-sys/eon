@@ -9,7 +9,6 @@ import (
 )
 
 func TestExecTool(t *testing.T) {
-	// Test allowed execution
 	t.Run("allowed execution", func(t *testing.T) {
 		tool := exec.NewExecTool(true)
 		res, err := tool.Execute(context.Background(), json.RawMessage(`{"command":["echo","hello"]}`))
@@ -21,7 +20,6 @@ func TestExecTool(t *testing.T) {
 		}
 	})
 
-	// Test execution disabled
 	t.Run("execution disabled", func(t *testing.T) {
 		tool := exec.NewExecTool(false)
 		_, err := tool.Execute(context.Background(), json.RawMessage(`{"command":["echo","hello"]}`))
@@ -30,16 +28,22 @@ func TestExecTool(t *testing.T) {
 		}
 	})
 
-	// Test command execution error (e.g. invalid command)
 	t.Run("invalid command", func(t *testing.T) {
 		tool := exec.NewExecTool(true)
-		res, err := tool.Execute(context.Background(), json.RawMessage(`{"command":["non_existent_command"]}`))
-		// exec.Cmd.Run() returns an error, but the tool captures it in the result string and returns a nil error from the Execute method itself.
+		res, err := tool.Execute(context.Background(), json.RawMessage(`{"command":["non_existent_command_12345"]}`))
 		if err != nil {
-			t.Fatalf("unexpected error returned from Execute, the error should be captured in output: %v", err)
+			t.Fatalf("unexpected error returned from Execute: %v", err)
 		}
 		if !strings.Contains(res, "ERROR:") {
 			t.Errorf("expected ERROR in output for invalid command, got: %s", res)
+		}
+	})
+
+	t.Run("missing arguments", func(t *testing.T) {
+		tool := exec.NewExecTool(true)
+		_, err := tool.Execute(context.Background(), json.RawMessage(`{"command":[]}`))
+		if err == nil || !strings.Contains(err.Error(), "empty command") {
+			t.Errorf("expected empty command error, got: %v", err)
 		}
 	})
 }

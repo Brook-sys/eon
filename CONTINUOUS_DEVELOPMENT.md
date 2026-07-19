@@ -703,3 +703,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 10:47 — HEARTBEAT — Fase 15 implementada com a adição das tools fs (read_file, write_file, list_dir) que possibilitam manipulação do sistema de arquivos e estão injetadas e prontas no kernel via bootstrap.
 
 2026-07-19 14:05 — HEARTBEAT — Adicionada infraestrutura de multi-turn e capability profile para o núcleo autônomo e executada rodada live simulada. Sem ambiente Go ativo para verificação compilada neste heartbeat.
+2026-07-19 14:15 — HEARTBEAT — Adicionada tool exec_command (Fase 16) isolando processo com a flag AllowExec. Ferramenta inserida no bootstrap (kernel dispatcher). A execução pode agora ser desativada via port/policy no options.
