@@ -461,7 +461,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		Profile:               profile,
 		PreferJSON:            true, // PROPOSE_ONLY path expects JSON ChangeSet.
 		PreferExpandedContext: e.PreferExpandedContext,
-		AllowNativeTools:      false, // tools not wired in MVP executor path
+		AllowNativeTools:      e.Tools != nil, // Tools wired natively now
 	})
 	compiler := e.Compiler
 	if plan.ContextTokens > 0 && (compiler.ProviderContextTokens <= 0 || plan.ContextTokens < compiler.ProviderContextTokens) {
@@ -569,6 +569,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		var completion port.CompletionResult
 		var callErr error
 		var activeToolProvider port.ModelToolProvider
+			if activeProvider == nil {
+				lastErr = fmt.Errorf("active provider is nil")
+				break
+			}
 		var ok bool
 		if e.Tools != nil && len(e.Tools.Definitions()) > 0 {
 			if activeToolProvider, ok = activeProvider.(port.ModelToolProvider); ok {
@@ -693,11 +697,102 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 
 		// if this response was a tool request, do NOT advance to VERIFYING or attempt to parse as final text proposal.
 		if len(completion.ToolCalls) > 0 {
-			// We're delegating tool dispatch upward or into a recursive loop.
-			// For now, since Phase 12 dispatch isn't wired fully into the loop flow,
-			// we just return the tool calls up in the result to verify wiring works.
-			result.ToolCalls = completion.ToolCalls
-			result.Done = true
+			if e.Tools != nil {
+				dispatcher := tool.NewDispatcher(e.Tools)
+				dispatchResults := dispatcher.Dispatch(ctx, completion.ToolCalls)
+				
+				// We check for any tool level errors that should be sent back to model
+				var hasToolError bool
+				var toolErrorText string
+				
+				for _, res := range dispatchResults {
+					if res.Error != nil {
+						var dErr tool.DispatchError
+						if errors.As(res.Error, &dErr) && dErr.FallbackPrompt != "" {
+							hasToolError = true
+							toolErrorText += dErr.FallbackPrompt + "\n"
+						} else {
+							// Return generic tool error to model so it knows what failed
+							hasToolError = true
+							toolErrorText += "Tool execution failed: " + res.Error.Error() + "\n"
+						}
+					}
+				}
+				
+				if hasToolError {
+					if budget.ModelCallsUsed >= maxCalls {
+						lastErr = fmt.Errorf("tool execution failed and loop exhausted")
+						break
+					}
+					nextInput := compileInput
+					nextInput.Facts = append([]prompt.Fact(nil), compileInput.Facts...)
+					nextInput.Facts = append(nextInput.Facts, prompt.Fact{
+						ID:       "tool_execution_error",
+						Text:     toolErrorText,
+						Required: true,
+						Priority: 100,
+					})
+					var compileErr error
+					compiled, compileErr = compiler.Compile(spec, nextInput)
+					if compileErr != nil {
+						lastErr = fmt.Errorf("compile fallback prompt: %w", compileErr)
+						break
+					}
+					request = compiled.Request
+					request.ResponseFormat = plan.ResponseFormat
+					compileInput = nextInput
+					continue
+				}
+				
+				// All tools succeeded! 
+				// We need to recompile with tool responses, but our CompletionRequest 
+				// currently doesn't have a History/Messages field since it's "baseline text→text"
+				// For the MVP, we just inject the tool responses as Facts into the next prompt compilation.
+				
+				
+				// Increase maxCalls by 1 so the next model loop can actually run
+				// Otherwise budget=1 will immediately fail on tools.
+				maxCalls++
+				spec.Budget.ModelCalls = maxCalls
+				
+				if budget.ModelCallsUsed >= maxCalls {
+					lastErr = fmt.Errorf("tool loop budget exhausted")
+					break
+				}
+				
+				// Inject the tool responses as facts for the next iteration
+				nextInput := compileInput
+				nextInput.Facts = append([]prompt.Fact(nil), compileInput.Facts...)
+				for _, res := range dispatchResults {
+					nextInput.Facts = append(nextInput.Facts, prompt.Fact{
+						ID:       "tool_result_" + res.CallID,
+						Text:     "Tool returned: " + res.Result,
+						Required: true,
+						Priority: 90,
+					})
+				}
+				
+				var compileErr error
+				compiled, compileErr = compiler.Compile(spec, nextInput)
+				if compileErr != nil {
+					lastErr = fmt.Errorf("compile tool response prompt: %w", compileErr)
+					break
+				}
+				request = compiled.Request
+				request.ResponseFormat = plan.ResponseFormat
+				compileInput = nextInput
+				
+				continue
+			} else {
+				// We're delegating tool dispatch upward because no tools are configured.
+				result.ToolCalls = completion.ToolCalls
+				result.Done = true
+				break
+			}
+		}
+
+		// If we delegated tool dispatch upwards, break out of the loop entirely
+		if result.Done {
 			break
 		}
 
