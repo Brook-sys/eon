@@ -598,3 +598,12 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-18 22:40 — HEARTBEAT — Permanecemos bloqueados pelo mesmo motivo operacional: não há credenciais de API injetadas (Groq/NVIDIA NIM) e o node-inference (Ollama) local reporta que não há nós conectados/anunciando capacidade. O avanço em tarefas como avaliação de recarga atômica de configuração `MODELS` requer uma destas dependências vivas para averiguação objetiva. O heartbeat conclui em repouso forçado sem novas alterações de código.
 
 2026-07-18 23:20 — HEARTBEAT — Desenvolvimento segue bloqueado pela falta de credenciais (Groq/NVIDIA NIM) ou de um nó Ollama disponível. O teste da recarga atômica de configuração de MODELS exige endpoints vivos. Emitindo alerta visível ao usuário solicitando as credenciais ou a conexão de um nó de inferência.
+
+2026-07-19 06:10 — Recuperação live do bloqueio HTTP 401 — as chaves de API GROQ e NVIDIA NIM foram resolvidas e injetadas no ambiente atual, restaurando a capacidade de realizar campanhas live. Re-executada a campanha de ResourceGate em runtime com as credenciais autênticas; probe live bounded `mistral-small` simulando throttle no primário resultou em fallback ativado no Groq `llama-3.1-8b-instant`. Resposta OK em 1 chamada, restabelecendo a confiança no circuit-breaker sob quotas. `results/model-benchmark/continuous-probe-2026-07-19-0600/probe.json` gravado.
+
+### Fase 8 — Runtime live reload & Provider integration maturity
+
+- [ ] `READY` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
+- [ ] `READY` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
+- [ ] `READY` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
+- [ ] `READY` Endurecer identidade de diretório pai/publicação relativa a descritor em backup SQLite (preflight de rename concorrente).

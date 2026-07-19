@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-19",
+  "started_at": "2026-07-19T03:06:09.876774322Z",
+  "completed_at": "2026-07-19T03:06:10.407112524Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-primary",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-fallback",
+  "route_rejected": {
+    "nim-primary": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "observed_input_tokens": 244,
+  "observed_output_tokens": 50,
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-19T03:07:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-fallback",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-19T03:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-19T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-19T03:06:00Z",
+      "token_minute_count": 294,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:nim-primary",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-19T03:07:09.876774322Z",
+      "last_failure_at": "2026-07-19T03:06:09.876774322Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-19T03:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-19T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-19T03:06:00Z",
+      "token_minute_count": 294,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

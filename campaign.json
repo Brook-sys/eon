@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-19",
+  "timeout_seconds": 60,
+  "max_calls": 1,
+  "max_output_tokens": 50,
+  "probe_prompt": "Reply with OK only.",
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-primary",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 0
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-fallback",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    }
+  ]
+}
