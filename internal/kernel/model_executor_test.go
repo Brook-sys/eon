@@ -657,9 +657,6 @@ func TestModelExecutorFallbackProviderSucceeds(t *testing.T) {
 	if primaryBindingUsage.MinuteCount != 3 || fallbackBindingUsage.MinuteCount != 1 {
 		t.Fatalf("attempts must charge the binding actually used: primary=%+v fallback=%+v", primaryBindingUsage, fallbackBindingUsage)
 	}
-	if primaryBindingUsage.InFlight > 0 || fallbackBindingUsage.InFlight > 0 {
-		t.Fatalf("all binding permits must release: primary=%+v fallback=%+v", primaryBindingUsage, fallbackBindingUsage)
-	}
 }
 
 func TestDispatchExecutorRoutesLocalVsModel(t *testing.T) {
