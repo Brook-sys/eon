@@ -615,7 +615,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 ### Fase 11 — Expansão de Tooling nativo e Adapter de Protocolo de Modelo
 - [x] `DONE` Elaborar interface abstrata `ToolProvider` abstraindo o catálogo de ferramentas.
 - [x] `DONE` Implementar Adapter `ModelProvider` com suporte a chamadas de tool (functions).
-- [ ] `READY` Elaborar specs básicas (fixtures) de chamadas de tools de arquivo/pesquisa web.
+- [x] `DONE` Elaborar specs básicas (fixtures) de chamadas de tools de arquivo/pesquisa web.
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
@@ -659,3 +659,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 04:00 — Heartbeat poll — Validação da conclusão da Fase 7. Dashboard HTTP verificado operante, APIs do control plane respondendo e specs cumpridas. Repouso finalizado neste ciclo com os logs de benchmark incorporados.
 2026-07-19 06:21 — HEARTBEAT — Fase 11/Expansão de Tooling nativo e Model Adapter finalizada com suporte a functions/tools. A interface de catálogo `tool.Catalog` e abstrações estritas JSON foram implementadas no kernel, as definições foram projetadas para o port `ModelProvider` na forma do novo `ModelToolProvider`, e o adapter OpenAI foi adaptado para serializar `ToolDefinition` e parsear `ToolCall` em CompletionRequest/Result de modo isolado sem quebrar o formato legível text->text quando functions não estão em uso.
+2026-07-19 06:21 — HEARTBEAT — Adicionados test fixtures detalhados (`fixture_test.go`) em `internal/tool` demonstrando ferramentas genéricas como `web_search` e `read_file` em aderência ao contrato json.RawMessage. O lote 1 da Fase 11 (Expansão de Tooling) foi totalmente concluído.
