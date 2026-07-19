@@ -7,7 +7,8 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-// FallbackPrompt must be used when sending the result back to the model as an instruction.\ntype DispatchError struct {
+// FallbackPrompt must be used when sending the result back to the model as an instruction.
+type DispatchError struct {
 	Err            error
 	FallbackPrompt string
 }

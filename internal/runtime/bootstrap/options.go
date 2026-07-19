@@ -46,6 +46,7 @@ type Options struct {
 	// Observability is optional derived export; zero value keeps it disabled.
 	Observability observability.Config
 	// EnableDashboard mounts the experimental operator UI on the same server.
+	AllowExec bool
 	EnableDashboard bool
 	// ModelPresetCatalogPath optionally exposes an evidence-verified preset
 	// catalog through the Control API/dashboard. Empty disables the catalog.

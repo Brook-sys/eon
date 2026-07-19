@@ -18,6 +18,7 @@ import (
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/tool"
 	"motor-autonomo/internal/tool/fs"
+	internal_exec "motor-autonomo/internal/tool/exec"
 )
 
 // BuildModelExecutor assembles the runtime's optional PROPOSE_ONLY executor.
@@ -102,10 +103,13 @@ func BuildModelExecutor(
 		workspacePath = "/home/node/.openclaw/workspace" // Default fallback
 	}
 	
-	toolCatalog, catalogErr := tool.NewCatalog(
+	execTool := internal_exec.NewExecTool(modelOpts.AllowExec)
+	
+		toolCatalog, catalogErr := tool.NewCatalog(
 		fs.NewReadFileTool(workspacePath),
 		fs.NewWriteFileTool(workspacePath),
 		fs.NewListDirTool(workspacePath),
+			execTool,
 	)
 	if catalogErr != nil {
 		return nil, fmt.Errorf("tool catalog: %w", catalogErr)

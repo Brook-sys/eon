@@ -687,10 +687,10 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 16 — Adaptação Inicial de Execução de Comandos (Shell/Exec)
 
-- [ ] `READY` Elaborar tool `exec_command`: execução de binários via exec em ambiente de shell não interativo, capturando stdout, stderr e código de retorno.
-- [ ] `READY` Implementar validação e segurança em `exec_command` com flag/configuração explícita de `allow_exec` no default workspace options para evitar chamadas de processo por engano.
-- [ ] `READY` Adicionar testes demonstrando isolamento de output longo e retorno de código não nulo ao modelo.
-- [ ] `READY` Registrar a nova tool no provider durante o bootstrap quando ativado na política (opt-in).
+- [x] `DONE` Elaborar tool `exec_command`: execução de binários via exec em ambiente de shell não interativo, capturando stdout, stderr e código de retorno.
+- [x] `DONE` Implementar validação e segurança em `exec_command` com flag/configuração explícita de `allow_exec` no default workspace options para evitar chamadas de processo por engano.
+- [x] `DONE` Adicionar testes demonstrando isolamento de output longo e retorno de código não nulo ao modelo.
+- [x] `DONE` Registrar a nova tool no provider durante o bootstrap quando ativado na política (opt-in).
 
 - [x] `DONE` Adaptador `tool.Adapter`: interface de registro que instancie implementações baseadas no catálogo.
 - [x] `DONE` Elaborar tool `read_file`: leitura de conteúdo de arquivos controlada por jail/chroot.
