@@ -79,6 +79,7 @@ type ModelExecuteResult struct {
 	Exhausted bool
 	Done      bool
 	ToolCalls []port.ToolCall
+	Yielded   bool
 	CommitID  domain.CommitID
 	LeaseRef  string
 	// ModelCalls counts Complete invocations performed in this Execute.
@@ -711,6 +712,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				// We check for any tool level errors that should be sent back to model
 				var hasToolError bool
 				var toolErrorText string
+				var isYielded bool
 
 				for _, res := range dispatchResults {
 					if res.Error != nil {
@@ -724,6 +726,22 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 							toolErrorText += "Tool execution failed: " + res.Error.Error() + "\n"
 						}
 					}
+					// Handle yielded state
+					var yieldCheck map[string]string
+					if res.Error == nil && res.Result != "" {
+						_ = json.Unmarshal([]byte(res.Result), &yieldCheck)
+						if yieldCheck["status"] == "YIELDED" {
+							isYielded = true
+						}
+					}
+				}
+
+				// Support explicit task suspension via YIELDED status
+				if isYielded {
+					return ModelExecuteResult{
+						OperationID: operationID,
+						Yielded:     true,
+					}, nil
 				}
 
 				if hasToolError {
