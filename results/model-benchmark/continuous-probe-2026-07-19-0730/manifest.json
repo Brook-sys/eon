@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-19-429",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v2.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 44,
+  "max_output_tokens": 50,
+  "max_total_output_tokens": 2200,
+  "timeout_seconds": 240,
+  "models": [
+    {
+      "provider": "nim",
+      "binding_id": "nim-primary",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "groq",
+      "binding_id": "groq-fallback",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}
