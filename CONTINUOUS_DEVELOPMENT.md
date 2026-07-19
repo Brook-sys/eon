@@ -633,3 +633,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. O avanço continua bloqueado pela indisponibilidade do toolchain Go () para a compilação local, mas as verificações que não exigiam o binário foram aplicadas com sucesso e comitadas. Retornando ao repouso produtivo.
 
 2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. As verificações que não exigiam binários externos foram comitadas. Retornando ao repouso.
+2026-07-19 08:00 — Fase 7/verificação de limites em lote — correção em reportModelCompleteBatch permitindo vazamento local de testes curado; contract/domain intactos. DONE
