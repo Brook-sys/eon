@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-19-1000-groq",
+  "provider": "groq",
+  "base_url": "https://api.groq.com/openai/v1",
+  "model": "llama-3.1-8b-instant",
+  "api_key_env": "GROQ_API_KEY",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v2.json",
+  "context_tokens": [2048],
+  "formats_per_case": 3,
+  "planned_calls": 22,
+  "max_calls": 22,
+  "max_output_tokens_per_call": 256,
+  "max_total_output_tokens": 5632,
+  "timeout_seconds": 240,
+  "observed_calls": 22,
+  "observed_output_tokens": 1456,
+  "observed_rate_limited": 6,
+  "observed_retry_after_millis": 2000,
+  "verdict": "PARTIAL"
+}
