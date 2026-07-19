@@ -606,6 +606,9 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [x] `DONE` Wire o SemanticMemory real no bootstrap (cmd/runtime/bootstrap.go) integrando ao SQLite.
 - [x] `DONE` Validar injeção do MemoryStore ao ModelExecutor passando as memórias relevantes no prompt.
 - [x] `DONE` Integrar o MemoryStore à Scheduler para influenciar Decisões de Agendamento baseadas em contexto histórico.
+2026-07-19 09:35 — HEARTBEAT — Concluído o endpoint `POST /memories` na Control API, que recebe artefatos de memória e os salva na `SemanticMemory`. O `API` struct foi estendido para incluir a interface `MemoryWriter`, devidamente inicializada pelo bootstrap no `kernel.Scheduler` e instanciada para `control.NewAPI`. Os testes estruturais foram ajustados (`httpapi_test.go`, usando `DefaultReceiptFactory/DispositionFactory` refatorados de mocks diretos) e passam validando toda a interface HTTP/domain. O lote da Fase 9 está integralmente concluído, encerrando a arquitetura base de Memória e Agendamento guiado por dados longitudinais.
+
+### Fase 10 — Runtime Gate & Loop Optimization
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
 - [x] `DONE` Otimizar o log de eventos duráveis do ResourceGate durante fallback iterativo.

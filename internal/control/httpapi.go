@@ -93,6 +93,8 @@ type API struct {
 	// read-only evidence-backed inputs; selecting one only creates a disabled
 	// MODELS draft and never changes routing authority directly.
 	ModelPresets *domain.ModelPresetCatalog
+	// SemanticMemory exposing direct retrieval and injection to Operator API
+	SemanticMemory port.MemoryWriter
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -140,6 +142,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /missions/{missionID}/active", a.handleGetActiveMission)
 	mux.HandleFunc("POST /missions/amendments/preview", a.handlePreviewMissionAmendment)
 	mux.HandleFunc("POST /missions/amendments/accept", a.handleAcceptMissionAmendment)
+	mux.HandleFunc("POST /memories", a.handleSubmitMemory)
 	return mux
 }
 
@@ -1489,4 +1492,43 @@ func decodeStrictJSON(body []byte, dest any) error {
 		return apiError{status: http.StatusBadRequest, code: "invalid_json", message: "request body must contain a single JSON value"}
 	}
 	return nil
+}
+
+type memorySubmitRequest struct {
+	ID         domain.MemoryID    `json:"id"`
+	Key        string             `json:"key"`
+	Scope      domain.MemoryScope `json:"scope"`
+	Value      string             `json:"value"`
+	Expiration time.Time          `json:"expiration,omitempty"`
+}
+
+func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
+	if a.SemanticMemory == nil {
+		writeAPIError(w, apiError{status: http.StatusServiceUnavailable, code: "unavailable", message: "semantic memory unavailable"})
+		return
+	}
+	var req memorySubmitRequest
+	body, err := readLimitedJSON(r)
+	if err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if err := decodeStrictJSON(body, &req); err != nil {
+		writeAPIError(w, err)
+		return
+	}
+	if req.ID == "" || strings.TrimSpace(req.Key) == "" || strings.TrimSpace(req.Value) == "" {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "id, key and value are required"})
+		return
+	}
+	if req.Scope != domain.MemoryScopeMission && req.Scope != domain.MemoryScopeStrategy && req.Scope != domain.MemoryScopeAgent {
+		writeAPIError(w, apiError{status: http.StatusBadRequest, code: "invalid_request", message: "invalid memory scope"})
+		return
+	}
+	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
+	if err := a.SemanticMemory.SaveMemory(mem); err != nil {
+		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
+		return
+	}
+	writeJSON(w, http.StatusCreated, mem)
 }
