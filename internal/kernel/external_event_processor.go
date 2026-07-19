@@ -100,7 +100,7 @@ func (p *ExternalEventProcessor) Process(ctx context.Context, eventID domain.Ext
 			}
 			final = disposition
 			return nil
-		case domain.ExternalUserMessage, domain.ExternalAvailabilitySignal, domain.ExternalAuthorizedSource:
+		case domain.ExternalUserMessage, domain.ExternalAvailabilitySignal, domain.ExternalAuthorizedSource, domain.ExternalSubagentCompletion:
 			resultRef, applyErr := p.applyWake(tx, event, now)
 			if applyErr != nil {
 				if rejectErr := p.finish(tx, &disposition, domain.ExternalEventRejected, now, "", externalFailureCode(applyErr)); rejectErr != nil {
@@ -316,6 +316,8 @@ func wakeEventType(kind domain.ExternalEventKind) string {
 		return "source.available"
 	case domain.ExternalAuthorizedSource:
 		return "authorized.source"
+	case domain.ExternalSubagentCompletion:
+		return "subagent.completion"
 	default:
 		return ""
 	}

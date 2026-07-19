@@ -166,11 +166,12 @@ const (
 	ExternalUserAnswer         ExternalEventKind = "USER_ANSWER"
 	ExternalAuthorizedSource   ExternalEventKind = "AUTHORIZED_SOURCE"
 	ExternalAvailabilitySignal ExternalEventKind = "AVAILABILITY_SIGNAL"
+	ExternalSubagentCompletion ExternalEventKind = "SUBAGENT_COMPLETION"
 )
 
 func (k ExternalEventKind) valid() bool {
 	switch k {
-	case ExternalUserMessage, ExternalUserAnswer, ExternalAuthorizedSource, ExternalAvailabilitySignal:
+	case ExternalUserMessage, ExternalUserAnswer, ExternalAuthorizedSource, ExternalAvailabilitySignal, ExternalSubagentCompletion:
 		return true
 	default:
 		return false
