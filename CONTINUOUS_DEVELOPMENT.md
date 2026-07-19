@@ -725,4 +725,9 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [x] `DONE` Adicionar capability de `sessions_spawn` ao registry (similar a file/web) com budget dedicado, submetido ao ResourceGate e Authority, documentando os limites e a integração multi-turn.
 - [x] `DONE` Atualizar o bootstrap e as opções (`-subagents`) para acionar o `SessionManager` real e as delegators de spawn/yield.
 
+### Fase 18 — Controle de Paralelismo e Famílias de Trabalho de Sub-Agente
+
+- [ ] `READY` Elaborar `kernel.ContinuityFamily` especializada em despachar `SubagentTasks` não terminadas para o SessionManager, gerenciando ciclo de vida e concorrência no nível do motor.
+- [ ] `READY` Proteger `SessionManager` limitando a quantidade de delegators simultâneos por restrições de orçamento/policy.
+
 2026-07-19 17:20 — HEARTBEAT — Fase 17 concluída. Orquestração de sub-agentes com sessions_spawn/yield/SessionManager nativo introduzida no kernel e acoplada via flag -subagents no cmd/runtime. Build compilou sem erros e a pipeline de testes passou na íntegra com isolamento determinístico temporal recuperado.
