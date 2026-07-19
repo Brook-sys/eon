@@ -357,3 +357,11 @@ func AdvanceExternalEventDisposition(current, next ExternalEventDisposition) err
 		return fmt.Errorf("%w: illegal external event disposition transition %s → %s", ErrConflict, current.State, next.State)
 	}
 }
+
+
+type SubagentCompletionPayload struct {
+	SubagentID string `json:"subagent_id"`
+	State      string `json:"state"`
+	Result     string `json:"result,omitempty"`
+	Error      string `json:"error,omitempty"`
+}

@@ -281,3 +281,49 @@ func TestExternalEventProcessorRejectsInvalidAnswerPayload(t *testing.T) {
 		t.Fatalf("divergent reuse error = %v", err)
 	}
 }
+
+func TestExternalEventProcessorWakesSubagentCompletion(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 19, 18, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(20)
+	mission, operation := seedMissionAgenda(t, store, now)
+
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		op, err := tx.Operation(operation.ID)
+		if err != nil {
+			return err
+		}
+		next, err := domain.Transition(domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation}, domain.TransitionInput{
+			Event: domain.EventWaitEvent, EventType: "subagent.completion", Reference: "sub_123",
+		})
+		if err != nil {
+			return err
+		}
+		op.State, op.Reevaluation = next.State, next.Reevaluation
+		return tx.SaveOperation(op)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	inbox, err := control.NewExternalEventInbox(store, control.FixedDispositionFactory(now))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	signal := domain.ExternalEvent{
+		SchemaVersion: domain.SchemaVersionV1, ID: "ext_subagent", DeduplicationKey: "subagent:complete:sub_123",
+		Source: "session_manager", SourceActorID: "sys", Kind: domain.ExternalSubagentCompletion, MissionID: mission.MissionID,
+		CorrelationID: "sub_123",
+		Content: domain.ExternalContent{MediaType: "application/json", Text: "{}"}, ReceivedAt: now,
+	}
+	if _, err := inbox.SubmitExternalEvent(signal); err != nil {
+		t.Fatal(err)
+	}
+
+	processor, _ := kernel.NewExternalEventProcessor(store, clock, ids)
+	applied, ok, err := processor.ProcessNext(context.Background())
+	if !ok || err != nil || applied.State != domain.ExternalEventApplied {
+		t.Fatalf("signal not applied: ok=%v err=%v state=%v", ok, err, applied.State)
+	}
+}
