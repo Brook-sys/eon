@@ -259,6 +259,7 @@ type Reader interface {
 	EventReader
 	IdempotencyReader
 	KnowledgeReader
+	MemoryReader
 }
 
 type Transaction interface {
@@ -274,6 +275,7 @@ type Transaction interface {
 	EventWriter
 	IdempotencyWriter
 	KnowledgeWriter
+	MemoryWriter
 }
 
 // Store provides serializable, rollback-capable local transactions. Callbacks

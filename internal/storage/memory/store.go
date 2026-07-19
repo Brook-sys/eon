@@ -104,6 +104,8 @@ type state struct {
 	proposedChanges           map[domain.ChangeSetID]domain.ProposedChangeSet
 	acceptedChanges           map[domain.ChangeSetID]domain.AcceptedChangeSet
 	receipts                  map[domain.ReceiptID]domain.ValidationReceipt
+	memories                  map[string]domain.LongTermMemory
+
 	commitReceipts            map[domain.ReceiptID]domain.CommitReceipt
 	commits                   map[domain.CommitID]domain.Commit
 	commitByIntent            map[domain.IdempotencyKey]domain.CommitID
@@ -176,6 +178,7 @@ func newState() state {
 		continuityDiagnoses:       make(map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis),
 		configDrafts:              make(map[domain.ConfigDraftID]domain.ConfigDraft),
 		configRevisions:           make(map[domain.ConfigRevisionID]domain.ConfigRevision),
+		memories:                  make(map[string]domain.LongTermMemory),
 		activeConfig:              make(map[domain.ConfigScope]domain.ConfigRevisionID),
 		configApplyReceipts:       make(map[domain.ConfigDraftID]domain.ConfigApplyReceipt),
 		channelCursors:            make(map[string]domain.ChannelCursor),
