@@ -103,7 +103,7 @@ func BuildModelExecutor(
 		workspacePath = "/home/node/.openclaw/workspace" // Default fallback
 	}
 
-	execTool := internal_exec.NewExecTool(opts.AllowExec)
+	execTool := internal_exec.NewExecTool(opts.AllowExec, workspacePath)
 
 	toolCatalog, catalogErr := tool.NewCatalog(
 		fs.NewReadFileTool(workspacePath),
