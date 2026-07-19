@@ -631,3 +631,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 07:30 — ResourceGate durable event optimization — Refactored the ModelExecutor fallback loop and CapabilityAuthorizer to release model permits in batches rather than loop-by-loop. Added `ReportModelCompleteScopedFailure` to persist the composite model fallback outcome using a single store transaction and one durable event log entry. Reduced transaction volume and log spam during HTTP failures. Verified by `TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit` event counts.
 
 2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. O avanço continua bloqueado pela indisponibilidade do toolchain Go () para a compilação local, mas as verificações que não exigiam o binário foram aplicadas com sucesso e comitadas. Retornando ao repouso produtivo.
+
+2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. As verificações que não exigiam binários externos foram comitadas. Retornando ao repouso.
