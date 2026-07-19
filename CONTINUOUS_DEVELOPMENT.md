@@ -665,8 +665,9 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 - [x] `DONE` Elaborar `tool.Dispatcher` no kernel para associar requisições recebidas via adapter aos tools registrados.
 - [x] `DONE` Integrar `tool.Catalog` e `ModelToolProvider` no loop cognitivo do `kernel.Scheduler`.
-- [ ] `READY` Elaborar políticas de validação de schemas de entrada antes do dispatch.
+- [x] `DONE` Elaborar políticas de validação de schemas de entrada antes do dispatch.
 - [x] `DONE` Implementar fallback ou devolução de erros de validação da tool de volta ao modelo (tool_call_id map).
 2026-07-19 06:22 — HEARTBEAT — Adicionado `tool.Dispatcher` para mapear requisições recebidas (calls) para as instâncias de tool contidas no `Provider`, resolvendo roteamento nativo no kernel e lidando com isolamento de falha (miss/exec erro). Lote dispatcher da Fase 12 iniciado.
 2026-07-19 06:23 — HEARTBEAT — O `ModelExecutor` no `kernel` foi atualizado para verificar se a interface abstrata `port.ModelToolProvider` está suportada no provedor corrente para a binding. Caso o adapter a implemente e exista um catálogo bound (propriedade `Tools tool.Provider` e calls `Definitions()`), o dispatch delega com a interface que envia metadata de functions na request. (Lote Dispatch - passo inicial).
 2026-07-19 06:24 — HEARTBEAT — Adicionado suporte ao retorno interceptado de ToolCalls no loop cognitivo do `ModelExecutor`. Em vez de prosseguir para verificação de resposta em texto livre, o framework agora pausa e devolve requests mapeados. Fallbacks estão mapeados para integração subsequente em `executeTools`. Lote 2 da Fase 12 (Dispatch nativo) concluído.
+2026-07-19 09:48 — HEARTBEAT — Adicionada validação de pre-flight JSON no `tool.Dispatcher` e um mecanismo `DispatchError` permitindo envolver erros (como JSON quebrado, miss tool ou fail_validation) e extrair hints (FallbackPrompt) para realimentar o compilador na próxima interação com o modelo dentro de `ModelExecutor`. Testes cobrindo validação, rotas falhas e malformed JSON passaram. Fase 12 concluída.

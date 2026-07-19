@@ -13,9 +13,9 @@ type searchTool struct {}
 
 func (searchTool) Definition() port.ToolDefinition {
 	return port.ToolDefinition{
-		Name: "web_search",
+		Name:        "web_search",
 		Description: "Search the web",
-		Parameters: json.RawMessage(`{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}`),
+		Parameters:  json.RawMessage(`{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}`),
 	}
 }
 
@@ -28,6 +28,8 @@ func (searchTool) Execute(ctx context.Context, payload json.RawMessage) (string,
 	}
 	return "Result for " + args.Query, nil
 }
+
+
 
 type readTool struct {}
 

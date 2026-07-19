@@ -601,6 +601,27 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
+
+			// NEW FALLBACK LOGIC FOR TOOL CALL VALIDATION ERRORS
+			var dispatchErr tool.DispatchError
+			if errors.As(callErr, &dispatchErr) && dispatchErr.FallbackPrompt != "" {
+				// We append the fallback instructions as a required fact so the compiler builds it properly.
+				compileInput.Facts = append(compileInput.Facts, prompt.Fact{
+					ID:       "tool_validation_error",
+					Text:     dispatchErr.FallbackPrompt,
+					Required: true,
+					Priority: 100,
+				})
+				var compileErr error
+				compiled, compileErr = compiler.Compile(spec, compileInput)
+				if compileErr != nil {
+					lastErr = fmt.Errorf("compile fallback prompt: %w", compileErr)
+					break
+				}
+				request = compiled.Request
+				request.ResponseFormat = plan.ResponseFormat
+				continue
+			}
 			// The failure taxonomy's TRY_NEXT_BINDING disposition is operational,
 			// not merely descriptive. When a catalog and call budget permit, route
 			// the next attempt through the normal durable selector, excluding the

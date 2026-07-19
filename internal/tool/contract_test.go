@@ -18,11 +18,42 @@ func (f fakeTool) Execute(context.Context, json.RawMessage) (string, error) {
 	return "ok", nil
 }
 
-func fixture(name string) fakeTool {
+func fixture(name string) tool.Tool {
+	if name == "valid_tool" {
+		return fixtureTool{name: name}
+	}
 	return fakeTool{definition: port.ToolDefinition{
 		Name: name, Description: "fixture " + name,
 		Parameters: json.RawMessage(`{"type":"object","properties":{},"additionalProperties":false}`),
 	}}
+}
+
+type fixtureTool struct {
+	name string
+}
+
+func (f fixtureTool) Definition() port.ToolDefinition {
+	return port.ToolDefinition{
+		Name:        f.name,
+		Description: "A valid tool",
+		Parameters:  json.RawMessage(`{"type":"object"}`),
+	}
+}
+
+func (f fixtureTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
+	var input struct {
+		Arg string `json:"arg"`
+	}
+	if err := json.Unmarshal(args, &input); err != nil {
+		return "", err
+	}
+	if input.Arg == "fail_validation" {
+		return "", tool.DispatchError{
+			Err:            context.Canceled,
+			FallbackPrompt: "The tool returned an error processing your arguments: validation failed. Check parameter constraints.",
+		}
+	}
+	return "ok", nil
 }
 
 func TestCatalogIsValidatedOrderedAndDefensivelyCopied(t *testing.T) {

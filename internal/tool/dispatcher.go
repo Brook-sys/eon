@@ -7,6 +7,19 @@ import (
 	"motor-autonomo/internal/port"
 )
 
+type DispatchError struct {
+	Err            error
+	FallbackPrompt string
+}
+
+func (e DispatchError) Error() string {
+	return e.Err.Error()
+}
+
+func (e DispatchError) Unwrap() error {
+	return e.Err
+}
+
 type DispatchResult struct {
 	CallID string
 	Result string
@@ -30,7 +43,22 @@ func (d *Dispatcher) Dispatch(ctx context.Context, calls []port.ToolCall) []Disp
 	for _, call := range calls {
 		target, ok := d.catalog.Find(call.Name)
 		if !ok {
-			results = append(results, DispatchResult{CallID: call.ID, Error: errors.New("tool not found")})
+			err := DispatchError{
+				Err:            errors.New("tool not found"),
+				FallbackPrompt: "The tool requested ('" + call.Name + "') does not exist in the current catalog. Use only provided tools.",
+			}
+			results = append(results, DispatchResult{CallID: call.ID, Error: err})
+			continue
+		}
+
+		// Pre-flight basic JSON validity check
+		var schema map[string]interface{}
+		if err := json.Unmarshal([]byte(call.Arguments), &schema); err != nil {
+			dispatchErr := DispatchError{
+				Err:            errors.New("invalid JSON arguments"),
+				FallbackPrompt: "The tool call arguments were not valid JSON. Ensure arguments match the expected schema for '" + call.Name + "'.",
+			}
+			results = append(results, DispatchResult{CallID: call.ID, Error: dispatchErr})
 			continue
 		}
 	
