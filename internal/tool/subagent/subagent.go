@@ -43,6 +43,9 @@ func (t *SessionsSpawnTool) Execute(ctx context.Context, args json.RawMessage) (
 	if req.Task == "" {
 		return "", errors.New("task is required")
 	}
+	if req.ContextMode == "" {
+		req.ContextMode = "isolated"
+	}
 
 	spec := kernel.SubagentSpec{
 		Task:        req.Task,

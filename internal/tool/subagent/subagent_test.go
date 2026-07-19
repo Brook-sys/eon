@@ -2,12 +2,12 @@ package subagent_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
-	"strings"
 
-	"motor-autonomo/internal/tool/subagent"
 	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/tool/subagent"
 )
 
 type mockClock struct {
@@ -38,6 +38,16 @@ func TestSessionsSpawnTool_Execute(t *testing.T) {
 	result := string(out)
 	if !strings.Contains(result, `"session_id"`) || !strings.Contains(result, `"PENDING"`) {
 		t.Errorf("unexpected output: %s", result)
+	}
+
+	// Test default context fallback
+	args2 := []byte(`{"task": "Fallback test"}`)
+	out2, err := spawnTool.Execute(ctx, args2)
+	if err != nil {
+		t.Fatalf("unexpected execution error with omitted context: %v", err)
+	}
+	if !strings.Contains(string(out2), `"session_id"`) {
+		t.Errorf("unexpected output for fallback: %s", out2)
 	}
 
 	cap := spawnTool.Capability()

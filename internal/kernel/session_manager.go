@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 )
@@ -60,6 +61,7 @@ type SessionManager interface {
 var (
 	ErrSessionNotFound = errors.New("session not found")
 	ErrSessionLimit    = errors.New("subagent concurrency limit reached")
+	ErrSessionConflict = errors.New("subagent idempotency key conflicts with existing specification")
 )
 
 // localSessionManager is a deterministic in-memory implementation intended for
@@ -118,6 +120,10 @@ func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (Ses
 	// after spawn-but-before-checkpoint returns the original session.
 	if taskID := spec.Labels["task_id"]; taskID != "" {
 		if id, ok := m.byTaskID[taskID]; ok {
+			existing := m.sessions[id]
+			if existing == nil || !subagentSpecsEqual(existing.Spec, spec) {
+				return "", ErrSessionConflict
+			}
 			return id, nil
 		}
 	}
@@ -158,6 +164,10 @@ func (m *localSessionManager) Status(ctx context.Context, id SessionID) (Subagen
 
 func (m *localSessionManager) Wait(ctx context.Context, id SessionID) (SubagentStatus, error) {
 	return m.Status(ctx, id)
+}
+
+func subagentSpecsEqual(a, b SubagentSpec) bool {
+	return a.Task == b.Task && a.ContextMode == b.ContextMode && maps.Equal(a.Labels, b.Labels)
 }
 
 func cloneSubagentSpec(spec SubagentSpec) SubagentSpec {

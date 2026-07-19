@@ -55,12 +55,17 @@ func TestLocalSessionManager_SpawnIdempotencyAndIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id2, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1 duplicate", ContextMode: "isolated", Labels: labels})
+	id2, err := sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1", ContextMode: "isolated", Labels: labels})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if id1 != id2 {
 		t.Errorf("expected idempotent ID return %q, got %q", id1, id2)
+	}
+
+	_, err = sm.Spawn(ctx, kernel.SubagentSpec{Task: "T1 duplicate", ContextMode: "isolated", Labels: labels})
+	if err != kernel.ErrSessionConflict {
+		t.Errorf("expected ErrSessionConflict for mismatching spec, got %v", err)
 	}
 
 	status, _ := sm.Status(ctx, id1)

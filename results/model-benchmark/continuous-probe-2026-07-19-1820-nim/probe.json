@@ -1,0 +1,22 @@
+{
+  "bounded": {
+    "max_calls": 1,
+    "max_tokens": 16,
+    "timeout_seconds": 20
+  },
+  "http_status": 200,
+  "latency_ms": 627,
+  "model": "meta/llama-3.1-8b-instruct",
+  "provider": "nvidia_nim",
+  "response_exact": "PROBE_OK",
+  "schema": "motor-autonomo.continuous-probe.v1",
+  "usage": {
+    "completion_tokens": 4,
+    "prompt_tokens": 40,
+    "prompt_tokens_details": {
+      "audio_tokens": null,
+      "cached_tokens": 32
+    },
+    "total_tokens": 44
+  }
+}

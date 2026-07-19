@@ -732,3 +732,5 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 18:00 — HEARTBEAT — Fase 18 implementada (`kernel.SubagentContinuityFamily` testada, acoplada e com enforcement funcional). Testes verificam o despacho de tasks não terminadas pela policy, com o `SessionManager` parando na barreira local configurada. Probe live executado (Groq/llama-3.1-8b-instant, 335ms PROBE_OK). Nenhum busy loop, repouso mantido. Lote despachado para compilação estrita em `/tmp/go-toolchain/go/bin/go`. Fase 18 completada com sucesso.
 
+
+2026-07-19 18:20 — HEARTBEAT — Adicionada prevenção de duplicatas exatas em localSessionManager.Spawn e default 'isolated' em sessions_spawn tool, corrigindo a API do dispatcher para consistência em testes e chamadas diretas — verificação: `go test`, `go vet`, `gofmt` e `git diff --check` nas áreas afetadas (kernel, subagent tool) — commit imediato.
