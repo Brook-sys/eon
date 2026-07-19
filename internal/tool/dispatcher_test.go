@@ -2,7 +2,6 @@ package tool_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"motor-autonomo/internal/port"
