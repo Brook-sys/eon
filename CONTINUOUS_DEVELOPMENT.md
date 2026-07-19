@@ -603,7 +603,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 8 — Runtime live reload & Provider integration maturity
 
-- [ ] `READY` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
+- [x] `DONE` Integrar reload atômico MODELS no boundary de ciclo via `ConfigScopeModels`.
 - [ ] `READY` Ampliar corpus/regressões com falhas observadas em campanhas cognitivas multi-modelo.
 - [ ] `READY` Caracterizar gate/circuit breaker/fallback diante de 503/429 sem induzir carga intencional.
 - [ ] `READY` Endurecer identidade de diretório pai/publicação relativa a descritor em backup SQLite (preflight de rename concorrente).
