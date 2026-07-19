@@ -21,6 +21,36 @@ type Store struct {
 	state state
 }
 
+func (s *Store) LongTermMemory(key string) (domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return reader{&s.state}.LongTermMemory(key)
+}
+
+func (s *Store) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return reader{&s.state}.ListMemoriesByScope(scope)
+}
+
+func (s *Store) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return reader{&s.state}.ListExpiredMemories(now)
+}
+
+func (s *Store) SaveMemory(mem domain.LongTermMemory) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return transaction{&s.state}.SaveMemory(mem)
+}
+
+func (s *Store) DeleteMemory(id domain.MemoryID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return transaction{&s.state}.DeleteMemory(id)
+}
+
 // SetActiveConfig sets an active config revision directly for testing.
 func (s *Store) SetActiveConfig(ctx context.Context, scope domain.ConfigScope, version string, payload interface{}) error {
 	return s.Update(ctx, func(tx port.Transaction) error {

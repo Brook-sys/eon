@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
 
@@ -213,6 +214,45 @@ func (s *ServerStore) View(ctx context.Context, fn func(port.Reader) error) erro
 		return errors.New("dolt server store is closed")
 	}
 	return s.core.View(ctx, fn)
+}
+
+func (s *ServerStore) LongTermMemory(key string) (domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return domain.LongTermMemory{}, errors.New("store is closed")
+	}
+	return s.core.LongTermMemory(key)
+}
+
+func (s *ServerStore) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return nil, errors.New("store is closed")
+	}
+	return s.core.ListMemoriesByScope(scope)
+}
+
+func (s *ServerStore) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return nil, errors.New("store is closed")
+	}
+	return s.core.ListExpiredMemories(now)
+}
+
+func (s *ServerStore) SaveMemory(mem domain.LongTermMemory) error {
+	return s.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveMemory(mem)
+	})
+}
+
+func (s *ServerStore) DeleteMemory(id domain.MemoryID) error {
+	return s.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.DeleteMemory(id)
+	})
 }
 
 func (s *ServerStore) Update(ctx context.Context, fn func(port.Transaction) error) error {

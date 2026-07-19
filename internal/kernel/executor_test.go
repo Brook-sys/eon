@@ -70,7 +70,7 @@ func TestLocalExecutorCompletesContinuityOperation(t *testing.T) {
 		t.Fatalf("want READY op, got %s", admitted.Operation.State)
 	}
 
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, admitted.Operation.ID)
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -202,7 +202,7 @@ func TestLocalAuditResidualFamilyDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admit: %v", err)
 	}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, admitted.Operation.ID)
 	if err != nil || !result.Completed {
 		t.Fatalf("execute: err=%v result=%+v", err, result)
@@ -250,7 +250,7 @@ func TestLocalExecutorSkipsNonLocalSpec(t *testing.T) {
 	store := memory.New()
 	seedAgenda(t, store, now)
 
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, "operation_a")
 	if err != nil {
 		t.Fatalf("execute: %v", err)
@@ -311,7 +311,7 @@ func TestProcessCyclePathViaSchedulerDispatchAndExecute(t *testing.T) {
 		t.Fatalf("decision = %+v, want DISPATCH %s", decision, admitted.Operation.ID)
 	}
 
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, decision.Operation)
 	if err != nil || !result.Completed {
 		t.Fatalf("execute after dispatch: err=%v result=%+v", err, result)
@@ -378,7 +378,7 @@ func TestLocalArtifactRefreshMarksStaleAgainstHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admit: %v", err)
 	}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, admitted.Operation.ID)
 	if err != nil || !result.Completed {
 		t.Fatalf("execute: err=%v result=%+v", err, result)
@@ -482,7 +482,7 @@ func TestLocalSourceFreshnessAgingFindings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admit: %v", err)
 	}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	result, err := exec.Execute(ctx, admitted.Operation.ID)
 	if err != nil || !result.Completed {
 		t.Fatalf("execute: err=%v result=%+v", err, result)
@@ -613,7 +613,7 @@ func TestLocalIntegrityAndConflictStructuralFindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 
 	admittedI, err := admitter.AdmitOne(ctx, integrityOpp.ID)
 	if err != nil {
@@ -806,7 +806,7 @@ func TestLocalHarnessAndFrontierFamilyEffects(t *testing.T) {
 	}
 
 	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 
 	admittedH, err := admitter.AdmitOne(ctx, "opp_harness_local")
 	if err != nil {
@@ -957,7 +957,7 @@ func TestLocalFrontierManageAppliesHygieneTransitions(t *testing.T) {
 	}
 
 	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	admitted, err := admitter.AdmitOne(ctx, "opp_frontier_hygiene")
 	if err != nil {
 		t.Fatalf("admit: %v", err)
@@ -1116,7 +1116,7 @@ func TestLocalFrontierManageReopensDeferredUnderCapacity(t *testing.T) {
 	}
 
 	admitter := Admitter{Store: store, Clock: clock, IDs: ids, Catalog: DefaultFamilySpecCatalog()}
-	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids}
+	exec := LocalExecutor{Store: store, Clock: clock, IDs: ids, MemoryStore: store}
 	admitted, err := admitter.AdmitOne(ctx, "opp_frontier_reopen")
 	if err != nil {
 		t.Fatalf("admit: %v", err)

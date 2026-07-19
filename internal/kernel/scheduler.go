@@ -49,9 +49,10 @@ type ContinuityStrategy interface {
 }
 
 type Scheduler struct {
-	Store      port.Store
-	Clock      source.Clock
-	Strategies []ContinuityStrategy
+	Store       port.Store
+	MemoryStore port.MemoryReader
+	Clock       source.Clock
+	Strategies  []ContinuityStrategy
 	Registry   *StrategyRegistry
 	Policy     domain.HorizonPolicy
 	// IDs is optional; when set, ContinuityBlocked diagnosis ids are generated with it.

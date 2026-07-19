@@ -46,6 +46,7 @@ type ModelExecutor struct {
 	FallbackProviderKind domain.ProviderKind
 	Changes              *changeset.Processor
 	Compiler             prompt.Compiler
+	MemoryStore          port.MemoryReader
 	// PolicyVersion is stamped on accepted changesets.
 	PolicyVersion string
 	LeaseTTL      time.Duration

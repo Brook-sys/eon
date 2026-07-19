@@ -47,6 +47,7 @@ type LocalExecutor struct {
 	Store    port.Store
 	Clock    source.Clock
 	IDs      source.IDGenerator
+	MemoryStore port.MemoryReader
 	LeaseTTL time.Duration
 }
 

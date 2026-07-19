@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"sync"
 
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -107,6 +109,36 @@ func (s *Store) View(ctx context.Context, fn func(port.Reader) error) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.core.View(ctx, fn)
+}
+
+func (s *Store) LongTermMemory(key string) (domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.core.LongTermMemory(key)
+}
+
+func (s *Store) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.core.ListMemoriesByScope(scope)
+}
+
+func (s *Store) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.core.ListExpiredMemories(now)
+}
+
+func (s *Store) SaveMemory(mem domain.LongTermMemory) error {
+	return s.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveMemory(mem)
+	})
+}
+
+func (s *Store) DeleteMemory(id domain.MemoryID) error {
+	return s.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.DeleteMemory(id)
+	})
 }
 
 // RuntimeVersion returns the SQLite engine version actually loaded by the

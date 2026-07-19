@@ -159,11 +159,12 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 	cooldowns := kernel.NewStrategyCooldownBook()
 	scheduler := kernel.Scheduler{
-		Store:     store,
-		Clock:     clock,
-		Registry:  registry,
-		IDs:       ids,
-		Cooldowns: cooldowns,
+		Store:       store,
+		MemoryStore: store,
+		Clock:       clock,
+		Registry:    registry,
+		IDs:         ids,
+		Cooldowns:   cooldowns,
 	}
 
 	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{

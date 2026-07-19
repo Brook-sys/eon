@@ -37,7 +37,7 @@ func TestSchedulerReportsContinuityBlockedAfterTryingEveryStrategy(t *testing.T)
 			return ContinuityResult{Changed: true}, nil
 		}},
 	}
-	scheduler := Scheduler{Store: store, Clock: clock, Strategies: strategies}
+	scheduler := Scheduler{Store: store, MemoryStore: store, Clock: clock, Strategies: strategies}
 
 	decision, err := scheduler.Step(context.Background(), "revision_1")
 	if err != nil {
@@ -60,7 +60,7 @@ func TestSchedulerDispatchesWorkAdmittedByAnotherContinuityFamily(t *testing.T) 
 	store := memory.New()
 	seedMission(t, store)
 	var fallbackCalled bool
-	scheduler := Scheduler{Store: store, Clock: clock, Strategies: []ContinuityStrategy{
+	scheduler := Scheduler{Store: store, MemoryStore: store, Clock: clock, Strategies: []ContinuityStrategy{
 		continuityStrategy{name: "gap-scan", run: func(context.Context, domain.MissionRevisionID) (ContinuityResult, error) {
 			return ContinuityResult{}, nil
 		}},
@@ -91,7 +91,7 @@ func TestSchedulerResumesDueOperationOnceAndSelectsDeterministically(t *testing.
 	clock := source.NewManualClock(now)
 	store := memory.New()
 	seedAgenda(t, store, now)
-	scheduler := Scheduler{Store: store, Clock: clock}
+	scheduler := Scheduler{Store: store, MemoryStore: store, Clock: clock}
 
 	decision, err := scheduler.Step(context.Background(), "revision_1")
 	if err != nil {
@@ -133,7 +133,7 @@ func TestSchedulerRegistryExpandPersistsDiagnosisOnBlock(t *testing.T) {
 	}}); err != nil {
 		t.Fatal(err)
 	}
-	scheduler := Scheduler{Store: store, Clock: clock, Registry: reg, IDs: source.NewSequenceIDGenerator(1)}
+	scheduler := Scheduler{Store: store, MemoryStore: store, Clock: clock, Registry: reg, IDs: source.NewSequenceIDGenerator(1)}
 	decision, err := scheduler.Step(context.Background(), "revision_1")
 	if err != nil {
 		t.Fatalf("step: %v", err)
@@ -258,7 +258,7 @@ func TestSchedulerPauseBlocksNewDispatchButStillResumesLocalWaits(t *testing.T) 
 	}); err != nil {
 		t.Fatal(err)
 	}
-	scheduler := Scheduler{Store: store, Clock: clock}
+	scheduler := Scheduler{Store: store, MemoryStore: store, Clock: clock}
 	decision, err := scheduler.Step(context.Background(), "revision_1")
 	if err != nil {
 		t.Fatalf("step: %v", err)
