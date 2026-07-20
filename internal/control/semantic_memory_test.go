@@ -23,7 +23,7 @@ func TestSemanticMemoryPersistsViewAndAuditAtomically(t *testing.T) {
 	}
 
 	mem := domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "private value", StoredAt: clock.Now()}
-	if err := service.SaveMemory(context.Background(), mem); err != nil {
+	if err := service.SaveMemory(context.Background(), mem, "operator_local"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -46,7 +46,7 @@ func TestSemanticMemoryPersistsViewAndAuditAtomically(t *testing.T) {
 		t.Fatalf("audit payload must reference metadata without exposing value: %q", events[0].PayloadRef)
 	}
 
-	deleted, err := service.DeleteMemory(context.Background(), mem.ID, "operator_deleted")
+	deleted, err := service.DeleteMemory(context.Background(), mem.ID, "operator_deleted", "operator_local")
 	if err != nil || !deleted {
 		t.Fatalf("delete = %v, err = %v", deleted, err)
 	}
@@ -77,7 +77,7 @@ func TestSemanticMemoryDuplicateEventRollsBackView(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "value", StoredAt: clock.Now()})
+	err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "value", StoredAt: clock.Now()}, "operator_local")
 	if err == nil {
 		t.Fatal("expected duplicate event failure")
 	}
@@ -90,7 +90,7 @@ func TestSemanticMemoryDeleteUnknownDoesNotAppendEvent(t *testing.T) {
 	clock := source.NewManualClock(time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC))
 	store := memory.New()
 	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
-	deleted, err := service.DeleteMemory(context.Background(), "missing", "operator_deleted")
+	deleted, err := service.DeleteMemory(context.Background(), "missing", "operator_deleted", "operator_local")
 	if err != nil || deleted {
 		t.Fatalf("delete = %v, err = %v", deleted, err)
 	}
@@ -113,10 +113,10 @@ func TestSemanticMemoryRejectsIdentityCollisionAndRollsBackDeleteEventFailure(t 
 	store := memory.New()
 	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
 	first := domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "one"}
-	if err := service.SaveMemory(context.Background(), first); err != nil {
+	if err := service.SaveMemory(context.Background(), first, "operator_local"); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-2", Key: first.Key, Scope: first.Scope, Value: "two"}); err == nil {
+	if err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-2", Key: first.Key, Scope: first.Scope, Value: "two"}, "operator_local"); err == nil {
 		t.Fatal("expected key/ID collision rejection")
 	}
 	stored, err := store.LongTermMemory(first.Key)
@@ -125,7 +125,7 @@ func TestSemanticMemoryRejectsIdentityCollisionAndRollsBackDeleteEventFailure(t 
 	}
 
 	duplicateEventService, _ := NewSemanticMemory(store, clock, fixedIDGenerator("event_0000000000000001"))
-	deleted, err := duplicateEventService.DeleteMemory(context.Background(), first.ID, "operator_deleted")
+	deleted, err := duplicateEventService.DeleteMemory(context.Background(), first.ID, "operator_deleted", "operator_local")
 	if err == nil || deleted {
 		t.Fatalf("delete with duplicate event = %v, err=%v", deleted, err)
 	}
@@ -140,7 +140,7 @@ func TestSemanticMemoryHonorsCanceledContext(t *testing.T) {
 	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := service.SaveMemory(ctx, domain.LongTermMemory{ID: "memory-1", Key: "key", Scope: domain.MemoryScopeAgent, Value: "value"}); !errors.Is(err, context.Canceled) {
+	if err := service.SaveMemory(ctx, domain.LongTermMemory{ID: "memory-1", Key: "key", Scope: domain.MemoryScopeAgent, Value: "value"}, "operator_local"); !errors.Is(err, context.Canceled) {
 		t.Fatalf("save error = %v, want context.Canceled", err)
 	}
 	if _, err := store.LongTermMemory("key"); !errors.Is(err, port.ErrNotFound) {
@@ -158,7 +158,7 @@ func TestSemanticMemoryCompactsExpiredInBoundedDeterministicBatches(t *testing.T
 		{ID: "memory-equal", Key: "equal", Scope: domain.MemoryScopeAgent, Value: "v", Expiration: clock.Now().Add(3 * time.Hour)},
 		{ID: "memory-active", Key: "active", Scope: domain.MemoryScopeAgent, Value: "v", Expiration: clock.Now().Add(4 * time.Hour)},
 	} {
-		if err := service.SaveMemory(context.Background(), mem); err != nil {
+		if err := service.SaveMemory(context.Background(), mem, "operator_local"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -220,7 +220,7 @@ func TestSemanticMemoryCompactionRollsBackWholeBatchOnAuditFailure(t *testing.T)
 	seed, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
 	if err := seed.SaveMemory(context.Background(), domain.LongTermMemory{
 		ID: "memory-expired", Key: "expired", Scope: domain.MemoryScopeAgent, Value: "v", Expiration: clock.Now().Add(time.Hour),
-	}); err != nil {
+	}, "operator_local"); err != nil {
 		t.Fatal(err)
 	}
 	if err := clock.Advance(time.Hour); err != nil {

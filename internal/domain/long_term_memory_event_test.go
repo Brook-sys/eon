@@ -20,7 +20,7 @@ func TestMemoryStoredEventBuildsCanonicalEvent(t *testing.T) {
 	if event.Kind != EventMemoryStored || event.OccurredAt != at.UTC() || event.Sequence != 0 {
 		t.Fatalf("unexpected event: %+v", event)
 	}
-	if event.PayloadRef != "memory_id=memory-1;key=mission+context;scope=mission" {
+	if event.PayloadRef != "memory_id=memory-1;key=mission+context;scope=mission;actor=unknown" {
 		t.Fatalf("unexpected payload ref: %q", event.PayloadRef)
 	}
 	if err := event.ValidateForAppend(); err != nil {
@@ -41,7 +41,7 @@ func TestMemoryCompactedEventBuildsCanonicalEvent(t *testing.T) {
 	if event.Kind != EventMemoryCompacted || event.OccurredAt != at {
 		t.Fatalf("unexpected event: %+v", event)
 	}
-	if event.PayloadRef != "memory_id=memory-1;reason=operator+delete" {
+	if event.PayloadRef != "memory_id=memory-1;reason=operator+delete;actor=unknown" {
 		t.Fatalf("unexpected payload ref: %q", event.PayloadRef)
 	}
 }

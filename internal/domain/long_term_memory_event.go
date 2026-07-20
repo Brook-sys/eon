@@ -14,6 +14,7 @@ type MemoryStoredEvent struct {
 	Key      string
 	Scope    MemoryScope
 	At       time.Time
+	Actor    string
 }
 
 func (e MemoryStoredEvent) Event(id EventID) (Event, error) {
@@ -23,13 +24,17 @@ func (e MemoryStoredEvent) Event(id EventID) (Event, error) {
 	if !validMemoryScope(e.Scope) {
 		return Event{}, errors.New("memory stored event has invalid scope")
 	}
+	actor := e.Actor
+	if actor == "" {
+		actor = "unknown"
+	}
 	return Event{
 		SchemaVersion: SchemaVersionV1,
 		ID:            id,
 		Kind:          EventMemoryStored,
 		OccurredAt:    e.At.UTC(),
-		PayloadRef: fmt.Sprintf("memory_id=%s;key=%s;scope=%s",
-			url.QueryEscape(string(e.MemoryID)), url.QueryEscape(e.Key), url.QueryEscape(string(e.Scope))),
+		PayloadRef: fmt.Sprintf("memory_id=%s;key=%s;scope=%s;actor=%s",
+			url.QueryEscape(string(e.MemoryID)), url.QueryEscape(e.Key), url.QueryEscape(string(e.Scope)), url.QueryEscape(actor)),
 	}, nil
 }
 
@@ -39,19 +44,24 @@ type MemoryCompactedEvent struct {
 	MemoryID MemoryID
 	Reason   string
 	At       time.Time
+	Actor    string
 }
 
 func (e MemoryCompactedEvent) Event(id EventID) (Event, error) {
 	if id == "" || e.MemoryID == "" || e.Reason == "" || e.At.IsZero() {
 		return Event{}, errors.New("memory compacted event is incomplete")
 	}
+	actor := e.Actor
+	if actor == "" {
+		actor = "unknown"
+	}
 	return Event{
 		SchemaVersion: SchemaVersionV1,
 		ID:            id,
 		Kind:          EventMemoryCompacted,
 		OccurredAt:    e.At.UTC(),
-		PayloadRef: fmt.Sprintf("memory_id=%s;reason=%s",
-			url.QueryEscape(string(e.MemoryID)), url.QueryEscape(e.Reason)),
+		PayloadRef: fmt.Sprintf("memory_id=%s;reason=%s;actor=%s",
+			url.QueryEscape(string(e.MemoryID)), url.QueryEscape(e.Reason), url.QueryEscape(actor)),
 	}, nil
 }
 

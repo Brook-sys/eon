@@ -43,7 +43,7 @@ func TestDurableStore(t *testing.T, factory DurableFactory) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := service.SaveMemory(context.Background(), memory); err != nil {
+		if err := service.SaveMemory(context.Background(), memory, "operator_local"); err != nil {
 			t.Fatalf("save semantic memory: %v", err)
 		}
 
@@ -72,7 +72,7 @@ func TestDurableStore(t *testing.T, factory DurableFactory) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		deleted, err := service.DeleteMemory(context.Background(), memory.ID, "contract_cleanup")
+		deleted, err := service.DeleteMemory(context.Background(), memory.ID, "contract_cleanup", "operator_local")
 		if err != nil || !deleted {
 			t.Fatalf("delete semantic memory = %v, err=%v", deleted, err)
 		}

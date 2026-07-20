@@ -1529,7 +1529,8 @@ func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
-	if err := a.SemanticMemory.SaveMemory(r.Context(), mem); err != nil {
+	actor := "operator_local" // TODO: extract from request context when auth is wired
+	if err := a.SemanticMemory.SaveMemory(r.Context(), mem, actor); err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
 		return
 	}
@@ -1604,7 +1605,7 @@ func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted, err := a.SemanticMemory.DeleteMemory(r.Context(), domain.MemoryID(id), "operator_deleted")
+	deleted, err := a.SemanticMemory.DeleteMemory(r.Context(), domain.MemoryID(id), "operator_deleted", "operator_local")
 	if err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "failed to delete memory"})
 		return

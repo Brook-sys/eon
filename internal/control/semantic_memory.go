@@ -26,7 +26,7 @@ func NewSemanticMemory(store port.Store, clock source.Clock, ids source.IDGenera
 	return &SemanticMemory{Store: store, Clock: clock, IDs: ids}, nil
 }
 
-func (s *SemanticMemory) SaveMemory(ctx context.Context, memory domain.LongTermMemory) error {
+func (s *SemanticMemory) SaveMemory(ctx context.Context, memory domain.LongTermMemory, actor string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -43,6 +43,7 @@ func (s *SemanticMemory) SaveMemory(ctx context.Context, memory domain.LongTermM
 		Key:      memory.Key,
 		Scope:    memory.Scope,
 		At:       memory.StoredAt,
+		Actor:    actor,
 	}).Event(domain.EventID(eventID))
 	if err != nil {
 		return fmt.Errorf("build memory stored event: %w", err)
@@ -56,7 +57,7 @@ func (s *SemanticMemory) SaveMemory(ctx context.Context, memory domain.LongTermM
 	})
 }
 
-func (s *SemanticMemory) DeleteMemory(ctx context.Context, id domain.MemoryID, reason string) (bool, error) {
+func (s *SemanticMemory) DeleteMemory(ctx context.Context, id domain.MemoryID, reason string, actor string) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
@@ -68,6 +69,7 @@ func (s *SemanticMemory) DeleteMemory(ctx context.Context, id domain.MemoryID, r
 		MemoryID: id,
 		Reason:   reason,
 		At:       s.Clock.Now(),
+		Actor:    actor,
 	}).Event(domain.EventID(eventID))
 	if err != nil {
 		return false, fmt.Errorf("build memory compacted event: %w", err)
@@ -134,6 +136,7 @@ func (s *SemanticMemory) CompactExpired(ctx context.Context, limit int) (int, er
 				MemoryID: memory.ID,
 				Reason:   "expired",
 				At:       now,
+				Actor:    "system",
 			}).Event(domain.EventID(eventID))
 			if err != nil {
 				return fmt.Errorf("build memory compacted event: %w", err)
