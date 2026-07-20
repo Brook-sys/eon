@@ -877,3 +877,8 @@ Adicionar documentação de Fase 23
 - [x] `DONE` Implementar interface para persistência dos peers dinâmicos, para que desconexões não forcem reconexão do zero no mDNS.
 
 2026-07-20 08:05 — HEARTBEAT — Fase 28 (Kademlia/Mesh e DHT Local Routing) iniciada: projetada a routing table estrita, que evita unbounded growth por K-buckets para nós conectados, suportando limitação segura em `internal/network/dht.LocalRoutingTable`. Além do limite dinâmico de conexões/endereçamentos de peers, modelamos o contrato de recuperação em caso de desconexão (`PeerPersistenceContract`), com implementação atômica baseada em fail-closed FileStore JSON. Isso resolve a limitação da rede subagentes ter que refazer todo o mDNS handshake após um bounce do sistema local e prepara o terreno para mesh lookup distribuída. Validação técnica `go test ./internal/network/dht` e `go vet` passaram perfeitamente. Ausência de tooling cognitivo não inviabiliza commits desta natureza; probe não repetida pois a regressão de credenciais confirmada nas Fases 25-27 continua impeditiva (a experimentação live em heartbeats subsequentes foi registrada em log anterior). Commit: `fase28-kbucket-dht`.
+
+### Fase 29 — Subagent Runtime Context Syncing (P2P State Push/Pull)
+
+- [ ] `READY` Ligar `sync.Service.PullOnce` ao ciclo do daemon P2P usando uma goroutine baseada em ticker para push/pull persistente (P2P Mesh Tick).
+- [ ] `READY` Tratar conflitos de `PeerSyncCursor` sob a nova regra de "event-driven recovery" implementada no router mTLS.
