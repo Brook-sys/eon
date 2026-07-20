@@ -45,6 +45,12 @@ type Options struct {
 	MaxInboxBatch int
 	// MemoryCompactionBatch caps expired semantic memories removed per cycle.
 	MemoryCompactionBatch int
+	// PeerBindAddr enables the P2P RPC listener when not empty.
+	PeerBindAddr string
+	// PeerCert/PeerKey/PeerCACert are required when PeerBindAddr is set.
+	PeerCert   string
+	PeerKey    string
+	PeerCACert string
 	// Observability is optional derived export; zero value keeps it disabled.
 	Observability observability.Config
 	// EnableDashboard mounts the experimental operator UI on the same server.
@@ -279,6 +285,11 @@ func (o *Options) Validate() error {
 	}
 	if o.MemoryCompactionBatch > 256 {
 		return errors.New("memory compaction batch is capped at 256")
+	}
+	if o.PeerBindAddr != "" {
+		if o.PeerCert == "" || o.PeerKey == "" || o.PeerCACert == "" {
+			return errors.New("peer binding requires cert, key, and ca-cert options")
+		}
 	}
 	if err := o.Observability.Validate(); err != nil {
 		return err

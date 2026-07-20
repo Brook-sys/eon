@@ -22,6 +22,8 @@ import (
 	"motor-autonomo/internal/inspect"
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/mission"
+	"motor-autonomo/internal/network"
+	"motor-autonomo/internal/network/http"
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
@@ -59,6 +61,7 @@ type Runtime struct {
 	Web *kernel.WebExecutor
 	// File is optional; nil keeps file-eligible ops skipped as requires_file.
 	File      *kernel.FileExecutor
+	Peer      *kernel.PeerTransport
 	Registry  *kernel.StrategyRegistry
 	Cooldowns *kernel.StrategyCooldownBook
 
@@ -75,9 +78,10 @@ type Runtime struct {
 	Telemetry      *observability.Runtime
 	cycleTelemetry *observability.CycleInstruments
 
-	logger *log.Logger
-	mu     sync.Mutex
-	server *http.Server
+	logger     *log.Logger
+	mu         sync.Mutex
+	server     *http.Server
+	peerServer *http.Server
 }
 
 // Open assembles dependencies. It does not start the HTTP server or loop.
@@ -314,6 +318,16 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	if modelExec != nil {
 		projector.SetModelProvider(modelExec.Provider)
 	}
+
+	peerTransport, err := buildPeerTransport(opts)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, fmt.Errorf("peer transport: %w", err)
+	}
+
 	return &Runtime{
 		Opts:             opts,
 		Store:            store,
@@ -339,6 +353,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Model:           modelExec,
 		Web:             webExec,
 		File:            fileExec,
+		Peer:            peerTransport,
 		Registry:        registry,
 		Cooldowns:       cooldowns,
 		Inspect:         inspectAPI,
@@ -461,11 +476,20 @@ func (rt *Runtime) Close(ctx context.Context) error {
 	var first error
 	rt.mu.Lock()
 	srv := rt.server
+	peerSrv := rt.peerServer
 	rt.server = nil
+	rt.peerServer = nil
 	rt.mu.Unlock()
 	if srv != nil {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		if err := srv.Shutdown(shutdownCtx); err != nil && first == nil {
+			first = err
+		}
+		cancel()
+	}
+	if peerSrv != nil {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		if err := peerSrv.Shutdown(shutdownCtx); err != nil && first == nil {
 			first = err
 		}
 		cancel()
@@ -748,11 +772,40 @@ func (rt *Runtime) RunHTTP(ctx context.Context) error {
 			return ctx
 		},
 	}
+	var peerSrv *http.Server
+	if rt.Peer != nil && rt.Opts.PeerBindAddr != "" {
+		handler, err := peerhttp.NewServerHandler(rt.Peer.Caller)
+		if err != nil {
+			return fmt.Errorf("peer server handler: %w", err)
+		}
+		cfg := network.PeerConfig{
+			NodeCert: rt.Opts.PeerCert,
+			NodeKey:  rt.Opts.PeerKey,
+			CACert:   rt.Opts.PeerCACert,
+		}
+		tlsConfig, err := network.LoadMTLSConfig(cfg)
+		if err != nil {
+			return fmt.Errorf("peer server tls: %w", err)
+		}
+		peerSrv = &http.Server{
+			Addr:              rt.Opts.PeerBindAddr,
+			Handler:           handler,
+			TLSConfig:         tlsConfig,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			BaseContext: func(net.Listener) context.Context {
+				return ctx
+			},
+		}
+	}
+
 	rt.mu.Lock()
 	rt.server = srv
+	rt.peerServer = peerSrv
 	rt.mu.Unlock()
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 	go func() {
 		rt.logger.Printf("runtime listening on http://%s (store=%s dashboard=%v otel=%v)",
 			rt.Opts.ListenAddr, rt.Opts.StoreBackend, rt.Opts.EnableDashboard, rt.Telemetry.Enabled())
@@ -763,13 +816,28 @@ func (rt *Runtime) RunHTTP(ctx context.Context) error {
 		errCh <- nil
 	}()
 
+	if peerSrv != nil {
+		go func() {
+			rt.logger.Printf("peer rpc listening on mTLS https://%s", rt.Opts.PeerBindAddr)
+			if err := peerSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errCh <- err
+				return
+			}
+			errCh <- nil
+		}()
+	}
+
 	select {
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
-		return <-errCh
+		if peerSrv != nil {
+			_ = peerSrv.Shutdown(shutdownCtx)
+		}
+		return nil // Graceful stop, ignore listener return channel
 	case err := <-errCh:
+		// If either listener fails eagerly, return immediately.
 		return err
 	}
 }
