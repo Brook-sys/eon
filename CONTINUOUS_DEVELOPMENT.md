@@ -798,3 +798,10 @@ Proximo: integrar o listener P2P diretamente ao ciclo principal do runtime via i
 2026-07-20 01:00 — HEARTBEAT — Fase 22: Framing atualizado para DNS-SD/TXT. O adapter P2P/mDNS agora utiliza a biblioteca miekg/dns emitindo e validando registros PTR (_openclaw._tcp.local.), SRV (resolvendo a porta dinamicamente) e TXT (fingerprint v=openclaw-p2p-1 e id=<node_id>). Substituiu os pacotes custom string NODE: por binario oficial mDNS limitados, mantendo autorizacao estrita. Testes de integracao cross-peers usam loopback raw udp socket injetado nos listener goroutines com DNS unpacking em vez de raw casting. Verificacao: go mod tidy, suite go test ./internal/network/mdns passaram em 606ms com Go 1.26.5. Probe tool bloqueado por falta de export credential para o Groq (visto no ciclo anterior). Proximo passo: wiring P2P completo injetando o start/stop beacon atrelado ao P2PManager e inicializacao (opt-in) atraves do config.
 
 2026-07-20 01:05 — HEARTBEAT — Fase 22/Bootstrap: P2P Manager e o novo beacon mDNS atrelados no wiring e nas flags do daemon do motor autonomo. Adicionadas ao cmd/runtime as flags opt-in -p2p, -p2p-bind e -p2p-mdns. O subsistema da rede (Manager+Beacon) arranca se acionado atraves de bootstrap.NetworkOptions. Start/Stop do beacon fluem atraves do runtime com idempotencia. Verificacao: go build ./cmd/runtime executou com sucesso (Go 1.26.5). Probe Tool permaneceu bloqueado por API_KEY de credencial (ja reportado no ciclo anterior). A fase 22 de P2P esta completa e integrada.
+
+### Fase 23 — Delegação Cognitiva P2P (Distributed Evaluation)
+
+- [ ] `TODO` Atualizar o scheduler ou a infra de evaluation para suportar roteamento explícito para o RemoteTool se um teste assim solicitar (usar mock ou tool configuration payload).
+- [ ] `TODO` Elaborar e rodar uma campanha que prova uma chamada local originando um tool call que é completado transparentemente via RemoteTool em um stub externo.
+- [ ] `TODO` Auditar se a resposta de tooling remota segue o contrato the size limits (1MiB / 2MiB json).
+
