@@ -6,11 +6,13 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"motor-autonomo/internal/domain"
 	peerhttp "motor-autonomo/internal/network/http"
+	"motor-autonomo/internal/network/mdns"
 )
 
 // Options define as flags e politicas para o subsistema de rede P2P.
@@ -24,6 +26,7 @@ type Options struct {
 	TLSKeyFile  string
 	// MDNSEnabled habilita o beacon mDNS.
 	MDNSEnabled bool
+	NodeID      string
 }
 
 // P2PManager agrupa os recursos do subsistema de rede que precisam de start/stop.
@@ -31,6 +34,7 @@ type P2PManager struct {
 	Router     *Router
 	Registry   *StaticRegistry
 	httpServer *http.Server
+	beacon     *mdns.Beacon
 	listenAddr string
 	logger     *slog.Logger
 	mu         sync.Mutex
@@ -80,10 +84,37 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	var beacon *mdns.Beacon
+	if opts.MDNSEnabled {
+		if opts.NodeID == "" {
+			opts.NodeID = "node-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+		}
+		// Extract port from BindAddr if possible
+		portNum := 8443
+		_, pStr, err := net.SplitHostPort(opts.BindAddr)
+		if err == nil {
+			p, _ := strconv.Atoi(pStr)
+			if p > 0 {
+				portNum = p
+			}
+		}
+
+		mdnsCfg := mdns.MDNSConfig{
+			NodeID:            opts.NodeID,
+			Port:              portNum,
+			AdvertiseInterval: 30 * time.Second,
+		}
+		beacon, err = mdns.NewBeacon(mdnsCfg, registry)
+		if err != nil {
+			return nil, fmt.Errorf("create mdns beacon: %w", err)
+		}
+	}
+
 	return &P2PManager{
 		Router:     router,
 		Registry:   registry,
 		httpServer: srv,
+		beacon:     beacon,
 		listenAddr: opts.BindAddr,
 		logger:     logger,
 	}, nil
@@ -104,6 +135,15 @@ func (m *P2PManager) Start(ctx context.Context) error {
 	}
 
 	m.logger.InfoContext(ctx, "starting P2P server", slog.String("addr", ln.Addr().String()))
+
+	if m.beacon != nil {
+		if err := m.beacon.Start(ctx); err != nil {
+			ln.Close()
+			return fmt.Errorf("start mdns beacon: %w", err)
+		}
+		m.logger.InfoContext(ctx, "started mDNS beacon")
+	}
+
 	m.running = true
 	go func() {
 		if err := m.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
@@ -119,6 +159,10 @@ func (m *P2PManager) Stop(ctx context.Context) error {
 	defer m.mu.Unlock()
 	if !m.running {
 		return nil
+	}
+
+	if m.beacon != nil {
+		m.beacon.Stop()
 	}
 
 	err := m.httpServer.Shutdown(ctx)

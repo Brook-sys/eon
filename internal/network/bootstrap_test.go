@@ -45,3 +45,26 @@ func TestP2PManagerLifecycle(t *testing.T) {
 		t.Fatalf("idempotent Stop: %v", err)
 	}
 }
+
+func TestP2PManagerLifecycle_WithMDNS(t *testing.T) {
+	manager, err := NewP2PManager(Options{
+		Enabled:     true,
+		BindAddr:    "127.0.0.1:0",
+		MDNSEnabled: true,
+		NodeID:      "test-node-1",
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	if err != nil {
+		t.Fatalf("NewP2PManager: %v", err)
+	}
+	if manager.beacon == nil {
+		t.Fatal("beacon should be initialized when MDNSEnabled is true")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	// Multicast may fail on CI so we ignore error during start/stop in this simple config check
+	_ = manager.Start(ctx)
+	_ = manager.Stop(ctx)
+}
