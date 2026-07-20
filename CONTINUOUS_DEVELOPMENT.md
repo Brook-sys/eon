@@ -759,7 +759,7 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 ### Fase 21 — Conexões P2P e Autenticação de Rede de Subagentes
 
-- [ ] `READY`  Elaborar TLS e mTLS configuration baseline para comunicação de peers.
+- [x] `DONE` Elaborar TLS e mTLS configuration baseline para comunicação de peers.
 - [ ] `READY`  Modelar contrato de registro de subagentes / discovery na rede (Gossip/Kademlia baseline ou Registry estático inicial).
 - [ ] `READY`  Rascunhar port.Network interface no kernel.
 
