@@ -59,25 +59,24 @@ func TestBeacon_ValidateAndRegister(t *testing.T) {
 	config := MDNSConfig{
 		NodeID:           "test-node",
 		AllowedPKIHashes: []string{"authorized-peer"},
+		Port:             8080,
 	}
 
 	beacon, _ := NewBeacon(config, registry)
 
 	ctx := context.Background()
 
-	// Should not register unauthorized peer
-	beacon.validateAndRegister(ctx, "unauthorized-peer", "10.0.0.1:8080")
+	beacon.validateAndRegister(ctx, "unauthorized-peer", "10.0.0.1:8080", 8080)
 	if len(registry.peers) != 0 {
 		t.Fatalf("expected 0 peers, got %d", len(registry.peers))
 	}
 
-	// Should register authorized peer
-	beacon.validateAndRegister(ctx, "authorized-peer", "10.0.0.2:8080")
+	beacon.validateAndRegister(ctx, "authorized-peer", "10.0.0.2:8081", 8081)
 	if len(registry.peers) != 1 {
 		t.Fatalf("expected 1 peer, got %d", len(registry.peers))
 	}
 
-	if p := registry.peers["authorized-peer"]; p.Address.Host != "10.0.0.2" || p.Address.Port != 8080 {
-		t.Fatalf("expected address 10.0.0.2:8080, got %s:%d", p.Address.Host, p.Address.Port)
+	if p := registry.peers["authorized-peer"]; p.Address.Host != "10.0.0.2" || p.Address.Port != 8081 {
+		t.Fatalf("expected address 10.0.0.2:8081, got %s:%d", p.Address.Host, p.Address.Port)
 	}
 }

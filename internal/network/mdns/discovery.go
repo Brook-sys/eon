@@ -24,16 +24,15 @@ const (
 	maxPayloadSize          = 9000
 )
 
-// MDNSConfig holds configuration for mDNS discovery.
 type MDNSConfig struct {
 	BindAddress       string
 	MulticastAddress  string
 	NodeID            string
-	AllowedPKIHashes  []string // Hashes of authorized public keys
+	AllowedPKIHashes  []string
 	AdvertiseInterval time.Duration
+	Port              int
 }
 
-// Beacon manages the lifecycle of the mDNS advertiser and listener.
 type Beacon struct {
 	config   MDNSConfig
 	registry port.PeerRegistry
@@ -43,7 +42,6 @@ type Beacon struct {
 	running bool
 }
 
-// NewBeacon initializes a new mDNS beacon.
 func NewBeacon(config MDNSConfig, registry port.PeerRegistry) (*Beacon, error) {
 	if config.NodeID == "" || registry == nil {
 		return nil, ErrInvalidConfig
@@ -54,14 +52,12 @@ func NewBeacon(config MDNSConfig, registry port.PeerRegistry) (*Beacon, error) {
 	if config.AdvertiseInterval == 0 {
 		config.AdvertiseInterval = 30 * time.Second
 	}
-
 	return &Beacon{
 		config:   config,
 		registry: registry,
 	}, nil
 }
 
-// Start begins advertising the local node and discovering peers.
 func (b *Beacon) Start(ctx context.Context) error {
 	b.mu.Lock()
 	if b.running {
@@ -91,7 +87,6 @@ func (b *Beacon) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop halts the mDNS beacon.
 func (b *Beacon) Stop() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -110,9 +105,8 @@ func (b *Beacon) advertise(ctx context.Context) {
 	ticker := time.NewTicker(b.config.AdvertiseInterval)
 	defer ticker.Stop()
 
-	payload := []byte(fmt.Sprintf("NODE:%s", b.config.NodeID))
+	payload := []byte(fmt.Sprintf("NODE:%s:%d", b.config.NodeID, b.config.Port))
 
-	// Initial advertise
 	b.sendAdvertisement(payload)
 
 	for {
@@ -168,15 +162,25 @@ func (b *Beacon) listen(ctx context.Context) {
 
 		msg := string(buf[:n])
 		if strings.HasPrefix(msg, "NODE:") {
-			peerID := strings.TrimPrefix(msg, "NODE:")
-			if peerID != b.config.NodeID {
-				b.validateAndRegister(ctx, peerID, src.String())
+			parts := strings.Split(msg, ":")
+			if len(parts) >= 2 {
+				peerID := parts[1]
+				portNum := b.config.Port
+				if len(parts) >= 3 {
+					p, err := strconv.Atoi(parts[2])
+					if err == nil {
+						portNum = p
+					}
+				}
+				if peerID != b.config.NodeID {
+					b.validateAndRegister(ctx, peerID, src.String(), portNum)
+				}
 			}
 		}
 	}
 }
 
-func (b *Beacon) validateAndRegister(ctx context.Context, peerID, addrStr string) {
+func (b *Beacon) validateAndRegister(ctx context.Context, peerID, addrStr string, portNum int) {
 	authorized := false
 	if len(b.config.AllowedPKIHashes) == 0 {
 		authorized = true
@@ -193,12 +197,10 @@ func (b *Beacon) validateAndRegister(ctx context.Context, peerID, addrStr string
 		return
 	}
 
-	host, portStr, err := net.SplitHostPort(addrStr)
+	host, _, err := net.SplitHostPort(addrStr)
 	if err != nil {
 		host = addrStr
-		portStr = "0"
 	}
-	portNum, _ := strconv.Atoi(portStr)
 
 	record := domain.PeerRecord{
 		Identity: domain.NodeIdentity{ID: peerID},
