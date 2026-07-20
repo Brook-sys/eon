@@ -3,6 +3,7 @@ package peersync
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,12 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
 )
+
+type peerCallerFunc func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
+
+func (f peerCallerFunc) Call(ctx context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+	return f(ctx, request)
+}
 
 func TestServiceStoresBatchAdvancesCursorAndDeduplicates(t *testing.T) {
 	store := memory.New()
@@ -109,6 +116,91 @@ func TestServicePullReadsBoundedLocalEvents(t *testing.T) {
 	}
 	if response.Kind != domain.PeerSyncEventBatch || len(response.Events) != domain.MaxPeerSyncEvents || response.NextSequence != domain.MaxPeerSyncEvents {
 		t.Fatalf("unexpected batch: kind=%s events=%d next=%d", response.Kind, len(response.Events), response.NextSequence)
+	}
+}
+
+func TestPullOnceCommitsBeforeAckAndRecoversAfterCrash(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(100, 0).UTC()
+	localStore := memory.New()
+	remoteStore := memory.New()
+	if err := remoteStore.Update(ctx, func(tx port.Transaction) error {
+		for i := uint64(1); i <= 2; i++ {
+			event := syncServiceEvent(fmt.Sprintf("remote-%d", i), 0)
+			if _, err := tx.AppendEvent(event); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	local, _ := NewService(localStore, func() time.Time { return now })
+	remote, _ := NewService(remoteStore, func() time.Time { return now })
+	caller := peerCallerFunc(func(ctx context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		message, err := Decode(request.Payload)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+		response, err := remote.Handle(ctx, "local", "remote", message)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+		payload, err := Encode(response)
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, err
+	})
+	crash := errors.New("simulated crash")
+	if _, err := local.PullOnce(ctx, caller, "remote", "local", "events", func(point PullCheckpoint) error {
+		if point == PullAfterCommit {
+			return crash
+		}
+		return nil
+	}); !errors.Is(err, crash) {
+		t.Fatalf("crash error = %v", err)
+	}
+	if err := localStore.View(ctx, func(reader port.Reader) error {
+		cursor, err := reader.PeerSyncCursor("remote", "remote", "events", domain.PeerSyncInbound)
+		if err != nil || cursor.NextSequence != 2 {
+			t.Fatalf("durable cursor after crash = %+v, err=%v", cursor, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := local.PullOnce(ctx, caller, "remote", "local", "events", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Events != 0 || result.NextSequence != 2 {
+		t.Fatalf("restart result = %+v", result)
+	}
+	if err := remoteStore.View(ctx, func(reader port.Reader) error {
+		cursor, err := reader.PeerSyncCursor("local", "remote", "events", domain.PeerSyncOutboundAck)
+		if err != nil || cursor.NextSequence != 2 {
+			t.Fatalf("remote ack cursor = %+v, err=%v", cursor, err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPullOnceDoesNotCommitResponseLostBeforeDurableBoundary(t *testing.T) {
+	ctx := context.Background()
+	now := time.Unix(100, 0).UTC()
+	local, _ := NewService(memory.New(), func() time.Time { return now })
+	caller := peerCallerFunc(func(_ context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		pull, _ := Decode(request.Payload)
+		batch := domain.PeerSyncMessage{SchemaVersion: domain.SchemaVersionV1, StreamID: pull.StreamID, MessageID: pull.MessageID, Kind: domain.PeerSyncEventBatch, OriginID: "remote", AfterSequence: pull.AfterSequence, NextSequence: 1, Events: []domain.Event{syncServiceEvent("remote-1", 1)}}
+		payload, _ := Encode(batch)
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+	})
+	crash := errors.New("simulated crash")
+	if _, err := local.PullOnce(ctx, caller, "remote", "local", "events", func(point PullCheckpoint) error { return crash }); !errors.Is(err, crash) {
+		t.Fatalf("crash error = %v", err)
+	}
+	if _, exists, err := local.inboundPosition(ctx, "remote", "events"); err != nil || exists {
+		t.Fatalf("cursor exists before commit: exists=%v err=%v", exists, err)
 	}
 }
 
