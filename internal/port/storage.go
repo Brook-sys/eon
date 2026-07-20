@@ -98,6 +98,7 @@ type PeerSyncReader interface {
 
 type PeerSyncWriter interface {
 	PutPeerSyncInboxRecord(domain.PeerSyncInboxRecord) (domain.PeerSyncInboxRecord, bool, error)
+	DeletePeerSyncInboxRecord(peerID, originID, messageID string) error
 	SavePeerSyncCursor(domain.PeerSyncCursor, uint64) error
 }
 

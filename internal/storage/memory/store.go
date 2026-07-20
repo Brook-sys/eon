@@ -2839,3 +2839,12 @@ func equalStrings(a, b []string) bool {
 }
 
 var _ port.Store = (*Store)(nil)
+
+func (t transaction) DeletePeerSyncInboxRecord(peerID, originID, messageID string) error {
+	key := peerSyncInboxKey(peerID, originID, messageID)
+	if _, ok := t.state.peerSyncInbox[key]; !ok {
+		return port.ErrNotFound
+	}
+	delete(t.state.peerSyncInbox, key)
+	return nil
+}
