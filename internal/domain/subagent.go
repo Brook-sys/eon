@@ -57,5 +57,11 @@ func (r SubagentRecord) Validate() error {
 	if r.MaxAttempts < 0 {
 		return errors.New("subagent max_attempts cannot be negative")
 	}
+	if r.MaxAttempts > 0 && r.Attempt >= r.MaxAttempts {
+		return errors.New("subagent attempt must be below max_attempts")
+	}
+	if !r.Deadline.IsZero() && r.Deadline.Before(r.StartedAt) {
+		return errors.New("subagent deadline cannot precede started_at")
+	}
 	return nil
 }

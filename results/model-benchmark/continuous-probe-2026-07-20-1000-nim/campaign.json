@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-20-1000-nim",
+  "fixture_name": "cognitive-tool-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "llama-3.1-8b-instruct-nim",
+      "model": "meta/llama-3.1-8b-instruct",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-tool-v1",
+        "model": "meta/llama-3.1-8b-instruct",
+        "runs": [
+          {
+            "case_id": "tool-search-single",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "actual_input_tokens": 468,
+            "output_tokens": 38,
+            "duration_millis": 833,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "values": {
+              "tool_call_name": "sessions_spawn_remote"
+            }
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 468,
+          "output_tokens": 38,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "JSON",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
+      }
+    }
+  ]
+}

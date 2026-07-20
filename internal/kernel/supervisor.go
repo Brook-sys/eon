@@ -14,6 +14,7 @@ type Supervisor struct {
 	Store   port.Store
 	Manager SessionManager
 	Clock   interface{ Now() time.Time }
+	IDs     interface{ NewID(string) (string, error) }
 }
 
 // Reconcile scans pending and running subagent records in storage,
@@ -44,6 +45,9 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				rec.ErrorCode = "deadline_exceeded"
 				rec.UpdatedAt = now
 				if err := tx.SaveSubagentRecord(rec); err != nil {
+					return err
+				}
+				if err := s.appendTerminalEvent(tx, rec, now); err != nil {
 					return err
 				}
 				reconciled++
@@ -87,6 +91,11 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				if err := tx.SaveSubagentRecord(rec); err != nil {
 					return err
 				}
+				if (rec.State == domain.SubagentStateComplete || rec.State == domain.SubagentStateError) && s.IDs != nil {
+					if err := s.appendTerminalEvent(tx, rec, rec.UpdatedAt); err != nil {
+						return err
+					}
+				}
 				reconciled++
 			}
 		}
@@ -94,4 +103,43 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 	})
 
 	return reconciled, err
+}
+
+func (s *Supervisor) appendTerminalEvent(tx port.Transaction, rec domain.SubagentRecord, now time.Time) error {
+	if s.IDs == nil {
+		return nil
+	}
+	eventID, err := s.IDs.NewID("external-event")
+	if err != nil {
+		return err
+	}
+	result := rec.Result
+	if rec.State == domain.SubagentStateError {
+		result = rec.ErrorCode
+	}
+	event := domain.ExternalEvent{
+		SchemaVersion:    domain.SchemaVersionV1,
+		ID:               domain.ExternalEventID(eventID),
+		DeduplicationKey: "subagent-terminal:" + rec.ID,
+		Source:           "kernel.subagent.supervisor",
+		SourceActorID:    "kernel",
+		Kind:             domain.ExternalSubagentCompletion,
+		MissionID:        domain.MissionID(rec.MissionID),
+		CorrelationID:    rec.ID,
+		Content: domain.ExternalContent{
+			MediaType: "text/plain",
+			Text:      string(rec.State) + ":" + result,
+		},
+		ReceivedAt: now,
+	}
+	disposition := domain.ExternalEventDisposition{
+		SchemaVersion: domain.SchemaVersionV1,
+		EventID:       event.ID,
+		State:         domain.ExternalEventReceived,
+		RecordedAt:    now,
+	}
+	if err := tx.CreateExternalEvent(event, disposition); err != nil && err != port.ErrConflict {
+		return err
+	}
+	return nil
 }

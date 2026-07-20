@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-20-1000-nim",
+  "fixture_path": "internal/evaluation/testdata/cognitive-tool-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "max_total_output_tokens": 128,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "llama-3.1-8b-instruct-nim",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

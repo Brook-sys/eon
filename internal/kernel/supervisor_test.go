@@ -49,6 +49,7 @@ func TestSupervisor_Reconcile(t *testing.T) {
 		Store:   store,
 		Manager: mockManager,
 		Clock:   clock,
+		IDs:     &supervisorIDs{},
 	}
 
 	reconciled, err := supervisor.Reconcile(ctx)
@@ -74,6 +75,13 @@ func TestSupervisor_Reconcile(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+type supervisorIDs struct{ n int }
+
+func (i *supervisorIDs) NewID(prefix string) (string, error) {
+	i.n++
+	return prefix + "-" + string(rune('0'+i.n)), nil
 }
 
 type mockSessionManager struct {
@@ -150,6 +158,36 @@ func TestSupervisor_ExpiresOrphanedSession(t *testing.T) {
 		}
 		if got.State != domain.SubagentStateError || got.ErrorCode != "deadline_exceeded" {
 			t.Fatalf("unexpected expired record: %+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSupervisorPersistsTerminalWakeEventExactlyOnce(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "terminal-1", TaskID: "task-terminal", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "finish", ContextMode: "isolated"}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	ids := &supervisorIDs{}
+	supervisor := &kernel.Supervisor{Store: store, Manager: &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"terminal-1": {ID: "terminal-1", State: kernel.SessionStateComplete, Result: "ok"}}}, Clock: clock, IDs: ids}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("first reconcile=(%d,%v)", n, err)
+	}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 0 {
+		t.Fatalf("replay reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		event, err := tx.ExternalEvent("external-event-1")
+		if err != nil {
+			return err
+		}
+		if event.DeduplicationKey != "subagent-terminal:terminal-1" || event.CorrelationID != "terminal-1" || event.Kind != domain.ExternalSubagentCompletion {
+			t.Fatalf("unexpected terminal event: %+v", event)
 		}
 		return nil
 	}); err != nil {

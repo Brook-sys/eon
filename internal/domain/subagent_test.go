@@ -43,3 +43,18 @@ func TestSubagentRecordValidation(t *testing.T) {
 		t.Fatal("expected error when updated_at precedes started_at")
 	}
 }
+
+func TestSubagentRecordRejectsExhaustedAttemptAndDeadlineBeforeStart(t *testing.T) {
+	now := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	base := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "s", TaskID: "t", MissionID: "m", State: domain.SubagentStateRunning, StartedAt: now, UpdatedAt: now, Task: "work", ContextMode: "isolated"}
+	exhausted := base
+	exhausted.Attempt, exhausted.MaxAttempts = 2, 2
+	if err := exhausted.Validate(); err == nil {
+		t.Fatal("expected exhausted attempt to fail")
+	}
+	invalidDeadline := base
+	invalidDeadline.Deadline = now.Add(-time.Second)
+	if err := invalidDeadline.Validate(); err == nil {
+		t.Fatal("expected deadline before start to fail")
+	}
+}

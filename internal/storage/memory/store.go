@@ -2897,10 +2897,16 @@ func (r reader) SubagentRecordsByState(state domain.SubagentState, limit int) ([
 	for _, record := range r.state.subagentRecords {
 		if record.State == state {
 			result = append(result, record)
-			if limit > 0 && len(result) >= limit {
-				break
-			}
 		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].UpdatedAt.Equal(result[j].UpdatedAt) {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].UpdatedAt.Before(result[j].UpdatedAt)
+	})
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
 	}
 	return result, nil
 }
