@@ -3,14 +3,19 @@ package peerhttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"motor-autonomo/internal/domain"
 )
+
+func testIdentity(*x509.Certificate) (string, error) { return "caller-a", nil }
 
 type mockCaller struct {
 	callFunc func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
@@ -23,6 +28,9 @@ func (m *mockCaller) Call(ctx context.Context, req domain.PeerRPCRequest) (domai
 func TestServerHandler_Valid(t *testing.T) {
 	caller := &mockCaller{
 		callFunc: func(ctx context.Context, req domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+			if req.CallerID != "caller-a" {
+				t.Fatalf("caller ID = %q, want caller-a", req.CallerID)
+			}
 			if req.Capability != "echo" {
 				return domain.PeerRPCResponse{}, errors.New("unsupported capability")
 			}
@@ -34,7 +42,7 @@ func TestServerHandler_Valid(t *testing.T) {
 		},
 	}
 
-	handler, err := NewServerHandler(caller)
+	handler, err := NewAuthenticatedServerHandler(caller, testIdentity)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,6 +55,7 @@ func TestServerHandler_Valid(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodPost, RPCPath, bytes.NewReader(reqBody))
+	req.TLS = verifiedTestTLSState()
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -75,7 +84,7 @@ func TestServerHandler_Errors(t *testing.T) {
 			return domain.PeerRPCResponse{}, errors.New("rpc failed")
 		},
 	}
-	handler, _ := NewServerHandler(caller)
+	handler, _ := NewAuthenticatedServerHandler(caller, testIdentity)
 
 	// Bad Method
 	req := httptest.NewRequest(http.MethodGet, RPCPath, nil)
@@ -104,6 +113,7 @@ func TestServerHandler_Errors(t *testing.T) {
 	// Unknown field
 	reqBody := []byte(`{"request_id":"1","peer_id":"a","unknown":"bad","payload":"` + `xA==` + `"}`)
 	req = httptest.NewRequest(http.MethodPost, RPCPath, bytes.NewReader(reqBody))
+	req.TLS = verifiedTestTLSState()
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -118,6 +128,7 @@ func TestServerHandler_Errors(t *testing.T) {
 		Capability: "echo",
 	})
 	req = httptest.NewRequest(http.MethodPost, RPCPath, bytes.NewReader(reqBody))
+	req.TLS = verifiedTestTLSState()
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -130,4 +141,52 @@ func TestServerHandler_NilCaller(t *testing.T) {
 	if _, err := NewServerHandler(nil); err == nil {
 		t.Error("expected error for nil caller, got nil")
 	}
+}
+
+func TestServerHandler_RejectsMissingVerifiedCertificate(t *testing.T) {
+	handler, err := NewAuthenticatedServerHandler(&mockCaller{callFunc: func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		t.Fatal("caller must not run for unauthenticated request")
+		return domain.PeerRPCResponse{}, nil
+	}}, testIdentity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, RPCPath, bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", w.Code)
+	}
+}
+
+func TestPeerIDFromCertificate(t *testing.T) {
+	valid, err := url.Parse("spiffe://motor-autonomo/peer/node-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := PeerIDFromCertificate(&x509.Certificate{URIs: []*url.URL{valid}}); err != nil || got != "node-a" {
+		t.Fatalf("valid identity = %q, %v", got, err)
+	}
+	for _, raw := range []string{
+		"spiffe://other/peer/node-a",
+		"spiffe://motor-autonomo/node-a",
+		"spiffe://motor-autonomo/peer/node/a",
+		"https://motor-autonomo/peer/node-a",
+	} {
+		uri, err := url.Parse(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := PeerIDFromCertificate(&x509.Certificate{URIs: []*url.URL{uri}}); err == nil {
+			t.Errorf("accepted invalid URI SAN %q", raw)
+		}
+	}
+	if _, err := PeerIDFromCertificate(&x509.Certificate{}); err == nil {
+		t.Error("accepted certificate without URI SAN")
+	}
+}
+
+func verifiedTestTLSState() *tls.ConnectionState {
+	return &tls.ConnectionState{VerifiedChains: [][]*x509.Certificate{{{}}}}
 }

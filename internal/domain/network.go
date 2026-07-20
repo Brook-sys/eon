@@ -36,6 +36,7 @@ type PeerRegistryPolicy struct {
 type PeerRPCRequest struct {
 	RequestID  string
 	PeerID     string
+	CallerID   string
 	Capability string
 	Payload    []byte
 }

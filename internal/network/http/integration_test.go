@@ -2,6 +2,7 @@ package peerhttp
 
 import (
 	"context"
+	"crypto/x509"
 	"net"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +16,9 @@ func TestIntegration_TransportAndServer(t *testing.T) {
 
 	caller := &mockCaller{
 		callFunc: func(ctx context.Context, req domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+			if req.CallerID != "node-a" {
+				t.Fatalf("authenticated caller = %q, want node-a", req.CallerID)
+			}
 			if req.Capability != "echo" {
 				return domain.PeerRPCResponse{}, domain.ErrPeerNotFound
 			}
@@ -26,7 +30,7 @@ func TestIntegration_TransportAndServer(t *testing.T) {
 		},
 	}
 
-	handler, err := NewServerHandler(caller)
+	handler, err := NewAuthenticatedServerHandler(caller, func(*x509.Certificate) (string, error) { return "node-a", nil })
 	if err != nil {
 		t.Fatal(err)
 	}

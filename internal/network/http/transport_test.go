@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -55,6 +56,8 @@ func generateTestPKI() (*tls.Config, *tls.Config) {
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 	}
+	clientURI, _ := url.Parse("spiffe://motor-autonomo/peer/node-a")
+	clientTemplate.URIs = []*url.URL{clientURI}
 	clientDER, _ := x509.CreateCertificate(rand.Reader, &clientTemplate, caCert, &clientKey.PublicKey, caKey)
 
 	pool := x509.NewCertPool()
