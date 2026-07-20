@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-tool-v1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "runs": [
+    {
+      "case_id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 521,
+      "output_tokens": 119,
+      "duration_millis": 1466,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\n  \"tool_call_name\": \"sessions_spawn_remote\"\n}",
+      "values": {
+        "tool_call_name": "sessions_spawn_remote"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 1,
+    "input_tokens": 521,
+    "output_tokens": 119,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "JSON",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}

@@ -86,7 +86,7 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 			request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileStatus, DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, Digest: digest}
 			response, ok := r.lookup(ctx, timeout, receipt.CallerPeerID, request)
 			if !ok || response.State != domain.SubagentReconcileFound {
-				if err := r.deferStatus(ctx, receipt, now); err != nil && !errors.Is(err, port.ErrConflict) {
+				if err := r.deferStatus(ctx, receipt); err != nil && !errors.Is(err, port.ErrConflict) {
 					return processed, err
 				}
 				continue
@@ -127,7 +127,7 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 		request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileSpawn, DeliveryID: string(dispatch.RequestID), SessionID: dispatch.SessionID, Attempt: dispatch.Attempt, Digest: digest}
 		response, ok := r.lookup(ctx, timeout, dispatch.PeerID, request)
 		if !ok || response.State != domain.SubagentReconcileFound {
-			if err := r.deferDispatch(ctx, dispatch, now); err != nil && !errors.Is(err, port.ErrConflict) {
+			if err := r.deferDispatch(ctx, dispatch); err != nil && !errors.Is(err, port.ErrConflict) {
 				return processed, err
 			}
 			continue
@@ -174,7 +174,7 @@ func (r *SubagentEffectReconciler) backoff(attempt uint32) time.Duration {
 	return delay
 }
 
-func (r *SubagentEffectReconciler) deferDispatch(ctx context.Context, observed domain.SubagentDispatch, now time.Time) error {
+func (r *SubagentEffectReconciler) deferDispatch(ctx context.Context, observed domain.SubagentDispatch) error {
 	return r.Store.Update(ctx, func(tx port.Transaction) error {
 		current, err := tx.SubagentDispatch(observed.RequestID)
 		if err != nil {
@@ -186,23 +186,25 @@ func (r *SubagentEffectReconciler) deferDispatch(ctx context.Context, observed d
 		if !current.UpdatedAt.Equal(observed.UpdatedAt) || current.ReconcileAttempts != observed.ReconcileAttempts || !current.ReconcileAfter.Equal(observed.ReconcileAfter) {
 			return port.ErrConflict
 		}
+		now := r.Clock.Now().UTC()
 		next, err := domain.DeferSubagentDispatchReconciliation(current, now, now.Add(r.backoff(current.ReconcileAttempts)))
 		if err != nil {
 			return err
-		}
-		if !current.UpdatedAt.Equal(observed.UpdatedAt) || current.ReconcileAttempts != observed.ReconcileAttempts || !current.ReconcileAfter.Equal(observed.ReconcileAfter) {
-			return port.ErrConflict
 		}
 		return tx.SaveSubagentDispatch(next, current.Status, current.SendAttempt)
 	})
 }
 
-func (r *SubagentEffectReconciler) deferStatus(ctx context.Context, observed domain.SubagentSpawnReceipt, now time.Time) error {
+func (r *SubagentEffectReconciler) deferStatus(ctx context.Context, observed domain.SubagentSpawnReceipt) error {
 	return r.Store.Update(ctx, func(tx port.Transaction) error {
 		current, err := tx.SubagentSpawnReceipt(observed.CallerPeerID, observed.RequestID)
 		if err != nil {
 			return err
 		}
+		if current.StatusDelivery != observed.StatusDelivery || !current.UpdatedAt.Equal(observed.UpdatedAt) || current.ReconcileAttempts != observed.ReconcileAttempts || !current.ReconcileAfter.Equal(observed.ReconcileAfter) {
+			return port.ErrConflict
+		}
+		now := r.Clock.Now().UTC()
 		next, err := domain.DeferSubagentSpawnReceiptStatusReconciliation(current, now, now.Add(r.backoff(current.ReconcileAttempts)))
 		if err != nil {
 			return err

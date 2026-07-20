@@ -154,6 +154,85 @@ func TestSubagentEffectReconcilerWaitsForDurableBackoff(t *testing.T) {
 	})
 }
 
+func TestSubagentEffectReconcilerBackoffStartsAfterSlowLookup(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	dispatch := seedDispatch(t, store, clock.Now())
+	leased, _ := domain.LeaseSubagentDispatch(dispatch, "worker", clock.Now(), clock.Now().Add(time.Second))
+	unknown, _ := domain.MarkAmbiguousSubagentDispatch(leased, "worker", clock.Now())
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentDispatch(unknown, dispatch.Status, dispatch.SendAttempt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	caller := dispatchCaller(func(_ context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		clock.currentTime = clock.Now().Add(5 * time.Second)
+		lookup, _ := domain.DecodeSubagentReconcileRequest(request.Payload)
+		payload, _ := domain.EncodeSubagentReconcileResponse(domain.SubagentReconcileResponse{Kind: lookup.Kind, DeliveryID: lookup.DeliveryID, SessionID: lookup.SessionID, Attempt: lookup.Attempt, State: domain.SubagentReconcileNotFound})
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+	})
+	reconciler := kernel.SubagentEffectReconciler{Store: store, Caller: caller, Clock: clock, BackoffBase: time.Second}
+	if n, err := reconciler.Reconcile(context.Background()); err != nil || n != 0 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	_ = store.View(context.Background(), func(r port.Reader) error {
+		got, _ := r.SubagentDispatch(dispatch.RequestID)
+		if !got.UpdatedAt.Equal(clock.Now()) || !got.ReconcileAfter.Equal(clock.Now().Add(time.Second)) {
+			t.Fatalf("dispatch=%+v now=%s", got, clock.Now())
+		}
+		return nil
+	})
+}
+
+func TestSubagentEffectReconcilerDoesNotDeferConcurrentStatusUpdate(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	receipt := seedTerminalReceipt(t, store, clock.Now())
+	inFlight, err := domain.BeginSubagentSpawnReceiptStatusDelivery(receipt, clock.Now().Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := domain.MarkSubagentSpawnReceiptStatusEffectUnknown(inFlight, clock.Now().Add(2*time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentSpawnReceipt(unknown, receipt.Status, receipt.UpdatedAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	clock.currentTime = unknown.UpdatedAt
+	caller := dispatchCaller(func(_ context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		if err := store.Update(context.Background(), func(tx port.Transaction) error {
+			current, err := tx.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+			if err != nil {
+				return err
+			}
+			next, err := domain.DeferSubagentSpawnReceiptStatusReconciliation(current, clock.Now(), clock.Now().Add(30*time.Second))
+			if err != nil {
+				return err
+			}
+			return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		lookup, _ := domain.DecodeSubagentReconcileRequest(request.Payload)
+		payload, _ := domain.EncodeSubagentReconcileResponse(domain.SubagentReconcileResponse{Kind: lookup.Kind, DeliveryID: lookup.DeliveryID, SessionID: lookup.SessionID, Attempt: lookup.Attempt, State: domain.SubagentReconcileNotFound})
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+	})
+	reconciler := kernel.SubagentEffectReconciler{Store: store, Caller: caller, Clock: clock, BackoffBase: time.Second}
+	if n, err := reconciler.Reconcile(context.Background()); err != nil || n != 0 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	_ = store.View(context.Background(), func(r port.Reader) error {
+		got, _ := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+		if got.ReconcileAttempts != 1 || !got.ReconcileAfter.Equal(clock.Now().Add(30*time.Second)) {
+			t.Fatalf("receipt=%+v", got)
+		}
+		return nil
+	})
+}
+
 func TestSubagentEffectReconcilerUsesOldestEvidenceAcrossKinds(t *testing.T) {
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
