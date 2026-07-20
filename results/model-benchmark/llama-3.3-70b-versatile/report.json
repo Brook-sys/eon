@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-tool-v1",
+  "model": "llama-3.3-70b-versatile",
+  "runs": [
+    {
+      "case_id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 110,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 401
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 1,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "JSON",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}

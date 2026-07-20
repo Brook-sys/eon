@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "name": "tool-explore",
+  "name": "continuous-probe-2026-07-20-0740-groq",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
-  "max_calls": 50,
+  "max_calls": 1,
   "models": [
     {
       "provider": "openai",
-      "binding_id": "groq-llama-3-3-70b-versatile",
+      "binding_id": "llama-3.3-70b-versatile",
       "model": "llama-3.3-70b-versatile",
       "report": {
         "schema_version": 1,
@@ -18,10 +18,10 @@
             "case_id": "tool-search-single",
             "operation": "SYNTHESIZE",
             "format": "JSON",
-            "context_tokens": 4096,
+            "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 103,
+            "duration_millis": 110,
             "syntax_valid": false,
             "semantically_correct": false,
             "error_kind": "PROVIDER",
@@ -67,7 +67,7 @@
           ],
           "by_context": [
             {
-              "label": "4096",
+              "label": "2048",
               "total": 1,
               "compiled": 1,
               "syntax_valid": 0,
