@@ -1824,6 +1824,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
             + " supports=" + esc(String(item.supports || 0))
             + " contradicts=" + esc(String(item.contradicts || 0))
             + (item.without_evidence ? " · SEM EVIDÊNCIA" : "")
+            + (item.quorum ? " · QUORUM=" + item.quorum : "")
+            + (item.provenance ? " · PEER=" + esc(item.provenance) : "")
             + ((item.contradicts || 0) > 0 ? " · CONTRADIÇÃO" : "") + "</div>";
         } else if (kind === "sources") {
           html += "<h3>" + esc(item.kind || "") + " · " + esc(item.locator || "") + "</h3>";

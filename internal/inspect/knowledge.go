@@ -135,6 +135,8 @@ type ClaimSummary struct {
 	Contradicts     int            `json:"contradicts"`
 	OtherRelations  int            `json:"other_relations"`
 	WithoutEvidence bool           `json:"without_evidence"`
+	Provenance      string         `json:"provenance,omitempty"`
+	Quorum          int            `json:"quorum,omitempty"`
 }
 
 // KnowledgeClaimFilter constrains claim browse lists.
@@ -165,6 +167,8 @@ type ClaimDetail struct {
 	Claim           domain.Claim            `json:"claim"`
 	Evidence        []EvidenceLinkDetail    `json:"evidence"`
 	WithoutEvidence bool                    `json:"without_evidence"`
+	Provenance      string                  `json:"provenance,omitempty"`
+	Quorum          int                     `json:"quorum,omitempty"`
 	Canonical       *domain.CanonicalEntity `json:"canonical_entity,omitempty"`
 }
 
