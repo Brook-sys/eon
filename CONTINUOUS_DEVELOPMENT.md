@@ -873,5 +873,7 @@ Adicionar documentação de Fase 23
 
 ### Fase 28 — Kademlia/Mesh e DHT Local Routing
 
-- [ ] `READY` Modelar DHT local routing table (K-buckets) para manter os IDs e IPs (via node endpoints) dos peers ativamente conectados.
-- [ ] `READY` Implementar interface para persistência dos peers dinâmicos, para que desconexões não forcem reconexão do zero no mDNS.
+- [x] `DONE` Modelar DHT local routing table (K-buckets) para manter os IDs e IPs (via node endpoints) dos peers ativamente conectados.
+- [x] `DONE` Implementar interface para persistência dos peers dinâmicos, para que desconexões não forcem reconexão do zero no mDNS.
+
+2026-07-20 08:05 — HEARTBEAT — Fase 28 (Kademlia/Mesh e DHT Local Routing) iniciada: projetada a routing table estrita, que evita unbounded growth por K-buckets para nós conectados, suportando limitação segura em `internal/network/dht.LocalRoutingTable`. Além do limite dinâmico de conexões/endereçamentos de peers, modelamos o contrato de recuperação em caso de desconexão (`PeerPersistenceContract`), com implementação atômica baseada em fail-closed FileStore JSON. Isso resolve a limitação da rede subagentes ter que refazer todo o mDNS handshake após um bounce do sistema local e prepara o terreno para mesh lookup distribuída. Validação técnica `go test ./internal/network/dht` e `go vet` passaram perfeitamente. Ausência de tooling cognitivo não inviabiliza commits desta natureza; probe não repetida pois a regressão de credenciais confirmada nas Fases 25-27 continua impeditiva (a experimentação live em heartbeats subsequentes foi registrada em log anterior). Commit: `fase28-kbucket-dht`.
