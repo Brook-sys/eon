@@ -18,8 +18,12 @@ import (
 )
 
 const (
-	RPCPath       = "/v1/peer/rpc"
-	maxFrameBytes = 1 << 20
+	RPCPath             = "/v1/peer/rpc"
+	maxPeerPayloadBytes = 1 << 20
+	// JSON encodes []byte as base64, so the wire frame must be larger than the
+	// raw payload contract. Keep a separate bounded ceiling instead of silently
+	// reducing the usable peer payload below 1 MiB.
+	maxJSONFrameBytes = 2 << 20
 )
 
 var ErrInvalidFrame = errors.New("invalid peer rpc frame")
@@ -52,8 +56,11 @@ func (t *Transport) Invoke(ctx context.Context, peer domain.PeerRecord, request 
 	if t == nil || t.client == nil || peer.Address.Host == "" || peer.Address.Port < 1 || peer.Address.Port > 65535 {
 		return domain.PeerRPCResponse{}, ErrInvalidFrame
 	}
+	if len(request.Payload) > maxPeerPayloadBytes {
+		return domain.PeerRPCResponse{}, ErrInvalidFrame
+	}
 	body, err := json.Marshal(frame{RequestID: request.RequestID, PeerID: request.PeerID, Capability: request.Capability, Payload: request.Payload})
-	if err != nil || len(body) > maxFrameBytes {
+	if err != nil || len(body) > maxJSONFrameBytes {
 		return domain.PeerRPCResponse{}, ErrInvalidFrame
 	}
 	endpoint := url.URL{Scheme: "https", Host: peer.Address.Host + ":" + strconv.Itoa(peer.Address.Port), Path: RPCPath}
@@ -71,9 +78,9 @@ func (t *Transport) Invoke(ctx context.Context, peer domain.PeerRecord, request 
 		return domain.PeerRPCResponse{}, fmt.Errorf("peer rpc status: %d", resp.StatusCode)
 	}
 	var result frame
-	decoder := json.NewDecoder(io.LimitReader(resp.Body, maxFrameBytes+1))
+	decoder := json.NewDecoder(io.LimitReader(resp.Body, maxJSONFrameBytes+1))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&result); err != nil || decoder.Decode(&struct{}{}) != io.EOF || result.Capability != "" || len(result.Payload) > maxFrameBytes {
+	if err := decoder.Decode(&result); err != nil || decoder.Decode(&struct{}{}) != io.EOF || result.Capability != "" || len(result.Payload) > maxPeerPayloadBytes {
 		return domain.PeerRPCResponse{}, ErrInvalidFrame
 	}
 	return domain.PeerRPCResponse{RequestID: result.RequestID, PeerID: result.PeerID, Payload: result.Payload}, nil

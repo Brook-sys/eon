@@ -160,6 +160,35 @@ func TestServerHandler_RejectsMissingVerifiedCertificate(t *testing.T) {
 	}
 }
 
+func TestServerHandler_RejectsInvalidCallerResponse(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		resp domain.PeerRPCResponse
+	}{
+		{name: "request mismatch", resp: domain.PeerRPCResponse{RequestID: "other", PeerID: "node-a"}},
+		{name: "peer mismatch", resp: domain.PeerRPCResponse{RequestID: "req-1", PeerID: "other"}},
+		{name: "payload oversize", resp: domain.PeerRPCResponse{RequestID: "req-1", PeerID: "node-a", Payload: make([]byte, maxPeerPayloadBytes+1)}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			handler, err := NewAuthenticatedServerHandler(&mockCaller{callFunc: func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+				return test.resp, nil
+			}}, testIdentity)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, _ := json.Marshal(frame{RequestID: "req-1", PeerID: "node-a", Capability: "echo"})
+			req := httptest.NewRequest(http.MethodPost, RPCPath, bytes.NewReader(body))
+			req.TLS = verifiedTestTLSState()
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			if w.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d, want 500", w.Code)
+			}
+		})
+	}
+}
+
 func TestPeerIDFromCertificate(t *testing.T) {
 	valid, err := url.Parse("spiffe://motor-autonomo/peer/node-a")
 	if err != nil {

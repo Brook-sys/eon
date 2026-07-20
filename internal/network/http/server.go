@@ -42,9 +42,9 @@ func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req frame
-	decoder := json.NewDecoder(io.LimitReader(r.Body, maxFrameBytes+1))
+	decoder := json.NewDecoder(io.LimitReader(r.Body, maxJSONFrameBytes+1))
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&req); err != nil || decoder.Decode(&struct{}{}) != io.EOF || len(req.Payload) > maxFrameBytes {
+	if err := decoder.Decode(&req); err != nil || decoder.Decode(&struct{}{}) != io.EOF || len(req.Payload) > maxPeerPayloadBytes {
 		http.Error(w, "invalid frame", http.StatusBadRequest)
 		return
 	}
@@ -58,7 +58,7 @@ func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rpcResp, err := h.caller.Call(r.Context(), rpcReq)
-	if err != nil {
+	if err != nil || rpcResp.RequestID != req.RequestID || rpcResp.PeerID != req.PeerID || len(rpcResp.Payload) > maxPeerPayloadBytes {
 		http.Error(w, "rpc failed", http.StatusInternalServerError)
 		return
 	}
@@ -69,10 +69,15 @@ func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Payload:   rpcResp.Payload,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
+	body, err := json.Marshal(resp)
+	if err != nil || len(body) > maxJSONFrameBytes {
+		http.Error(w, "rpc failed", http.StatusInternalServerError)
 		return
 	}
+	body = append(body, '\n')
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
 }
 
 func authenticatedPeerID(r *http.Request, identityFrom func(*x509.Certificate) (string, error)) (string, error) {

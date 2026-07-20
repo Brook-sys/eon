@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
+	"io"
 	"math/big"
 	"net"
 	"net/http"
@@ -142,5 +143,45 @@ func TestTransport_Errors(t *testing.T) {
 	_, err = NewTransport(insecureTLS, time.Second)
 	if err == nil {
 		t.Error("expected error for insecure config")
+	}
+}
+
+func TestTransport_AcceptsFullRawPayloadDespiteBase64Expansion(t *testing.T) {
+	serverTLS, clientTLS := generateTestPKI()
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var f frame
+		decoder := json.NewDecoder(io.LimitReader(r.Body, maxJSONFrameBytes+1))
+		if err := decoder.Decode(&f); err != nil || len(f.Payload) != maxPeerPayloadBytes {
+			http.Error(w, "bad body", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(frame{RequestID: f.RequestID, PeerID: f.PeerID, Payload: f.Payload})
+	}))
+	server.TLS = serverTLS
+	server.StartTLS()
+	defer server.Close()
+
+	port := server.Listener.Addr().((*net.TCPAddr)).Port
+	transport, err := NewTransport(clientTLS, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload := make([]byte, maxPeerPayloadBytes)
+	resp, err := transport.Invoke(context.Background(), domain.PeerRecord{Address: domain.PeerAddress{Host: "127.0.0.1", Port: port}}, domain.PeerRPCRequest{
+		RequestID: "full", PeerID: "server-id", Capability: "echo", Payload: payload,
+	})
+	if err != nil {
+		t.Fatalf("full payload failed: %v", err)
+	}
+	if len(resp.Payload) != maxPeerPayloadBytes {
+		t.Fatalf("response payload length = %d", len(resp.Payload))
+	}
+
+	_, err = transport.Invoke(context.Background(), domain.PeerRecord{Address: domain.PeerAddress{Host: "127.0.0.1", Port: port}}, domain.PeerRPCRequest{
+		RequestID: "oversize", PeerID: "server-id", Capability: "echo", Payload: make([]byte, maxPeerPayloadBytes+1),
+	})
+	if err != ErrInvalidFrame {
+		t.Fatalf("oversize error = %v, want ErrInvalidFrame", err)
 	}
 }
