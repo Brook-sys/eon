@@ -15,7 +15,7 @@ import (
 func TestSupervisor_Reconcile(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
-	clock := &supervisorMockClock{currentTime: time.Now()}
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)}
 
 	// Use explicit tx to seed pending subagent
 	rec1 := domain.SubagentRecord{

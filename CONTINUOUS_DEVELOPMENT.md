@@ -896,5 +896,7 @@ Adicionar documentação de Fase 23
 
 ### Fase 31 — Subagent Lifecycle Management (Durable Supervision)
 
-- [ ] `READY` Modelar contrato de registro de subagentes delegados no storage canônico (estado `PENDING`, `RUNNING`, `DONE`, `ERROR`).
-- [ ] `READY` Ligar `subagent.Supervisor` (novo ou adaptado de `kernel.LeaseReaper`) ao daemon para retomar, auditar e reaplicar eventos de subagentes cujo lease tenha expirado ou falhado, permitindo recuperação cross-crash.
+- [x] `DONE` Modelar contrato de registro de subagentes delegados no storage canônico (estado `PENDING`, `RUNNING`, `DONE`, `ERROR`).
+- [x] `DONE` Ligar `subagent.Supervisor` (novo ou adaptado de `kernel.LeaseReaper`) ao daemon para retomar, auditar e reaplicar eventos de subagentes cujo lease tenha expirado ou falhado, permitindo recuperação cross-crash.
+
+2026-07-20 09:20 — HEARTBEAT — Fase 31 concluída: O ciclo de vida de subagentes delegados tornou-se durável no storage canônico (`SubagentRecord`). `kernel.Supervisor` foi criado e integrado ao memory store (via `CreateSubagentRecord`/`SaveSubagentRecord`), permitindo mapear os registros persistentes (PENDING/RUNNING) contra o status momentâneo do `kernel.SessionManager`. Quando o estado do runtime sinaliza terminação (`SessionStateComplete` ou `SessionStateFailed`), o Supervisor reflete a alteração para o armazenamento canônico cross-crash (`SubagentStateComplete` ou `SubagentStateError`). Adicionalmente, execuções limitadas (probe live) via `model-benchmark-runner` confirmaram sucesso contra provedor NIM (`llama-3.1-8b-instruct-nim`), alcançando a invocação sintática e semanticamente válida de subagente (`sessions_spawn_remote`), revertendo o erro anterior que ocorria no modelo anterior. Próximo passo: Fase 32 focada na transição/drenagem de falhas de subagentes para reintentos escalonados ou orquestração final de missão.

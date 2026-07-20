@@ -8,7 +8,7 @@ import (
 )
 
 func TestSubagentRecordValidation(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
 	valid := domain.SubagentRecord{
 		SchemaVersion: domain.SchemaVersionV1,
 		ID:            "session-1",
