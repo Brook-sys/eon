@@ -91,6 +91,8 @@ type SubagentSpawnReceipt struct {
 	Result            string                      `json:"result,omitempty"`
 	Failure           string                      `json:"failure,omitempty"`
 	StatusDelivery    SubagentStatusDeliveryState `json:"status_delivery,omitempty"`
+	ReconcileAttempts uint32                      `json:"reconcile_attempts,omitempty"`
+	ReconcileAfter    time.Time                   `json:"reconcile_after,omitempty"`
 }
 
 func (r SubagentSpawnReceipt) Validate() error {
@@ -108,6 +110,12 @@ func (r SubagentSpawnReceipt) Validate() error {
 		return ErrInvalidSubagentSpawnRPC
 	}
 	if r.StatusDelivery != "" && !r.StatusDelivery.valid() {
+		return ErrInvalidSubagentSpawnRPC
+	}
+	if r.StatusDelivery != SubagentStatusDeliveryInFlight && r.StatusDelivery != SubagentStatusDeliveryEffectUnknown && (r.ReconcileAttempts != 0 || !r.ReconcileAfter.IsZero()) {
+		return ErrInvalidSubagentSpawnRPC
+	}
+	if !r.ReconcileAfter.IsZero() && r.ReconcileAfter.Before(r.UpdatedAt) {
 		return ErrInvalidSubagentSpawnRPC
 	}
 	switch r.Status {
@@ -228,6 +236,7 @@ func BeginSubagentSpawnReceiptStatusDelivery(current SubagentSpawnReceipt, now t
 	}
 	next := current
 	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryInFlight, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 
@@ -241,6 +250,7 @@ func MarkSubagentSpawnReceiptStatusDelivered(current SubagentSpawnReceipt, now t
 	}
 	next := current
 	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryDelivered, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 
@@ -254,6 +264,25 @@ func MarkSubagentSpawnReceiptStatusEffectUnknown(current SubagentSpawnReceipt, n
 	}
 	next := current
 	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryEffectUnknown, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, now
+	return next, next.Validate()
+}
+
+// DeferSubagentSpawnReceiptStatusReconciliation schedules another read-only
+// status receipt lookup without republishing the terminal status.
+func DeferSubagentSpawnReceiptStatusReconciliation(current SubagentSpawnReceipt, now, retryAt time.Time) (SubagentSpawnReceipt, error) {
+	if err := current.Validate(); err != nil {
+		return SubagentSpawnReceipt{}, err
+	}
+	current = current.normalizedQueueState()
+	if (current.StatusDelivery != SubagentStatusDeliveryEffectUnknown && current.StatusDelivery != SubagentStatusDeliveryInFlight) || now.IsZero() || retryAt.Before(now) || now.Before(current.UpdatedAt) {
+		return SubagentSpawnReceipt{}, ErrInvalidSubagentSpawnRPC
+	}
+	next := current
+	if next.ReconcileAttempts < ^uint32(0) {
+		next.ReconcileAttempts++
+	}
+	next.ReconcileAfter, next.UpdatedAt = retryAt, now
 	return next, next.Validate()
 }
 
@@ -267,6 +296,7 @@ func ResolveSubagentSpawnReceiptStatusNotFound(current SubagentSpawnReceipt, now
 	}
 	next := current
 	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryPending, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 
@@ -280,6 +310,7 @@ func ResolveSubagentSpawnReceiptStatusFound(current SubagentSpawnReceipt, now ti
 	}
 	next := current
 	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryDelivered, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 

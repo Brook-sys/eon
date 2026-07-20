@@ -65,6 +65,8 @@ type SubagentDispatch struct {
 	LeaseOwner        string                 `json:"lease_owner,omitempty"`
 	LeaseUntil        time.Time              `json:"lease_until,omitempty"`
 	LastFailureCode   string                 `json:"last_failure_code,omitempty"`
+	ReconcileAttempts uint32                 `json:"reconcile_attempts,omitempty"`
+	ReconcileAfter    time.Time              `json:"reconcile_after,omitempty"`
 	CreatedAt         time.Time              `json:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
 }
@@ -82,6 +84,9 @@ func (d SubagentDispatch) Validate() error {
 	if len(d.RequestID) > 128 || len(d.SessionID) > 128 || len(d.PeerID) > 128 || len(d.ReceiverSessionID) > 128 || len(d.LeaseOwner) > 128 || len(d.LastFailureCode) > 128 {
 		return errors.New("subagent dispatch field exceeds byte limit")
 	}
+	if d.Status != SubagentDispatchEffectUnknown && (d.ReconcileAttempts != 0 || !d.ReconcileAfter.IsZero()) {
+		return errors.New("subagent dispatch has reconciliation schedule outside EFFECT_UNKNOWN")
+	}
 	switch d.Status {
 	case SubagentDispatchPending, SubagentDispatchRetry:
 		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || d.ReceiverSessionID != "" {
@@ -94,6 +99,9 @@ func (d SubagentDispatch) Validate() error {
 	case SubagentDispatchEffectUnknown:
 		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || strings.TrimSpace(d.LastFailureCode) == "" || d.ReceiverSessionID != "" {
 			return errors.New("effect-unknown subagent dispatch has invalid fields")
+		}
+		if !d.ReconcileAfter.IsZero() && d.ReconcileAfter.Before(d.UpdatedAt) {
+			return errors.New("effect-unknown subagent dispatch has invalid reconciliation schedule")
 		}
 	case SubagentDispatchDelivered:
 		// ReceiverSessionID was introduced after the outbox. Empty remains valid
@@ -148,6 +156,7 @@ func CompleteSubagentDispatch(current SubagentDispatch, owner, receiverSessionID
 	next := current
 	next.Status, next.UpdatedAt, next.LastFailureCode, next.ReceiverSessionID = SubagentDispatchDelivered, now, "", receiverSessionID
 	next.LeaseOwner, next.LeaseUntil = "", time.Time{}
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 
@@ -160,6 +169,7 @@ func FailSubagentDispatch(current SubagentDispatch, owner, failureCode string, n
 	}
 	next := current
 	next.LeaseOwner, next.LeaseUntil, next.UpdatedAt, next.LastFailureCode = "", time.Time{}, now, failureCode
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	if current.SendAttempt >= current.MaxSendAttempts {
 		next.Status = SubagentDispatchDead
 	} else {
@@ -196,6 +206,7 @@ func MarkSubagentDispatchEffectUnknown(current SubagentDispatch, now time.Time, 
 	}
 	next := current
 	next.Status, next.LeaseOwner, next.LeaseUntil, next.LastFailureCode, next.UpdatedAt = SubagentDispatchEffectUnknown, "", time.Time{}, code, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, now
 	return next, next.Validate()
 }
 
@@ -212,6 +223,24 @@ func MarkAmbiguousSubagentDispatch(current SubagentDispatch, owner string, now t
 	}
 	next := current
 	next.Status, next.LeaseOwner, next.LeaseUntil, next.LastFailureCode, next.UpdatedAt = SubagentDispatchEffectUnknown, "", time.Time{}, SubagentDispatchFailureAmbiguousSend, now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, now
+	return next, next.Validate()
+}
+
+// DeferSubagentDispatchReconciliation schedules another read-only evidence
+// lookup. It does not authorize retry, cancellation, or any remote effect.
+func DeferSubagentDispatchReconciliation(current SubagentDispatch, now, retryAt time.Time) (SubagentDispatch, error) {
+	if err := current.Validate(); err != nil {
+		return SubagentDispatch{}, err
+	}
+	if current.Status != SubagentDispatchEffectUnknown || now.IsZero() || retryAt.Before(now) || now.Before(current.UpdatedAt) {
+		return SubagentDispatch{}, errors.New("dispatch reconciliation deferral requires EFFECT_UNKNOWN and a valid schedule")
+	}
+	next := current
+	if next.ReconcileAttempts < ^uint32(0) {
+		next.ReconcileAttempts++
+	}
+	next.ReconcileAfter, next.UpdatedAt = retryAt, now
 	return next, next.Validate()
 }
 
@@ -224,6 +253,7 @@ func ResolveSubagentDispatchEffectUnknown(current SubagentDispatch, now, retryAt
 	}
 	next := current
 	next.UpdatedAt = now
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	if current.SendAttempt >= current.MaxSendAttempts {
 		next.Status = SubagentDispatchDead
 		if next.LastFailureCode == "" {
@@ -247,6 +277,7 @@ func CompleteSubagentDispatchAfterReconcile(current SubagentDispatch, receiverSe
 	}
 	next := current
 	next.Status, next.UpdatedAt, next.LastFailureCode, next.ReceiverSessionID = SubagentDispatchDelivered, now, "", receiverSessionID
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }
 
@@ -263,5 +294,6 @@ func CancelSubagentDispatch(current SubagentDispatch, now time.Time) (SubagentDi
 	next := current
 	next.Status, next.UpdatedAt = SubagentDispatchCancelled, now
 	next.LeaseOwner, next.LeaseUntil = "", time.Time{}
+	next.ReconcileAttempts, next.ReconcileAfter = 0, time.Time{}
 	return next, next.Validate()
 }

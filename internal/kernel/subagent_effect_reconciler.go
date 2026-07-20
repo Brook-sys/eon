@@ -17,11 +17,13 @@ const subagentReconcileCapability = "subagent.reconcile.v1"
 // durable evidence. Negative, conflicting, malformed, or unavailable evidence
 // leaves the local row parked and never triggers retry or cancellation.
 type SubagentEffectReconciler struct {
-	Store      port.Store
-	Caller     port.PeerCaller
-	Clock      interface{ Now() time.Time }
-	Batch      int
-	RPCTimeout time.Duration
+	Store       port.Store
+	Caller      port.PeerCaller
+	Clock       interface{ Now() time.Time }
+	Batch       int
+	RPCTimeout  time.Duration
+	BackoffBase time.Duration
+	BackoffMax  time.Duration
 }
 
 func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
@@ -36,15 +38,16 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
+	now := r.Clock.Now().UTC()
 	var dispatches []domain.SubagentDispatch
 	var statuses []domain.SubagentSpawnReceipt
 	if err := r.Store.View(ctx, func(reader port.Reader) error {
 		var err error
-		dispatches, err = reader.EffectUnknownSubagentDispatches(batch)
+		dispatches, err = reader.EffectUnknownSubagentDispatches(now, batch)
 		if err != nil {
 			return err
 		}
-		statuses, err = reader.SubagentStatusDeliveriesRequiringReconciliation(batch)
+		statuses, err = reader.SubagentStatusDeliveriesRequiringReconciliation(now, batch)
 		return err
 	}); err != nil {
 		return 0, err
@@ -83,6 +86,9 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 			request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileStatus, DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, Digest: digest}
 			response, ok := r.lookup(ctx, timeout, receipt.CallerPeerID, request)
 			if !ok || response.State != domain.SubagentReconcileFound {
+				if err := r.deferStatus(ctx, receipt, now); err != nil && !errors.Is(err, port.ErrConflict) {
+					return processed, err
+				}
 				continue
 			}
 			if err := r.Store.Update(ctx, func(tx port.Transaction) error {
@@ -121,6 +127,9 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 		request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileSpawn, DeliveryID: string(dispatch.RequestID), SessionID: dispatch.SessionID, Attempt: dispatch.Attempt, Digest: digest}
 		response, ok := r.lookup(ctx, timeout, dispatch.PeerID, request)
 		if !ok || response.State != domain.SubagentReconcileFound {
+			if err := r.deferDispatch(ctx, dispatch, now); err != nil && !errors.Is(err, port.ErrConflict) {
+				return processed, err
+			}
 			continue
 		}
 		if err := r.Store.Update(ctx, func(tx port.Transaction) error {
@@ -142,6 +151,64 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 		processed++
 	}
 	return processed, nil
+}
+
+func (r *SubagentEffectReconciler) backoff(attempt uint32) time.Duration {
+	base, maximum := r.BackoffBase, r.BackoffMax
+	if base <= 0 {
+		base = time.Second
+	}
+	if maximum <= 0 {
+		maximum = time.Minute
+	}
+	delay := base
+	for i := uint32(0); i < attempt && delay < maximum; i++ {
+		if delay > maximum/2 {
+			return maximum
+		}
+		delay *= 2
+	}
+	if delay > maximum {
+		return maximum
+	}
+	return delay
+}
+
+func (r *SubagentEffectReconciler) deferDispatch(ctx context.Context, observed domain.SubagentDispatch, now time.Time) error {
+	return r.Store.Update(ctx, func(tx port.Transaction) error {
+		current, err := tx.SubagentDispatch(observed.RequestID)
+		if err != nil {
+			return err
+		}
+		if current.Status != domain.SubagentDispatchEffectUnknown {
+			return port.ErrConflict
+		}
+		if !current.UpdatedAt.Equal(observed.UpdatedAt) || current.ReconcileAttempts != observed.ReconcileAttempts || !current.ReconcileAfter.Equal(observed.ReconcileAfter) {
+			return port.ErrConflict
+		}
+		next, err := domain.DeferSubagentDispatchReconciliation(current, now, now.Add(r.backoff(current.ReconcileAttempts)))
+		if err != nil {
+			return err
+		}
+		if !current.UpdatedAt.Equal(observed.UpdatedAt) || current.ReconcileAttempts != observed.ReconcileAttempts || !current.ReconcileAfter.Equal(observed.ReconcileAfter) {
+			return port.ErrConflict
+		}
+		return tx.SaveSubagentDispatch(next, current.Status, current.SendAttempt)
+	})
+}
+
+func (r *SubagentEffectReconciler) deferStatus(ctx context.Context, observed domain.SubagentSpawnReceipt, now time.Time) error {
+	return r.Store.Update(ctx, func(tx port.Transaction) error {
+		current, err := tx.SubagentSpawnReceipt(observed.CallerPeerID, observed.RequestID)
+		if err != nil {
+			return err
+		}
+		next, err := domain.DeferSubagentSpawnReceiptStatusReconciliation(current, now, now.Add(r.backoff(current.ReconcileAttempts)))
+		if err != nil {
+			return err
+		}
+		return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
+	})
 }
 
 type subagentReconcileCandidate struct {
