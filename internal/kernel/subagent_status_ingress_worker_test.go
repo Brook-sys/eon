@@ -62,3 +62,63 @@ func TestSubagentStatusIngressWorkerApplyRestartAndConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSubagentStatusIngressWorkerQuarantinesAttemptMismatchAndContinues(t *testing.T) {
+	ctx := context.Background()
+	clock := ingressWorkerClock{now: time.Unix(200, 0).UTC()}
+	store := memory.New()
+	local := NewLocalSessionManager(clock)
+	manager, err := NewPersistentSessionManager(local, store, clock, &ingressWorkerIDs{}, PersistentSessionPolicy{MissionID: "mission-1", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, SubagentSpec{Task: "work", ContextMode: "isolated", Labels: map[string]string{SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.PublishStatus(ctx, SubagentObservation{ID: id, Attempt: 0, State: SessionStateFailed, Failure: "retry"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Retry(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	clock.now = clock.now.Add(time.Second)
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-stale", SubagentObservation{ID: id, Attempt: 0, State: SessionStateComplete, Result: "late"}); err != nil {
+		t.Fatal(err)
+	}
+	clock.now = clock.now.Add(time.Second)
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-current", SubagentObservation{ID: id, Attempt: 1, State: SessionStateComplete, Result: "done"}); err != nil {
+		t.Fatal(err)
+	}
+
+	worker := SubagentStatusIngressWorker{Store: store, Manager: manager, Clock: clock, Batch: 2}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 2 {
+		t.Fatalf("apply n=%d err=%v", n, err)
+	}
+	status, err := manager.Status(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.State != SessionStateComplete || status.Attempt != 1 || status.Result != "done" {
+		t.Fatalf("status=%+v", status)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		stale, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-stale")
+		if err != nil {
+			return err
+		}
+		current, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-current")
+		if err != nil {
+			return err
+		}
+		if stale.Status != domain.SubagentStatusIngressRejected || stale.RejectionCode != domain.SubagentStatusIngressRejectionAttemptMismatch || current.Status != domain.SubagentStatusIngressApplied {
+			t.Fatalf("stale=%+v current=%+v", stale, current)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 0 {
+		t.Fatalf("restart n=%d err=%v", n, err)
+	}
+}

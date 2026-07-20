@@ -14,11 +14,15 @@ func TestSubagentStatusIngressCheckpoint(t *testing.T) {
 	now := time.Unix(100, 0).UTC()
 	record := domain.SubagentRecord{SchemaVersion: 1, ID: "session-1", TaskID: "task-1", MissionID: "mission-1", State: domain.SubagentStatePending, StartedAt: now, UpdatedAt: now, Task: "work", ContextMode: "isolated", TransportPeerID: "peer-a", MaxAttempts: 2, Deadline: now.Add(time.Minute)}
 	receipt := domain.SubagentStatusIngressReceipt{SchemaVersion: 1, CallerPeerID: "peer-a", DeliveryID: "delivery-1", SessionID: record.ID, State: "COMPLETE", Result: "done", Status: domain.SubagentStatusIngressPending, RecordedAt: now}
+	rejected, err := domain.RejectSubagentStatusIngressAttemptMismatch(receipt, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.CreateSubagentRecord(record); err != nil {
 			return err
 		}
-		return tx.CreateSubagentStatusIngressReceipt(receipt)
+		return tx.CreateSubagentStatusIngressReceipt(rejected)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +39,7 @@ func TestSubagentStatusIngressCheckpoint(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if !got.Matches(receipt) {
+		if !got.Matches(receipt) || got.Status != domain.SubagentStatusIngressRejected || got.RejectionCode != domain.SubagentStatusIngressRejectionAttemptMismatch || !got.RejectedAt.Equal(now.Add(time.Second)) {
 			t.Fatalf("got=%+v", got)
 		}
 		return nil

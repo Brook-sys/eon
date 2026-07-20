@@ -34,11 +34,35 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 	}); err != nil {
 		return 0, err
 	}
-	applied := 0
+	processed := 0
 	for _, receipt := range receipts {
 		err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(receipt.SessionID), Attempt: receipt.Attempt, State: SessionState(receipt.State), Result: receipt.Result, Failure: receipt.Failure})
 		if err != nil {
-			return applied, err
+			if !errors.Is(err, ErrSessionAttempt) {
+				return processed, err
+			}
+			err = w.Store.Update(ctx, func(tx port.Transaction) error {
+				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
+				if err != nil {
+					return err
+				}
+				if current.Status == domain.SubagentStatusIngressRejected && current.Matches(receipt) {
+					return nil
+				}
+				next, err := domain.RejectSubagentStatusIngressAttemptMismatch(current, w.Clock.Now().UTC())
+				if err != nil {
+					return err
+				}
+				return tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending)
+			})
+			if err != nil {
+				if errors.Is(err, port.ErrConflict) {
+					continue
+				}
+				return processed, err
+			}
+			processed++
+			continue
 		}
 		err = w.Store.Update(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
@@ -61,9 +85,9 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			if errors.Is(err, port.ErrConflict) {
 				continue
 			}
-			return applied, err
+			return processed, err
 		}
-		applied++
+		processed++
 	}
-	return applied, nil
+	return processed, nil
 }
