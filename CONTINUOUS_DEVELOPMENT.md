@@ -808,3 +808,10 @@ Proximo: integrar o listener P2P diretamente ao ciclo principal do runtime via i
 Adicionar documentação de Fase 23
 
 2026-07-20 01:10 — HEARTBEAT — Fase 23 (Delegação Cognitiva P2P): Atualizado infraestrutura de benchmark (`internal/evaluation`) para injetar um tool_call_name sintético na saída quando o modelo usa tools, permitindo que os fixtures existentes de choice/json operem verificações semânticas em ToolCalls. Corrigido `openai.Provider` e `fakeserver` para mapear structs de ToolCalls (request e response), provando transparência no envio de tool calls no subagent remoto usando `CompleteWithTools`. Atualizado o fixture de teste `cognitive-tool-v1.json` para invocar especificamente `sessions_spawn_remote`. O contrato the limite de tamanho foi aplicado e testado em `remote_tool.go` e `remote_tool_test.go` (limite de 2MiB na resposta do peer). Testes unitários de evaluation, provider e subagent executados e aprovados. Campanha `tool-explore` executada offline contra fakeserver, verificando a injeção local-remote correta, e testada via Groq (embora falhando localmente pela chave API omitida, a malha de teste estrutural rodou perfeitamente). Próximo passo: definir Fase 24 focada em multiplexação de multi-agentes ou state syncing sobre p2p.
+
+### Fase 24 — State Syncing Multiplexado sobre P2P
+
+- [ ] `TODO` Estabelecer protocolo de multiplexação de mensagens assíncronas no transporte P2P para suportar sync de estado entre nodes (event log sync).
+- [ ] `TODO` Implementar resolução de conflitos (CRDT ou last-writer-wins em escopo fechado) para as agendas locais e distribuídas dos peers descobertos.
+- [ ] `TODO` Documentar a semântica de fallbacks da malha: o que acontece quando um peer sincronizado é removido/desconecta abruptamente no meio de um sync.
+
