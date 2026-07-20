@@ -1,0 +1,9 @@
+{
+  "schema": "motor-autonomo.continuous-probe.v1",
+  "provider": "groq",
+  "planned_model": "llama-3.1-8b-instant",
+  "bounds": {"max_calls": 1, "max_output_tokens": 8, "timeout_seconds": 30, "retries": 0},
+  "status": "BLOCKED",
+  "calls_attempted": 0,
+  "reason": "GROQ_API_KEY was not present in the heartbeat process environment"
+}
