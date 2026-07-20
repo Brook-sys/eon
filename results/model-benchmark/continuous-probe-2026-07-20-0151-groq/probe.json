@@ -1,0 +1,12 @@
+{
+  "error": "http_error",
+  "http_status": 403,
+  "max_calls": 1,
+  "model": "llama-3.1-8b-instant",
+  "pass": false,
+  "provider": "groq",
+  "retry_after": null,
+  "schema": "motor-autonomo.live-probe.v1",
+  "started_at": "2026-07-20T04:53:44Z",
+  "timeout_seconds": 30
+}

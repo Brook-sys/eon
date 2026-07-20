@@ -1,0 +1,24 @@
+{
+  "http_status": 200,
+  "max_calls": 1,
+  "model": "meta/llama-3.1-8b-instruct",
+  "pass": true,
+  "provider": "nvidia-nim",
+  "raw_response": "{\n  \"apply_local_canonical\": false,\n  \"record_conflict\": true\n}",
+  "response": {
+    "apply_local_canonical": false,
+    "record_conflict": true
+  },
+  "schema": "motor-autonomo.live-probe.v1",
+  "started_at": "2026-07-20T04:54:01Z",
+  "timeout_seconds": 30,
+  "usage": {
+    "completion_tokens": 20,
+    "prompt_tokens": 80,
+    "prompt_tokens_details": {
+      "audio_tokens": null,
+      "cached_tokens": 16
+    },
+    "total_tokens": 100
+  }
+}
