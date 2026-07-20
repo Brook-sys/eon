@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -83,6 +84,16 @@ func restoreSubagents(ctx context.Context, store port.Store, manager kernel.Sess
 					StartedAt: record.StartedAt,
 				}
 				if err := manager.Restore(ctx, status); err != nil {
+					return err
+				}
+				winner, err := reader.AppliedSubagentStatusIngressWinner(record.ID, record.Attempt)
+				if err != nil {
+					if errors.Is(err, port.ErrNotFound) {
+						continue
+					}
+					return err
+				}
+				if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: kernel.SessionID(winner.SessionID), Attempt: winner.Attempt, State: kernel.SessionState(winner.State), Result: winner.Result, Failure: winner.Failure}); err != nil {
 					return err
 				}
 			}

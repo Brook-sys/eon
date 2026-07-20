@@ -36,7 +36,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 	}
 	processed := 0
 	for _, receipt := range receipts {
-		err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(receipt.SessionID), Attempt: receipt.Attempt, State: SessionState(receipt.State), Result: receipt.Result, Failure: receipt.Failure})
+		err := w.Manager.PublishStatus(ctx, ingressObservation(receipt))
 		if err != nil {
 			if !errors.Is(err, ErrSessionAttempt) && !errors.Is(err, ErrSessionTerminal) {
 				return processed, err
@@ -99,4 +99,8 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 		processed++
 	}
 	return processed, nil
+}
+
+func ingressObservation(receipt domain.SubagentStatusIngressReceipt) SubagentObservation {
+	return SubagentObservation{ID: SessionID(receipt.SessionID), Attempt: receipt.Attempt, State: SessionState(receipt.State), Result: receipt.Result, Failure: receipt.Failure}
 }

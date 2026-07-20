@@ -298,6 +298,72 @@ func TestOpenRestoresActiveSubagentAcrossSQLiteRestart(t *testing.T) {
 	}
 }
 
+func TestOpenRestoresAppliedTerminalWinnerBeforePendingConflict(t *testing.T) {
+	ctx := context.Background()
+	dbPath := t.TempDir() + "/runtime.db"
+	opts := bootstrap.Options{StoreBackend: bootstrap.StorageSQLite, SQLitePath: dbPath, MissionID: "mission-terminal-winner", Subagent: &bootstrap.SubagentOptions{Enabled: true, MaxConcurrent: 2, MaxAttempts: 2, Timeout: time.Minute}}
+	first, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := first.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "preserve terminal winner", ContextMode: "isolated", Labels: map[string]string{kernel.SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := first.Subagents.(*kernel.PersistentSessionManager)
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-winner", kernel.SubagentObservation{ID: id, State: kernel.SessionStateComplete, Result: "winner"}); err != nil {
+		t.Fatal(err)
+	}
+	worker := kernel.SubagentStatusIngressWorker{Store: first.Store, Manager: first.Subagents, Clock: first.Clock, Batch: 1}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 1 {
+		t.Fatalf("apply winner n=%d err=%v", n, err)
+	}
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-conflict", kernel.SubagentObservation{ID: id, State: kernel.SessionStateFailed, Failure: "contradiction"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = second.Close(ctx) })
+	second.SubagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: second.Store, Manager: second.Subagents, Clock: second.Clock, Batch: 1}
+	result, err := second.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.SubagentStatusesApplied != 1 || result.SubagentsReconciled != 1 {
+		t.Fatalf("cycle=%+v", result)
+	}
+	if err := second.Store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		winner, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-winner")
+		if err != nil {
+			return err
+		}
+		conflict, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-conflict")
+		if err != nil {
+			return err
+		}
+		if record.State != domain.SubagentStateComplete || record.Result != "winner" || winner.Status != domain.SubagentStatusIngressApplied || conflict.Status != domain.SubagentStatusIngressRejected || conflict.RejectionCode != domain.SubagentStatusIngressRejectionTerminalConflict {
+			t.Fatalf("record=%+v winner=%+v conflict=%+v", record, winner, conflict)
+		}
+		_, err = r.ExternalEventByDeduplicationKey("subagent-terminal:" + string(id))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := second.ProcessCycle(ctx); err != nil || result.SubagentStatusesApplied != 0 || result.SubagentsReconciled != 0 {
+		t.Fatalf("idempotent cycle=%+v err=%v", result, err)
+	}
+}
+
 func TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart(t *testing.T) {
 	ctx := context.Background()
 	dbPath := t.TempDir() + "/runtime.db"

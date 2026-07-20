@@ -214,6 +214,7 @@ type ContinuityReader interface {
 	SubagentStatusDeliveriesRequiringReconciliation(time.Time, int) ([]domain.SubagentSpawnReceipt, error)
 	SubagentStatusIngressReceipt(callerPeerID, deliveryID string) (domain.SubagentStatusIngressReceipt, error)
 	PendingSubagentStatusIngressReceipts(int) ([]domain.SubagentStatusIngressReceipt, error)
+	AppliedSubagentStatusIngressWinner(sessionID string, attempt int) (domain.SubagentStatusIngressReceipt, error)
 }
 
 // ContinuityWriter persists frontier opportunities and continuity diagnoses.

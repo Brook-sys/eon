@@ -3113,6 +3113,38 @@ func (r reader) PendingSubagentStatusIngressReceipts(limit int) ([]domain.Subage
 	}
 	return result, nil
 }
+func (t transaction) AppliedSubagentStatusIngressWinner(sessionID string, attempt int) (domain.SubagentStatusIngressReceipt, error) {
+	return reader(t).AppliedSubagentStatusIngressWinner(sessionID, attempt)
+}
+func (r reader) AppliedSubagentStatusIngressWinner(sessionID string, attempt int) (domain.SubagentStatusIngressReceipt, error) {
+	var winner domain.SubagentStatusIngressReceipt
+	found := false
+	for _, receipt := range r.state.subagentStatusIngress {
+		if receipt.Status != domain.SubagentStatusIngressApplied || receipt.SessionID != sessionID || receipt.Attempt != attempt {
+			continue
+		}
+		if !found || appliedSubagentStatusIngressLess(receipt, winner) {
+			winner, found = receipt, true
+		}
+	}
+	if !found {
+		return domain.SubagentStatusIngressReceipt{}, notFound("applied subagent status ingress winner", sessionID)
+	}
+	return winner, nil
+}
+
+func appliedSubagentStatusIngressLess(a, b domain.SubagentStatusIngressReceipt) bool {
+	if a.AppliedAt.Equal(b.AppliedAt) {
+		if a.RecordedAt.Equal(b.RecordedAt) {
+			if a.CallerPeerID == b.CallerPeerID {
+				return a.DeliveryID < b.DeliveryID
+			}
+			return a.CallerPeerID < b.CallerPeerID
+		}
+		return a.RecordedAt.Before(b.RecordedAt)
+	}
+	return a.AppliedAt.Before(b.AppliedAt)
+}
 func (t transaction) SaveSubagentStatusIngressReceipt(v domain.SubagentStatusIngressReceipt, expected domain.SubagentStatusIngressState) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate subagent status ingress receipt: %w", err)
