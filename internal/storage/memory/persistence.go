@@ -86,6 +86,7 @@ type persistedState struct {
 	ContinuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
 	SubagentRecords           map[string]domain.SubagentRecord
 	SubagentDispatches        map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
+	SubagentSpawnReceipts     map[string]domain.SubagentSpawnReceipt
 	ConfigDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
 	ConfigRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
 	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
@@ -124,9 +125,10 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ExternalEvents:          cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
 		ExternalEventDispositions: cloned.externalEventDispositions,
 		WorkOpportunities:         cloned.workOpportunities, ContinuityDiagnoses: cloned.continuityDiagnoses,
-		SubagentRecords:    cloned.subagentRecords,
-		SubagentDispatches: cloned.subagentDispatches,
-		ConfigDrafts:       cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
+		SubagentRecords:       cloned.subagentRecords,
+		SubagentDispatches:    cloned.subagentDispatches,
+		SubagentSpawnReceipts: cloned.subagentSpawnReceipts,
+		ConfigDrafts:          cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 		ChannelCursors:        cloned.channelCursors,
 		ResourceUsages:        cloned.resourceUsages,
@@ -266,6 +268,12 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 		}
 	}
 	base.subagentDispatches = nonNil(p.SubagentDispatches, base.subagentDispatches)
+	base.subagentSpawnReceipts = nonNil(p.SubagentSpawnReceipts, base.subagentSpawnReceipts)
+	for key, receipt := range base.subagentSpawnReceipts {
+		if err := receipt.Validate(); err != nil || key != subagentSpawnReceiptKey(receipt.CallerPeerID, receipt.RequestID) {
+			return nil, fmt.Errorf("decode checkpoint invalid subagent spawn receipt %q", key)
+		}
+	}
 	// The generation index is derived state. Rebuild it from validated rows rather
 	// than trusting a stale or tampered checkpoint index.
 	base.dispatchByGeneration = make(map[string]domain.SubagentDispatchRequestID, len(base.subagentDispatches))

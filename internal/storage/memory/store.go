@@ -95,6 +95,7 @@ type state struct {
 	subagentRecords        map[string]domain.SubagentRecord
 	subagentDispatches     map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
 	dispatchByGeneration   map[string]domain.SubagentDispatchRequestID
+	subagentSpawnReceipts  map[string]domain.SubagentSpawnReceipt
 	missionRevisions       map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions         map[domain.MissionID]domain.MissionRevisionID
 	operationSpecs         map[domain.OperationSpecID]domain.OperationSpec
@@ -158,9 +159,10 @@ func New() *Store { return &Store{state: newState()} }
 func newState() state {
 	return state{
 
-		subagentRecords:      make(map[string]domain.SubagentRecord),
-		subagentDispatches:   make(map[domain.SubagentDispatchRequestID]domain.SubagentDispatch),
-		dispatchByGeneration: make(map[string]domain.SubagentDispatchRequestID),
+		subagentRecords:       make(map[string]domain.SubagentRecord),
+		subagentDispatches:    make(map[domain.SubagentDispatchRequestID]domain.SubagentDispatch),
+		dispatchByGeneration:  make(map[string]domain.SubagentDispatchRequestID),
+		subagentSpawnReceipts: make(map[string]domain.SubagentSpawnReceipt),
 
 		missionRevisions:          make(map[domain.MissionRevisionID]domain.MissionRevision),
 		activeMissions:            make(map[domain.MissionID]domain.MissionRevisionID),
@@ -2430,6 +2432,9 @@ func cloneState(src state) state {
 	for k, v := range src.subagentDispatches {
 		dst.subagentDispatches[k] = v
 	}
+	for k, v := range src.subagentSpawnReceipts {
+		dst.subagentSpawnReceipts[k] = v
+	}
 	for k, v := range src.dispatchByGeneration {
 		dst.dispatchByGeneration[k] = v
 	}
@@ -2905,6 +2910,38 @@ func (t transaction) SubagentRecordsByState(state domain.SubagentState, limit in
 
 func subagentDispatchGenerationKey(sessionID string, attempt int) string {
 	return fmt.Sprintf("%s\x00%d", sessionID, attempt)
+}
+
+func subagentSpawnReceiptKey(callerPeerID, requestID string) string {
+	return callerPeerID + "\x00" + requestID
+}
+
+func (t transaction) SubagentSpawnReceipt(callerPeerID, requestID string) (domain.SubagentSpawnReceipt, error) {
+	return reader(t).SubagentSpawnReceipt(callerPeerID, requestID)
+}
+func (r reader) SubagentSpawnReceipt(callerPeerID, requestID string) (domain.SubagentSpawnReceipt, error) {
+	v, ok := r.state.subagentSpawnReceipts[subagentSpawnReceiptKey(callerPeerID, requestID)]
+	if !ok {
+		return domain.SubagentSpawnReceipt{}, notFound("subagent spawn receipt", requestID)
+	}
+	return v, nil
+}
+func (t transaction) CreateSubagentSpawnReceipt(v domain.SubagentSpawnReceipt) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent spawn receipt: %w", err)
+	}
+	key := subagentSpawnReceiptKey(v.CallerPeerID, v.RequestID)
+	if existing, ok := t.state.subagentSpawnReceipts[key]; ok {
+		if existing == v {
+			return nil
+		}
+		return conflict("subagent spawn receipt", v.RequestID)
+	}
+	if _, ok := t.state.subagentRecords[v.ReceiverSessionID]; !ok {
+		return notFound("subagent record", v.ReceiverSessionID)
+	}
+	t.state.subagentSpawnReceipts[key] = v
+	return nil
 }
 
 func (t transaction) SubagentDispatch(id domain.SubagentDispatchRequestID) (domain.SubagentDispatch, error) {

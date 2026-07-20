@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -51,6 +52,44 @@ func NewPersistentSessionManager(manager SessionManager, store port.Store, clock
 }
 
 func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error) {
+	return m.spawnAndPersist(ctx, spec, "", domain.SubagentSpawnRequest{})
+}
+
+// AcceptRemoteSpawn atomically persists the receiver lifecycle record and its
+// authenticated replay receipt. A committed request can therefore return the
+// same acknowledgement after restart even when the original response was lost.
+func (m *PersistentSessionManager) AcceptRemoteSpawn(ctx context.Context, callerPeerID string, request domain.SubagentSpawnRequest) (domain.SubagentSpawnAcknowledgement, error) {
+	if !domain.ValidSubagentRPCField(callerPeerID) || domain.ValidateSubagentSpawnRequest(request) != nil {
+		return domain.SubagentSpawnAcknowledgement{}, domain.ErrInvalidSubagentSpawnRPC
+	}
+	var existing domain.SubagentSpawnReceipt
+	err := m.store.View(ctx, func(reader port.Reader) error {
+		var readErr error
+		existing, readErr = reader.SubagentSpawnReceipt(callerPeerID, request.RequestID)
+		return readErr
+	})
+	if err == nil {
+		if !existing.Matches(callerPeerID, request) {
+			return domain.SubagentSpawnAcknowledgement{}, ErrSessionConflict
+		}
+		return existing.Acknowledgement(), nil
+	}
+	if !errors.Is(err, port.ErrNotFound) {
+		return domain.SubagentSpawnAcknowledgement{}, err
+	}
+	spec := SubagentSpec{Task: request.Task, ContextMode: request.ContextMode, Labels: map[string]string{"task_id": remoteSpawnTaskID(callerPeerID, request.RequestID), "source_peer_id": callerPeerID, "source_session_id": request.SessionID}}
+	id, err := m.spawnAndPersist(ctx, spec, callerPeerID, request)
+	if err != nil {
+		return domain.SubagentSpawnAcknowledgement{}, err
+	}
+	return domain.SubagentSpawnAcknowledgement{RequestID: request.RequestID, SessionID: request.SessionID, Attempt: request.Attempt, ReceiverSessionID: string(id), Accepted: true}, nil
+}
+
+func remoteSpawnTaskID(callerPeerID, requestID string) string {
+	return fmt.Sprintf("subagent-spawn:%x", sha256.Sum256([]byte(callerPeerID+"\x00"+requestID)))
+}
+
+func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec SubagentSpec, callerPeerID string, request domain.SubagentSpawnRequest) (SessionID, error) {
 	id, err := m.manager.Spawn(ctx, spec)
 	if err != nil {
 		return "", err
@@ -119,6 +158,18 @@ func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec)
 				if readErr != nil || existing.PeerID != dispatch.PeerID {
 					return fmt.Errorf("%w: durable subagent dispatch differs from idempotent spawn", ErrSessionConflict)
 				}
+			}
+		}
+		if callerPeerID != "" {
+			receipt := domain.SubagentSpawnReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: callerPeerID, RequestID: request.RequestID, SourceSessionID: request.SessionID, Attempt: request.Attempt, Task: request.Task, ContextMode: request.ContextMode, ReceiverSessionID: string(id), RecordedAt: now}
+			if existing, readErr := tx.SubagentSpawnReceipt(callerPeerID, request.RequestID); readErr == nil {
+				if !existing.Matches(callerPeerID, request) || existing.ReceiverSessionID != string(id) {
+					return fmt.Errorf("%w: durable subagent spawn receipt differs", ErrSessionConflict)
+				}
+			} else if !errors.Is(readErr, port.ErrNotFound) {
+				return readErr
+			} else if createErr := tx.CreateSubagentSpawnReceipt(receipt); createErr != nil {
+				return createErr
 			}
 		}
 		return nil

@@ -17,7 +17,7 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-func buildPeerTransport(opts Options, store port.Store, now func() time.Time, sessions kernel.SessionManager) (*kernel.PeerTransport, error) {
+func buildPeerTransport(opts Options, store port.Store, now func() time.Time, sessions *kernel.PersistentSessionManager) (*kernel.PeerTransport, error) {
 	if opts.PeerBindAddr == "" {
 		return nil, nil // Disabled by default
 	}
