@@ -13,6 +13,10 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
+type routerIDs struct{ n int }
+
+func (i *routerIDs) NewID(prefix string) (string, error) { i.n++; return prefix + "-id", nil }
+
 type transportFunc func(context.Context, domain.PeerRecord, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
 
 func (f transportFunc) Invoke(ctx context.Context, peer domain.PeerRecord, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
@@ -25,7 +29,12 @@ func TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport(t *
 		transportCalls++
 		return domain.PeerRPCResponse{}, nil
 	})
-	manager := kernel.NewLocalSessionManager(routerClock{})
+	local := kernel.NewLocalSessionManager(routerClock{})
+	store := memory.New()
+	manager, err := kernel.NewPersistentSessionManager(local, store, routerClock{}, &routerIDs{}, kernel.PersistentSessionPolicy{MissionID: "mission-1", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
 	id, err := manager.Spawn(context.Background(), kernel.SubagentSpec{Task: "remote work", ContextMode: "isolated", Labels: map[string]string{subagentstatus.TransportPeerKey: "node-a"}})
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +46,7 @@ func TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport(t *
 	if err := router.AttachSubagentStatuses(service); err != nil {
 		t.Fatal(err)
 	}
-	payload, err := subagentstatus.Encode(subagentstatus.Observation{SessionID: string(id), Attempt: 0, State: kernel.SessionStateRunning})
+	payload, err := subagentstatus.Encode(subagentstatus.Observation{DeliveryID: "delivery-1", SessionID: string(id), Attempt: 0, State: kernel.SessionStateComplete, Result: "done"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +55,7 @@ func TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport(t *
 		t.Fatal(err)
 	}
 	ack, err := subagentstatus.DecodeAcknowledgement(response.Payload)
-	if err != nil || ack.SessionID != string(id) || ack.State != kernel.SessionStateRunning {
+	if err != nil || ack.SessionID != string(id) || ack.State != kernel.SessionStateComplete {
 		t.Fatalf("ack=%+v err=%v", ack, err)
 	}
 	if transportCalls != 0 {

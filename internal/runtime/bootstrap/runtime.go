@@ -59,11 +59,12 @@ type Runtime struct {
 	LeaseReaper kernel.LeaseReaper
 	// Subagents and Supervisor share one manager so model tool calls, durable
 	// lifecycle records, and cycle reconciliation observe the same sessions.
-	Subagents                kernel.SessionManager
-	Supervisor               *kernel.Supervisor
-	SubagentDispatcher       *kernel.SubagentDispatcher
-	RemoteSubagentWorker     *kernel.RemoteSubagentWorker
-	SubagentStatusDispatcher *kernel.SubagentStatusDispatcher
+	Subagents                   kernel.SessionManager
+	Supervisor                  *kernel.Supervisor
+	SubagentDispatcher          *kernel.SubagentDispatcher
+	RemoteSubagentWorker        *kernel.RemoteSubagentWorker
+	SubagentStatusDispatcher    *kernel.SubagentStatusDispatcher
+	SubagentStatusIngressWorker *kernel.SubagentStatusIngressWorker
 	// subagentTools is retained separately so dynamic model-executor reloads
 	// preserve the lifecycle tools rather than rebuilding an fs/exec-only catalog.
 	subagentTools tool.Provider
@@ -382,9 +383,11 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	var subagentDispatcher *kernel.SubagentDispatcher
 	var remoteSubagentWorker *kernel.RemoteSubagentWorker
 	var subagentStatusDispatcher *kernel.SubagentStatusDispatcher
+	var subagentStatusIngressWorker *kernel.SubagentStatusIngressWorker
 	if peerTransport != nil && sessionManager != nil {
 		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
 		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
+		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: store, Manager: sessionManager, Clock: clock, Batch: 4}
 		if modelExec != nil && modelExec.Provider != nil {
 			remoteSubagentWorker = &kernel.RemoteSubagentWorker{Store: store, Manager: sessionManager, Executor: kernel.ModelRemoteSubagentExecutor{Provider: modelExec.Provider, MaxOutputTokens: 512}, Clock: clock, Owner: opts.RuntimeName, Batch: 2, Lease: 2 * time.Minute, Timeout: 90 * time.Second}
 		}
@@ -415,29 +418,30 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			Web:   webExec,
 			Model: modelExec,
 		},
-		LeaseReaper:              leaseReaper,
-		Subagents:                sessionManager,
-		Supervisor:               supervisor,
-		SubagentDispatcher:       subagentDispatcher,
-		RemoteSubagentWorker:     remoteSubagentWorker,
-		SubagentStatusDispatcher: subagentStatusDispatcher,
-		subagentTools:            subagentTools,
-		Model:                    modelExec,
-		Web:                      webExec,
-		File:                     fileExec,
-		Peer:                     peerTransport,
-		Registry:                 registry,
-		Cooldowns:                cooldowns,
-		Inspect:                  inspectAPI,
-		Control:                  controlAPI,
-		Dashboard:                dash,
-		Handler:                  handler,
-		TelegramAdapter:          telegramBits.Adapter,
-		TelegramWorker:           telegramBits.Worker,
-		TelegramIngress:          telegramBits.Ingress,
-		Telemetry:                telemetry,
-		cycleTelemetry:           observability.NewCycleInstruments(telemetry),
-		logger:                   log.Default(),
+		LeaseReaper:                 leaseReaper,
+		Subagents:                   sessionManager,
+		Supervisor:                  supervisor,
+		SubagentDispatcher:          subagentDispatcher,
+		RemoteSubagentWorker:        remoteSubagentWorker,
+		SubagentStatusDispatcher:    subagentStatusDispatcher,
+		SubagentStatusIngressWorker: subagentStatusIngressWorker,
+		subagentTools:               subagentTools,
+		Model:                       modelExec,
+		Web:                         webExec,
+		File:                        fileExec,
+		Peer:                        peerTransport,
+		Registry:                    registry,
+		Cooldowns:                   cooldowns,
+		Inspect:                     inspectAPI,
+		Control:                     controlAPI,
+		Dashboard:                   dash,
+		Handler:                     handler,
+		TelegramAdapter:             telegramBits.Adapter,
+		TelegramWorker:              telegramBits.Worker,
+		TelegramIngress:             telegramBits.Ingress,
+		Telemetry:                   telemetry,
+		cycleTelemetry:              observability.NewCycleInstruments(telemetry),
+		logger:                      log.Default(),
 	}, nil
 }
 
@@ -596,6 +600,7 @@ type CycleResult struct {
 	SubagentDispatches         int
 	RemoteSubagentsExecuted    int
 	SubagentStatusesDispatched int
+	SubagentStatusesApplied    int
 	SchedulerRan               bool
 	SchedulerSteps             int
 	SchedulerKind              kernel.DecisionKind
@@ -694,6 +699,16 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.RemoteSubagentsExecuted = executed
 		if executed > 0 {
+			result.Worked = true
+		}
+	}
+	if rt.SubagentStatusIngressWorker != nil {
+		applied, err := rt.SubagentStatusIngressWorker.ApplyPending(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent status ingress worker: %w", err)
+		}
+		result.SubagentStatusesApplied = applied
+		if applied > 0 {
 			result.Worked = true
 		}
 	}

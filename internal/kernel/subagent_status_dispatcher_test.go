@@ -39,15 +39,16 @@ func TestSubagentStatusDispatcherUsesSourceGenerationAndMarksACK(t *testing.T) {
 			t.Fatalf("route=%+v", request)
 		}
 		var observation struct {
-			SessionID string              `json:"session_id"`
-			Attempt   int                 `json:"attempt"`
-			State     kernel.SessionState `json:"state"`
-			Result    string              `json:"result"`
+			DeliveryID string              `json:"delivery_id"`
+			SessionID  string              `json:"session_id"`
+			Attempt    int                 `json:"attempt"`
+			State      kernel.SessionState `json:"state"`
+			Result     string              `json:"result"`
 		}
 		if err := json.Unmarshal(request.Payload, &observation); err != nil {
 			t.Fatal(err)
 		}
-		if observation.SessionID != receipt.SourceSessionID || observation.Attempt != receipt.Attempt || observation.State != kernel.SessionStateComplete || observation.Result != "answer" {
+		if observation.DeliveryID != receipt.RequestID || observation.SessionID != receipt.SourceSessionID || observation.Attempt != receipt.Attempt || observation.State != kernel.SessionStateComplete || observation.Result != "answer" {
 			t.Fatalf("observation=%+v", observation)
 		}
 		payload, _ := json.Marshal(map[string]any{"session_id": observation.SessionID, "state": observation.State})
@@ -114,7 +115,11 @@ func TestSubagentStatusDispatcherCompletesOriginGenerationThroughSupervisor(t *t
 	if err := originStore.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(originRecord) }); err != nil {
 		t.Fatal(err)
 	}
-	service, err := subagentstatus.NewService(originManager)
+	persistentOrigin, err := kernel.NewPersistentSessionManager(originManager, originStore, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{MissionID: "mission-origin", MaxAttempts: 4, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := subagentstatus.NewService(persistentOrigin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,6 +134,10 @@ func TestSubagentStatusDispatcherCompletesOriginGenerationThroughSupervisor(t *t
 	dispatcher := kernel.SubagentStatusDispatcher{Store: receiverStore, Caller: caller, Clock: clock}
 	if n, err := dispatcher.DispatchTerminal(ctx); err != nil || n != 1 {
 		t.Fatalf("dispatch=(%d,%v)", n, err)
+	}
+	ingressWorker := kernel.SubagentStatusIngressWorker{Store: originStore, Manager: originManager, Clock: clock, Batch: 4}
+	if n, err := ingressWorker.ApplyPending(ctx); err != nil || n != 1 {
+		t.Fatalf("apply ingress=(%d,%v)", n, err)
 	}
 	supervisor := kernel.Supervisor{Store: originStore, Manager: originManager, Clock: clock}
 	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {

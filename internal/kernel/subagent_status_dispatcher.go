@@ -16,11 +16,12 @@ import (
 const subagentStatusCapability = "subagent.status.v1"
 
 type outboundSubagentStatus struct {
-	SessionID string       `json:"session_id"`
-	Attempt   int          `json:"attempt"`
-	State     SessionState `json:"state"`
-	Result    string       `json:"result,omitempty"`
-	Failure   string       `json:"failure,omitempty"`
+	DeliveryID string       `json:"delivery_id"`
+	SessionID  string       `json:"session_id"`
+	Attempt    int          `json:"attempt"`
+	State      SessionState `json:"state"`
+	Result     string       `json:"result,omitempty"`
+	Failure    string       `json:"failure,omitempty"`
 }
 
 type subagentStatusAcknowledgement struct {
@@ -78,7 +79,7 @@ func (d *SubagentStatusDispatcher) DispatchTerminal(ctx context.Context) (int, e
 			}
 			return processed, err
 		}
-		observation := outboundSubagentStatus{SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt}
+		observation := outboundSubagentStatus{DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt}
 		switch receipt.Status {
 		case domain.SubagentSpawnReceiptComplete:
 			observation.State, observation.Result = SessionStateComplete, receipt.Result

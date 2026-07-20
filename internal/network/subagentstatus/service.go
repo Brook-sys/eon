@@ -25,11 +25,12 @@ var ErrInvalidObservation = errors.New("invalid subagent status observation")
 // SessionManager validates the lifecycle transition and the Supervisor remains
 // the sole component that writes canonical records and wake events.
 type Observation struct {
-	SessionID string              `json:"session_id"`
-	Attempt   int                 `json:"attempt"`
-	State     kernel.SessionState `json:"state"`
-	Result    string              `json:"result,omitempty"`
-	Failure   string              `json:"failure,omitempty"`
+	DeliveryID string              `json:"delivery_id"`
+	SessionID  string              `json:"session_id"`
+	Attempt    int                 `json:"attempt"`
+	State      kernel.SessionState `json:"state"`
+	Result     string              `json:"result,omitempty"`
+	Failure    string              `json:"failure,omitempty"`
 }
 
 type Acknowledgement struct {
@@ -38,14 +39,14 @@ type Acknowledgement struct {
 }
 
 type Service struct {
-	manager kernel.SessionManager
+	manager *kernel.PersistentSessionManager
 }
 
 type Handler interface {
 	Handle(context.Context, string, []byte) ([]byte, error)
 }
 
-func NewService(manager kernel.SessionManager) (*Service, error) {
+func NewService(manager *kernel.PersistentSessionManager) (*Service, error) {
 	if manager == nil {
 		return nil, errors.New("subagent status manager is required")
 	}
@@ -65,27 +66,20 @@ func (s *Service) Handle(ctx context.Context, callerID string, payload []byte) (
 	if err := decoder.Decode(&observation); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
 		return nil, ErrInvalidObservation
 	}
-	if !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
+	if !validField(observation.DeliveryID) || !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
 		return nil, ErrInvalidObservation
 	}
 
-	status, err := s.manager.Status(ctx, kernel.SessionID(observation.SessionID))
-	if err != nil {
-		return nil, err
-	}
-	// The expected reporter is fixed when the transport session is admitted;
+	// The expected reporter is checked against the durable transport binding;
 	// certificate identity, not payload or model output, establishes callerID.
-	if status.Spec.Labels[TransportPeerKey] == "" || status.Spec.Labels[TransportPeerKey] != callerID {
-		return nil, ErrInvalidObservation
-	}
-	if err := s.manager.PublishStatus(ctx, kernel.SubagentObservation{ID: status.ID, Attempt: observation.Attempt, State: observation.State, Result: observation.Result, Failure: observation.Failure}); err != nil {
+	if err := s.manager.AdmitRemoteStatus(ctx, callerID, observation.DeliveryID, kernel.SubagentObservation{ID: kernel.SessionID(observation.SessionID), Attempt: observation.Attempt, State: observation.State, Result: observation.Result, Failure: observation.Failure}); err != nil {
 		return nil, err
 	}
 	return json.Marshal(Acknowledgement{SessionID: observation.SessionID, State: observation.State})
 }
 
 func Encode(observation Observation) ([]byte, error) {
-	if !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
+	if !validField(observation.DeliveryID) || !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
 		return nil, ErrInvalidObservation
 	}
 	payload, err := json.Marshal(observation)

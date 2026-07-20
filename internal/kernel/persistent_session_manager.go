@@ -188,6 +188,35 @@ func (m *PersistentSessionManager) Restore(ctx context.Context, status SubagentS
 	return m.manager.Restore(ctx, status)
 }
 
+// AdmitRemoteStatus verifies the authenticated reporter against the durable
+// transport binding and commits an immutable ingress receipt before ACK.
+func (m *PersistentSessionManager) AdmitRemoteStatus(ctx context.Context, callerPeerID, deliveryID string, observation SubagentObservation) error {
+	candidate := domain.SubagentStatusIngressReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: callerPeerID, DeliveryID: deliveryID, SessionID: string(observation.ID), Attempt: observation.Attempt, State: string(observation.State), Result: observation.Result, Failure: observation.Failure, Status: domain.SubagentStatusIngressPending, RecordedAt: m.clock.Now().UTC()}
+	if err := candidate.Validate(); err != nil {
+		return err
+	}
+	return m.store.Update(ctx, func(tx port.Transaction) error {
+		record, err := tx.SubagentRecord(string(observation.ID))
+		if err != nil {
+			return err
+		}
+		if record.TransportPeerID == "" || record.TransportPeerID != callerPeerID {
+			return domain.ErrInvalidSubagentStatusIngress
+		}
+		existing, err := tx.SubagentStatusIngressReceipt(callerPeerID, deliveryID)
+		if err == nil {
+			if !existing.Matches(candidate) {
+				return fmt.Errorf("%w: durable subagent status ingress differs", ErrSessionConflict)
+			}
+			return nil
+		}
+		if !errors.Is(err, port.ErrNotFound) {
+			return err
+		}
+		return tx.CreateSubagentStatusIngressReceipt(candidate)
+	})
+}
+
 func (m *PersistentSessionManager) PublishStatus(ctx context.Context, observation SubagentObservation) error {
 	return m.manager.PublishStatus(ctx, observation)
 }

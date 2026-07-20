@@ -96,6 +96,7 @@ type state struct {
 	subagentDispatches     map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
 	dispatchByGeneration   map[string]domain.SubagentDispatchRequestID
 	subagentSpawnReceipts  map[string]domain.SubagentSpawnReceipt
+	subagentStatusIngress  map[string]domain.SubagentStatusIngressReceipt
 	missionRevisions       map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions         map[domain.MissionID]domain.MissionRevisionID
 	operationSpecs         map[domain.OperationSpecID]domain.OperationSpec
@@ -163,6 +164,7 @@ func newState() state {
 		subagentDispatches:    make(map[domain.SubagentDispatchRequestID]domain.SubagentDispatch),
 		dispatchByGeneration:  make(map[string]domain.SubagentDispatchRequestID),
 		subagentSpawnReceipts: make(map[string]domain.SubagentSpawnReceipt),
+		subagentStatusIngress: make(map[string]domain.SubagentStatusIngressReceipt),
 
 		missionRevisions:          make(map[domain.MissionRevisionID]domain.MissionRevision),
 		activeMissions:            make(map[domain.MissionID]domain.MissionRevisionID),
@@ -2435,6 +2437,9 @@ func cloneState(src state) state {
 	for k, v := range src.subagentSpawnReceipts {
 		dst.subagentSpawnReceipts[k] = v
 	}
+	for k, v := range src.subagentStatusIngress {
+		dst.subagentStatusIngress[k] = v
+	}
 	for k, v := range src.dispatchByGeneration {
 		dst.dispatchByGeneration[k] = v
 	}
@@ -3020,6 +3025,83 @@ func (t transaction) SaveSubagentSpawnReceipt(v domain.SubagentSpawnReceipt, exp
 		return fmt.Errorf("%w: immutable subagent spawn receipt identity changed", port.ErrConflict)
 	}
 	t.state.subagentSpawnReceipts[key] = v
+	return nil
+}
+
+func subagentStatusIngressKey(callerPeerID, deliveryID string) string {
+	return callerPeerID + "\x00" + deliveryID
+}
+
+func (t transaction) SubagentStatusIngressReceipt(callerPeerID, deliveryID string) (domain.SubagentStatusIngressReceipt, error) {
+	return reader(t).SubagentStatusIngressReceipt(callerPeerID, deliveryID)
+}
+func (r reader) SubagentStatusIngressReceipt(callerPeerID, deliveryID string) (domain.SubagentStatusIngressReceipt, error) {
+	v, ok := r.state.subagentStatusIngress[subagentStatusIngressKey(callerPeerID, deliveryID)]
+	if !ok {
+		return domain.SubagentStatusIngressReceipt{}, notFound("subagent status ingress receipt", deliveryID)
+	}
+	return v, nil
+}
+func (t transaction) CreateSubagentStatusIngressReceipt(v domain.SubagentStatusIngressReceipt) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent status ingress receipt: %w", err)
+	}
+	key := subagentStatusIngressKey(v.CallerPeerID, v.DeliveryID)
+	if existing, ok := t.state.subagentStatusIngress[key]; ok {
+		if existing.Matches(v) {
+			return nil
+		}
+		return conflict("subagent status ingress receipt", v.DeliveryID)
+	}
+	if _, ok := t.state.subagentRecords[v.SessionID]; !ok {
+		return notFound("subagent record", v.SessionID)
+	}
+	t.state.subagentStatusIngress[key] = v
+	return nil
+}
+func (t transaction) PendingSubagentStatusIngressReceipts(limit int) ([]domain.SubagentStatusIngressReceipt, error) {
+	return reader(t).PendingSubagentStatusIngressReceipts(limit)
+}
+func (r reader) PendingSubagentStatusIngressReceipts(limit int) ([]domain.SubagentStatusIngressReceipt, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("pending subagent status ingress query requires positive limit")
+	}
+	result := make([]domain.SubagentStatusIngressReceipt, 0, limit)
+	for _, receipt := range r.state.subagentStatusIngress {
+		if receipt.Status == domain.SubagentStatusIngressPending {
+			result = append(result, receipt)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].RecordedAt.Equal(result[j].RecordedAt) {
+			if result[i].CallerPeerID == result[j].CallerPeerID {
+				return result[i].DeliveryID < result[j].DeliveryID
+			}
+			return result[i].CallerPeerID < result[j].CallerPeerID
+		}
+		return result[i].RecordedAt.Before(result[j].RecordedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (t transaction) SaveSubagentStatusIngressReceipt(v domain.SubagentStatusIngressReceipt, expected domain.SubagentStatusIngressState) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent status ingress receipt: %w", err)
+	}
+	key := subagentStatusIngressKey(v.CallerPeerID, v.DeliveryID)
+	current, ok := t.state.subagentStatusIngress[key]
+	if !ok {
+		return notFound("subagent status ingress receipt", v.DeliveryID)
+	}
+	if current.Status != expected {
+		return fmt.Errorf("%w: stale subagent status ingress state", port.ErrConflict)
+	}
+	if !current.Matches(v) || !current.RecordedAt.Equal(v.RecordedAt) {
+		return fmt.Errorf("%w: immutable subagent status ingress identity changed", port.ErrConflict)
+	}
+	t.state.subagentStatusIngress[key] = v
 	return nil
 }
 

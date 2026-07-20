@@ -87,6 +87,7 @@ type persistedState struct {
 	SubagentRecords           map[string]domain.SubagentRecord
 	SubagentDispatches        map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
 	SubagentSpawnReceipts     map[string]domain.SubagentSpawnReceipt
+	SubagentStatusIngress     map[string]domain.SubagentStatusIngressReceipt
 	ConfigDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
 	ConfigRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
 	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
@@ -128,6 +129,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		SubagentRecords:       cloned.subagentRecords,
 		SubagentDispatches:    cloned.subagentDispatches,
 		SubagentSpawnReceipts: cloned.subagentSpawnReceipts,
+		SubagentStatusIngress: cloned.subagentStatusIngress,
 		ConfigDrafts:          cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 		ChannelCursors:        cloned.channelCursors,
@@ -269,6 +271,12 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	}
 	base.subagentDispatches = nonNil(p.SubagentDispatches, base.subagentDispatches)
 	base.subagentSpawnReceipts = nonNil(p.SubagentSpawnReceipts, base.subagentSpawnReceipts)
+	base.subagentStatusIngress = nonNil(p.SubagentStatusIngress, base.subagentStatusIngress)
+	for key, receipt := range base.subagentStatusIngress {
+		if err := receipt.Validate(); err != nil || key != subagentStatusIngressKey(receipt.CallerPeerID, receipt.DeliveryID) {
+			return nil, fmt.Errorf("decode checkpoint invalid subagent status ingress receipt %q", key)
+		}
+	}
 	for key, receipt := range base.subagentSpawnReceipts {
 		if err := receipt.Validate(); err != nil || key != subagentSpawnReceiptKey(receipt.CallerPeerID, receipt.RequestID) {
 			return nil, fmt.Errorf("decode checkpoint invalid subagent spawn receipt %q", key)
