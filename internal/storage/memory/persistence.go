@@ -84,6 +84,7 @@ type persistedState struct {
 	ExternalEventDispositions map[domain.ExternalEventID]domain.ExternalEventDisposition
 	WorkOpportunities         map[domain.WorkOpportunityID]domain.WorkOpportunity
 	ContinuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
+	SubagentRecords           map[string]domain.SubagentRecord
 	ConfigDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
 	ConfigRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
 	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
@@ -122,7 +123,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ExternalEvents:          cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
 		ExternalEventDispositions: cloned.externalEventDispositions,
 		WorkOpportunities:         cloned.workOpportunities, ContinuityDiagnoses: cloned.continuityDiagnoses,
-		ConfigDrafts: cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
+		SubagentRecords: cloned.subagentRecords,
+		ConfigDrafts:    cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 		ChannelCursors:        cloned.channelCursors,
 		ResourceUsages:        cloned.resourceUsages,
@@ -299,6 +301,7 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	base.externalEventDispositions = nonNil(p.ExternalEventDispositions, base.externalEventDispositions)
 	base.workOpportunities = nonNil(p.WorkOpportunities, base.workOpportunities)
 	base.continuityDiagnoses = nonNil(p.ContinuityDiagnoses, base.continuityDiagnoses)
+	base.subagentRecords = nonNil(p.SubagentRecords, base.subagentRecords)
 	base.configDrafts = nonNil(p.ConfigDrafts, base.configDrafts)
 	base.configRevisions = nonNil(p.ConfigRevisions, base.configRevisions)
 	base.activeConfig = nonNil(p.ActiveConfig, base.activeConfig)

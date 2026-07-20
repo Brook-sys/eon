@@ -2,6 +2,7 @@ package kernel_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -88,5 +89,41 @@ func TestLocalSessionManager_EnforcesConcurrencyLimit(t *testing.T) {
 	_, err = sm.Spawn(ctx, kernel.SubagentSpec{Task: "T2", ContextMode: "isolated", Labels: map[string]string{"task_id": "2"}})
 	if err != kernel.ErrSessionLimit {
 		t.Fatalf("expected ErrSessionLimit, got %v", err)
+	}
+}
+
+func TestLocalSessionManager_RestoreAndPublishTerminalStatus(t *testing.T) {
+	ctx := context.Background()
+	clock := &mockClock{now: time.Date(2026, 7, 20, 13, 30, 0, 0, time.UTC)}
+	manager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	status := kernel.SubagentStatus{
+		ID: "restored-1", State: kernel.SessionStateRunning,
+		Spec:      kernel.SubagentSpec{Task: "continue after restart", ContextMode: "isolated", Labels: map[string]string{"task_id": "task-restored"}},
+		StartedAt: clock.Now().Add(-time.Minute),
+	}
+	if err := manager.Restore(ctx, status); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Restore(ctx, status); err != nil {
+		t.Fatalf("idempotent restore: %v", err)
+	}
+	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateComplete, "done", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateComplete, "done", ""); err != nil {
+		t.Fatalf("idempotent terminal replay: %v", err)
+	}
+	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateFailed, "", "late failure"); !errors.Is(err, kernel.ErrSessionTerminal) {
+		t.Fatalf("divergent terminal replay = %v", err)
+	}
+	got, err := manager.Status(ctx, status.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.State != kernel.SessionStateComplete || got.Result != "done" || got.Error != nil {
+		t.Fatalf("published status = %+v", got)
 	}
 }

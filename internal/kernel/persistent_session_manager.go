@@ -93,6 +93,14 @@ func (m *PersistentSessionManager) Status(ctx context.Context, id SessionID) (Su
 	return m.manager.Status(ctx, id)
 }
 
+func (m *PersistentSessionManager) Restore(ctx context.Context, status SubagentStatus) error {
+	return m.manager.Restore(ctx, status)
+}
+
+func (m *PersistentSessionManager) PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error {
+	return m.manager.PublishStatus(ctx, id, state, result, failure)
+}
+
 func (m *PersistentSessionManager) Wait(ctx context.Context, id SessionID) (SubagentStatus, error) {
 	return m.manager.Wait(ctx, id)
 }

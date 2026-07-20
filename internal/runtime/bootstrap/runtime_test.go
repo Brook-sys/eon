@@ -174,6 +174,57 @@ func TestOpenWiresSubagentToolsAndCycleSupervisor(t *testing.T) {
 	}
 }
 
+func TestOpenRestoresActiveSubagentAcrossSQLiteRestart(t *testing.T) {
+	ctx := context.Background()
+	dbPath := t.TempDir() + "/runtime.db"
+	opts := bootstrap.Options{
+		StoreBackend: bootstrap.StorageSQLite,
+		SQLitePath:   dbPath,
+		MissionID:    "mission-restart",
+		Subagent:     &bootstrap.SubagentOptions{Enabled: true, MaxConcurrent: 2, MaxAttempts: 2, Timeout: time.Minute},
+	}
+	first, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatalf("first open: %v", err)
+	}
+	id, err := first.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "survive restart", ContextMode: "isolated", Labels: map[string]string{"task_id": "task-restart"}})
+	if err != nil {
+		t.Fatalf("spawn: %v", err)
+	}
+	if err := first.Subagents.PublishStatus(ctx, id, kernel.SessionStateRunning, "", ""); err != nil {
+		t.Fatalf("publish running: %v", err)
+	}
+	if _, err := first.Supervisor.Reconcile(ctx); err != nil {
+		t.Fatalf("persist running: %v", err)
+	}
+	if err := first.Close(ctx); err != nil {
+		t.Fatalf("first close: %v", err)
+	}
+
+	second, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatalf("second open: %v", err)
+	}
+	t.Cleanup(func() { _ = second.Close(ctx) })
+	status, err := second.Subagents.Status(ctx, id)
+	if err != nil {
+		t.Fatalf("restored status: %v", err)
+	}
+	if status.State != kernel.SessionStateRunning || status.Spec.Task != "survive restart" || status.Spec.Labels["task_id"] != "task-restart" {
+		t.Fatalf("restored status = %+v", status)
+	}
+	if err := second.Subagents.PublishStatus(ctx, id, kernel.SessionStateComplete, "recovered", ""); err != nil {
+		t.Fatalf("publish completion: %v", err)
+	}
+	result, err := second.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("completion cycle: %v", err)
+	}
+	if result.SubagentsReconciled != 1 || result.EventsProcessed != 1 || !result.Worked {
+		t.Fatalf("completion cycle = %#v", result)
+	}
+}
+
 func TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

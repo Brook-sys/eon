@@ -92,6 +92,25 @@ func (m *mockSessionManager) Spawn(ctx context.Context, spec kernel.SubagentSpec
 	return "", errors.New("unimplemented")
 }
 
+func (m *mockSessionManager) Restore(ctx context.Context, status kernel.SubagentStatus) error {
+	m.sessions[status.ID] = status
+	return nil
+}
+
+func (m *mockSessionManager) PublishStatus(ctx context.Context, id kernel.SessionID, state kernel.SessionState, result, failure string) error {
+	status, ok := m.sessions[id]
+	if !ok {
+		return kernel.ErrSessionNotFound
+	}
+	status.State = state
+	status.Result = result
+	if failure != "" {
+		status.Error = errors.New(failure)
+	}
+	m.sessions[id] = status
+	return nil
+}
+
 func (m *mockSessionManager) Status(ctx context.Context, id kernel.SessionID) (kernel.SubagentStatus, error) {
 	status, ok := m.sessions[id]
 	if !ok {

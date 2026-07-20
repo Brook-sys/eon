@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -34,6 +35,9 @@ func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := restoreSubagents(context.Background(), store, local); err != nil {
+		return nil, nil, err
+	}
 	sm, err := kernel.NewPersistentSessionManager(local, store, clock, kernel.PersistentSessionPolicy{
 		MissionID: missionID, MaxAttempts: opts.MaxAttempts, Timeout: opts.Timeout,
 	})
@@ -46,6 +50,33 @@ func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now
 
 	cat, err := tool.NewCatalog(tools...)
 	return cat, sm, err
+}
+
+func restoreSubagents(ctx context.Context, store port.Store, manager kernel.SessionManager) error {
+	return store.View(ctx, func(reader port.Reader) error {
+		for _, state := range []domain.SubagentState{domain.SubagentStatePending, domain.SubagentStateRunning} {
+			records, err := reader.SubagentRecordsByState(state, 0)
+			if err != nil {
+				return err
+			}
+			for _, record := range records {
+				sessionState := kernel.SessionStatePending
+				if record.State == domain.SubagentStateRunning {
+					sessionState = kernel.SessionStateRunning
+				}
+				status := kernel.SubagentStatus{
+					ID:        kernel.SessionID(record.ID),
+					State:     sessionState,
+					Spec:      kernel.SubagentSpec{Task: record.Task, ContextMode: record.ContextMode, Labels: map[string]string{"task_id": record.TaskID}},
+					StartedAt: record.StartedAt,
+				}
+				if err := manager.Restore(ctx, status); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func buildSubagentRemote(opts *SubagentOptions, clock interface{ Now() time.Time }, peerCaller port.PeerCaller, ids source.IDGenerator, callerID string) (tool.Provider, error) {

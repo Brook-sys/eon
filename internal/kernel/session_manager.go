@@ -54,6 +54,8 @@ func (p SessionPolicy) validate() error {
 // SessionManager defines the contract for coordinating child subagents.
 type SessionManager interface {
 	Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error)
+	Restore(ctx context.Context, status SubagentStatus) error
+	PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
 }
@@ -62,6 +64,7 @@ var (
 	ErrSessionNotFound = errors.New("session not found")
 	ErrSessionLimit    = errors.New("subagent concurrency limit reached")
 	ErrSessionConflict = errors.New("subagent idempotency key conflicts with existing specification")
+	ErrSessionTerminal = errors.New("terminal subagent status cannot be changed")
 )
 
 // localSessionManager is a deterministic in-memory implementation intended for
@@ -145,6 +148,100 @@ func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (Ses
 		m.byTaskID[taskID] = id
 	}
 	return id, nil
+}
+
+// Restore rehydrates a non-terminal transport observation after process
+// restart. It never invents a completed result and is idempotent only when the
+// restored identity and specification are identical.
+func (m *localSessionManager) Restore(ctx context.Context, status SubagentStatus) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if status.ID == "" || status.Spec.Task == "" {
+		return errors.New("restored subagent identity and task are required")
+	}
+	if status.Spec.ContextMode != "isolated" && status.Spec.ContextMode != "fork" {
+		return errors.New("restored subagent context mode must be isolated or fork")
+	}
+	if status.State != SessionStatePending && status.State != SessionStateRunning {
+		return errors.New("only active subagent sessions can be restored")
+	}
+	if status.StartedAt.IsZero() {
+		return errors.New("restored subagent start time is required")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if existing, ok := m.sessions[status.ID]; ok {
+		if existing.State != status.State || !existing.StartedAt.Equal(status.StartedAt) || !subagentSpecsEqual(existing.Spec, status.Spec) {
+			return ErrSessionConflict
+		}
+		return nil
+	}
+	active := 0
+	for _, existing := range m.sessions {
+		if existing.State == SessionStatePending || existing.State == SessionStateRunning {
+			active++
+		}
+	}
+	if active >= m.policy.MaxConcurrent {
+		return ErrSessionLimit
+	}
+	copy := status
+	copy.Spec = cloneSubagentSpec(status.Spec)
+	copy.Result = ""
+	copy.Error = nil
+	m.sessions[status.ID] = &copy
+	if taskID := status.Spec.Labels["task_id"]; taskID != "" {
+		if prior, exists := m.byTaskID[taskID]; exists && prior != status.ID {
+			delete(m.sessions, status.ID)
+			return ErrSessionConflict
+		}
+		m.byTaskID[taskID] = status.ID
+	}
+	return nil
+}
+
+// PublishStatus is the narrow ingress used by a real child-session transport
+// to publish lifecycle observations. Terminal observations are monotonic and
+// replay-safe; divergent terminal replays fail closed.
+func (m *localSessionManager) PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if state != SessionStateRunning && state != SessionStateComplete && state != SessionStateFailed {
+		return errors.New("published subagent state must be RUNNING, COMPLETE, or FAILED")
+	}
+	if state == SessionStateComplete && failure != "" {
+		return errors.New("completed subagent cannot publish failure")
+	}
+	if state == SessionStateFailed && result != "" {
+		return errors.New("failed subagent cannot publish result")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	status, ok := m.sessions[id]
+	if !ok {
+		return ErrSessionNotFound
+	}
+	if status.State == SessionStateComplete || status.State == SessionStateFailed {
+		existingFailure := ""
+		if status.Error != nil {
+			existingFailure = status.Error.Error()
+		}
+		if status.State == state && status.Result == result && existingFailure == failure {
+			return nil
+		}
+		return ErrSessionTerminal
+	}
+	status.State = state
+	status.Result = result
+	status.Error = nil
+	if failure != "" {
+		status.Error = errors.New(failure)
+	}
+	return nil
 }
 
 func (m *localSessionManager) Status(ctx context.Context, id SessionID) (SubagentStatus, error) {
