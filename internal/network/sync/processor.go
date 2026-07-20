@@ -8,6 +8,5 @@ import (
 // and applies them to the local node canonical state, provided they pass strict
 // domain validity and authority checks.
 type InboxCanonicalizer interface {
-	Reconcile(ctx context.Context) error
+	Reconcile(ctx context.Context, peerID string) (int, error)
 }
-
