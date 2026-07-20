@@ -12,11 +12,23 @@ import (
 
 // SessionsSpawnTool delegates work to an isolated child session.
 type SessionsSpawnTool struct {
-	manager kernel.SessionManager
+	manager       kernel.SessionManager
+	trustedLabels map[string]string
 }
 
 func NewSessionsSpawnTool(manager kernel.SessionManager) *SessionsSpawnTool {
 	return &SessionsSpawnTool{manager: manager}
+}
+
+// NewSessionsSpawnToolWithTrustedLabels binds deployment-authorized routing
+// metadata outside model-controlled arguments. Callers cannot override these
+// labels through the tool schema.
+func NewSessionsSpawnToolWithTrustedLabels(manager kernel.SessionManager, labels map[string]string) *SessionsSpawnTool {
+	copy := make(map[string]string, len(labels))
+	for key, value := range labels {
+		copy[key] = value
+	}
+	return &SessionsSpawnTool{manager: manager, trustedLabels: copy}
 }
 
 func (t *SessionsSpawnTool) Definition() port.ToolDefinition {
@@ -50,6 +62,7 @@ func (t *SessionsSpawnTool) Execute(ctx context.Context, args json.RawMessage) (
 	spec := kernel.SubagentSpec{
 		Task:        req.Task,
 		ContextMode: req.ContextMode,
+		Labels:      t.trustedLabels,
 	}
 
 	id, err := t.manager.Spawn(ctx, spec)

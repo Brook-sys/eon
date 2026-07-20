@@ -53,3 +53,33 @@ func TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent(t *testing.T)
 		t.Fatal(err)
 	}
 }
+
+func TestPersistentSessionManagerPersistsTransportPeerBinding(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 13, 0, 0, 0, time.UTC)}
+	local, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager, err := kernel.NewPersistentSessionManager(local, store, clock, kernel.PersistentSessionPolicy{MissionID: "mission-1", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "remote task", ContextMode: "isolated", Labels: map[string]string{"task_id": "task-remote", kernel.SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		record, readErr := r.SubagentRecord(string(id))
+		if readErr != nil {
+			return readErr
+		}
+		if record.TransportPeerID != "peer-a" {
+			t.Fatalf("transport peer = %q", record.TransportPeerID)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

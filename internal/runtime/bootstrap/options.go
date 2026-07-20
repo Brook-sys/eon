@@ -331,6 +331,9 @@ func (o *Options) Validate() error {
 		if o.Subagent.Timeout < 0 {
 			return errors.New("subagent timeout must not be negative")
 		}
+		if len(o.Subagent.TransportPeerID) > 128 || strings.TrimSpace(o.Subagent.TransportPeerID) != o.Subagent.TransportPeerID {
+			return errors.New("subagent transport peer id is invalid")
+		}
 	}
 	for i, route := range o.QuestionRoutes {
 		if strings.TrimSpace(route.Channel) == "" || strings.TrimSpace(route.DestinationRef) == "" {

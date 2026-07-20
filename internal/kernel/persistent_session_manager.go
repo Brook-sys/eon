@@ -56,17 +56,18 @@ func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec)
 		taskID = string(id)
 	}
 	record := domain.SubagentRecord{
-		SchemaVersion: domain.SchemaVersionV1,
-		ID:            string(id),
-		TaskID:        taskID,
-		MissionID:     string(m.policy.MissionID),
-		State:         domain.SubagentStatePending,
-		StartedAt:     now,
-		UpdatedAt:     now,
-		Task:          spec.Task,
-		ContextMode:   spec.ContextMode,
-		MaxAttempts:   m.policy.MaxAttempts,
-		Deadline:      now.Add(m.policy.Timeout),
+		SchemaVersion:   domain.SchemaVersionV1,
+		ID:              string(id),
+		TaskID:          taskID,
+		MissionID:       string(m.policy.MissionID),
+		State:           domain.SubagentStatePending,
+		StartedAt:       now,
+		UpdatedAt:       now,
+		Task:            spec.Task,
+		ContextMode:     spec.ContextMode,
+		TransportPeerID: spec.Labels[SubagentTransportPeerLabel],
+		MaxAttempts:     m.policy.MaxAttempts,
+		Deadline:        now.Add(m.policy.Timeout),
 	}
 	err = m.store.Update(ctx, func(tx port.Transaction) error {
 		if createErr := tx.CreateSubagentRecord(record); createErr != nil {
@@ -77,7 +78,7 @@ func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec)
 			if readErr != nil {
 				return readErr
 			}
-			if existing.TaskID != record.TaskID || existing.MissionID != record.MissionID || existing.Task != record.Task || existing.ContextMode != record.ContextMode {
+			if existing.TaskID != record.TaskID || existing.MissionID != record.MissionID || existing.Task != record.Task || existing.ContextMode != record.ContextMode || existing.TransportPeerID != record.TransportPeerID {
 				return fmt.Errorf("%w: durable subagent record differs from idempotent spawn", ErrSessionConflict)
 			}
 		}

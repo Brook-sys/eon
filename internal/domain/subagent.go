@@ -25,11 +25,14 @@ type SubagentRecord struct {
 	UpdatedAt     time.Time     `json:"updated_at"`
 	Task          string        `json:"task"`
 	ContextMode   string        `json:"context_mode"`
-	Result        string        `json:"result,omitempty"`
-	ErrorCode     string        `json:"error_code,omitempty"`
-	Attempt       int           `json:"attempt"`
-	MaxAttempts   int           `json:"max_attempts"`
-	Deadline      time.Time     `json:"deadline,omitempty"`
+	// TransportPeerID is the authenticated peer authorized to execute and
+	// report this session. Empty keeps the session process-local.
+	TransportPeerID string    `json:"transport_peer_id,omitempty"`
+	Result          string    `json:"result,omitempty"`
+	ErrorCode       string    `json:"error_code,omitempty"`
+	Attempt         int       `json:"attempt"`
+	MaxAttempts     int       `json:"max_attempts"`
+	Deadline        time.Time `json:"deadline,omitempty"`
 }
 
 func (r SubagentRecord) Validate() error {
@@ -41,6 +44,9 @@ func (r SubagentRecord) Validate() error {
 	}
 	if r.Task == "" {
 		return errors.New("subagent task cannot be empty")
+	}
+	if len(r.TransportPeerID) > 128 {
+		return errors.New("subagent transport peer id exceeds limit")
 	}
 	if r.State != SubagentStatePending && r.State != SubagentStateRunning && r.State != SubagentStateComplete && r.State != SubagentStateError {
 		return errors.New("invalid subagent state")

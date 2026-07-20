@@ -19,6 +19,9 @@ type SubagentOptions struct {
 	MaxConcurrent int
 	MaxAttempts   int
 	Timeout       time.Duration
+	// TransportPeerID pins every admitted session to one deployment-authorized
+	// mTLS peer. It is not exposed as a model-controlled tool argument.
+	TransportPeerID string
 }
 
 // buildSubagent sets up one shared bounded manager, durable lifecycle records,
@@ -44,7 +47,11 @@ func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now
 	if err != nil {
 		return nil, nil, err
 	}
-	tSpawn := subagent.NewSessionsSpawnTool(sm)
+	trustedLabels := map[string]string(nil)
+	if opts.TransportPeerID != "" {
+		trustedLabels = map[string]string{kernel.SubagentTransportPeerLabel: opts.TransportPeerID}
+	}
+	tSpawn := subagent.NewSessionsSpawnToolWithTrustedLabels(sm, trustedLabels)
 	tYield := yield.NewSessionsYieldTool()
 	tools := []tool.Tool{tSpawn, tYield}
 
@@ -64,11 +71,15 @@ func restoreSubagents(ctx context.Context, store port.Store, manager kernel.Sess
 				if record.State == domain.SubagentStateRunning {
 					sessionState = kernel.SessionStateRunning
 				}
+				labels := map[string]string{"task_id": record.TaskID}
+				if record.TransportPeerID != "" {
+					labels[kernel.SubagentTransportPeerLabel] = record.TransportPeerID
+				}
 				status := kernel.SubagentStatus{
 					ID:        kernel.SessionID(record.ID),
 					Attempt:   record.Attempt,
 					State:     sessionState,
-					Spec:      kernel.SubagentSpec{Task: record.Task, ContextMode: record.ContextMode, Labels: map[string]string{"task_id": record.TaskID}},
+					Spec:      kernel.SubagentSpec{Task: record.Task, ContextMode: record.ContextMode, Labels: labels},
 					StartedAt: record.StartedAt,
 				}
 				if err := manager.Restore(ctx, status); err != nil {

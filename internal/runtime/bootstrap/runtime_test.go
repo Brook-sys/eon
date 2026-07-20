@@ -225,6 +225,52 @@ func TestOpenRestoresActiveSubagentAcrossSQLiteRestart(t *testing.T) {
 	}
 }
 
+func TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart(t *testing.T) {
+	ctx := context.Background()
+	dbPath := t.TempDir() + "/runtime.db"
+	opts := bootstrap.Options{
+		StoreBackend: bootstrap.StorageSQLite,
+		SQLitePath:   dbPath,
+		MissionID:    "mission-remote-restart",
+		Subagent:     &bootstrap.SubagentOptions{Enabled: true, MaxConcurrent: 2, MaxAttempts: 2, Timeout: time.Minute, TransportPeerID: "peer-a"},
+	}
+	first, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := first.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "remote restart", ContextMode: "isolated", Labels: map[string]string{"task_id": "task-remote", kernel.SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	second, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = second.Close(ctx) })
+	status, err := second.Subagents.Status(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := status.Spec.Labels[kernel.SubagentTransportPeerLabel]; got != "peer-a" {
+		t.Fatalf("restored transport peer = %q", got)
+	}
+	if err := second.Store.View(ctx, func(r port.Reader) error {
+		record, readErr := r.SubagentRecord(string(id))
+		if readErr != nil {
+			return readErr
+		}
+		if record.TransportPeerID != "peer-a" {
+			t.Fatalf("durable transport peer = %q", record.TransportPeerID)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

@@ -13,7 +13,7 @@ import (
 
 const (
 	Capability       = "subagent.status.v1"
-	TransportPeerKey = "transport_peer_id"
+	TransportPeerKey = kernel.SubagentTransportPeerLabel
 	maxPayloadBytes  = 72 << 10
 	maxResultBytes   = 64 << 10
 	maxFailureBytes  = 4 << 10

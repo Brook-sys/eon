@@ -63,6 +63,7 @@ func main() {
 		fileMaxRead     = flag.Int64("file-max-read-bytes", 0, "file.read cap (0 = 1 MiB default)")
 		allowExec       = flag.Bool("allow-exec", false, "enable execution of commands locally via tool execution")
 		enableSubagents = flag.Bool("subagents", false, "enable spawn/ orchestration tools")
+		subagentPeer    = flag.String("subagent-peer-id", "", "authorized mTLS peer for admitted subagent sessions (optional)")
 		p2pEnabled      = flag.Bool("p2p", false, "enable experimental peer-to-peer subsystem")
 		p2pBind         = flag.String("p2p-bind", "127.0.0.1:8443", "local bind address for P2P network")
 		p2pMDNS         = flag.Bool("p2p-mdns", false, "enable mDNS beacon on P2P network")
@@ -149,10 +150,11 @@ func main() {
 	}
 
 	opts.Subagent = &bootstrap.SubagentOptions{
-		Enabled:       *enableSubagents,
-		MaxConcurrent: 4,
-		MaxAttempts:   2,
-		Timeout:       15 * time.Minute,
+		Enabled:         *enableSubagents,
+		MaxConcurrent:   4,
+		MaxAttempts:     2,
+		Timeout:         15 * time.Minute,
+		TransportPeerID: *subagentPeer,
 	}
 	if *modelEnabled {
 		mopts := &bootstrap.ModelOptions{

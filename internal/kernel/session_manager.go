@@ -12,6 +12,10 @@ import (
 // SessionID represents a unique identifier for a subagent session.
 type SessionID string
 
+// SubagentTransportPeerLabel is trusted routing metadata injected by runtime
+// configuration. It is deliberately absent from model-controlled tool input.
+const SubagentTransportPeerLabel = "transport_peer_id"
+
 // SessionState indicates the current status of a subagent.
 type SessionState string
 

@@ -2,6 +2,7 @@ package subagent_test
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,30 @@ import (
 
 type mockClock struct {
 	now time.Time
+}
+
+func TestSessionsSpawnToolInjectsTrustedPeerBinding(t *testing.T) {
+	clock := &mockClock{now: time.Date(2026, 7, 20, 10, 0, 0, 0, time.UTC)}
+	sm := kernel.NewLocalSessionManager(clock)
+	spawnTool := subagent.NewSessionsSpawnToolWithTrustedLabels(sm, map[string]string{kernel.SubagentTransportPeerLabel: "peer-a"})
+
+	out, err := spawnTool.Execute(context.Background(), []byte(`{"task":"remote work","context":"isolated","transport_peer_id":"peer-evil"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := json.Unmarshal([]byte(out), &response); err != nil {
+		t.Fatal(err)
+	}
+	status, err := sm.Status(context.Background(), kernel.SessionID(response.SessionID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := status.Spec.Labels[kernel.SubagentTransportPeerLabel]; got != "peer-a" {
+		t.Fatalf("transport peer = %q, want trusted peer-a", got)
+	}
 }
 
 func (c *mockClock) Now() time.Time {
