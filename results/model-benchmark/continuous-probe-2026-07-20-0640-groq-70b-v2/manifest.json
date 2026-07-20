@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "heartbeat-baseline-70b",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-v2.json",
+  "context_tokens": [
+    4096
+  ],
+  "max_calls": 22,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 5632,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "groq-llama-3-3-70b-v2",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens"
+    }
+  ]
+}

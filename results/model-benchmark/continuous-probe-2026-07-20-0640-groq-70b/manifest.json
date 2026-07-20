@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "heartbeat-tool-routing-70b",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-tool-v1.json",
+  "context_tokens": [
+    4096
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 1024,
+  "max_total_output_tokens": 51200,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "groq-llama-3-3-70b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "heartbeat-tool-routing-nim",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-tool-v1.json",
+  "context_tokens": [4096],
+  "max_calls": 5,
+  "max_output_tokens": 512,
+  "max_total_output_tokens": 10240,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "nvidia-llama-3-1-8b",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}
