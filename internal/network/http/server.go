@@ -12,22 +12,22 @@ import (
 )
 
 type ServerHandler struct {
-	caller       port.PeerCaller
+	handler      port.PeerRPCHandler
 	identityFrom func(*x509.Certificate) (string, error)
 }
 
-func NewServerHandler(caller port.PeerCaller) (*ServerHandler, error) {
-	return NewAuthenticatedServerHandler(caller, PeerIDFromCertificate)
+func NewServerHandler(handler port.PeerRPCHandler) (*ServerHandler, error) {
+	return NewAuthenticatedServerHandler(handler, PeerIDFromCertificate)
 }
 
-func NewAuthenticatedServerHandler(caller port.PeerCaller, identityFrom func(*x509.Certificate) (string, error)) (*ServerHandler, error) {
-	if caller == nil {
-		return nil, errors.New("invalid peer caller")
+func NewAuthenticatedServerHandler(handler port.PeerRPCHandler, identityFrom func(*x509.Certificate) (string, error)) (*ServerHandler, error) {
+	if handler == nil {
+		return nil, errors.New("invalid peer handler")
 	}
 	if identityFrom == nil {
 		return nil, errors.New("invalid peer identity verifier")
 	}
-	return &ServerHandler{caller: caller, identityFrom: identityFrom}, nil
+	return &ServerHandler{handler: handler, identityFrom: identityFrom}, nil
 }
 
 func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +57,7 @@ func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Payload:    req.Payload,
 	}
 
-	rpcResp, err := h.caller.Call(r.Context(), rpcReq)
+	rpcResp, err := h.handler.Handle(r.Context(), rpcReq)
 	if err != nil || rpcResp.RequestID != req.RequestID || rpcResp.PeerID != req.PeerID || len(rpcResp.Payload) > maxPeerPayloadBytes {
 		http.Error(w, "rpc failed", http.StatusInternalServerError)
 		return

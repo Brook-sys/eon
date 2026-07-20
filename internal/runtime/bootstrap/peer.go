@@ -1,15 +1,21 @@
 package bootstrap
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"os"
 	"time"
+
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/network"
-	"motor-autonomo/internal/network/http"
+	peerhttp "motor-autonomo/internal/network/http"
+	peersync "motor-autonomo/internal/network/sync"
+	"motor-autonomo/internal/port"
 )
 
-func buildPeerTransport(opts Options) (*kernel.PeerTransport, error) {
+func buildPeerTransport(opts Options, store port.Store, now func() time.Time) (*kernel.PeerTransport, error) {
 	if opts.PeerBindAddr == "" {
 		return nil, nil // Disabled by default
 	}
@@ -41,6 +47,34 @@ func buildPeerTransport(opts Options) (*kernel.PeerTransport, error) {
 	caller, err := network.NewRouter(registry, transport)
 	if err != nil {
 		return nil, fmt.Errorf("init peer router: %w", err)
+	}
+	if opts.PeerNodeID == "" {
+		// Existing deployments did not expose an explicit node-id flag. Derive a
+		// stable local identity from the certificate SAN while keeping peer auth
+		// anchored in mTLS.
+		certificatePEM, loadErr := os.ReadFile(opts.PeerCert)
+		if loadErr != nil {
+			return nil, fmt.Errorf("derive peer node id: %w", loadErr)
+		}
+		block, _ := pem.Decode(certificatePEM)
+		if block == nil || block.Type != "CERTIFICATE" {
+			return nil, fmt.Errorf("derive peer node id: invalid certificate PEM")
+		}
+		certificate, loadErr := x509.ParseCertificate(block.Bytes)
+		if loadErr != nil {
+			return nil, fmt.Errorf("derive peer node id: %w", loadErr)
+		}
+		opts.PeerNodeID, loadErr = peerhttp.PeerIDFromCertificate(certificate)
+		if loadErr != nil {
+			return nil, fmt.Errorf("derive peer node id: %w", loadErr)
+		}
+	}
+	syncService, err := peersync.NewService(store, now)
+	if err != nil {
+		return nil, fmt.Errorf("init peer sync: %w", err)
+	}
+	if err := caller.AttachSync(opts.PeerNodeID, syncService); err != nil {
+		return nil, fmt.Errorf("attach peer sync: %w", err)
 	}
 
 	// Combine into PeerTransport kernel bundle.

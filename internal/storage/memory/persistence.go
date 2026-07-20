@@ -54,6 +54,8 @@ type persistedState struct {
 	Memories                  map[string]domain.LongTermMemory
 	Events                    []domain.Event
 	EventIDs                  map[domain.EventID]uint64
+	PeerSyncInbox             map[string]domain.PeerSyncInboxRecord
+	PeerSyncCursors           map[string]domain.PeerSyncCursor
 	Idempotency               map[domain.IdempotencyKey]domain.IdempotencyRecord
 	Sources                   map[domain.SourceID]domain.Source
 	SourceVersions            map[domain.SourceVersionID]domain.SourceVersion
@@ -106,7 +108,8 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		DeliveryByTransport:   cloned.deliveryByTransport,
 		QuestionGateDecisions: cloned.questionGateDecisions, GateDecisionByQuestion: cloned.gateDecisionByQuestion,
 		Candidates: cloned.candidates, Inquiries: cloned.inquiries, Operations: cloned.operations,
-		Memories: cloned.memories, Events: cloned.events, EventIDs: cloned.eventIDs, Idempotency: cloned.idempotency,
+		Memories: cloned.memories, Events: cloned.events, EventIDs: cloned.eventIDs,
+		PeerSyncInbox: cloned.peerSyncInbox, PeerSyncCursors: cloned.peerSyncCursors, Idempotency: cloned.idempotency,
 		Sources: cloned.sources, SourceVersions: cloned.sourceVersions, SourceSnapshots: cloned.sourceSnapshots,
 		SourceFragments: cloned.sourceFragments, Observations: cloned.observations, Claims: cloned.claims,
 		EvidenceLinks: cloned.evidenceLinks, Artifacts: cloned.artifacts, RawModelOutputs: cloned.rawModelOutputs,
@@ -266,6 +269,8 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	base.memories = nonNil(p.Memories, base.memories)
 	base.events = append([]domain.Event(nil), p.Events...)
 	base.eventIDs = nonNil(p.EventIDs, base.eventIDs)
+	base.peerSyncInbox = nonNil(p.PeerSyncInbox, base.peerSyncInbox)
+	base.peerSyncCursors = nonNil(p.PeerSyncCursors, base.peerSyncCursors)
 	base.idempotency = nonNil(p.Idempotency, base.idempotency)
 	base.sources = nonNil(p.Sources, base.sources)
 	base.sourceVersions = nonNil(p.SourceVersions, base.sourceVersions)

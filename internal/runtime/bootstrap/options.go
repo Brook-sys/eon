@@ -47,6 +47,8 @@ type Options struct {
 	MemoryCompactionBatch int
 	// PeerBindAddr enables the P2P RPC listener when not empty.
 	PeerBindAddr string
+	// PeerNodeID is the stable local identity used in authenticated sync frames.
+	PeerNodeID string
 	// PeerCert/PeerKey/PeerCACert are required when PeerBindAddr is set.
 	PeerCert   string
 	PeerKey    string

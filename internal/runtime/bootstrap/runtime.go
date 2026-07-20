@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"log/slog"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -332,7 +332,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		projector.SetModelProvider(modelExec.Provider)
 	}
 
-	peerTransport, err := buildPeerTransport(opts)
+	peerTransport, err := buildPeerTransport(opts, store, clock.Now)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
 		if closer != nil {
@@ -346,12 +346,11 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 	}
 
-	
-		if p2pManager != nil {
-			_ = p2pManager.Start(ctx)
-		}
+	if p2pManager != nil {
+		_ = p2pManager.Start(ctx)
+	}
 
-		return &Runtime{
+	return &Runtime{
 		Opts:             opts,
 		Store:            store,
 		Clock:            clock,
@@ -797,7 +796,7 @@ func (rt *Runtime) RunHTTP(ctx context.Context) error {
 	}
 	var peerSrv *http.Server
 	if rt.Peer != nil && rt.Opts.PeerBindAddr != "" {
-		handler, err := peerhttp.NewServerHandler(rt.Peer.Caller)
+		handler, err := peerhttp.NewServerHandler(rt.Peer.Handler)
 		if err != nil {
 			return fmt.Errorf("peer server handler: %w", err)
 		}

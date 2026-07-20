@@ -109,6 +109,8 @@ type state struct {
 	operations             map[domain.OperationID]domain.Operation
 	events                 []domain.Event
 	eventIDs               map[domain.EventID]uint64
+	peerSyncInbox          map[string]domain.PeerSyncInboxRecord
+	peerSyncCursors        map[string]domain.PeerSyncCursor
 	idempotency            map[domain.IdempotencyKey]domain.IdempotencyRecord
 	sources                map[domain.SourceID]domain.Source
 	sourceVersions         map[domain.SourceVersionID]domain.SourceVersion
@@ -168,6 +170,8 @@ func newState() state {
 		inquiries:                 make(map[domain.InquiryID]domain.Inquiry),
 		operations:                make(map[domain.OperationID]domain.Operation),
 		eventIDs:                  make(map[domain.EventID]uint64),
+		peerSyncInbox:             make(map[string]domain.PeerSyncInboxRecord),
+		peerSyncCursors:           make(map[string]domain.PeerSyncCursor),
 		idempotency:               make(map[domain.IdempotencyKey]domain.IdempotencyRecord),
 		sources:                   make(map[domain.SourceID]domain.Source),
 		sourceVersions:            make(map[domain.SourceVersionID]domain.SourceVersion),
@@ -375,6 +379,12 @@ func (t transaction) Events(afterSequence uint64, limit int) ([]domain.Event, er
 }
 func (t transaction) EventByID(id domain.EventID) (domain.Event, error) {
 	return reader(t).EventByID(id)
+}
+func (t transaction) PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error) {
+	return reader(t).PeerSyncInboxRecord(peerID, originID, messageID)
+}
+func (t transaction) PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error) {
+	return reader(t).PeerSyncCursor(peerID, originID, streamID, direction)
 }
 func (t transaction) IdempotencyRecord(key domain.IdempotencyKey) (domain.IdempotencyRecord, error) {
 	return reader(t).IdempotencyRecord(key)
@@ -933,6 +943,38 @@ func (r reader) EventByID(id domain.EventID) (domain.Event, error) {
 		return domain.Event{}, notFound("event", id)
 	}
 	return r.state.events[sequence-1], nil
+}
+
+func peerSyncInboxKey(peerID, originID, messageID string) string {
+	return strings.TrimSpace(peerID) + "\x00" + strings.TrimSpace(originID) + "\x00" + strings.TrimSpace(messageID)
+}
+
+func peerSyncCursorKey(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) string {
+	return strings.TrimSpace(peerID) + "\x00" + strings.TrimSpace(originID) + "\x00" + strings.TrimSpace(streamID) + "\x00" + string(direction)
+}
+
+func (r reader) PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error) {
+	key := peerSyncInboxKey(peerID, originID, messageID)
+	if strings.TrimSpace(peerID) == "" || strings.TrimSpace(originID) == "" || strings.TrimSpace(messageID) == "" {
+		return domain.PeerSyncInboxRecord{}, fmt.Errorf("peer sync inbox lookup requires identity")
+	}
+	v, ok := r.state.peerSyncInbox[key]
+	if !ok {
+		return domain.PeerSyncInboxRecord{}, notFound("peer sync inbox record", key)
+	}
+	return clonePeerSyncInboxRecord(v), nil
+}
+
+func (r reader) PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error) {
+	key := peerSyncCursorKey(peerID, originID, streamID, direction)
+	if strings.TrimSpace(peerID) == "" || strings.TrimSpace(originID) == "" || strings.TrimSpace(streamID) == "" {
+		return domain.PeerSyncCursor{}, fmt.Errorf("peer sync cursor requires scope")
+	}
+	v, ok := r.state.peerSyncCursors[key]
+	if !ok {
+		return domain.PeerSyncCursor{}, notFound("peer sync cursor", key)
+	}
+	return v, nil
 }
 func (r reader) IdempotencyRecord(key domain.IdempotencyKey) (domain.IdempotencyRecord, error) {
 	v, ok := r.state.idempotency[key]
@@ -1754,6 +1796,47 @@ func (t transaction) SaveChannelCursor(next domain.ChannelCursor, expectedRevisi
 	return nil
 }
 
+func (t transaction) PutPeerSyncInboxRecord(next domain.PeerSyncInboxRecord) (domain.PeerSyncInboxRecord, bool, error) {
+	if err := next.Validate(); err != nil {
+		return domain.PeerSyncInboxRecord{}, false, fmt.Errorf("validate peer sync inbox record: %w", err)
+	}
+	key := peerSyncInboxKey(next.PeerID, next.OriginID, next.MessageID)
+	if current, ok := t.state.peerSyncInbox[key]; ok {
+		if !peerSyncInboxRecordsEqual(current, next) {
+			return domain.PeerSyncInboxRecord{}, false, fmt.Errorf("%w: peer sync message id reused with divergent content", port.ErrConflict)
+		}
+		return clonePeerSyncInboxRecord(current), false, nil
+	}
+	t.state.peerSyncInbox[key] = clonePeerSyncInboxRecord(next)
+	return clonePeerSyncInboxRecord(next), true, nil
+}
+
+func (t transaction) SavePeerSyncCursor(next domain.PeerSyncCursor, expectedRevision uint64) error {
+	if err := next.Validate(); err != nil {
+		return fmt.Errorf("validate peer sync cursor: %w", err)
+	}
+	key := peerSyncCursorKey(next.PeerID, next.OriginID, next.StreamID, next.Direction)
+	current, ok := t.state.peerSyncCursors[key]
+	if !ok {
+		if expectedRevision != 0 || next.Revision != 0 {
+			return fmt.Errorf("%w: initial peer sync cursor must start at revision 0", port.ErrConflict)
+		}
+		t.state.peerSyncCursors[key] = next
+		return nil
+	}
+	if current.Revision != expectedRevision {
+		return fmt.Errorf("%w: stale peer sync cursor revision", port.ErrConflict)
+	}
+	if next.NextSequence == current.NextSequence && next.Revision == current.Revision {
+		return nil
+	}
+	if next.Revision != current.Revision+1 || next.NextSequence < current.NextSequence || next.SchemaVersion != current.SchemaVersion {
+		return fmt.Errorf("%w: invalid peer sync cursor advance", port.ErrConflict)
+	}
+	t.state.peerSyncCursors[key] = next
+	return nil
+}
+
 func (t transaction) SaveResourceUsage(next domain.ResourceUsage) error {
 	if err := next.Validate(); err != nil {
 		return fmt.Errorf("validate resource usage: %w", err)
@@ -2457,6 +2540,12 @@ func cloneState(src state) state {
 	for k, v := range src.channelCursors {
 		dst.channelCursors[k] = v
 	}
+	for k, v := range src.peerSyncInbox {
+		dst.peerSyncInbox[k] = clonePeerSyncInboxRecord(v)
+	}
+	for k, v := range src.peerSyncCursors {
+		dst.peerSyncCursors[k] = v
+	}
 	for k, v := range src.resourceUsages {
 		dst.resourceUsages[k] = cloneResourceUsage(v)
 	}
@@ -2464,6 +2553,19 @@ func cloneState(src state) state {
 		dst.modelContextPressures[k] = v
 	}
 	return dst
+}
+
+func clonePeerSyncInboxRecord(v domain.PeerSyncInboxRecord) domain.PeerSyncInboxRecord {
+	out := v
+	out.Message.Events = append([]domain.Event(nil), v.Message.Events...)
+	return out
+}
+
+func peerSyncInboxRecordsEqual(a, b domain.PeerSyncInboxRecord) bool {
+	if a.SchemaVersion != b.SchemaVersion || a.PeerID != b.PeerID || a.OriginID != b.OriginID || a.MessageID != b.MessageID || a.StreamID != b.StreamID {
+		return false
+	}
+	return fmt.Sprintf("%#v", a.Message) == fmt.Sprintf("%#v", b.Message)
 }
 
 func cloneResourceUsage(v domain.ResourceUsage) domain.ResourceUsage {

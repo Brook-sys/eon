@@ -26,6 +26,10 @@ type PeerCaller interface {
 	Call(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
 }
 
+type PeerRPCHandler interface {
+	Handle(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
+}
+
 // Network is the narrow kernel-facing interface for authenticated peer
 // discovery. Transport adapters must not receive canonical store authority.
 type Network interface {

@@ -88,6 +88,18 @@ type EventWriter interface {
 	AppendEvent(domain.Event) (domain.Event, error)
 }
 
+// PeerSyncReader exposes only remote, authority-free sync evidence and its
+// resumable source-local cursor.
+type PeerSyncReader interface {
+	PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error)
+	PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error)
+}
+
+type PeerSyncWriter interface {
+	PutPeerSyncInboxRecord(domain.PeerSyncInboxRecord) (domain.PeerSyncInboxRecord, bool, error)
+	SavePeerSyncCursor(domain.PeerSyncCursor, uint64) error
+}
+
 // IdempotencyReader exposes the durable result of a logical intent.
 type IdempotencyReader interface {
 	IdempotencyRecord(domain.IdempotencyKey) (domain.IdempotencyRecord, error)
@@ -257,6 +269,7 @@ type Reader interface {
 	ResourceReader
 	ModelContextReader
 	EventReader
+	PeerSyncReader
 	IdempotencyReader
 	KnowledgeReader
 	MemoryReader
@@ -273,6 +286,7 @@ type Transaction interface {
 	ResourceWriter
 	ModelContextWriter
 	EventWriter
+	PeerSyncWriter
 	IdempotencyWriter
 	KnowledgeWriter
 	MemoryWriter

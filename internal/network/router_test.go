@@ -7,12 +7,48 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	peersync "motor-autonomo/internal/network/sync"
+	"motor-autonomo/internal/storage/memory"
 )
 
 type transportFunc func(context.Context, domain.PeerRecord, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
 
 func (f transportFunc) Invoke(ctx context.Context, peer domain.PeerRecord, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
 	return f(ctx, peer, request)
+}
+
+func TestRouterHandlesAuthenticatedSyncWithoutTransport(t *testing.T) {
+	transportCalls := 0
+	router := newTestRouter(t, func(_ context.Context, _ domain.PeerRecord, _ domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		transportCalls++
+		return domain.PeerRPCResponse{}, nil
+	})
+	service, err := peersync.NewService(memory.New(), func() time.Time { return time.Unix(100, 0).UTC() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := router.AttachSync("node-local", service); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := peersync.Encode(domain.PeerSyncMessage{SchemaVersion: domain.SchemaVersionV1, StreamID: "stream", MessageID: "message", Kind: domain.PeerSyncHello, OriginID: "node-a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := router.Handle(context.Background(), domain.PeerRPCRequest{RequestID: "request-sync", PeerID: "node-local", CallerID: "node-a", Capability: peersync.Capability, Payload: payload})
+	if err != nil {
+		t.Fatal(err)
+	}
+	message, err := peersync.Decode(response.Payload)
+	if err != nil || message.Kind != domain.PeerSyncAck || message.OriginID != "node-local" {
+		t.Fatalf("response = %+v, err=%v", message, err)
+	}
+	if transportCalls != 0 {
+		t.Fatalf("sync unexpectedly used outbound transport %d times", transportCalls)
+	}
+
+	if _, err := router.Handle(context.Background(), domain.PeerRPCRequest{RequestID: "request-spoof", PeerID: "node-local", CallerID: "node-b", Capability: peersync.Capability, Payload: payload}); !errors.Is(err, peersync.ErrInvalidPeerIdentity) {
+		t.Fatalf("spoof error = %v", err)
+	}
 }
 
 func newTestRouter(t *testing.T, transport transportFunc) *Router {

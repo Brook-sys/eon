@@ -1,0 +1,15 @@
+{
+  "provider": "nvidia_nim",
+  "campaign": "phase24_peer_sync_authority_boundary",
+  "bounded": {
+    "planned_calls": 1,
+    "max_tokens": 96,
+    "timeout_seconds": 30,
+    "retries": 0
+  },
+  "credential_env": "NVIDIA_NIM_API_KEY",
+  "credential_present": false,
+  "outcome": "blocked_missing_credential",
+  "prepared_prompt": "For a peer event synchronization protocol, decide whether an authenticated remote EVENT_BATCH may be appended directly to the receiver's canonical event log. Return JSON with decision and one invariant. Constraints: remote data is evidence, deterministic kernel owns state transitions, batches are replayable.",
+  "next_reproducible_step": "Run exactly one completion against https://integrate.api.nvidia.com/v1 with the configured NVIDIA NIM credential, max_tokens=96, timeout=30s, no retry; record status, latency, model, raw response, and parsing result."
+}

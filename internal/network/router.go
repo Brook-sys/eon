@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"motor-autonomo/internal/domain"
+	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
 )
 
@@ -22,6 +23,45 @@ var (
 type Router struct {
 	registry  port.PeerRegistry
 	transport port.PeerTransport
+	sync      peersync.Handler
+	localID   string
+}
+
+// Handle dispatches an inbound RPC whose CallerID was established by the
+// authenticated transport. It never resolves or invokes an outbound peer.
+func (r *Router) Handle(ctx context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return domain.PeerRPCResponse{}, err
+	}
+	if !validRPCField(request.RequestID) || !validRPCField(request.PeerID) || !validRPCField(request.CallerID) ||
+		request.Capability != peersync.Capability || len(request.Payload) > maxPeerRPCPayload || r.sync == nil {
+		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+	}
+	message, err := peersync.Decode(request.Payload)
+	if err != nil {
+		return domain.PeerRPCResponse{}, err
+	}
+	response, err := r.sync.Handle(ctx, request.CallerID, r.localID, message)
+	if err != nil {
+		return domain.PeerRPCResponse{}, err
+	}
+	payload, err := peersync.Encode(response)
+	if err != nil {
+		return domain.PeerRPCResponse{}, err
+	}
+	return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+}
+
+// AttachSync installs the authority-free event-sync handler. The router still
+// exposes remote data only through the sync inbox/cursor; it never appends a
+// remote event to the local canonical event log.
+func (r *Router) AttachSync(localID string, service peersync.Handler) error {
+	if !validRPCField(localID) || service == nil {
+		return ErrInvalidRPCRequest
+	}
+	r.localID = localID
+	r.sync = service
+	return nil
 }
 
 func NewRouter(registry port.PeerRegistry, transport port.PeerTransport) (*Router, error) {
@@ -53,6 +93,9 @@ func (r *Router) Call(ctx context.Context, request domain.PeerRPCRequest) (domai
 	}
 	if !validRPCField(request.RequestID) || !validRPCField(request.PeerID) ||
 		!validRPCField(request.Capability) || len(request.Payload) > maxPeerRPCPayload {
+		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+	}
+	if request.CallerID != "" {
 		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
 	peer, err := r.registry.Lookup(ctx, request.PeerID)

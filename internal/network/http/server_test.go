@@ -21,7 +21,7 @@ type mockCaller struct {
 	callFunc func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error)
 }
 
-func (m *mockCaller) Call(ctx context.Context, req domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+func (m *mockCaller) Handle(ctx context.Context, req domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
 	return m.callFunc(ctx, req)
 }
 
