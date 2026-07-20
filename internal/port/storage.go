@@ -284,7 +284,6 @@ type Store interface {
 	View(context.Context, func(Reader) error) error
 	Update(context.Context, func(Transaction) error) error
 	MemoryReader
-	MemoryWriter
 }
 
 // ReadStore is the least-authority storage boundary for projections, health

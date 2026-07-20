@@ -129,18 +129,6 @@ func (s *Store) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, err
 	return s.core.ListExpiredMemories(now)
 }
 
-func (s *Store) SaveMemory(mem domain.LongTermMemory) error {
-	return s.Update(context.Background(), func(tx port.Transaction) error {
-		return tx.SaveMemory(mem)
-	})
-}
-
-func (s *Store) DeleteMemory(id domain.MemoryID) error {
-	return s.Update(context.Background(), func(tx port.Transaction) error {
-		return tx.DeleteMemory(id)
-	})
-}
-
 // RuntimeVersion returns the SQLite engine version actually loaded by the
 // configured driver, rather than inferring it from the Go module version.
 func (s *Store) RuntimeVersion() (string, error) {

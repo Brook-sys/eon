@@ -1529,7 +1529,7 @@ func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
-	if err := a.SemanticMemory.SaveMemory(mem); err != nil {
+	if err := a.SemanticMemory.SaveMemory(r.Context(), mem); err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
 		return
 	}
@@ -1574,6 +1574,17 @@ func (a *API) handleListMemories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Expiration removes a memory from the readable current view immediately;
+	// physical compaction and its audit event may happen in a later bounded job.
+	now := a.Clock.Now()
+	active := memories[:0]
+	for _, memory := range memories {
+		if memory.Expiration.IsZero() || memory.Expiration.After(now) {
+			active = append(active, memory)
+		}
+	}
+	memories = active
+
 	if memories == nil {
 		memories = make([]domain.LongTermMemory, 0)
 	}
@@ -1593,7 +1604,7 @@ func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deleted, err := a.SemanticMemory.DeleteMemory(domain.MemoryID(id), "operator_deleted")
+	deleted, err := a.SemanticMemory.DeleteMemory(r.Context(), domain.MemoryID(id), "operator_deleted")
 	if err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "failed to delete memory"})
 		return

@@ -1,0 +1,14 @@
+{
+  "bounded": {
+    "max_calls": 1,
+    "max_tokens": 16,
+    "timeout_seconds": 20
+  },
+  "error": "HTTP 403",
+  "http_status": 403,
+  "latency_ms": 124,
+  "model": "llama-3.1-8b-instant",
+  "provider": "groq",
+  "retry_after": null,
+  "schema": "motor-autonomo.continuous-probe.v1"
+}

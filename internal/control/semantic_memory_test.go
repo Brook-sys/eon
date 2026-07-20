@@ -21,7 +21,7 @@ func TestSemanticMemoryPersistsViewAndAuditAtomically(t *testing.T) {
 	}
 
 	mem := domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "private value", StoredAt: clock.Now()}
-	if err := service.SaveMemory(mem); err != nil {
+	if err := service.SaveMemory(context.Background(), mem); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,7 +44,7 @@ func TestSemanticMemoryPersistsViewAndAuditAtomically(t *testing.T) {
 		t.Fatalf("audit payload must reference metadata without exposing value: %q", events[0].PayloadRef)
 	}
 
-	deleted, err := service.DeleteMemory(mem.ID, "operator_deleted")
+	deleted, err := service.DeleteMemory(context.Background(), mem.ID, "operator_deleted")
 	if err != nil || !deleted {
 		t.Fatalf("delete = %v, err = %v", deleted, err)
 	}
@@ -75,7 +75,7 @@ func TestSemanticMemoryDuplicateEventRollsBackView(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := service.SaveMemory(domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "value", StoredAt: clock.Now()})
+	err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "value", StoredAt: clock.Now()})
 	if err == nil {
 		t.Fatal("expected duplicate event failure")
 	}
@@ -85,10 +85,10 @@ func TestSemanticMemoryDuplicateEventRollsBackView(t *testing.T) {
 }
 
 func TestSemanticMemoryDeleteUnknownDoesNotAppendEvent(t *testing.T) {
-	clock := source.NewManualClock(time.Now().UTC())
+	clock := source.NewManualClock(time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC))
 	store := memory.New()
 	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
-	deleted, err := service.DeleteMemory("missing", "operator_deleted")
+	deleted, err := service.DeleteMemory(context.Background(), "missing", "operator_deleted")
 	if err != nil || deleted {
 		t.Fatalf("delete = %v, err = %v", deleted, err)
 	}
@@ -103,6 +103,46 @@ func TestSemanticMemoryDeleteUnknownDoesNotAppendEvent(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSemanticMemoryRejectsIdentityCollisionAndRollsBackDeleteEventFailure(t *testing.T) {
+	clock := source.NewManualClock(time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC))
+	store := memory.New()
+	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
+	first := domain.LongTermMemory{ID: "memory-1", Key: "mission", Scope: domain.MemoryScopeMission, Value: "one"}
+	if err := service.SaveMemory(context.Background(), first); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SaveMemory(context.Background(), domain.LongTermMemory{ID: "memory-2", Key: first.Key, Scope: first.Scope, Value: "two"}); err == nil {
+		t.Fatal("expected key/ID collision rejection")
+	}
+	stored, err := store.LongTermMemory(first.Key)
+	if err != nil || stored.ID != first.ID || stored.Value != first.Value {
+		t.Fatalf("collision changed current view: %+v, err=%v", stored, err)
+	}
+
+	duplicateEventService, _ := NewSemanticMemory(store, clock, fixedIDGenerator("event_0000000000000001"))
+	deleted, err := duplicateEventService.DeleteMemory(context.Background(), first.ID, "operator_deleted")
+	if err == nil || deleted {
+		t.Fatalf("delete with duplicate event = %v, err=%v", deleted, err)
+	}
+	if _, lookupErr := store.LongTermMemory(first.Key); lookupErr != nil {
+		t.Fatal("delete mutation was not rolled back")
+	}
+}
+
+func TestSemanticMemoryHonorsCanceledContext(t *testing.T) {
+	clock := source.NewManualClock(time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC))
+	store := memory.New()
+	service, _ := NewSemanticMemory(store, clock, source.NewSequenceIDGenerator(1))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := service.SaveMemory(ctx, domain.LongTermMemory{ID: "memory-1", Key: "key", Scope: domain.MemoryScopeAgent, Value: "value"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("save error = %v, want context.Canceled", err)
+	}
+	if _, err := store.LongTermMemory("key"); !errors.Is(err, port.ErrNotFound) {
+		t.Fatalf("canceled save changed memory view: %v", err)
 	}
 }
 

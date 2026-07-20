@@ -6,8 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"motor-autonomo/internal/control"
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/runtime/source"
 )
 
 // DurableHarness owns a backend instance whose durable state can be reopened.
@@ -27,6 +29,74 @@ type DurableFactory func(testing.TB) DurableHarness
 // is not mistaken for evidence of process-crash durability.
 func TestDurableStore(t *testing.T, factory DurableFactory) {
 	t.Helper()
+	t.Run("semantic memory and audit events survive atomically", func(t *testing.T) {
+		h := factory(t)
+		t.Cleanup(func() {
+			if err := h.Close(); err != nil {
+				t.Errorf("close durable harness: %v", err)
+			}
+		})
+
+		now := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
+		memory := domain.LongTermMemory{ID: "durable_memory_1", Key: "durable-memory", Scope: domain.MemoryScopeAgent, Value: "durable value"}
+		service, err := control.NewSemanticMemory(h.Store(), source.NewManualClock(now), source.NewSequenceIDGenerator(1))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := service.SaveMemory(context.Background(), memory); err != nil {
+			t.Fatalf("save semantic memory: %v", err)
+		}
+
+		reopened, err := h.Restart()
+		if err != nil {
+			t.Fatalf("restart after memory save: %v", err)
+		}
+		stored, err := reopened.LongTermMemory(memory.Key)
+		if err != nil || stored.ID != memory.ID || stored.Value != memory.Value || !stored.StoredAt.Equal(now) {
+			t.Fatalf("memory after restart = %+v, err=%v", stored, err)
+		}
+		if err := reopened.View(context.Background(), func(r port.Reader) error {
+			event, err := r.EventByID("event_0000000000000001")
+			if err != nil {
+				return err
+			}
+			if event.Kind != domain.EventMemoryStored {
+				t.Fatalf("stored event kind = %q", event.Kind)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		service, err = control.NewSemanticMemory(reopened, source.NewManualClock(now.Add(time.Minute)), source.NewSequenceIDGenerator(2))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleted, err := service.DeleteMemory(context.Background(), memory.ID, "contract_cleanup")
+		if err != nil || !deleted {
+			t.Fatalf("delete semantic memory = %v, err=%v", deleted, err)
+		}
+		reopened, err = h.Restart()
+		if err != nil {
+			t.Fatalf("restart after memory delete: %v", err)
+		}
+		if _, err := reopened.LongTermMemory(memory.Key); !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("deleted memory after restart error = %v", err)
+		}
+		if err := reopened.View(context.Background(), func(r port.Reader) error {
+			event, err := r.EventByID("event_0000000000000002")
+			if err != nil {
+				return err
+			}
+			if event.Kind != domain.EventMemoryCompacted {
+				t.Fatalf("delete event kind = %q", event.Kind)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("committed state survives restart and rollback does not", func(t *testing.T) {
 		h := factory(t)
 		t.Cleanup(func() {

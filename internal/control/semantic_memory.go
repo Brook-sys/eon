@@ -26,7 +26,14 @@ func NewSemanticMemory(store port.Store, clock source.Clock, ids source.IDGenera
 	return &SemanticMemory{Store: store, Clock: clock, IDs: ids}, nil
 }
 
-func (s *SemanticMemory) SaveMemory(memory domain.LongTermMemory) error {
+func (s *SemanticMemory) SaveMemory(ctx context.Context, memory domain.LongTermMemory) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	memory.StoredAt = s.Clock.Now().UTC()
+	if err := memory.Validate(); err != nil {
+		return err
+	}
 	eventID, err := s.IDs.NewID("event")
 	if err != nil {
 		return fmt.Errorf("generate memory event ID: %w", err)
@@ -35,12 +42,12 @@ func (s *SemanticMemory) SaveMemory(memory domain.LongTermMemory) error {
 		MemoryID: memory.ID,
 		Key:      memory.Key,
 		Scope:    memory.Scope,
-		At:       s.Clock.Now(),
+		At:       memory.StoredAt,
 	}).Event(domain.EventID(eventID))
 	if err != nil {
 		return fmt.Errorf("build memory stored event: %w", err)
 	}
-	return s.Store.Update(context.Background(), func(tx port.Transaction) error {
+	return s.Store.Update(ctx, func(tx port.Transaction) error {
 		if err := tx.SaveMemory(memory); err != nil {
 			return err
 		}
@@ -49,7 +56,10 @@ func (s *SemanticMemory) SaveMemory(memory domain.LongTermMemory) error {
 	})
 }
 
-func (s *SemanticMemory) DeleteMemory(id domain.MemoryID, reason string) (bool, error) {
+func (s *SemanticMemory) DeleteMemory(ctx context.Context, id domain.MemoryID, reason string) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 	eventID, err := s.IDs.NewID("event")
 	if err != nil {
 		return false, fmt.Errorf("generate memory event ID: %w", err)
@@ -64,7 +74,7 @@ func (s *SemanticMemory) DeleteMemory(id domain.MemoryID, reason string) (bool, 
 	}
 
 	deleted := false
-	err = s.Store.Update(context.Background(), func(tx port.Transaction) error {
+	err = s.Store.Update(ctx, func(tx port.Transaction) error {
 		for _, scope := range []domain.MemoryScope{domain.MemoryScopeMission, domain.MemoryScopeStrategy, domain.MemoryScopeAgent} {
 			memories, err := tx.ListMemoriesByScope(scope)
 			if err != nil {
@@ -89,5 +99,8 @@ func (s *SemanticMemory) DeleteMemory(id domain.MemoryID, reason string) (bool, 
 		_, err := tx.AppendEvent(event)
 		return err
 	})
+	if err != nil {
+		return false, err
+	}
 	return deleted, err
 }

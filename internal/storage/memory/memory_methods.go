@@ -3,6 +3,8 @@ package memory
 import (
 	"errors"
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/port"
+	"sort"
 	"time"
 )
 
@@ -19,6 +21,17 @@ func (t transaction) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory
 }
 
 func (t transaction) SaveMemory(mem domain.LongTermMemory) error {
+	if err := mem.Validate(); err != nil {
+		return err
+	}
+	if current, ok := t.state.memories[mem.Key]; ok && current.ID != mem.ID {
+		return errors.New("memory key already belongs to another ID")
+	}
+	for key, current := range t.state.memories {
+		if current.ID == mem.ID && key != mem.Key {
+			return errors.New("memory ID already belongs to another key")
+		}
+	}
 	t.state.memories[mem.Key] = mem
 	return nil
 }
@@ -36,7 +49,7 @@ func (t transaction) DeleteMemory(id domain.MemoryID) error {
 func (r reader) LongTermMemory(key string) (domain.LongTermMemory, error) {
 	mem, ok := r.state.memories[key]
 	if !ok {
-		return domain.LongTermMemory{}, errors.New("not found")
+		return domain.LongTermMemory{}, port.ErrNotFound
 	}
 	return mem, nil
 }
@@ -48,6 +61,12 @@ func (r reader) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTerm
 			res = append(res, m)
 		}
 	}
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].Key != res[j].Key {
+			return res[i].Key < res[j].Key
+		}
+		return res[i].ID < res[j].ID
+	})
 	return res, nil
 }
 
@@ -58,5 +77,11 @@ func (r reader) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, err
 			res = append(res, m)
 		}
 	}
+	sort.Slice(res, func(i, j int) bool {
+		if !res[i].Expiration.Equal(res[j].Expiration) {
+			return res[i].Expiration.Before(res[j].Expiration)
+		}
+		return res[i].ID < res[j].ID
+	})
 	return res, nil
 }

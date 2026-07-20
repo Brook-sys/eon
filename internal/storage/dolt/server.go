@@ -243,18 +243,6 @@ func (s *ServerStore) ListExpiredMemories(now time.Time) ([]domain.LongTermMemor
 	return s.core.ListExpiredMemories(now)
 }
 
-func (s *ServerStore) SaveMemory(mem domain.LongTermMemory) error {
-	return s.Update(context.Background(), func(tx port.Transaction) error {
-		return tx.SaveMemory(mem)
-	})
-}
-
-func (s *ServerStore) DeleteMemory(id domain.MemoryID) error {
-	return s.Update(context.Background(), func(tx port.Transaction) error {
-		return tx.DeleteMemory(id)
-	})
-}
-
 func (s *ServerStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
 	if err := ctx.Err(); err != nil {
 		return err
