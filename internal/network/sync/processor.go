@@ -17,11 +17,15 @@ type InboxCanonicalizer interface {
 
 // BoundedInboxCanonicalizer processes events from PeerSyncInboxRecord.
 type BoundedInboxCanonicalizer struct {
-	store port.Store
+	store    port.Store
+	resolver EventConflictResolver
 }
 
-func NewBoundedInboxCanonicalizer(store port.Store) *BoundedInboxCanonicalizer {
-	return &BoundedInboxCanonicalizer{store: store}
+func NewBoundedInboxCanonicalizer(store port.Store, resolver EventConflictResolver) *BoundedInboxCanonicalizer {
+	return &BoundedInboxCanonicalizer{
+		store:    store,
+		resolver: resolver,
+	}
 }
 
 func (c *BoundedInboxCanonicalizer) Reconcile(ctx context.Context, peerID string) (int, error) {
@@ -54,9 +58,22 @@ func (c *BoundedInboxCanonicalizer) Reconcile(ctx context.Context, peerID string
 				return err
 			}
 
-			// Simple stub logic to record the count
-			if len(record.Message.Events) > 0 {
-				reconciled += len(record.Message.Events)
+			// Delegate resolution of each event
+			for _, event := range record.Message.Events {
+				if c.resolver != nil {
+					disp, err := c.resolver.ResolveConflict(ctx, tx, event)
+					if err != nil {
+						return fmt.Errorf("failed to resolve conflict for event %s: %w", event.ID, err)
+					}
+					if disp == DispositionApply {
+						reconciled++
+						// TODO: actual apply to canonical state when storage supports it.
+					}
+					// DISCARD or ESCALATE (escalate might queue a notification later)
+				} else {
+					// Dummy default for now
+					reconciled++
+				}
 			}
 
 			// Mark this message as successfully processed by removing it from the inbox.

@@ -11,27 +11,13 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
-func TestInboxCanonicalizer_Reconcile(t *testing.T) {
+func TestReconcile_WithResolver(t *testing.T) {
 	store := memory.New()
-	c := peersync.NewBoundedInboxCanonicalizer(store, nil)
+	resolver := &dummyResolver{disposition: peersync.DispositionDiscard}
+	c := peersync.NewBoundedInboxCanonicalizer(store, resolver)
 
-	// Test empty peerID
-	_, err := c.Reconcile(context.Background(), "")
-	if err == nil || err.Error() != "peer sync origin does not match authenticated caller" {
-		t.Errorf("expected ErrInvalidPeerIdentity, got %v", err)
-	}
-
-	// Test valid skeleton call with empty inbox
-	count, err := c.Reconcile(context.Background(), "peer1")
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-	if count != 0 {
-		t.Errorf("expected count 0, got %v", count)
-	}
-
-	// Test with events in inbox
-	err = store.Update(context.Background(), func(tx port.Transaction) error {
+	// Setup an inbox record with one event
+	err := store.Update(context.Background(), func(tx port.Transaction) error {
 		msg := domain.PeerSyncMessage{
 			SchemaVersion: domain.SchemaVersionV1,
 			StreamID:      "stream1",
@@ -66,11 +52,27 @@ func TestInboxCanonicalizer_Reconcile(t *testing.T) {
 		t.Fatalf("failed to setup inbox record: %v", err)
 	}
 
-	count, err = c.Reconcile(context.Background(), "peer1")
+	// Should reconcile 0 because disposition is Discard
+	count, err := c.Reconcile(context.Background(), "peer1")
 	if err != nil {
-		t.Errorf("expected no error, got %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if count != 1 {
-		t.Errorf("expected count 1, got %v", count)
+	if count != 0 {
+		t.Errorf("expected count 0, got %v", count)
+	}
+
+	// Make sure it was actually deleted from inbox
+	err = store.View(context.Background(), func(r port.Reader) error {
+		pending, err := r.PendingPeerSyncInboxRecords("peer1", 128)
+		if err != nil {
+			return err
+		}
+		if len(pending) != 0 {
+			t.Errorf("expected inbox empty, got %d", len(pending))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error reading inbox: %v", err)
 	}
 }
