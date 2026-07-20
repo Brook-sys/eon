@@ -764,3 +764,6 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [x] `DONE` Rascunhar port.Network interface no kernel.
 
 2026-07-19 22:15 — HEARTBEAT — Iniciada Fase 21 (Conexões P2P): implementada baseline de configuração mTLS restrita a TLS 1.3 em 'internal/network' e verificada atomicamente por testes de cobertura PKI local. Próximo passo será modelar o contrato de registro/discovery.
+
+2026-07-19 22:30 — HEARTBEAT — Fase 21 (Conexões P2P): domínio do PeerRegistry e baseline port.Network com StaticRegistry implementados. Contratos validam peers, controlam concorrência/tamanho (MaxPeers), clonam referências mutáveis para isolamento e implementam evicção básica e ordenação determinística (Evict/List). Não há loop de I/O em StaticRegistry, servindo de abstração local para o kernel enquanto transportes Kademlia/Gossip permanecem encapsulados sob essa API. Testes 100% OK, verificando validações e proteção de state isolado local.
+Probe live bounded Groq executou 1 chamada/44 tokens e retornou HTTP 200 PROBE_OK, provando credencial habilitada. Faltam agora na Fase 21 abstrações para rotear chamadas RPC para subagentes remotos.

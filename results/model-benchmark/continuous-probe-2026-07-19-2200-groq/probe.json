@@ -1,0 +1,15 @@
+{
+  "calls": 1,
+  "http_status": 200,
+  "max_output_tokens": 8,
+  "model": "llama-3.1-8b-instant",
+  "provider": "groq",
+  "result": "PASS",
+  "retry_attempts": 0,
+  "schema": "motor-autonomo.live-probe.v1",
+  "usage": {
+    "completion_tokens": 4,
+    "prompt_tokens": 40,
+    "total_tokens": 44
+  }
+}
