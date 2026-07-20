@@ -110,8 +110,15 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		} `json:"tools"`
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBytes))
-	if err := decoder.Decode(&body); err != nil || decoder.Decode(&struct{}{}) != io.EOF || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
-		s.failures = append(s.failures, fmt.Sprintf("invalid Chat Completions request: %v", err))
+	decodeErr := decoder.Decode(&body)
+	trailingErr := error(nil)
+	if decodeErr == nil {
+		trailingErr = decoder.Decode(&struct{}{})
+	}
+	if decodeErr != nil || trailingErr != io.EOF || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
+		// Keep the externally asserted failure stable and free of request/body
+		// details. Tests need deterministic classification, not decoder text.
+		s.failures = append(s.failures, "invalid Chat Completions request")
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
@@ -181,23 +188,23 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if model == "" {
 		model = req.Model
 	}
-	
+
 	message := map[string]any{"role": "assistant", "content": exchange.ResponseText}
 	if len(exchange.ToolCalls) > 0 {
 		var tcList []any
 		for i, tc := range exchange.ToolCalls {
 			tcList = append(tcList, map[string]any{
-				"id": fmt.Sprintf("call_%d", i),
+				"id":   fmt.Sprintf("call_%d", i),
 				"type": "function",
 				"function": map[string]any{
-					"name": tc.Name,
+					"name":      tc.Name,
 					"arguments": tc.Arguments,
 				},
 			})
 		}
 		message["tool_calls"] = tcList
 	}
-	
+
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"model":   model,
 		"choices": []any{map[string]any{"message": message}},

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-20-0235-model-rotation",
+  "fixture_path": "internal/evaluation/testdata/cognitive-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 22,
+  "max_output_tokens": 256,
+  "max_total_output_tokens": 5632,
+  "timeout_seconds": 600,
+  "models": [
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nim-nemotron-nano-9b-v2",
+      "base_url": "https://integrate.api.nvidia.com",
+      "model": "nvidia/nemotron-nano-9b-v2",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "groq",
+      "binding_id": "groq-gpt-oss-20b",
+      "base_url": "https://api.groq.com/openai",
+      "model": "openai/gpt-oss-20b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens"
+    }
+  ]
+}

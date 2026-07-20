@@ -206,6 +206,17 @@ um preset, toggle de enable ou mudança automática de preferência.
 
 Cada campanha DEVE declarar antes de executar: providers/modelos, fixture e versão, matriz de contexto/formato, teto de chamadas, teto de tokens ou saída, timeout global e critério de interrupção. A campanha DEVE parar em 429/cooldown quando o comportamento pretendido já estiver observado; "esgotar quota" significa testar o limite de maneira bounded e informativa, não consumir capacidade sem propósito.
 
+### Política permanente de execução live por heartbeat
+
+A partir de 2026-07-20, cada heartbeat de desenvolvimento DEVE produzir evidência nova de pelo menos uma requisição de inferência real. A regra também se aplica a lotes de documentação, infraestrutura, storage e rede: nesses casos o probe pode avaliar uma operação representativa, uma invariante afetada, compatibilidade de formato, regressão de baseline ou um modelo ainda pouco exercitado.
+
+- Resultado anterior, listagem de `/v1/models`, fake server e oracle offline NÃO contam como a inferência live do ciclo.
+- O modelo/provedor DEVE ser rotacionado deliberadamente com base no histórico recente. Repetição é aceita somente quando houver objetivo de regressão explícito ou ausência objetiva de alternativa saudável.
+- Toda chamada DEVE ser bounded e registrar provider, ID exato do modelo, caso/prompt, teto de chamadas/tokens/tempo, status, latência, usage ou erro, avaliação sintática/semântica e próximo experimento.
+- Quando a mudança for cognitiva, de parsing, roteamento, recovery, quota ou contexto, o teste live DEVE exercitar diretamente o comportamento alterado; quando bounded e útil, deve comparar ao menos dois modelos.
+- Uma resposta HTTP autêntica de erro é evidência operacional live e deve ser analisada. Credencial ausente sem tentativa não é teste: bloqueia conclusão e commit de novas mudanças naquele heartbeat.
+- Preferência de modelo nunca muda automaticamente. Resultados entram no histórico comparável e qualquer promoção/demissão permanece explícita, reproduzível e auditável.
+
 ## Critérios de aceite
 
 - dois modelos Groq com limites independentes podem ser usados sem bloquear um ao outro;
@@ -238,3 +249,12 @@ As quotas e o catálogo são dados mutáveis; presets devem registrar data/fonte
 - reporte composto libera como sucesso o permit fora do escopo da falha, evitando contaminação cruzada de circuitos;
 - eventos de policy de falha registram `provider_id` e `binding_id` validados pela configuração (sem URL, chave ou corpo de erro);
 - o executor legado continua válido: kind vazio mantém a classificação conservadora binding-wide.
+
+### Registro de adoção da política — 2026-07-20 02:35
+
+A primeira campanha sob a regra reforçada rotacionou dois deployments em 22 chamadas bounded (`results/model-benchmark/continuous-probe-2026-07-20-0235/`):
+
+- Groq `openai/gpt-oss-20b`: 10/11 corretas e válidas, sem erro de provider; a única falha foi o caso REPAIR/DELIMITED, no qual o modelo adicionou prefixos `A:`/`B:`. JSON obteve 4/4, sugerindo formato mais robusto para esse modelo nesse corpus.
+- NVIDIA NIM `nvidia/nemotron-nano-9b-v2`: 11/11 respostas HTTP 404. O resultado prova tentativa live e indisponibilidade do ID no endpoint atual; não permite inferência sobre capacidade cognitiva. O próximo ciclo NIM deve consultar o catálogo e selecionar um ID vigente diferente antes da campanha.
+
+Nenhuma preferência ativa foi alterada automaticamente.
