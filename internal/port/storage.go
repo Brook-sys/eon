@@ -92,6 +92,7 @@ type EventWriter interface {
 // resumable source-local cursor.
 type PeerSyncReader interface {
 	PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error)
+	PendingPeerSyncInboxRecords(peerID string, limit int) ([]domain.PeerSyncInboxRecord, error)
 	PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error)
 }
 

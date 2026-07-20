@@ -2,6 +2,7 @@ package peersync
 
 import (
 	"context"
+	"fmt"
 
 	"motor-autonomo/internal/port"
 )
@@ -27,7 +28,27 @@ func (c *BoundedInboxCanonicalizer) Reconcile(ctx context.Context, peerID string
 		return 0, ErrInvalidPeerIdentity
 	}
 
-	// Real conflict resolution and state convergence will follow here.
-	// Returning 0 for now as skeleton implementation.
-	return 0, nil
+	var reconciled int
+
+	err := c.store.Update(ctx, func(tx port.Transaction) error {
+		records, err := tx.PendingPeerSyncInboxRecords(peerID, 128)
+		if err != nil {
+			return err
+		}
+
+		for _, record := range records {
+			if len(record.Message.Events) > 0 {
+				reconciled += len(record.Message.Events)
+			}
+		}
+
+		// TODO: proper state convergence applying to canonical log and conflict resolution.
+		return nil
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to reconcile peer %s inbox: %w", peerID, err)
+	}
+
+	return reconciled, nil
 }

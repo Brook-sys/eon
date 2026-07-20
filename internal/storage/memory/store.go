@@ -383,6 +383,10 @@ func (t transaction) EventByID(id domain.EventID) (domain.Event, error) {
 func (t transaction) PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error) {
 	return reader(t).PeerSyncInboxRecord(peerID, originID, messageID)
 }
+
+func (t transaction) PendingPeerSyncInboxRecords(peerID string, limit int) ([]domain.PeerSyncInboxRecord, error) {
+	return reader(t).PendingPeerSyncInboxRecords(peerID, limit)
+}
 func (t transaction) PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error) {
 	return reader(t).PeerSyncCursor(peerID, originID, streamID, direction)
 }
@@ -963,6 +967,27 @@ func (r reader) PeerSyncInboxRecord(peerID, originID, messageID string) (domain.
 		return domain.PeerSyncInboxRecord{}, notFound("peer sync inbox record", key)
 	}
 	return clonePeerSyncInboxRecord(v), nil
+}
+
+func (r reader) PendingPeerSyncInboxRecords(peerID string, limit int) ([]domain.PeerSyncInboxRecord, error) {
+	if strings.TrimSpace(peerID) == "" {
+		return nil, fmt.Errorf("pending peer sync inbox lookup requires peer identity")
+	}
+	var records []domain.PeerSyncInboxRecord
+	for _, v := range r.state.peerSyncInbox {
+		if v.PeerID == peerID {
+			records = append(records, clonePeerSyncInboxRecord(v))
+		}
+	}
+	// Sort by ReceivedAt to ensure deterministic reconciliation order.
+	// We want oldest events first so they are processed in order of receipt.
+	sort.SliceStable(records, func(i, j int) bool {
+		return records[i].ReceivedAt.Before(records[j].ReceivedAt)
+	})
+	if limit > 0 && len(records) > limit {
+		records = records[:limit]
+	}
+	return records, nil
 }
 
 func (r reader) PeerSyncCursor(peerID, originID, streamID string, direction domain.PeerSyncCursorDirection) (domain.PeerSyncCursor, error) {
