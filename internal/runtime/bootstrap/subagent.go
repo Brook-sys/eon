@@ -66,6 +66,7 @@ func restoreSubagents(ctx context.Context, store port.Store, manager kernel.Sess
 				}
 				status := kernel.SubagentStatus{
 					ID:        kernel.SessionID(record.ID),
+					Attempt:   record.Attempt,
 					State:     sessionState,
 					Spec:      kernel.SubagentSpec{Task: record.Task, ContextMode: record.ContextMode, Labels: map[string]string{"task_id": record.TaskID}},
 					StartedAt: record.StartedAt,

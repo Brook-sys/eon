@@ -110,13 +110,13 @@ func TestLocalSessionManager_RestoreAndPublishTerminalStatus(t *testing.T) {
 	if err := manager.Restore(ctx, status); err != nil {
 		t.Fatalf("idempotent restore: %v", err)
 	}
-	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateComplete, "done", ""); err != nil {
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: status.ID, State: kernel.SessionStateComplete, Result: "done", Failure: ""}); err != nil {
 		t.Fatal(err)
 	}
-	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateComplete, "done", ""); err != nil {
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: status.ID, State: kernel.SessionStateComplete, Result: "done", Failure: ""}); err != nil {
 		t.Fatalf("idempotent terminal replay: %v", err)
 	}
-	if err := manager.PublishStatus(ctx, status.ID, kernel.SessionStateFailed, "", "late failure"); !errors.Is(err, kernel.ErrSessionTerminal) {
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: status.ID, State: kernel.SessionStateFailed, Result: "", Failure: "late failure"}); !errors.Is(err, kernel.ErrSessionTerminal) {
 		t.Fatalf("divergent terminal replay = %v", err)
 	}
 	got, err := manager.Status(ctx, status.ID)
@@ -139,7 +139,7 @@ func TestLocalSessionManager_RetryFailedSessionIsReplaySafe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := manager.PublishStatus(ctx, id, kernel.SessionStateFailed, "", "temporary"); err != nil {
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: id, State: kernel.SessionStateFailed, Result: "", Failure: "temporary"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := manager.Retry(ctx, id); err != nil {
@@ -155,7 +155,7 @@ func TestLocalSessionManager_RetryFailedSessionIsReplaySafe(t *testing.T) {
 	if got.State != kernel.SessionStatePending || got.Result != "" || got.Error != nil {
 		t.Fatalf("retried status = %+v", got)
 	}
-	if err := manager.PublishStatus(ctx, id, kernel.SessionStateComplete, "done", ""); err != nil {
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: id, Attempt: 1, State: kernel.SessionStateComplete, Result: "done", Failure: ""}); err != nil {
 		t.Fatal(err)
 	}
 	if err := manager.Retry(ctx, id); !errors.Is(err, kernel.ErrSessionTerminal) {

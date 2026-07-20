@@ -97,17 +97,17 @@ func (m *mockSessionManager) Restore(ctx context.Context, status kernel.Subagent
 	return nil
 }
 
-func (m *mockSessionManager) PublishStatus(ctx context.Context, id kernel.SessionID, state kernel.SessionState, result, failure string) error {
-	status, ok := m.sessions[id]
+func (m *mockSessionManager) PublishStatus(ctx context.Context, observation kernel.SubagentObservation) error {
+	status, ok := m.sessions[observation.ID]
 	if !ok {
 		return kernel.ErrSessionNotFound
 	}
-	status.State = state
-	status.Result = result
-	if failure != "" {
-		status.Error = errors.New(failure)
+	status.State = observation.State
+	status.Result = observation.Result
+	if observation.Failure != "" {
+		status.Error = errors.New(observation.Failure)
 	}
-	m.sessions[id] = status
+	m.sessions[observation.ID] = status
 	return nil
 }
 
@@ -123,6 +123,7 @@ func (m *mockSessionManager) Retry(ctx context.Context, id kernel.SessionID) err
 		return kernel.ErrSessionTerminal
 	}
 	status.State = kernel.SessionStatePending
+	status.Attempt++
 	status.Result = ""
 	status.Error = nil
 	m.sessions[id] = status
@@ -191,7 +192,7 @@ func TestSupervisorRecoversRetryRearmedBeforeDurableCommit(t *testing.T) {
 	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
 		t.Fatal(err)
 	}
-	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"retry-split": {ID: "retry-split", State: kernel.SessionStatePending}}}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"retry-split": {ID: "retry-split", Attempt: 1, State: kernel.SessionStatePending}}}
 	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock}
 	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
 		t.Fatalf("reconcile=(%d,%v)", n, err)

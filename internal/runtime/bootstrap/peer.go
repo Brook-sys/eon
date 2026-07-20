@@ -11,11 +11,12 @@ import (
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/network"
 	peerhttp "motor-autonomo/internal/network/http"
+	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
 )
 
-func buildPeerTransport(opts Options, store port.Store, now func() time.Time) (*kernel.PeerTransport, error) {
+func buildPeerTransport(opts Options, store port.Store, now func() time.Time, sessions kernel.SessionManager) (*kernel.PeerTransport, error) {
 	if opts.PeerBindAddr == "" {
 		return nil, nil // Disabled by default
 	}
@@ -75,6 +76,15 @@ func buildPeerTransport(opts Options, store port.Store, now func() time.Time) (*
 	}
 	if err := caller.AttachSync(opts.PeerNodeID, syncService); err != nil {
 		return nil, fmt.Errorf("attach peer sync: %w", err)
+	}
+	if sessions != nil {
+		statusService, statusErr := subagentstatus.NewService(sessions)
+		if statusErr != nil {
+			return nil, fmt.Errorf("init subagent status ingress: %w", statusErr)
+		}
+		if statusErr := caller.AttachSubagentStatuses(statusService); statusErr != nil {
+			return nil, fmt.Errorf("attach subagent status ingress: %w", statusErr)
+		}
 	}
 
 	// Combine into PeerTransport kernel bundle and attach the bounded mesh tick.

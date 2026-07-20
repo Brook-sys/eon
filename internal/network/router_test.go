@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/storage/memory"
 )
@@ -16,6 +18,45 @@ type transportFunc func(context.Context, domain.PeerRecord, domain.PeerRPCReques
 func (f transportFunc) Invoke(ctx context.Context, peer domain.PeerRecord, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
 	return f(ctx, peer, request)
 }
+
+func TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport(t *testing.T) {
+	transportCalls := 0
+	router := newTestRouter(t, func(_ context.Context, _ domain.PeerRecord, _ domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		transportCalls++
+		return domain.PeerRPCResponse{}, nil
+	})
+	manager := kernel.NewLocalSessionManager(routerClock{})
+	id, err := manager.Spawn(context.Background(), kernel.SubagentSpec{Task: "remote work", ContextMode: "isolated", Labels: map[string]string{subagentstatus.TransportPeerKey: "node-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := subagentstatus.NewService(manager)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := router.AttachSubagentStatuses(service); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := subagentstatus.Encode(subagentstatus.Observation{SessionID: string(id), Attempt: 0, State: kernel.SessionStateRunning})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := router.Handle(context.Background(), domain.PeerRPCRequest{RequestID: "request-status", PeerID: "node-local", CallerID: "node-a", Capability: subagentstatus.Capability, Payload: payload})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ack, err := subagentstatus.DecodeAcknowledgement(response.Payload)
+	if err != nil || ack.SessionID != string(id) || ack.State != kernel.SessionStateRunning {
+		t.Fatalf("ack=%+v err=%v", ack, err)
+	}
+	if transportCalls != 0 {
+		t.Fatalf("status ingress used outbound transport %d times", transportCalls)
+	}
+}
+
+type routerClock struct{}
+
+func (routerClock) Now() time.Time { return time.Unix(100, 0).UTC() }
 
 func TestRouterHandlesAuthenticatedSyncWithoutTransport(t *testing.T) {
 	transportCalls := 0
@@ -64,6 +105,7 @@ func newTestRouter(t *testing.T, transport transportFunc) *Router {
 	if err != nil {
 		t.Fatal(err)
 	}
+	router.localID = "node-local"
 	return router
 }
 

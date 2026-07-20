@@ -97,8 +97,8 @@ func (m *PersistentSessionManager) Restore(ctx context.Context, status SubagentS
 	return m.manager.Restore(ctx, status)
 }
 
-func (m *PersistentSessionManager) PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error {
-	return m.manager.PublishStatus(ctx, id, state, result, failure)
+func (m *PersistentSessionManager) PublishStatus(ctx context.Context, observation SubagentObservation) error {
+	return m.manager.PublishStatus(ctx, observation)
 }
 
 func (m *PersistentSessionManager) Retry(ctx context.Context, id SessionID) error {

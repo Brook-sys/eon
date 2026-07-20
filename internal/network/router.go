@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
 )
@@ -24,6 +25,7 @@ type Router struct {
 	registry  port.PeerRegistry
 	transport port.PeerTransport
 	sync      peersync.Handler
+	statuses  subagentstatus.Handler
 	localID   string
 }
 
@@ -33,21 +35,41 @@ func (r *Router) Handle(ctx context.Context, request domain.PeerRPCRequest) (dom
 	if err := ctx.Err(); err != nil {
 		return domain.PeerRPCResponse{}, err
 	}
-	if !validRPCField(request.RequestID) || !validRPCField(request.PeerID) || !validRPCField(request.CallerID) ||
-		request.Capability != peersync.Capability || len(request.Payload) > maxPeerRPCPayload || r.sync == nil {
+	if !validRPCField(request.RequestID) || !validRPCField(request.PeerID) || !validRPCField(request.CallerID) || len(request.Payload) > maxPeerRPCPayload {
 		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
-	message, err := peersync.Decode(request.Payload)
-	if err != nil {
-		return domain.PeerRPCResponse{}, err
+	if r.localID == "" || request.PeerID != r.localID {
+		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
-	response, err := r.sync.Handle(ctx, request.CallerID, r.localID, message)
-	if err != nil {
-		return domain.PeerRPCResponse{}, err
-	}
-	payload, err := peersync.Encode(response)
-	if err != nil {
-		return domain.PeerRPCResponse{}, err
+	var payload []byte
+	switch request.Capability {
+	case peersync.Capability:
+		if r.sync == nil {
+			return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+		}
+		message, err := peersync.Decode(request.Payload)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+		response, err := r.sync.Handle(ctx, request.CallerID, r.localID, message)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+		payload, err = peersync.Encode(response)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+	case subagentstatus.Capability:
+		if r.statuses == nil {
+			return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+		}
+		var err error
+		payload, err = r.statuses.Handle(ctx, request.CallerID, request.Payload)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
+	default:
+		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
 	return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
 }
@@ -61,6 +83,16 @@ func (r *Router) AttachSync(localID string, service peersync.Handler) error {
 	}
 	r.localID = localID
 	r.sync = service
+	return nil
+}
+
+// AttachSubagentStatuses exposes only authenticated lifecycle observations;
+// the handler receives no store and cannot append canonical events directly.
+func (r *Router) AttachSubagentStatuses(service subagentstatus.Handler) error {
+	if service == nil {
+		return ErrInvalidRPCRequest
+	}
+	r.statuses = service
 	return nil
 }
 

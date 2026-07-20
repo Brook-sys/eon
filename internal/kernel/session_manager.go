@@ -32,11 +32,22 @@ type SubagentSpec struct {
 // SubagentStatus tracks the lifecycle of an active subagent session.
 type SubagentStatus struct {
 	ID        SessionID
+	Attempt   int
 	State     SessionState
 	Spec      SubagentSpec
 	StartedAt time.Time
 	Result    string
 	Error     error
+}
+
+// SubagentObservation correlates an untrusted transport report with one exact
+// execution generation. Delayed observations from older attempts fail closed.
+type SubagentObservation struct {
+	ID      SessionID
+	Attempt int
+	State   SessionState
+	Result  string
+	Failure string
 }
 
 // SessionPolicy bounds delegation performed by a SessionManager.
@@ -55,7 +66,7 @@ func (p SessionPolicy) validate() error {
 type SessionManager interface {
 	Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error)
 	Restore(ctx context.Context, status SubagentStatus) error
-	PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error
+	PublishStatus(ctx context.Context, observation SubagentObservation) error
 	Retry(ctx context.Context, id SessionID) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
@@ -66,6 +77,7 @@ var (
 	ErrSessionLimit    = errors.New("subagent concurrency limit reached")
 	ErrSessionConflict = errors.New("subagent idempotency key conflicts with existing specification")
 	ErrSessionTerminal = errors.New("terminal subagent status cannot be changed")
+	ErrSessionAttempt  = errors.New("subagent observation attempt does not match active attempt")
 )
 
 // localSessionManager is a deterministic in-memory implementation intended for
@@ -143,7 +155,7 @@ func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (Ses
 
 	id := SessionID(fmt.Sprintf("subagent-%d", m.nextID))
 	m.nextID++
-	status := &SubagentStatus{ID: id, State: SessionStatePending, Spec: cloneSubagentSpec(spec), StartedAt: m.clock.Now()}
+	status := &SubagentStatus{ID: id, Attempt: 0, State: SessionStatePending, Spec: cloneSubagentSpec(spec), StartedAt: m.clock.Now()}
 	m.sessions[id] = status
 	if taskID := spec.Labels["task_id"]; taskID != "" {
 		m.byTaskID[taskID] = id
@@ -170,11 +182,14 @@ func (m *localSessionManager) Restore(ctx context.Context, status SubagentStatus
 	if status.StartedAt.IsZero() {
 		return errors.New("restored subagent start time is required")
 	}
+	if status.Attempt < 0 {
+		return errors.New("restored subagent attempt cannot be negative")
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if existing, ok := m.sessions[status.ID]; ok {
-		if existing.State != status.State || !existing.StartedAt.Equal(status.StartedAt) || !subagentSpecsEqual(existing.Spec, status.Spec) {
+		if existing.State != status.State || existing.Attempt != status.Attempt || !existing.StartedAt.Equal(status.StartedAt) || !subagentSpecsEqual(existing.Spec, status.Spec) {
 			return ErrSessionConflict
 		}
 		return nil
@@ -206,10 +221,11 @@ func (m *localSessionManager) Restore(ctx context.Context, status SubagentStatus
 // PublishStatus is the narrow ingress used by a real child-session transport
 // to publish lifecycle observations. Terminal observations are monotonic and
 // replay-safe; divergent terminal replays fail closed.
-func (m *localSessionManager) PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error {
+func (m *localSessionManager) PublishStatus(ctx context.Context, observation SubagentObservation) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	id, state, result, failure := observation.ID, observation.State, observation.Result, observation.Failure
 	if state != SessionStateRunning && state != SessionStateComplete && state != SessionStateFailed {
 		return errors.New("published subagent state must be RUNNING, COMPLETE, or FAILED")
 	}
@@ -225,6 +241,9 @@ func (m *localSessionManager) PublishStatus(ctx context.Context, id SessionID, s
 	status, ok := m.sessions[id]
 	if !ok {
 		return ErrSessionNotFound
+	}
+	if observation.Attempt != status.Attempt {
+		return ErrSessionAttempt
 	}
 	if status.State == SessionStateComplete || status.State == SessionStateFailed {
 		existingFailure := ""
@@ -263,6 +282,7 @@ func (m *localSessionManager) Retry(ctx context.Context, id SessionID) error {
 		return nil
 	case SessionStateFailed:
 		status.State = SessionStatePending
+		status.Attempt++
 		status.Result = ""
 		status.Error = nil
 		return nil

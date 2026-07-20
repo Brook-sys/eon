@@ -191,7 +191,7 @@ func TestOpenRestoresActiveSubagentAcrossSQLiteRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("spawn: %v", err)
 	}
-	if err := first.Subagents.PublishStatus(ctx, id, kernel.SessionStateRunning, "", ""); err != nil {
+	if err := first.Subagents.PublishStatus(ctx, kernel.SubagentObservation{ID: id, State: kernel.SessionStateRunning, Result: "", Failure: ""}); err != nil {
 		t.Fatalf("publish running: %v", err)
 	}
 	if _, err := first.Supervisor.Reconcile(ctx); err != nil {
@@ -213,7 +213,7 @@ func TestOpenRestoresActiveSubagentAcrossSQLiteRestart(t *testing.T) {
 	if status.State != kernel.SessionStateRunning || status.Spec.Task != "survive restart" || status.Spec.Labels["task_id"] != "task-restart" {
 		t.Fatalf("restored status = %+v", status)
 	}
-	if err := second.Subagents.PublishStatus(ctx, id, kernel.SessionStateComplete, "recovered", ""); err != nil {
+	if err := second.Subagents.PublishStatus(ctx, kernel.SubagentObservation{ID: id, State: kernel.SessionStateComplete, Result: "recovered", Failure: ""}); err != nil {
 		t.Fatalf("publish completion: %v", err)
 	}
 	result, err := second.ProcessCycle(ctx)

@@ -363,7 +363,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		projector.SetModelProvider(modelExec.Provider)
 	}
 
-	peerTransport, err := buildPeerTransport(opts, store, clock.Now)
+	peerTransport, err := buildPeerTransport(opts, store, clock.Now, sessionManager)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
 		if closer != nil {
