@@ -111,6 +111,24 @@ func (m *mockSessionManager) PublishStatus(ctx context.Context, id kernel.Sessio
 	return nil
 }
 
+func (m *mockSessionManager) Retry(ctx context.Context, id kernel.SessionID) error {
+	status, ok := m.sessions[id]
+	if !ok {
+		return kernel.ErrSessionNotFound
+	}
+	if status.State == kernel.SessionStatePending {
+		return nil
+	}
+	if status.State != kernel.SessionStateFailed {
+		return kernel.ErrSessionTerminal
+	}
+	status.State = kernel.SessionStatePending
+	status.Result = ""
+	status.Error = nil
+	m.sessions[id] = status
+	return nil
+}
+
 func (m *mockSessionManager) Status(ctx context.Context, id kernel.SessionID) (kernel.SubagentStatus, error) {
 	status, ok := m.sessions[id]
 	if !ok {
@@ -151,6 +169,40 @@ func TestSupervisor_RetriesFailedSession(t *testing.T) {
 		}
 		if got.State != domain.SubagentStatePending || got.Attempt != 1 || got.ErrorCode != "" {
 			t.Fatalf("unexpected retry record: %+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err := manager.Status(ctx, "retry-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.State != kernel.SessionStatePending || status.Error != nil {
+		t.Fatalf("transport was not re-armed: %+v", status)
+	}
+}
+
+func TestSupervisorRecoversRetryRearmedBeforeDurableCommit(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 5, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-split", TaskID: "task-retry-split", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "recover split retry", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"retry-split": {ID: "retry-split", State: kernel.SessionStatePending}}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord("retry-split")
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStatePending || got.Attempt != 1 {
+			t.Fatalf("split retry was not completed durably: %+v", got)
 		}
 		return nil
 	}); err != nil {

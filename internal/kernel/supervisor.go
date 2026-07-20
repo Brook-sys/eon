@@ -61,12 +61,28 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 
 			changed := false
 			switch status.State {
+			case SessionStatePending:
+				// A previous retry may have re-armed the transport immediately before
+				// the durable transaction rolled back. Complete that split observation
+				// without issuing another transport retry.
+				if rec.State == domain.SubagentStateRunning && rec.Attempt < rec.MaxAttempts-1 {
+					rec.State = domain.SubagentStatePending
+					rec.Attempt++
+					rec.Result = ""
+					rec.ErrorCode = ""
+					changed = true
+				}
 			case SessionStateComplete:
 				rec.State = domain.SubagentStateComplete
 				rec.Result = status.Result
 				changed = true
 			case SessionStateFailed:
 				if rec.Attempt < rec.MaxAttempts-1 {
+					// Re-arm the transport before publishing PENDING durably. Retry is
+					// idempotent so a store rollback can be reconciled safely next cycle.
+					if err := s.Manager.Retry(ctx, SessionID(rec.ID)); err != nil {
+						return err
+					}
 					rec.State = domain.SubagentStatePending
 					rec.Attempt++
 					// clear previous result/error
@@ -76,6 +92,8 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 					rec.State = domain.SubagentStateError
 					if status.Error != nil {
 						rec.ErrorCode = status.Error.Error()
+					} else {
+						rec.ErrorCode = "subagent_failed"
 					}
 				}
 				changed = true

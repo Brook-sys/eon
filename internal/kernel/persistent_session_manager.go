@@ -101,6 +101,10 @@ func (m *PersistentSessionManager) PublishStatus(ctx context.Context, id Session
 	return m.manager.PublishStatus(ctx, id, state, result, failure)
 }
 
+func (m *PersistentSessionManager) Retry(ctx context.Context, id SessionID) error {
+	return m.manager.Retry(ctx, id)
+}
+
 func (m *PersistentSessionManager) Wait(ctx context.Context, id SessionID) (SubagentStatus, error) {
 	return m.manager.Wait(ctx, id)
 }

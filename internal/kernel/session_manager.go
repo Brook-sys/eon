@@ -56,6 +56,7 @@ type SessionManager interface {
 	Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error)
 	Restore(ctx context.Context, status SubagentStatus) error
 	PublishStatus(ctx context.Context, id SessionID, state SessionState, result, failure string) error
+	Retry(ctx context.Context, id SessionID) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
 }
@@ -242,6 +243,34 @@ func (m *localSessionManager) PublishStatus(ctx context.Context, id SessionID, s
 		status.Error = errors.New(failure)
 	}
 	return nil
+}
+
+// Retry re-arms a failed transport session under the same durable identity.
+// Replays after the session has already returned to PENDING are harmless;
+// successful sessions remain terminal and cannot be re-executed.
+func (m *localSessionManager) Retry(ctx context.Context, id SessionID) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	status, ok := m.sessions[id]
+	if !ok {
+		return ErrSessionNotFound
+	}
+	switch status.State {
+	case SessionStatePending:
+		return nil
+	case SessionStateFailed:
+		status.State = SessionStatePending
+		status.Result = ""
+		status.Error = nil
+		return nil
+	case SessionStateComplete:
+		return ErrSessionTerminal
+	default:
+		return errors.New("running subagent session cannot be retried")
+	}
 }
 
 func (m *localSessionManager) Status(ctx context.Context, id SessionID) (SubagentStatus, error) {

@@ -127,3 +127,38 @@ func TestLocalSessionManager_RestoreAndPublishTerminalStatus(t *testing.T) {
 		t.Fatalf("published status = %+v", got)
 	}
 }
+
+func TestLocalSessionManager_RetryFailedSessionIsReplaySafe(t *testing.T) {
+	ctx := context.Background()
+	clock := &mockClock{now: time.Date(2026, 7, 20, 14, 0, 0, 0, time.UTC)}
+	manager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "retry transport", ContextMode: "isolated", Labels: map[string]string{"task_id": "retry-transport"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.PublishStatus(ctx, id, kernel.SessionStateFailed, "", "temporary"); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Retry(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Retry(ctx, id); err != nil {
+		t.Fatalf("idempotent retry: %v", err)
+	}
+	got, err := manager.Status(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.State != kernel.SessionStatePending || got.Result != "" || got.Error != nil {
+		t.Fatalf("retried status = %+v", got)
+	}
+	if err := manager.PublishStatus(ctx, id, kernel.SessionStateComplete, "done", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Retry(ctx, id); !errors.Is(err, kernel.ErrSessionTerminal) {
+		t.Fatalf("retry completed session = %v", err)
+	}
+}
