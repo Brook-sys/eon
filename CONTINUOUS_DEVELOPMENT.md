@@ -805,3 +805,4 @@ Proximo: integrar o listener P2P diretamente ao ciclo principal do runtime via i
 - [ ] `TODO` Elaborar e rodar uma campanha que prova uma chamada local originando um tool call que é completado transparentemente via RemoteTool em um stub externo.
 - [ ] `TODO` Auditar se a resposta de tooling remota segue o contrato the size limits (1MiB / 2MiB json).
 
+Adicionar documentação de Fase 23
