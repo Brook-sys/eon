@@ -81,6 +81,7 @@ type Options struct {
 	// File, when non-nil and enabled, wires file.discover / file.read under
 	// authorized absolute roots (FR-RES-001/002). Requires at least one root.
 	File     *FileOptions
+	Network  *NetworkOptions
 	Subagent *SubagentOptions
 }
 
@@ -491,4 +492,10 @@ func (o *Options) Validate() error {
 // SCHEDULER revisions replace process knobs via ActiveSchedulerCadence.
 func DefaultSchedulerCadence() domain.SchedulerCadenceConfig {
 	return domain.DefaultSchedulerCadenceConfig()
+}
+
+type NetworkOptions struct {
+	Enabled     bool
+	BindAddr    string
+	MDNSEnabled bool
 }

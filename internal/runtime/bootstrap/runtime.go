@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"log/slog"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -86,6 +87,18 @@ type Runtime struct {
 
 // Open assembles dependencies. It does not start the HTTP server or loop.
 func Open(ctx context.Context, opts Options) (*Runtime, error) {
+	var p2pManager *network.P2PManager
+	if opts.Network != nil && opts.Network.Enabled {
+		pm, err := network.NewP2PManager(network.Options{
+			Enabled:     opts.Network.Enabled,
+			BindAddr:    opts.Network.BindAddr,
+			MDNSEnabled: opts.Network.MDNSEnabled,
+		}, slog.Default())
+		if err != nil {
+			return nil, fmt.Errorf("create p2p manager: %w", err)
+		}
+		p2pManager = pm
+	}
 	if err := opts.Validate(); err != nil {
 		return nil, err
 	}
@@ -333,7 +346,12 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 	}
 
-	return &Runtime{
+	
+		if p2pManager != nil {
+			_ = p2pManager.Start(ctx)
+		}
+
+		return &Runtime{
 		Opts:             opts,
 		Store:            store,
 		Clock:            clock,
