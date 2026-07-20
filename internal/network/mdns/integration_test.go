@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+
+	"github.com/miekg/dns"
 )
 
 func TestBeacon_Integration_PeerDiscovery(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Test loopback integration using a normal UDP socket instead of multicast
-	// to avoid environmental restrictions on multicast routing in CI/sandbox.
 	addr, err := net.ResolveUDPAddr("udp4", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
@@ -36,6 +36,7 @@ func TestBeacon_Integration_PeerDiscovery(t *testing.T) {
 	cfgA := MDNSConfig{
 		NodeID:           "node-a",
 		AllowedPKIHashes: []string{"node-b"},
+		Port:             8081,
 	}
 	beaconA := &Beacon{
 		config:   cfgA,
@@ -48,6 +49,7 @@ func TestBeacon_Integration_PeerDiscovery(t *testing.T) {
 	cfgB := MDNSConfig{
 		NodeID:           "node-b",
 		AllowedPKIHashes: []string{"node-a"},
+		Port:             8082,
 	}
 	beaconB := &Beacon{
 		config:   cfgB,
@@ -59,20 +61,49 @@ func TestBeacon_Integration_PeerDiscovery(t *testing.T) {
 	go beaconA.listen(ctx)
 	go beaconB.listen(ctx)
 
-	// Manual send cross-peers
-	_, err = connA.WriteToUDP([]byte("NODE:node-a"), connB.LocalAddr().(*net.UDPAddr))
+	// Helper to generate DNS message
+	buildMsg := func(nodeID string, port int) []byte {
+		m := new(dns.Msg)
+		m.Id = dns.Id()
+		m.Response = true
+		m.Authoritative = true
+
+		srvName := nodeID + "." + mdnsService
+
+		m.Answer = append(m.Answer, &dns.PTR{
+			Hdr: dns.RR_Header{Name: mdnsService, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: 120},
+			Ptr: srvName,
+		})
+
+		m.Extra = append(m.Extra, &dns.SRV{
+			Hdr:    dns.RR_Header{Name: srvName, Rrtype: dns.TypeSRV, Class: dns.ClassINET, Ttl: 120},
+			Target: srvName,
+			Port:   uint16(port),
+		})
+		m.Extra = append(m.Extra, &dns.TXT{
+			Hdr: dns.RR_Header{Name: srvName, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 120},
+			Txt: []string{
+				txtPrefix,
+				"id=" + nodeID,
+			},
+		})
+
+		buf, _ := m.Pack()
+		return buf
+	}
+
+	_, err = connA.WriteToUDP(buildMsg("node-a", 8081), connB.LocalAddr().(*net.UDPAddr))
 	if err != nil {
 		t.Fatalf("write A->B: %v", err)
 	}
 
-	_, err = connB.WriteToUDP([]byte("NODE:node-b"), connA.LocalAddr().(*net.UDPAddr))
+	_, err = connB.WriteToUDP(buildMsg("node-b", 8082), connA.LocalAddr().(*net.UDPAddr))
 	if err != nil {
 		t.Fatalf("write B->A: %v", err)
 	}
 
 	time.Sleep(500 * time.Millisecond)
 
-	// Verify A discovered B
 	beaconA.mu.Lock()
 	defer beaconA.mu.Unlock()
 	if len(regA.peers) == 0 {
@@ -81,7 +112,6 @@ func TestBeacon_Integration_PeerDiscovery(t *testing.T) {
 		t.Errorf("beacon A discovered wrong peer: %v", regA.peers)
 	}
 
-	// Verify B discovered A
 	beaconB.mu.Lock()
 	defer beaconB.mu.Unlock()
 	if len(regB.peers) == 0 {

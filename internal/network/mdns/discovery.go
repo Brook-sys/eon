@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+
+	"github.com/miekg/dns"
 )
 
 var (
@@ -21,7 +22,8 @@ var (
 
 const (
 	defaultMulticastAddress = "224.0.0.251:5353"
-	maxPayloadSize          = 9000
+	txtPrefix               = "v=openclaw-p2p-1"
+	mdnsService             = "_openclaw._tcp.local."
 )
 
 type MDNSConfig struct {
@@ -52,6 +54,7 @@ func NewBeacon(config MDNSConfig, registry port.PeerRegistry) (*Beacon, error) {
 	if config.AdvertiseInterval == 0 {
 		config.AdvertiseInterval = 30 * time.Second
 	}
+
 	return &Beacon{
 		config:   config,
 		registry: registry,
@@ -105,9 +108,7 @@ func (b *Beacon) advertise(ctx context.Context) {
 	ticker := time.NewTicker(b.config.AdvertiseInterval)
 	defer ticker.Stop()
 
-	payload := []byte(fmt.Sprintf("NODE:%s:%d", b.config.NodeID, b.config.Port))
-
-	b.sendAdvertisement(payload)
+	b.sendAdvertisement()
 
 	for {
 		select {
@@ -115,23 +116,54 @@ func (b *Beacon) advertise(ctx context.Context) {
 			b.Stop()
 			return
 		case <-ticker.C:
-			b.sendAdvertisement(payload)
+			b.sendAdvertisement()
 		}
 	}
 }
 
-func (b *Beacon) sendAdvertisement(payload []byte) {
+func (b *Beacon) sendAdvertisement() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if !b.running || b.conn == nil {
 		return
 	}
+
+	m := new(dns.Msg)
+	m.Id = dns.Id()
+	m.Response = true
+	m.Authoritative = true
+
+	srvName := fmt.Sprintf("%s.%s", b.config.NodeID, mdnsService)
+
+	m.Answer = append(m.Answer, &dns.PTR{
+		Hdr: dns.RR_Header{Name: mdnsService, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: 120},
+		Ptr: srvName,
+	})
+
+	m.Extra = append(m.Extra, &dns.SRV{
+		Hdr:    dns.RR_Header{Name: srvName, Rrtype: dns.TypeSRV, Class: dns.ClassINET, Ttl: 120},
+		Target: srvName,
+		Port:   uint16(b.config.Port),
+	})
+	m.Extra = append(m.Extra, &dns.TXT{
+		Hdr: dns.RR_Header{Name: srvName, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: 120},
+		Txt: []string{
+			txtPrefix,
+			fmt.Sprintf("id=%s", b.config.NodeID),
+		},
+	})
+
+	buf, err := m.Pack()
+	if err != nil {
+		return
+	}
+
 	addr, _ := net.ResolveUDPAddr("udp4", b.config.MulticastAddress)
-	_, _ = b.conn.WriteToUDP(payload, addr)
+	_, _ = b.conn.WriteToUDP(buf, addr)
 }
 
 func (b *Beacon) listen(ctx context.Context) {
-	buf := make([]byte, maxPayloadSize)
+	buf := make([]byte, 9000)
 
 	for {
 		select {
@@ -160,20 +192,30 @@ func (b *Beacon) listen(ctx context.Context) {
 			continue
 		}
 
-		msg := string(buf[:n])
-		if strings.HasPrefix(msg, "NODE:") {
-			parts := strings.Split(msg, ":")
-			if len(parts) >= 2 {
-				peerID := parts[1]
-				portNum := b.config.Port
-				if len(parts) >= 3 {
-					p, err := strconv.Atoi(parts[2])
-					if err == nil {
-						portNum = p
+		msg := new(dns.Msg)
+		if err := msg.Unpack(buf[:n]); err == nil {
+			for _, extra := range msg.Extra {
+				if txt, ok := extra.(*dns.TXT); ok {
+					isValid := false
+					peerID := ""
+					for _, t := range txt.Txt {
+						if t == txtPrefix {
+							isValid = true
+						}
+						if strings.HasPrefix(t, "id=") {
+							peerID = strings.TrimPrefix(t, "id=")
+						}
 					}
-				}
-				if peerID != b.config.NodeID {
-					b.validateAndRegister(ctx, peerID, src.String(), portNum)
+
+					if isValid && peerID != "" && peerID != b.config.NodeID {
+						portNum := b.config.Port // fallback
+						for _, ex := range msg.Extra {
+							if srv, ok := ex.(*dns.SRV); ok {
+								portNum = int(srv.Port)
+							}
+						}
+						b.validateAndRegister(ctx, peerID, src.String(), portNum)
+					}
 				}
 			}
 		}
