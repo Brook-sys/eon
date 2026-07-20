@@ -11,6 +11,7 @@ import (
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/network"
 	peerhttp "motor-autonomo/internal/network/http"
+	"motor-autonomo/internal/network/subagentspawn"
 	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
@@ -84,6 +85,13 @@ func buildPeerTransport(opts Options, store port.Store, now func() time.Time, se
 		}
 		if statusErr := caller.AttachSubagentStatuses(statusService); statusErr != nil {
 			return nil, fmt.Errorf("attach subagent status ingress: %w", statusErr)
+		}
+		spawnService, spawnErr := subagentspawn.NewService(sessions)
+		if spawnErr != nil {
+			return nil, fmt.Errorf("init subagent spawn ingress: %w", spawnErr)
+		}
+		if spawnErr := caller.AttachSubagentSpawns(spawnService); spawnErr != nil {
+			return nil, fmt.Errorf("attach subagent spawn ingress: %w", spawnErr)
 		}
 	}
 

@@ -59,8 +59,9 @@ type Runtime struct {
 	LeaseReaper kernel.LeaseReaper
 	// Subagents and Supervisor share one manager so model tool calls, durable
 	// lifecycle records, and cycle reconciliation observe the same sessions.
-	Subagents  kernel.SessionManager
-	Supervisor *kernel.Supervisor
+	Subagents          kernel.SessionManager
+	Supervisor         *kernel.Supervisor
+	SubagentDispatcher *kernel.SubagentDispatcher
 	// subagentTools is retained separately so dynamic model-executor reloads
 	// preserve the lifecycle tools rather than rebuilding an fs/exec-only catalog.
 	subagentTools tool.Provider
@@ -319,7 +320,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
-	subagentTools, sessionManager, err := buildSubagent(opts.Subagent, store, clock, opts.MissionID)
+	subagentTools, sessionManager, err := buildSubagent(opts.Subagent, store, clock, ids, opts.MissionID)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
 		if closer != nil {
@@ -376,6 +377,10 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			Registry: peerTransport.Registry,
 		}
 	}
+	var subagentDispatcher *kernel.SubagentDispatcher
+	if peerTransport != nil && sessionManager != nil {
+		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
+	}
 
 	if p2pManager != nil {
 		_ = p2pManager.Start(ctx)
@@ -402,26 +407,27 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			Web:   webExec,
 			Model: modelExec,
 		},
-		LeaseReaper:     leaseReaper,
-		Subagents:       sessionManager,
-		Supervisor:      supervisor,
-		subagentTools:   subagentTools,
-		Model:           modelExec,
-		Web:             webExec,
-		File:            fileExec,
-		Peer:            peerTransport,
-		Registry:        registry,
-		Cooldowns:       cooldowns,
-		Inspect:         inspectAPI,
-		Control:         controlAPI,
-		Dashboard:       dash,
-		Handler:         handler,
-		TelegramAdapter: telegramBits.Adapter,
-		TelegramWorker:  telegramBits.Worker,
-		TelegramIngress: telegramBits.Ingress,
-		Telemetry:       telemetry,
-		cycleTelemetry:  observability.NewCycleInstruments(telemetry),
-		logger:          log.Default(),
+		LeaseReaper:        leaseReaper,
+		Subagents:          sessionManager,
+		Supervisor:         supervisor,
+		SubagentDispatcher: subagentDispatcher,
+		subagentTools:      subagentTools,
+		Model:              modelExec,
+		Web:                webExec,
+		File:               fileExec,
+		Peer:               peerTransport,
+		Registry:           registry,
+		Cooldowns:          cooldowns,
+		Inspect:            inspectAPI,
+		Control:            controlAPI,
+		Dashboard:          dash,
+		Handler:            handler,
+		TelegramAdapter:    telegramBits.Adapter,
+		TelegramWorker:     telegramBits.Worker,
+		TelegramIngress:    telegramBits.Ingress,
+		Telemetry:          telemetry,
+		cycleTelemetry:     observability.NewCycleInstruments(telemetry),
+		logger:             log.Default(),
 	}, nil
 }
 
@@ -577,6 +583,7 @@ type CycleResult struct {
 	TelegramDuplicate   int
 	LeasesReconciled    int
 	SubagentsReconciled int
+	SubagentDispatches  int
 	SchedulerRan        bool
 	SchedulerSteps      int
 	SchedulerKind       kernel.DecisionKind
@@ -655,6 +662,16 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.SubagentsReconciled = reconciled
 		if reconciled > 0 {
+			result.Worked = true
+		}
+	}
+	if rt.SubagentDispatcher != nil {
+		dispatched, err := rt.SubagentDispatcher.DispatchDue(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent dispatcher: %w", err)
+		}
+		result.SubagentDispatches = dispatched
+		if dispatched > 0 {
 			result.Worked = true
 		}
 	}

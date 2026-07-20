@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -121,6 +122,11 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				if err := tx.SaveSubagentRecord(rec); err != nil {
 					return err
 				}
+				if rec.State == domain.SubagentStatePending {
+					if err := s.createDispatchForGeneration(tx, rec, rec.UpdatedAt); err != nil {
+						return err
+					}
+				}
 				if (rec.State == domain.SubagentStateComplete || rec.State == domain.SubagentStateError) && s.IDs != nil {
 					if err := s.appendTerminalEvent(tx, rec, rec.UpdatedAt); err != nil {
 						return err
@@ -133,6 +139,22 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 	})
 
 	return reconciled, err
+}
+
+func (s *Supervisor) createDispatchForGeneration(tx port.Transaction, rec domain.SubagentRecord, now time.Time) error {
+	if rec.TransportPeerID == "" || s.IDs == nil {
+		return nil
+	}
+	if _, err := tx.SubagentDispatchByGeneration(rec.ID, rec.Attempt); err == nil {
+		return nil
+	} else if !errors.Is(err, port.ErrNotFound) {
+		return err
+	}
+	requestID, err := s.IDs.NewID("subagent-dispatch")
+	if err != nil {
+		return err
+	}
+	return tx.CreateSubagentDispatch(domain.SubagentDispatch{SchemaVersion: domain.SchemaVersionV1, RequestID: domain.SubagentDispatchRequestID(requestID), SessionID: rec.ID, Attempt: rec.Attempt, PeerID: rec.TransportPeerID, Status: domain.SubagentDispatchPending, MaxSendAttempts: 3, AvailableAt: now, CreatedAt: now, UpdatedAt: now})
 }
 
 func (s *Supervisor) appendTerminalEvent(tx port.Transaction, rec domain.SubagentRecord, now time.Time) error {

@@ -13,9 +13,10 @@ import (
 // PersistentSessionPolicy controls the durable lifecycle envelope created for
 // each successfully spawned process-local session.
 type PersistentSessionPolicy struct {
-	MissionID   domain.MissionID
-	MaxAttempts int
-	Timeout     time.Duration
+	MissionID           domain.MissionID
+	MaxAttempts         int
+	Timeout             time.Duration
+	DispatchMaxAttempts uint32
 }
 
 // PersistentSessionManager decorates a transport SessionManager and records
@@ -26,11 +27,12 @@ type PersistentSessionManager struct {
 	manager SessionManager
 	store   port.Store
 	clock   interface{ Now() time.Time }
+	ids     interface{ NewID(string) (string, error) }
 	policy  PersistentSessionPolicy
 }
 
-func NewPersistentSessionManager(manager SessionManager, store port.Store, clock interface{ Now() time.Time }, policy PersistentSessionPolicy) (*PersistentSessionManager, error) {
-	if manager == nil || store == nil || clock == nil {
+func NewPersistentSessionManager(manager SessionManager, store port.Store, clock interface{ Now() time.Time }, ids interface{ NewID(string) (string, error) }, policy PersistentSessionPolicy) (*PersistentSessionManager, error) {
+	if manager == nil || store == nil || clock == nil || ids == nil {
 		return nil, errors.New("persistent session manager dependencies are incomplete")
 	}
 	if policy.MissionID == "" {
@@ -42,7 +44,10 @@ func NewPersistentSessionManager(manager SessionManager, store port.Store, clock
 	if policy.Timeout <= 0 {
 		policy.Timeout = 15 * time.Minute
 	}
-	return &PersistentSessionManager{manager: manager, store: store, clock: clock, policy: policy}, nil
+	if policy.DispatchMaxAttempts == 0 {
+		policy.DispatchMaxAttempts = 3
+	}
+	return &PersistentSessionManager{manager: manager, store: store, clock: clock, ids: ids, policy: policy}, nil
 }
 
 func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error) {
@@ -69,6 +74,23 @@ func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec)
 		MaxAttempts:     m.policy.MaxAttempts,
 		Deadline:        now.Add(m.policy.Timeout),
 	}
+	var dispatch domain.SubagentDispatch
+	if record.TransportPeerID != "" {
+		_ = m.store.View(ctx, func(reader port.Reader) error {
+			existing, readErr := reader.SubagentDispatchByGeneration(record.ID, record.Attempt)
+			if readErr == nil {
+				dispatch = existing
+			}
+			return nil
+		})
+		if dispatch.RequestID == "" {
+			requestID, idErr := m.ids.NewID("subagent-dispatch")
+			if idErr != nil {
+				return "", fmt.Errorf("allocate subagent dispatch id: %w", idErr)
+			}
+			dispatch = domain.SubagentDispatch{SchemaVersion: domain.SchemaVersionV1, RequestID: domain.SubagentDispatchRequestID(requestID), SessionID: record.ID, Attempt: record.Attempt, PeerID: record.TransportPeerID, Status: domain.SubagentDispatchPending, MaxSendAttempts: m.policy.DispatchMaxAttempts, AvailableAt: now, CreatedAt: now, UpdatedAt: now}
+		}
+	}
 	err = m.store.Update(ctx, func(tx port.Transaction) error {
 		if createErr := tx.CreateSubagentRecord(record); createErr != nil {
 			if !errors.Is(createErr, port.ErrConflict) {
@@ -80,6 +102,23 @@ func (m *PersistentSessionManager) Spawn(ctx context.Context, spec SubagentSpec)
 			}
 			if existing.TaskID != record.TaskID || existing.MissionID != record.MissionID || existing.Task != record.Task || existing.ContextMode != record.ContextMode || existing.TransportPeerID != record.TransportPeerID {
 				return fmt.Errorf("%w: durable subagent record differs from idempotent spawn", ErrSessionConflict)
+			}
+		}
+		if dispatch.RequestID != "" {
+			if existing, readErr := tx.SubagentDispatchByGeneration(record.ID, record.Attempt); readErr == nil {
+				if existing.RequestID != dispatch.RequestID || existing.PeerID != dispatch.PeerID {
+					return fmt.Errorf("%w: durable subagent dispatch differs from idempotent spawn", ErrSessionConflict)
+				}
+			} else if !errors.Is(readErr, port.ErrNotFound) {
+				return readErr
+			} else if createErr := tx.CreateSubagentDispatch(dispatch); createErr != nil {
+				if !errors.Is(createErr, port.ErrConflict) {
+					return createErr
+				}
+				existing, readErr := tx.SubagentDispatchByGeneration(record.ID, record.Attempt)
+				if readErr != nil || existing.PeerID != dispatch.PeerID {
+					return fmt.Errorf("%w: durable subagent dispatch differs from idempotent spawn", ErrSessionConflict)
+				}
 			}
 		}
 		return nil

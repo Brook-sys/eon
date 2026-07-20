@@ -19,7 +19,7 @@ func TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manager, err := kernel.NewPersistentSessionManager(local, store, clock, kernel.PersistentSessionPolicy{
+	manager, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{
 		MissionID: "mission-1", MaxAttempts: 2, Timeout: 5 * time.Minute,
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestPersistentSessionManagerPersistsTransportPeerBinding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	manager, err := kernel.NewPersistentSessionManager(local, store, clock, kernel.PersistentSessionPolicy{MissionID: "mission-1", MaxAttempts: 2, Timeout: time.Minute})
+	manager, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{MissionID: "mission-1", MaxAttempts: 2, Timeout: time.Minute})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,6 +77,13 @@ func TestPersistentSessionManagerPersistsTransportPeerBinding(t *testing.T) {
 		}
 		if record.TransportPeerID != "peer-a" {
 			t.Fatalf("transport peer = %q", record.TransportPeerID)
+		}
+		dispatch, readErr := r.SubagentDispatchByGeneration(string(id), 0)
+		if readErr != nil {
+			return readErr
+		}
+		if dispatch.PeerID != "peer-a" || dispatch.Status != domain.SubagentDispatchPending || dispatch.SendAttempt != 0 {
+			t.Fatalf("unexpected dispatch: %+v", dispatch)
 		}
 		return nil
 	}); err != nil {

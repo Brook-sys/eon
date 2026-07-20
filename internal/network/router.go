@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/network/subagentspawn"
 	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
@@ -26,6 +27,7 @@ type Router struct {
 	transport port.PeerTransport
 	sync      peersync.Handler
 	statuses  subagentstatus.Handler
+	spawns    subagentspawn.Handler
 	localID   string
 }
 
@@ -68,6 +70,15 @@ func (r *Router) Handle(ctx context.Context, request domain.PeerRPCRequest) (dom
 		if err != nil {
 			return domain.PeerRPCResponse{}, err
 		}
+	case subagentspawn.Capability:
+		if r.spawns == nil {
+			return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+		}
+		var err error
+		payload, err = r.spawns.Handle(ctx, request.CallerID, request.Payload)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
 	default:
 		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
@@ -93,6 +104,15 @@ func (r *Router) AttachSubagentStatuses(service subagentstatus.Handler) error {
 		return ErrInvalidRPCRequest
 	}
 	r.statuses = service
+	return nil
+}
+
+// AttachSubagentSpawns exposes authenticated, receiver-idempotent admission.
+func (r *Router) AttachSubagentSpawns(service subagentspawn.Handler) error {
+	if service == nil {
+		return ErrInvalidRPCRequest
+	}
+	r.spawns = service
 	return nil
 }
 

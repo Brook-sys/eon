@@ -26,7 +26,7 @@ type SubagentOptions struct {
 
 // buildSubagent sets up one shared bounded manager, durable lifecycle records,
 // and the sessions_spawn / sessions_yield tools when enabled.
-func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now() time.Time }, missionID domain.MissionID) (tool.Provider, kernel.SessionManager, error) {
+func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now() time.Time }, ids source.IDGenerator, missionID domain.MissionID) (tool.Provider, kernel.SessionManager, error) {
 	if opts == nil || !opts.Enabled {
 		return nil, nil, nil // Disabled by default
 	}
@@ -41,7 +41,7 @@ func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now
 	if err := restoreSubagents(context.Background(), store, local); err != nil {
 		return nil, nil, err
 	}
-	sm, err := kernel.NewPersistentSessionManager(local, store, clock, kernel.PersistentSessionPolicy{
+	sm, err := kernel.NewPersistentSessionManager(local, store, clock, ids, kernel.PersistentSessionPolicy{
 		MissionID: missionID, MaxAttempts: opts.MaxAttempts, Timeout: opts.Timeout,
 	})
 	if err != nil {

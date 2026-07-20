@@ -154,12 +154,12 @@ func TestSupervisor_RetriesFailedSession(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)}
-	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-1", TaskID: "task-retry", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "retry me", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-1", TaskID: "task-retry", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "retry me", ContextMode: "isolated", TransportPeerID: "peer-a", Attempt: 0, MaxAttempts: 2}
 	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
 		t.Fatal(err)
 	}
 	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"retry-1": {ID: "retry-1", State: kernel.SessionStateFailed, Error: errors.New("transient")}}}
-	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
 	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
 		t.Fatalf("reconcile=(%d,%v)", n, err)
 	}
@@ -181,6 +181,18 @@ func TestSupervisor_RetriesFailedSession(t *testing.T) {
 	}
 	if status.State != kernel.SessionStatePending || status.Error != nil {
 		t.Fatalf("transport was not re-armed: %+v", status)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		dispatch, err := tx.SubagentDispatchByGeneration("retry-1", 1)
+		if err != nil {
+			return err
+		}
+		if dispatch.PeerID != "peer-a" || dispatch.Status != domain.SubagentDispatchPending {
+			t.Fatalf("retry dispatch = %+v", dispatch)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
