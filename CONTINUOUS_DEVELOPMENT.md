@@ -756,3 +756,10 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 2026-07-19 21:40 — Resolução do principal/autorização e gravação de actor nos audit events de memória semântica — O actor agora é preenchido em `MemoryStoredEvent` e `MemoryCompactedEvent`, sendo persistido na referência (payloadRef) gravada nos stores. A API injeta o autor da mutação, removendo um dos pendentes de auditoria e permitindo atribuição ponta-a-ponta. Verificação: `go test ./...` 100% OK em toolchain local, sem dependências extras, commits coerentes gerados.
 2026-07-19 21:50 — HEARTBEAT — O compactador bounded e failpoints do dolt server já foram implementados e registrados nas passagens 21:20 (compactador) e nas anteriores. O Dolt failpoints foram completados na Fase 4 (Dolt spike). Com a resolução do actor, não restam blockers de memória semântica e a transição é limpa para a Fase 20.
 2026-07-19 22:00 — HEARTBEAT — Campanha live bounded Groq Llama 3.3 70B para Fase 20 (Tooling cognitivo) executou com falha 401 Unauthorized (evidência objetiva registrada em results/model-benchmark/cognitive-tool-v1 sem expor segredos nem causar regressão de toolchain). A configuração e o runner tool-explore estão validando com sucesso a matriz contra o novo corpus, apenas desabilitados neste nodo local temporariamente por credencial.
+
+### Fase 21 — Conexões P2P e Autenticação de Rede de Subagentes
+
+- [ ] `READY`  Elaborar TLS e mTLS configuration baseline para comunicação de peers.
+- [ ] `READY`  Modelar contrato de registro de subagentes / discovery na rede (Gossip/Kademlia baseline ou Registry estático inicial).
+- [ ] `READY`  Rascunhar port.Network interface no kernel.
+
