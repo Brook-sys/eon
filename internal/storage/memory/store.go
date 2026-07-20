@@ -93,6 +93,8 @@ func (s *Store) SetActiveConfig(ctx context.Context, scope domain.ConfigScope, v
 
 type state struct {
 	subagentRecords        map[string]domain.SubagentRecord
+	subagentDispatches     map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
+	dispatchByGeneration   map[string]domain.SubagentDispatchRequestID
 	missionRevisions       map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions         map[domain.MissionID]domain.MissionRevisionID
 	operationSpecs         map[domain.OperationSpecID]domain.OperationSpec
@@ -156,7 +158,9 @@ func New() *Store { return &Store{state: newState()} }
 func newState() state {
 	return state{
 
-		subagentRecords: make(map[string]domain.SubagentRecord),
+		subagentRecords:      make(map[string]domain.SubagentRecord),
+		subagentDispatches:   make(map[domain.SubagentDispatchRequestID]domain.SubagentDispatch),
+		dispatchByGeneration: make(map[string]domain.SubagentDispatchRequestID),
 
 		missionRevisions:          make(map[domain.MissionRevisionID]domain.MissionRevision),
 		activeMissions:            make(map[domain.MissionID]domain.MissionRevisionID),
@@ -2423,6 +2427,12 @@ func cloneState(src state) state {
 	for k, v := range src.subagentRecords {
 		dst.subagentRecords[k] = v
 	}
+	for k, v := range src.subagentDispatches {
+		dst.subagentDispatches[k] = v
+	}
+	for k, v := range src.dispatchByGeneration {
+		dst.dispatchByGeneration[k] = v
+	}
 	for k, v := range src.missionRevisions {
 		dst.missionRevisions[k] = cloneMission(v)
 	}
@@ -2891,6 +2901,97 @@ func (r reader) SubagentRecord(id string) (domain.SubagentRecord, error) {
 
 func (t transaction) SubagentRecordsByState(state domain.SubagentState, limit int) ([]domain.SubagentRecord, error) {
 	return reader{t.state}.SubagentRecordsByState(state, limit)
+}
+
+func subagentDispatchGenerationKey(sessionID string, attempt int) string {
+	return fmt.Sprintf("%s\x00%d", sessionID, attempt)
+}
+
+func (t transaction) SubagentDispatch(id domain.SubagentDispatchRequestID) (domain.SubagentDispatch, error) {
+	return reader(t).SubagentDispatch(id)
+}
+func (r reader) SubagentDispatch(id domain.SubagentDispatchRequestID) (domain.SubagentDispatch, error) {
+	v, ok := r.state.subagentDispatches[id]
+	if !ok {
+		return domain.SubagentDispatch{}, notFound("subagent dispatch", id)
+	}
+	return v, nil
+}
+func (t transaction) SubagentDispatchByGeneration(sessionID string, attempt int) (domain.SubagentDispatch, error) {
+	return reader(t).SubagentDispatchByGeneration(sessionID, attempt)
+}
+func (r reader) SubagentDispatchByGeneration(sessionID string, attempt int) (domain.SubagentDispatch, error) {
+	id, ok := r.state.dispatchByGeneration[subagentDispatchGenerationKey(sessionID, attempt)]
+	if !ok {
+		return domain.SubagentDispatch{}, notFound("subagent dispatch generation", sessionID)
+	}
+	return r.SubagentDispatch(id)
+}
+func (t transaction) DueSubagentDispatches(now time.Time, limit int) ([]domain.SubagentDispatch, error) {
+	return reader(t).DueSubagentDispatches(now, limit)
+}
+func (r reader) DueSubagentDispatches(now time.Time, limit int) ([]domain.SubagentDispatch, error) {
+	if now.IsZero() || limit <= 0 {
+		return nil, fmt.Errorf("subagent dispatch query requires time and positive limit")
+	}
+	result := make([]domain.SubagentDispatch, 0, limit)
+	for _, dispatch := range r.state.subagentDispatches {
+		if dispatch.Due(now) {
+			result = append(result, dispatch)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].AvailableAt.Equal(result[j].AvailableAt) {
+			return result[i].RequestID < result[j].RequestID
+		}
+		return result[i].AvailableAt.Before(result[j].AvailableAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (t transaction) CreateSubagentDispatch(v domain.SubagentDispatch) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent dispatch: %w", err)
+	}
+	if v.Status != domain.SubagentDispatchPending || v.SendAttempt != 0 {
+		return fmt.Errorf("%w: subagent dispatch must be created pending before sends", port.ErrConflict)
+	}
+	if _, exists := t.state.subagentDispatches[v.RequestID]; exists {
+		return conflict("subagent dispatch", v.RequestID)
+	}
+	key := subagentDispatchGenerationKey(v.SessionID, v.Attempt)
+	if _, exists := t.state.dispatchByGeneration[key]; exists {
+		return fmt.Errorf("%w: subagent generation already has a dispatch", port.ErrConflict)
+	}
+	record, exists := t.state.subagentRecords[v.SessionID]
+	if !exists {
+		return notFound("subagent record", v.SessionID)
+	}
+	if record.Attempt != v.Attempt || record.TransportPeerID != v.PeerID {
+		return fmt.Errorf("%w: dispatch does not match subagent generation or peer", port.ErrConflict)
+	}
+	t.state.subagentDispatches[v.RequestID] = v
+	t.state.dispatchByGeneration[key] = v.RequestID
+	return nil
+}
+func (t transaction) SaveSubagentDispatch(v domain.SubagentDispatch, expectedStatus domain.SubagentDispatchStatus, expectedSendAttempt uint32) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent dispatch: %w", err)
+	}
+	current, ok := t.state.subagentDispatches[v.RequestID]
+	if !ok {
+		return notFound("subagent dispatch", v.RequestID)
+	}
+	if current.Status != expectedStatus || current.SendAttempt != expectedSendAttempt {
+		return fmt.Errorf("%w: stale subagent dispatch state", port.ErrConflict)
+	}
+	if current.SessionID != v.SessionID || current.Attempt != v.Attempt || current.PeerID != v.PeerID || current.RequestID != v.RequestID || current.CreatedAt != v.CreatedAt || current.MaxSendAttempts != v.MaxSendAttempts {
+		return fmt.Errorf("%w: immutable subagent dispatch fields changed", port.ErrConflict)
+	}
+	t.state.subagentDispatches[v.RequestID] = v
+	return nil
 }
 func (r reader) SubagentRecordsByState(state domain.SubagentState, limit int) ([]domain.SubagentRecord, error) {
 	var result []domain.SubagentRecord

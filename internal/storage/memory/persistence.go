@@ -85,6 +85,7 @@ type persistedState struct {
 	WorkOpportunities         map[domain.WorkOpportunityID]domain.WorkOpportunity
 	ContinuityDiagnoses       map[domain.ContinuityDiagnosisID]domain.ContinuityDiagnosis
 	SubagentRecords           map[string]domain.SubagentRecord
+	SubagentDispatches        map[domain.SubagentDispatchRequestID]domain.SubagentDispatch
 	ConfigDrafts              map[domain.ConfigDraftID]domain.ConfigDraft
 	ConfigRevisions           map[domain.ConfigRevisionID]domain.ConfigRevision
 	ActiveConfig              map[domain.ConfigScope]domain.ConfigRevisionID
@@ -123,8 +124,9 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ExternalEvents:          cloned.externalEvents, ExternalEventByDedup: cloned.externalEventByDedup,
 		ExternalEventDispositions: cloned.externalEventDispositions,
 		WorkOpportunities:         cloned.workOpportunities, ContinuityDiagnoses: cloned.continuityDiagnoses,
-		SubagentRecords: cloned.subagentRecords,
-		ConfigDrafts:    cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
+		SubagentRecords:    cloned.subagentRecords,
+		SubagentDispatches: cloned.subagentDispatches,
+		ConfigDrafts:       cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
 		ChannelCursors:        cloned.channelCursors,
 		ResourceUsages:        cloned.resourceUsages,
@@ -262,6 +264,23 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 			}
 			base.deliveryByTransport[deliveryTransportKey(delivery.Channel, delivery.TransportMessageID)] = id
 		}
+	}
+	base.subagentDispatches = nonNil(p.SubagentDispatches, base.subagentDispatches)
+	// The generation index is derived state. Rebuild it from validated rows rather
+	// than trusting a stale or tampered checkpoint index.
+	base.dispatchByGeneration = make(map[string]domain.SubagentDispatchRequestID, len(base.subagentDispatches))
+	for id, dispatch := range base.subagentDispatches {
+		if id != dispatch.RequestID {
+			return nil, fmt.Errorf("decode checkpoint subagent dispatch key mismatch: %s", id)
+		}
+		if err := dispatch.Validate(); err != nil {
+			return nil, fmt.Errorf("decode checkpoint subagent dispatch %s: %w", id, err)
+		}
+		key := subagentDispatchGenerationKey(dispatch.SessionID, dispatch.Attempt)
+		if _, duplicate := base.dispatchByGeneration[key]; duplicate {
+			return nil, fmt.Errorf("decode checkpoint duplicate subagent dispatch generation: %s", key)
+		}
+		base.dispatchByGeneration[key] = id
 	}
 	base.questionGateDecisions = nonNil(p.QuestionGateDecisions, base.questionGateDecisions)
 	base.gateDecisionByQuestion = nonNil(p.GateDecisionByQuestion, base.gateDecisionByQuestion)
