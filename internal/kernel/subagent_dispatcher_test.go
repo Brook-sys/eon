@@ -3,6 +3,7 @@ package kernel_test
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -104,4 +105,61 @@ func TestSubagentDispatcherRetriesDefiniteFailure(t *testing.T) {
 		}
 		return nil
 	})
+}
+
+func TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*domain.SubagentRecord, *domain.SubagentDispatch, time.Time)
+	}{
+		{name: "terminal record", mutate: func(record *domain.SubagentRecord, _ *domain.SubagentDispatch, now time.Time) {
+			record.State, record.Result, record.UpdatedAt = domain.SubagentStateComplete, "already done", now.Add(time.Second)
+		}},
+		{name: "expired deadline", mutate: func(record *domain.SubagentRecord, _ *domain.SubagentDispatch, now time.Time) {
+			record.Deadline, record.UpdatedAt = now, now
+		}},
+		{name: "superseded generation", mutate: func(record *domain.SubagentRecord, dispatch *domain.SubagentDispatch, now time.Time) {
+			record.Attempt, record.UpdatedAt = dispatch.Attempt+1, now.Add(time.Second)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := memory.New()
+			clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+			dispatch := seedDispatch(t, store, clock.Now())
+			if err := store.Update(context.Background(), func(tx port.Transaction) error {
+				record, err := tx.SubagentRecord(dispatch.SessionID)
+				if err != nil {
+					return err
+				}
+				tt.mutate(&record, &dispatch, clock.Now())
+				return tx.SaveSubagentRecord(record)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			var calls atomic.Int32
+			worker := kernel.SubagentDispatcher{Store: store, Clock: clock, Owner: "worker-1", Caller: dispatchCaller(func(context.Context, domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+				calls.Add(1)
+				return domain.PeerRPCResponse{}, nil
+			})}
+			if n, err := worker.DispatchDue(context.Background()); err != nil || n != 1 {
+				t.Fatalf("dispatch=(%d,%v)", n, err)
+			}
+			if calls.Load() != 0 {
+				t.Fatalf("remote calls=%d", calls.Load())
+			}
+			if err := store.View(context.Background(), func(r port.Reader) error {
+				got, err := r.SubagentDispatch(dispatch.RequestID)
+				if err != nil {
+					return err
+				}
+				if got.Status != domain.SubagentDispatchCancelled || got.SendAttempt != 0 {
+					t.Fatalf("dispatch=%+v", got)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }

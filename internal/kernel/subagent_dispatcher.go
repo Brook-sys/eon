@@ -3,7 +3,6 @@ package kernel
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -79,6 +78,7 @@ func (d *SubagentDispatcher) DispatchDue(ctx context.Context) (int, error) {
 
 		var leased domain.SubagentDispatch
 		var record domain.SubagentRecord
+		cancelled := false
 		if err := d.Store.Update(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentDispatch(candidate.RequestID)
 			if err != nil {
@@ -88,10 +88,20 @@ func (d *SubagentDispatcher) DispatchDue(ctx context.Context) (int, error) {
 			if err != nil {
 				return err
 			}
-			if record.Attempt != current.Attempt || record.TransportPeerID != current.PeerID {
-				return fmt.Errorf("dispatch generation no longer matches session")
+			now := d.Clock.Now().UTC()
+			activeGeneration := record.Attempt == current.Attempt && record.TransportPeerID == current.PeerID && (record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) && (record.Deadline.IsZero() || now.Before(record.Deadline))
+			if !activeGeneration {
+				next, cancelErr := domain.CancelSubagentDispatch(current, now)
+				if cancelErr != nil {
+					return cancelErr
+				}
+				if err := tx.SaveSubagentDispatch(next, current.Status, current.SendAttempt); err != nil {
+					return err
+				}
+				cancelled = true
+				return nil
 			}
-			leased, err = domain.LeaseSubagentDispatch(current, d.Owner, d.Clock.Now().UTC(), d.Clock.Now().UTC().Add(lease))
+			leased, err = domain.LeaseSubagentDispatch(current, d.Owner, now, now.Add(lease))
 			if err != nil {
 				return err
 			}
@@ -101,6 +111,10 @@ func (d *SubagentDispatcher) DispatchDue(ctx context.Context) (int, error) {
 				continue
 			}
 			return processed, err
+		}
+		if cancelled {
+			processed++
+			continue
 		}
 
 		payload, err := domain.EncodeSubagentSpawnRequest(domain.SubagentSpawnRequest{RequestID: string(leased.RequestID), SessionID: leased.SessionID, Attempt: leased.Attempt, Task: record.Task, ContextMode: record.ContextMode})

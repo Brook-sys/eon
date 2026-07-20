@@ -364,6 +364,72 @@ func TestOpenRestoresAppliedTerminalWinnerBeforePendingConflict(t *testing.T) {
 	}
 }
 
+func TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle(t *testing.T) {
+	tests := []struct {
+		name       string
+		status     domain.SubagentSpawnReceiptStatus
+		result     string
+		failure    string
+		wantState  kernel.SessionState
+		wantRecord domain.SubagentState
+	}{
+		{name: "complete", status: domain.SubagentSpawnReceiptComplete, result: "durable result", wantState: kernel.SessionStateComplete, wantRecord: domain.SubagentStateComplete},
+		{name: "failed", status: domain.SubagentSpawnReceiptFailed, failure: "durable failure", wantState: kernel.SessionStateFailed, wantRecord: domain.SubagentStateError},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			dbPath := t.TempDir() + "/runtime.db"
+			opts := bootstrap.Options{StoreBackend: bootstrap.StorageSQLite, SQLitePath: dbPath, MissionID: "mission-receiver-terminal", Subagent: &bootstrap.SubagentOptions{Enabled: true, MaxConcurrent: 2, MaxAttempts: 1, Timeout: time.Minute}}
+			first, err := bootstrap.Open(ctx, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := first.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "receiver work", ContextMode: "isolated", Labels: map[string]string{"task_id": "receiver-task-" + tt.name}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			now := first.Clock.Now().UTC()
+			receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: "request-" + tt.name, SourceSessionID: "source-" + tt.name, Attempt: 0, Task: "receiver work", ContextMode: "isolated", ReceiverSessionID: string(id), RecordedAt: now, Status: tt.status, UpdatedAt: now.Add(time.Second), Result: tt.result, Failure: tt.failure, StatusDelivery: domain.SubagentStatusDeliveryPending}
+			if err := first.Store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentSpawnReceipt(receipt) }); err != nil {
+				t.Fatal(err)
+			}
+			if err := first.Close(ctx); err != nil {
+				t.Fatal(err)
+			}
+
+			second, err := bootstrap.Open(ctx, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = second.Close(ctx) })
+			status, err := second.Subagents.Status(ctx, id)
+			if err != nil || status.State != tt.wantState || status.Result != tt.result {
+				t.Fatalf("restored status=%+v err=%v", status, err)
+			}
+			if status.Error != nil && status.Error.Error() != tt.failure {
+				t.Fatalf("restored error=%v", status.Error)
+			}
+			cycle, err := second.ProcessCycle(ctx)
+			if err != nil || cycle.SubagentsReconciled != 1 {
+				t.Fatalf("cycle=%+v err=%v", cycle, err)
+			}
+			if err := second.Store.View(ctx, func(r port.Reader) error {
+				record, err := r.SubagentRecord(string(id))
+				if err != nil {
+					return err
+				}
+				if record.State != tt.wantRecord || record.Result != tt.result {
+					t.Fatalf("record=%+v", record)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart(t *testing.T) {
 	ctx := context.Background()
 	dbPath := t.TempDir() + "/runtime.db"

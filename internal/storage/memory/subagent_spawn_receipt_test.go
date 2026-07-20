@@ -138,3 +138,50 @@ func TestSubagentSpawnReceiptStorageDueSaveAndCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTerminalSubagentSpawnReceiptForReceiverElectsDeterministically(t *testing.T) {
+	now := time.Date(2026, 7, 20, 17, 50, 0, 0, time.UTC)
+	store := memory.New()
+	record := receiptRecord(now, "receiver-a")
+	makeTerminal := func(peer, request string, recordedAt, updatedAt time.Time, status domain.SubagentSpawnReceiptStatus) domain.SubagentSpawnReceipt {
+		receipt := receiptFixture(recordedAt, peer, request, record.ID)
+		receipt.Status, receipt.UpdatedAt, receipt.StatusDelivery = status, updatedAt, domain.SubagentStatusDeliveryPending
+		if status == domain.SubagentSpawnReceiptComplete {
+			receipt.Result = request
+		} else {
+			receipt.Failure = request
+		}
+		return receipt
+	}
+	late := makeTerminal("peer-a", "late", now, now.Add(3*time.Second), domain.SubagentSpawnReceiptComplete)
+	tieB := makeTerminal("peer-b", "tie-b", now.Add(time.Second), now.Add(2*time.Second), domain.SubagentSpawnReceiptFailed)
+	tieA := makeTerminal("peer-a", "tie-a", now.Add(time.Second), now.Add(2*time.Second), domain.SubagentSpawnReceiptComplete)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.CreateSubagentRecord(record); err != nil {
+			return err
+		}
+		for _, receipt := range []domain.SubagentSpawnReceipt{late, tieB, tieA} {
+			if err := tx.CreateSubagentSpawnReceipt(receipt); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		winner, err := r.TerminalSubagentSpawnReceiptForReceiver(record.ID)
+		if err != nil {
+			return err
+		}
+		if winner.RequestID != tieA.RequestID {
+			t.Fatalf("winner=%+v", winner)
+		}
+		if _, err := r.TerminalSubagentSpawnReceiptForReceiver("missing"); !errors.Is(err, port.ErrNotFound) {
+			t.Fatalf("missing error=%v", err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

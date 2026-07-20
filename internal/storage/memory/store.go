@@ -2931,6 +2931,38 @@ func (r reader) SubagentSpawnReceipt(callerPeerID, requestID string) (domain.Sub
 	}
 	return v, nil
 }
+func (t transaction) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string) (domain.SubagentSpawnReceipt, error) {
+	return reader(t).TerminalSubagentSpawnReceiptForReceiver(receiverSessionID)
+}
+func (r reader) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string) (domain.SubagentSpawnReceipt, error) {
+	var winner domain.SubagentSpawnReceipt
+	found := false
+	for _, receipt := range r.state.subagentSpawnReceipts {
+		if receipt.ReceiverSessionID != receiverSessionID || (receipt.Status != domain.SubagentSpawnReceiptComplete && receipt.Status != domain.SubagentSpawnReceiptFailed) {
+			continue
+		}
+		if !found || terminalSubagentSpawnReceiptLess(receipt, winner) {
+			winner, found = receipt, true
+		}
+	}
+	if !found {
+		return domain.SubagentSpawnReceipt{}, notFound("terminal subagent spawn receipt for receiver", receiverSessionID)
+	}
+	return winner, nil
+}
+
+func terminalSubagentSpawnReceiptLess(a, b domain.SubagentSpawnReceipt) bool {
+	if a.UpdatedAt.Equal(b.UpdatedAt) {
+		if a.RecordedAt.Equal(b.RecordedAt) {
+			if a.CallerPeerID == b.CallerPeerID {
+				return a.RequestID < b.RequestID
+			}
+			return a.CallerPeerID < b.CallerPeerID
+		}
+		return a.RecordedAt.Before(b.RecordedAt)
+	}
+	return a.UpdatedAt.Before(b.UpdatedAt)
+}
 func (t transaction) CreateSubagentSpawnReceipt(v domain.SubagentSpawnReceipt) error {
 	if err := v.Validate(); err != nil {
 		return fmt.Errorf("validate subagent spawn receipt: %w", err)
