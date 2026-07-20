@@ -142,6 +142,38 @@ func TestProcessCycleDrainsCommandAndStops(t *testing.T) {
 	}
 }
 
+func TestOpenWiresSubagentToolsAndCycleSupervisor(t *testing.T) {
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend: bootstrap.StorageMemory,
+		MissionID:    "mission-1",
+		Subagent:     &bootstrap.SubagentOptions{Enabled: true, MaxAttempts: 2, Timeout: time.Minute},
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	if rt.Subagents == nil || rt.Supervisor == nil {
+		t.Fatal("subagent manager and supervisor must share runtime wiring")
+	}
+	id, err := rt.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "bounded task", ContextMode: "isolated", Labels: map[string]string{"task_id": "task-1"}})
+	if err != nil {
+		t.Fatalf("spawn: %v", err)
+	}
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		record, readErr := r.SubagentRecord(string(id))
+		if readErr != nil {
+			return readErr
+		}
+		if record.MissionID != "mission-1" || record.MaxAttempts != 2 {
+			t.Fatalf("unexpected record: %+v", record)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

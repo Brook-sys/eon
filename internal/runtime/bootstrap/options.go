@@ -318,6 +318,20 @@ func (o *Options) Validate() error {
 	if o.DeliveryRetry <= 0 {
 		o.DeliveryRetry = 15 * time.Second
 	}
+	if o.Subagent != nil && o.Subagent.Enabled {
+		if o.MissionID == "" {
+			return errors.New("subagent orchestration requires mission id")
+		}
+		if o.Subagent.MaxConcurrent < 0 || o.Subagent.MaxConcurrent > 32 {
+			return errors.New("subagent max concurrent must be between 0 and 32")
+		}
+		if o.Subagent.MaxAttempts < 0 || o.Subagent.MaxAttempts > 16 {
+			return errors.New("subagent max attempts must be between 0 and 16")
+		}
+		if o.Subagent.Timeout < 0 {
+			return errors.New("subagent timeout must not be negative")
+		}
+	}
 	for i, route := range o.QuestionRoutes {
 		if strings.TrimSpace(route.Channel) == "" || strings.TrimSpace(route.DestinationRef) == "" {
 			return fmt.Errorf("question route %d requires channel and destination", i)

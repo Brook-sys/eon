@@ -70,6 +70,26 @@ func NewCatalog(tools ...Tool) (*Catalog, error) {
 	return &Catalog{ordered: ordered, byName: byName}, nil
 }
 
+// MergeProviders assembles one immutable catalog from existing providers.
+// Providers remain authority-free descriptions/lookups; duplicate names fail
+// closed instead of silently shadowing an existing capability.
+func MergeProviders(providers ...Provider) (*Catalog, error) {
+	var tools []Tool
+	for _, provider := range providers {
+		if provider == nil {
+			continue
+		}
+		for _, definition := range provider.Definitions() {
+			candidate, ok := provider.Find(definition.Name)
+			if !ok {
+				return nil, errors.New("tool provider definition cannot be resolved")
+			}
+			tools = append(tools, candidate)
+		}
+	}
+	return NewCatalog(tools...)
+}
+
 func (c *Catalog) Definitions() []port.ToolDefinition {
 	if c == nil {
 		return nil

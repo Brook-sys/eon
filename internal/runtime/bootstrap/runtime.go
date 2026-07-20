@@ -30,6 +30,7 @@ import (
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/storage/sqlite"
+	"motor-autonomo/internal/tool"
 )
 
 // Runtime is the assembled process graph. Call Close after Run returns.
@@ -56,6 +57,13 @@ type Runtime struct {
 	Executor kernel.DispatchExecutor
 	// LeaseReaper reconciles expired RUNNING/VERIFYING leases before dispatch.
 	LeaseReaper kernel.LeaseReaper
+	// Subagents and Supervisor share one manager so model tool calls, durable
+	// lifecycle records, and cycle reconciliation observe the same sessions.
+	Subagents  kernel.SessionManager
+	Supervisor *kernel.Supervisor
+	// subagentTools is retained separately so dynamic model-executor reloads
+	// preserve the lifecycle tools rather than rebuilding an fs/exec-only catalog.
+	subagentTools tool.Provider
 	// Model is optional; nil keeps non-local ops skipped as requires_model.
 	Model *kernel.ModelExecutor
 	// Web is optional; nil keeps web-eligible ops skipped as requires_web.
@@ -311,6 +319,29 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 		return nil, fmt.Errorf("model provider: %w", err)
 	}
+	subagentTools, sessionManager, err := buildSubagent(opts.Subagent, store, clock, opts.MissionID)
+	if err != nil {
+		_ = telemetry.Shutdown(ctx)
+		if closer != nil {
+			_ = closer.Close()
+		}
+		return nil, fmt.Errorf("subagent provider: %w", err)
+	}
+	var supervisor *kernel.Supervisor
+	if sessionManager != nil {
+		supervisor = &kernel.Supervisor{Store: store, Manager: sessionManager, Clock: clock, IDs: ids}
+	}
+	if modelExec != nil && subagentTools != nil {
+		merged, mergeErr := tool.MergeProviders(modelExec.Tools, subagentTools)
+		if mergeErr != nil {
+			_ = telemetry.Shutdown(ctx)
+			if closer != nil {
+				_ = closer.Close()
+			}
+			return nil, fmt.Errorf("merge model and subagent tools: %w", mergeErr)
+		}
+		modelExec.Tools = merged
+	}
 	webExec, err := buildWeb(opts, store, clock, ids)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)
@@ -372,6 +403,9 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			Model: modelExec,
 		},
 		LeaseReaper:     leaseReaper,
+		Subagents:       sessionManager,
+		Supervisor:      supervisor,
+		subagentTools:   subagentTools,
 		Model:           modelExec,
 		Web:             webExec,
 		File:            fileExec,
@@ -542,6 +576,7 @@ type CycleResult struct {
 	TelegramRejected    int
 	TelegramDuplicate   int
 	LeasesReconciled    int
+	SubagentsReconciled int
 	SchedulerRan        bool
 	SchedulerSteps      int
 	SchedulerKind       kernel.DecisionKind
@@ -609,6 +644,19 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.CommandsProcessed++
 		result.Worked = true
+	}
+
+	// Reconcile terminal/deadline subagent observations before draining external
+	// events so completion wakes can affect the same bounded control cycle.
+	if rt.Supervisor != nil {
+		reconciled, err := rt.Supervisor.Reconcile(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent supervisor: %w", err)
+		}
+		result.SubagentsReconciled = reconciled
+		if reconciled > 0 {
+			result.Worked = true
+		}
 	}
 
 	// Channel ingress before event drain so polled answers apply this cycle.

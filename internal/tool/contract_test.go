@@ -96,3 +96,27 @@ func TestCatalogRejectsInvalidOrDuplicateDefinitions(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeProvidersPreservesToolsAndRejectsDuplicates(t *testing.T) {
+	left, err := tool.NewCatalog(fixture("web_search"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := tool.NewCatalog(fixture("sessions_spawn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	merged, err := tool.MergeProviders(left, right)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := merged.Find("web_search"); !ok {
+		t.Fatal("missing original tool")
+	}
+	if _, ok := merged.Find("sessions_spawn"); !ok {
+		t.Fatal("missing merged tool")
+	}
+	if _, err := tool.MergeProviders(left, left); err == nil {
+		t.Fatal("expected duplicate tool rejection")
+	}
+}

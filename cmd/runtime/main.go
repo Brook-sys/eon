@@ -149,7 +149,10 @@ func main() {
 	}
 
 	opts.Subagent = &bootstrap.SubagentOptions{
-		Enabled: *enableSubagents,
+		Enabled:       *enableSubagents,
+		MaxConcurrent: 4,
+		MaxAttempts:   2,
+		Timeout:       15 * time.Minute,
 	}
 	if *modelEnabled {
 		mopts := &bootstrap.ModelOptions{

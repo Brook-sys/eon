@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-07-20T10:25:00-03:00",
+  "provider": "groq",
+  "base_url": "https://api.groq.com/openai/v1",
+  "model": "llama-3.1-8b-instant",
+  "fixture": "internal/evaluation/testdata/cognitive-tool-v1.json",
+  "case": "tool-search-single",
+  "objective": "Verify bounded tool-routing syntax and semantics for subagent delegation after runtime lifecycle wiring.",
+  "limits": {
+    "calls": 1,
+    "context_tokens": 4096,
+    "timeout_seconds": 30,
+    "retries": 0
+  },
+  "result": {
+    "status": "PASS",
+    "latency_millis": 476,
+    "input_tokens": 165,
+    "output_tokens": 63,
+    "provider_errors": 0,
+    "syntax_valid": true,
+    "semantically_correct": true,
+    "selected_tool": "sessions_spawn_remote"
+  },
+  "analysis": "The response selected the expected remote subagent tool and the evaluation parser recovered the JSON object despite explanatory text. This is evidence that the model can route the bounded fixture; it does not authorize execution or change model preference.",
+  "comparison": "Rotated from the immediately previous NVIDIA NIM meta/llama-3.1-8b-instruct probe. Both achieved 1/1 correctness; this Groq run used 63 output tokens and 476 ms versus the recorded NIM run's 38 output tokens and 833 ms, on the same fixture class.",
+  "decision": "Keep both providers as evidence-qualified for this narrow routing case; no binding promotion.",
+  "next_experiment": "Exercise the production sessions_spawn catalog with a transport-backed SessionManager that can publish COMPLETE/FAILED state."
+}

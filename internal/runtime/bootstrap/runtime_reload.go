@@ -2,7 +2,10 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
+
 	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/tool"
 )
 
 // reloadModelExecutorIfNeeded reconstrui o ModelExecutor atomicamente se a
@@ -26,6 +29,13 @@ func (rt *Runtime) reloadModelExecutorIfNeeded(ctx context.Context) error {
 		if err != nil {
 			rt.logger.Printf("runtime: model executor rebuild failed: %v", err)
 			return err
+		}
+		if modelExec != nil && rt.subagentTools != nil {
+			merged, mergeErr := tool.MergeProviders(modelExec.Tools, rt.subagentTools)
+			if mergeErr != nil {
+				return fmt.Errorf("merge model and subagent tools after reload: %w", mergeErr)
+			}
+			modelExec.Tools = merged
 		}
 		rt.mu.Lock()
 		rt.Model = modelExec
