@@ -38,8 +38,12 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 	for _, receipt := range receipts {
 		err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(receipt.SessionID), Attempt: receipt.Attempt, State: SessionState(receipt.State), Result: receipt.Result, Failure: receipt.Failure})
 		if err != nil {
-			if !errors.Is(err, ErrSessionAttempt) {
+			if !errors.Is(err, ErrSessionAttempt) && !errors.Is(err, ErrSessionTerminal) {
 				return processed, err
+			}
+			rejectionCode := domain.SubagentStatusIngressRejectionAttemptMismatch
+			if errors.Is(err, ErrSessionTerminal) {
+				rejectionCode = domain.SubagentStatusIngressRejectionTerminalConflict
 			}
 			err = w.Store.Update(ctx, func(tx port.Transaction) error {
 				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
@@ -49,7 +53,12 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				if current.Status == domain.SubagentStatusIngressRejected && current.Matches(receipt) {
 					return nil
 				}
-				next, err := domain.RejectSubagentStatusIngressAttemptMismatch(current, w.Clock.Now().UTC())
+				var next domain.SubagentStatusIngressReceipt
+				if rejectionCode == domain.SubagentStatusIngressRejectionTerminalConflict {
+					next, err = domain.RejectSubagentStatusIngressTerminalConflict(current, w.Clock.Now().UTC())
+				} else {
+					next, err = domain.RejectSubagentStatusIngressAttemptMismatch(current, w.Clock.Now().UTC())
+				}
 				if err != nil {
 					return err
 				}

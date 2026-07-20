@@ -40,3 +40,23 @@ func TestRejectSubagentStatusIngressAttemptMismatch(t *testing.T) {
 		t.Fatalf("apply rejected err=%v", err)
 	}
 }
+
+func TestRejectSubagentStatusIngressTerminalConflict(t *testing.T) {
+	now := time.Unix(100, 0).UTC()
+	receipt := SubagentStatusIngressReceipt{SchemaVersion: SchemaVersionV1, CallerPeerID: "peer-a", DeliveryID: "delivery-conflict", SessionID: "session-1", Attempt: 1, State: "FAILED", Failure: "contradiction", Status: SubagentStatusIngressPending, RecordedAt: now}
+	rejected, err := RejectSubagentStatusIngressTerminalConflict(receipt, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rejected.Status != SubagentStatusIngressRejected || rejected.RejectionCode != SubagentStatusIngressRejectionTerminalConflict || rejected.RejectedAt.IsZero() {
+		t.Fatalf("rejected=%+v", rejected)
+	}
+	if !rejected.Matches(receipt) || !rejected.RecordedAt.Equal(receipt.RecordedAt) {
+		t.Fatalf("rejection changed immutable evidence: receipt=%+v rejected=%+v", receipt, rejected)
+	}
+	invalid := rejected
+	invalid.RejectionCode = "UNKNOWN"
+	if !errors.Is(invalid.Validate(), ErrInvalidSubagentStatusIngress) {
+		t.Fatalf("unknown rejection code validated: %+v", invalid)
+	}
+}

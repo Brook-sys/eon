@@ -48,3 +48,57 @@ func TestSubagentStatusIngressSurvivesSQLiteRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRejectedSubagentStatusIngressSurvivesSQLiteRestartAndLeavesPendingQueue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.db")
+	now := time.Unix(200, 0).UTC()
+	record := domain.SubagentRecord{SchemaVersion: 1, ID: "session-1", TaskID: "task-1", MissionID: "mission-1", State: domain.SubagentStatePending, StartedAt: now, UpdatedAt: now, Task: "work", ContextMode: "isolated", TransportPeerID: "peer-a", MaxAttempts: 2, Deadline: now.Add(time.Minute)}
+	conflict := domain.SubagentStatusIngressReceipt{SchemaVersion: 1, CallerPeerID: "peer-a", DeliveryID: "delivery-conflict", SessionID: record.ID, State: "FAILED", Failure: "contradiction", Status: domain.SubagentStatusIngressPending, RecordedAt: now}
+	rejected, err := domain.RejectSubagentStatusIngressTerminalConflict(conflict, now.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pending := domain.SubagentStatusIngressReceipt{SchemaVersion: 1, CallerPeerID: "peer-a", DeliveryID: "delivery-later", SessionID: record.ID, State: "COMPLETE", Result: "done", Status: domain.SubagentStatusIngressPending, RecordedAt: now.Add(2 * time.Second)}
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.CreateSubagentRecord(record); err != nil {
+			return err
+		}
+		if err := tx.CreateSubagentStatusIngressReceipt(rejected); err != nil {
+			return err
+		}
+		return tx.CreateSubagentStatusIngressReceipt(pending)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	store, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-conflict")
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentStatusIngressRejected || got.RejectionCode != domain.SubagentStatusIngressRejectionTerminalConflict {
+			t.Fatalf("rejected=%+v", got)
+		}
+		due, err := r.PendingSubagentStatusIngressReceipts(1)
+		if err != nil {
+			return err
+		}
+		if len(due) != 1 || due[0].DeliveryID != pending.DeliveryID {
+			t.Fatalf("pending=%+v", due)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

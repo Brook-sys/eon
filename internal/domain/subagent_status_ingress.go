@@ -16,7 +16,10 @@ const (
 	SubagentStatusIngressRejected SubagentStatusIngressState = "REJECTED"
 )
 
-const SubagentStatusIngressRejectionAttemptMismatch = "ATTEMPT_MISMATCH"
+const (
+	SubagentStatusIngressRejectionAttemptMismatch  = "ATTEMPT_MISMATCH"
+	SubagentStatusIngressRejectionTerminalConflict = "TERMINAL_CONFLICT"
+)
 
 type SubagentStatusIngressReceipt struct {
 	SchemaVersion int                        `json:"schema_version"`
@@ -60,7 +63,7 @@ func (r SubagentStatusIngressReceipt) Validate() error {
 			return ErrInvalidSubagentStatusIngress
 		}
 	case SubagentStatusIngressRejected:
-		if !r.AppliedAt.IsZero() || r.RejectedAt.IsZero() || r.RejectedAt.Before(r.RecordedAt) || r.RejectionCode != SubagentStatusIngressRejectionAttemptMismatch {
+		if !r.AppliedAt.IsZero() || r.RejectedAt.IsZero() || r.RejectedAt.Before(r.RecordedAt) || !validSubagentStatusIngressRejectionCode(r.RejectionCode) {
 			return ErrInvalidSubagentStatusIngress
 		}
 	default:
@@ -88,12 +91,28 @@ func MarkSubagentStatusIngressApplied(current SubagentStatusIngressReceipt, now 
 // authenticated evidence and replay contract while removing it from the
 // pending queue so one stale/future observation cannot poison every cycle.
 func RejectSubagentStatusIngressAttemptMismatch(current SubagentStatusIngressReceipt, now time.Time) (SubagentStatusIngressReceipt, error) {
+	return rejectSubagentStatusIngress(current, now, SubagentStatusIngressRejectionAttemptMismatch)
+}
+
+// RejectSubagentStatusIngressTerminalConflict quarantines authenticated
+// evidence that contradicts an already-terminal session at the same attempt.
+// The evidence remains durable for audit and replay, but leaves the pending
+// queue so it cannot starve later independent receipts.
+func RejectSubagentStatusIngressTerminalConflict(current SubagentStatusIngressReceipt, now time.Time) (SubagentStatusIngressReceipt, error) {
+	return rejectSubagentStatusIngress(current, now, SubagentStatusIngressRejectionTerminalConflict)
+}
+
+func rejectSubagentStatusIngress(current SubagentStatusIngressReceipt, now time.Time, code string) (SubagentStatusIngressReceipt, error) {
 	if current.Validate() != nil || current.Status != SubagentStatusIngressPending || now.IsZero() || now.Before(current.RecordedAt) {
 		return SubagentStatusIngressReceipt{}, ErrInvalidSubagentStatusIngress
 	}
 	next := current
 	next.Status = SubagentStatusIngressRejected
 	next.RejectedAt = now
-	next.RejectionCode = SubagentStatusIngressRejectionAttemptMismatch
+	next.RejectionCode = code
 	return next, next.Validate()
+}
+
+func validSubagentStatusIngressRejectionCode(code string) bool {
+	return code == SubagentStatusIngressRejectionAttemptMismatch || code == SubagentStatusIngressRejectionTerminalConflict
 }

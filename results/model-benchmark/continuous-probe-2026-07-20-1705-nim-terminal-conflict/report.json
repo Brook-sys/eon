@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-tool-v1",
+  "model": "meta/llama-3.1-8b-instruct",
+  "runs": [
+    {
+      "case_id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 164,
+      "output_tokens": 64,
+      "duration_millis": 1093,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```json\n{\n  \"tool_call_name\": \"sessions_spawn_remote\",\n  \"peer_id\": \"test\",\n  \"capability\": \"search_memory\",\n  \"payload\": \"{\\\"query\\\":\\\"version number\\\"}\"\n}\n```\n\nThis JSON object represents the tool call for 'sessions_spawn_remote' with the required parameters."
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 164,
+    "output_tokens": 64,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 1,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "JSON",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}
