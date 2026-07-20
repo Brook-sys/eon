@@ -195,6 +195,12 @@ func (s *Service) Handle(ctx context.Context, callerID, localID string, message 
 			} else {
 				next, err = domain.InitialPeerSyncCursor(callerID, message.OriginID, message.StreamID, domain.PeerSyncInbound, message.NextSequence, s.now().UTC())
 			}
+			if errors.Is(err, domain.ErrConflict) {
+				// Event-driven recovery: remote node rolled back or we missed an event.
+				// Treat as unrecoverable at the cursor level so the operator/sync system
+				// can escalate or restart the stream.
+				return ErrCursorGap
+			}
 			if err != nil {
 				return err
 			}
@@ -220,6 +226,10 @@ func (s *Service) Handle(ctx context.Context, callerID, localID string, message 
 				next, err = domain.AdvancePeerSyncCursor(current, message.NextSequence, s.now().UTC())
 			} else {
 				next, err = domain.InitialPeerSyncCursor(callerID, localID, message.StreamID, domain.PeerSyncOutboundAck, message.NextSequence, s.now().UTC())
+			}
+			if errors.Is(err, domain.ErrConflict) {
+				// Event-driven recovery: gap in outbound ACK tracking (e.g. state reversion)
+				return ErrCursorGap
 			}
 			if err != nil {
 				return err
