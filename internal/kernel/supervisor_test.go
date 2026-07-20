@@ -103,3 +103,56 @@ type supervisorMockClock struct {
 func (m *supervisorMockClock) Now() time.Time {
 	return m.currentTime
 }
+
+func TestSupervisor_RetriesFailedSession(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-1", TaskID: "task-retry", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "retry me", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{"retry-1": {ID: "retry-1", State: kernel.SessionStateFailed, Error: errors.New("transient")}}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord("retry-1")
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStatePending || got.Attempt != 1 || got.ErrorCode != "" {
+			t.Fatalf("unexpected retry record: %+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSupervisor_ExpiresOrphanedSession(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "orphan-1", TaskID: "task-orphan", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Hour), UpdatedAt: clock.Now().Add(-time.Hour), Task: "stuck", ContextMode: "isolated", Deadline: clock.Now()}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	supervisor := &kernel.Supervisor{Store: store, Manager: &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{}}, Clock: clock}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord("orphan-1")
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateError || got.ErrorCode != "deadline_exceeded" {
+			t.Fatalf("unexpected expired record: %+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

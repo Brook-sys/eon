@@ -38,6 +38,18 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 		active = append(active, running...)
 
 		for _, rec := range active {
+			now := s.Clock.Now()
+			if !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
+				rec.State = domain.SubagentStateError
+				rec.ErrorCode = "deadline_exceeded"
+				rec.UpdatedAt = now
+				if err := tx.SaveSubagentRecord(rec); err != nil {
+					return err
+				}
+				reconciled++
+				continue
+			}
+
 			status, err := s.Manager.Status(ctx, SessionID(rec.ID))
 			if err != nil {
 				continue
@@ -50,9 +62,17 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				rec.Result = status.Result
 				changed = true
 			case SessionStateFailed:
-				rec.State = domain.SubagentStateError
-				if status.Error != nil {
-					rec.ErrorCode = status.Error.Error()
+				if rec.Attempt < rec.MaxAttempts-1 {
+					rec.State = domain.SubagentStatePending
+					rec.Attempt++
+					// clear previous result/error
+					rec.Result = ""
+					rec.ErrorCode = ""
+				} else {
+					rec.State = domain.SubagentStateError
+					if status.Error != nil {
+						rec.ErrorCode = status.Error.Error()
+					}
 				}
 				changed = true
 			case SessionStateRunning:

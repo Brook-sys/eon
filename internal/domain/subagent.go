@@ -27,6 +27,9 @@ type SubagentRecord struct {
 	ContextMode   string        `json:"context_mode"`
 	Result        string        `json:"result,omitempty"`
 	ErrorCode     string        `json:"error_code,omitempty"`
+	Attempt       int           `json:"attempt"`
+	MaxAttempts   int           `json:"max_attempts"`
+	Deadline      time.Time     `json:"deadline,omitempty"`
 }
 
 func (r SubagentRecord) Validate() error {
@@ -47,6 +50,12 @@ func (r SubagentRecord) Validate() error {
 	}
 	if r.UpdatedAt.Before(r.StartedAt) {
 		return errors.New("subagent updated_at cannot precede started_at")
+	}
+	if r.Attempt < 0 {
+		return errors.New("subagent attempt cannot be negative")
+	}
+	if r.MaxAttempts < 0 {
+		return errors.New("subagent max_attempts cannot be negative")
 	}
 	return nil
 }
