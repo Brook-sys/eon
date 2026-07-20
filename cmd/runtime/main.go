@@ -35,18 +35,19 @@ func main() {
 		otelInsecure       = flag.Bool("otel-insecure", false, "disable TLS for OTLP HTTP")
 		otelSample         = flag.Float64("otel-sample", 1, "trace sample ratio in [0,1]")
 		// Export-buffer retention (disposable queues only; not store GC).
-		otelTraceQueue   = flag.Int("otel-trace-queue", 0, "OTLP span queue size (0 = default 2048)")
-		otelTraceBatch   = flag.Int("otel-trace-batch", 0, "OTLP span export batch size (0 = default 512)")
-		otelTraceFlush   = flag.Duration("otel-trace-flush", 0, "OTLP span batch timeout (0 = default 5s)")
-		otelTraceExport  = flag.Duration("otel-trace-export-timeout", 0, "OTLP span export timeout (0 = default 30s)")
-		otelMetricEvery  = flag.Duration("otel-metric-interval", 0, "OTLP metric export interval (0 = default 60s)")
-		otelMetricExport = flag.Duration("otel-metric-export-timeout", 0, "OTLP metric export timeout (0 = default 30s)")
-		idleMin          = flag.Duration("idle-min", 50*time.Millisecond, "minimum idle sleep after empty control cycle")
-		idleMax          = flag.Duration("idle-max", time.Second, "maximum idle sleep after empty control cycle")
-		maxInboxBatch    = flag.Int("max-inbox-batch", 8, "max commands/events drained per control cycle")
-		deliveryBatch    = flag.Int("delivery-batch", 8, "max outbox deliveries / reminder scans per control cycle")
-		deliveryLease    = flag.Duration("delivery-lease", 30*time.Second, "telegram outbox lease duration")
-		deliveryRetry    = flag.Duration("delivery-retry", 15*time.Second, "telegram outbox retry delay")
+		otelTraceQueue     = flag.Int("otel-trace-queue", 0, "OTLP span queue size (0 = default 2048)")
+		otelTraceBatch     = flag.Int("otel-trace-batch", 0, "OTLP span export batch size (0 = default 512)")
+		otelTraceFlush     = flag.Duration("otel-trace-flush", 0, "OTLP span batch timeout (0 = default 5s)")
+		otelTraceExport    = flag.Duration("otel-trace-export-timeout", 0, "OTLP span export timeout (0 = default 30s)")
+		otelMetricEvery    = flag.Duration("otel-metric-interval", 0, "OTLP metric export interval (0 = default 60s)")
+		otelMetricExport   = flag.Duration("otel-metric-export-timeout", 0, "OTLP metric export timeout (0 = default 30s)")
+		idleMin            = flag.Duration("idle-min", 50*time.Millisecond, "minimum idle sleep after empty control cycle")
+		idleMax            = flag.Duration("idle-max", time.Second, "maximum idle sleep after empty control cycle")
+		maxInboxBatch      = flag.Int("max-inbox-batch", 8, "max commands/events drained per control cycle")
+		memoryCompactBatch = flag.Int("memory-compaction-batch", 8, "max expired semantic memories compacted per control cycle")
+		deliveryBatch      = flag.Int("delivery-batch", 8, "max outbox deliveries / reminder scans per control cycle")
+		deliveryLease      = flag.Duration("delivery-lease", 30*time.Second, "telegram outbox lease duration")
+		deliveryRetry      = flag.Duration("delivery-retry", 15*time.Second, "telegram outbox retry delay")
 		// Optional READ_ONLY web acquisition (FR-RES-001/002). Deploy-level egress
 		// controls remain outside the process; no secrets on flags.
 		webEnabled       = flag.Bool("web", false, "enable web.search / web.fetch path")
@@ -97,6 +98,7 @@ func main() {
 		IdleMin:                *idleMin,
 		IdleMax:                *idleMax,
 		MaxInboxBatch:          *maxInboxBatch,
+		MemoryCompactionBatch:  *memoryCompactBatch,
 		DeliveryBatch:          *deliveryBatch,
 		DeliveryLease:          *deliveryLease,
 		DeliveryRetry:          *deliveryRetry,

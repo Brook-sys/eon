@@ -73,7 +73,7 @@ func (r reader) ListMemoriesByScope(scope domain.MemoryScope) ([]domain.LongTerm
 func (r reader) ListExpiredMemories(now time.Time) ([]domain.LongTermMemory, error) {
 	var res []domain.LongTermMemory
 	for _, m := range r.state.memories {
-		if !m.Expiration.IsZero() && now.After(m.Expiration) {
+		if !m.Expiration.IsZero() && !m.Expiration.After(now) {
 			res = append(res, m)
 		}
 	}

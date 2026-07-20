@@ -142,6 +142,51 @@ func TestProcessCycleDrainsCommandAndStops(t *testing.T) {
 	}
 }
 
+func TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend:          bootstrap.StorageMemory,
+		MemoryCompactionBatch: 1,
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+
+	now := time.Now().UTC()
+	for _, mem := range []domain.LongTermMemory{
+		{ID: "expired-1", Key: "expired-1", Scope: domain.MemoryScopeAgent, Value: "one", StoredAt: now.Add(-2 * time.Hour), Expiration: now.Add(-time.Hour)},
+		{ID: "expired-2", Key: "expired-2", Scope: domain.MemoryScopeAgent, Value: "two", StoredAt: now.Add(-2 * time.Hour), Expiration: now.Add(-30 * time.Minute)},
+	} {
+		if err := rt.Store.Update(ctx, func(tx port.Transaction) error { return tx.SaveMemory(mem) }); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MemoriesCompacted != 1 || !result.Worked {
+		t.Fatalf("first cycle = %#v", result)
+	}
+	result, err = rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MemoriesCompacted != 1 || !result.Worked {
+		t.Fatalf("second cycle = %#v", result)
+	}
+	result, err = rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.MemoriesCompacted != 0 || result.Worked {
+		t.Fatalf("third cycle should rest: %#v", result)
+	}
+}
+
 func TestProcessCycleSchedulerWithMission(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

@@ -41,6 +41,8 @@ type Runtime struct {
 
 	Commands *control.CommandInbox
 	Events   *control.ExternalEventInbox
+	// SemanticMemory owns audited current-view mutations and bounded expiry GC.
+	SemanticMemory *control.SemanticMemory
 
 	// Command/Event processors may be observability wrappers; they never gain authority.
 	CommandProcessor observability.CommandProcessor
@@ -321,6 +323,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Closer:           closer,
 		Commands:         commandInbox,
 		Events:           eventInbox,
+		SemanticMemory:   semanticMemory,
 		CommandProcessor: observability.InstrumentCommand(commandProcessor, telemetry),
 		EventProcessor:   observability.InstrumentExternalEvent(eventProcessor, telemetry),
 		ConfigApplier:    configApplier,
@@ -485,6 +488,7 @@ func (rt *Runtime) Close(ctx context.Context) error {
 type CycleResult struct {
 	CommandsProcessed   int
 	EventsProcessed     int
+	MemoriesCompacted   int
 	RemindersScheduled  int
 	DeliveriesProcessed int
 	TelegramFetched     int
@@ -578,6 +582,15 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 			break
 		}
 		result.EventsProcessed++
+		result.Worked = true
+	}
+
+	compacted, err := rt.SemanticMemory.CompactExpired(ctx, rt.Opts.MemoryCompactionBatch)
+	if err != nil {
+		return result, fmt.Errorf("semantic memory compaction: %w", err)
+	}
+	result.MemoriesCompacted = compacted
+	if compacted > 0 {
 		result.Worked = true
 	}
 

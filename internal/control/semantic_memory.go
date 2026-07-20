@@ -104,3 +104,52 @@ func (s *SemanticMemory) DeleteMemory(ctx context.Context, id domain.MemoryID, r
 	}
 	return deleted, err
 }
+
+// CompactExpired removes at most limit expired records from the current view
+// and appends one audit event per removal in the same transaction. Expiration
+// equality is inclusive: a memory whose deadline is now is no longer current.
+func (s *SemanticMemory) CompactExpired(ctx context.Context, limit int) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if limit <= 0 {
+		return 0, errors.New("semantic memory compaction requires a positive limit")
+	}
+	now := s.Clock.Now().UTC()
+	compacted := 0
+	err := s.Store.Update(ctx, func(tx port.Transaction) error {
+		expired, err := tx.ListExpiredMemories(now)
+		if err != nil {
+			return err
+		}
+		if len(expired) > limit {
+			expired = expired[:limit]
+		}
+		for _, memory := range expired {
+			eventID, err := s.IDs.NewID("event")
+			if err != nil {
+				return fmt.Errorf("generate memory compaction event ID: %w", err)
+			}
+			event, err := (domain.MemoryCompactedEvent{
+				MemoryID: memory.ID,
+				Reason:   "expired",
+				At:       now,
+			}).Event(domain.EventID(eventID))
+			if err != nil {
+				return fmt.Errorf("build memory compacted event: %w", err)
+			}
+			if err := tx.DeleteMemory(memory.ID); err != nil {
+				return err
+			}
+			if _, err := tx.AppendEvent(event); err != nil {
+				return err
+			}
+			compacted++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return compacted, nil
+}

@@ -43,6 +43,8 @@ type Options struct {
 	IdleMax time.Duration
 	// MaxInboxBatch caps commands/events drained per cycle (fairness).
 	MaxInboxBatch int
+	// MemoryCompactionBatch caps expired semantic memories removed per cycle.
+	MemoryCompactionBatch int
 	// Observability is optional derived export; zero value keeps it disabled.
 	Observability observability.Config
 	// EnableDashboard mounts the experimental operator UI on the same server.
@@ -271,6 +273,12 @@ func (o *Options) Validate() error {
 	}
 	if o.MaxInboxBatch > 256 {
 		return errors.New("max inbox batch is capped at 256")
+	}
+	if o.MemoryCompactionBatch <= 0 {
+		o.MemoryCompactionBatch = 8
+	}
+	if o.MemoryCompactionBatch > 256 {
+		return errors.New("memory compaction batch is capped at 256")
 	}
 	if err := o.Observability.Validate(); err != nil {
 		return err
