@@ -142,6 +142,79 @@ func TestProcessCycleDrainsCommandAndStops(t *testing.T) {
 	}
 }
 
+func TestProcessCycleAppliesDurableRemoteCompletionBeforeDeadline(t *testing.T) {
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend: bootstrap.StorageMemory,
+		MissionID:    "mission-deadline-ordering",
+		Subagent:     &bootstrap.SubagentOptions{Enabled: true, MaxAttempts: 2, Timeout: time.Minute},
+	})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+
+	id, err := rt.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "return durable result", ContextMode: "isolated", Labels: map[string]string{kernel.SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatalf("spawn: %v", err)
+	}
+	manager, ok := rt.Subagents.(*kernel.PersistentSessionManager)
+	if !ok {
+		t.Fatalf("subagent manager type = %T", rt.Subagents)
+	}
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-before-deadline", kernel.SubagentObservation{ID: id, State: kernel.SessionStateComplete, Result: "durable remote result"}); err != nil {
+		t.Fatalf("admit remote status: %v", err)
+	}
+	now := rt.Clock.Now().UTC()
+	if err := rt.Store.Update(ctx, func(tx port.Transaction) error {
+		record, err := tx.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		record.State = domain.SubagentStateRunning
+		record.UpdatedAt = now
+		record.Deadline = now
+		return tx.SaveSubagentRecord(record)
+	}); err != nil {
+		t.Fatalf("arm deadline: %v", err)
+	}
+	rt.SubagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: rt.Store, Manager: rt.Subagents, Clock: rt.Clock, Batch: 1}
+
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("cycle: %v", err)
+	}
+	if result.SubagentStatusesApplied != 1 || result.SubagentsReconciled != 1 {
+		t.Fatalf("cycle result=%+v", result)
+	}
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		if record.State != domain.SubagentStateComplete || record.Result != "durable remote result" || record.ErrorCode != "" {
+			t.Fatalf("canonical record=%+v", record)
+		}
+		receipt, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-before-deadline")
+		if err != nil {
+			return err
+		}
+		if receipt.Status != domain.SubagentStatusIngressApplied {
+			t.Fatalf("receipt=%+v", receipt)
+		}
+		event, err := r.ExternalEventByDeduplicationKey("subagent-terminal:" + string(id))
+		if err != nil {
+			return err
+		}
+		if event.Content.Text != "COMPLETE:durable remote result" {
+			t.Fatalf("completion event=%+v", event)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOpenWiresSubagentToolsAndCycleSupervisor(t *testing.T) {
 	ctx := context.Background()
 	rt, err := bootstrap.Open(ctx, bootstrap.Options{

@@ -675,6 +675,19 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		result.Worked = true
 	}
 
+	// Make durable authenticated status evidence process-visible before enforcing
+	// local deadlines. Supervisor remains the sole canonical lifecycle writer.
+	if rt.SubagentStatusIngressWorker != nil {
+		applied, err := rt.SubagentStatusIngressWorker.ApplyPending(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent status ingress worker: %w", err)
+		}
+		result.SubagentStatusesApplied = applied
+		if applied > 0 {
+			result.Worked = true
+		}
+	}
+
 	// Reconcile terminal/deadline subagent observations before draining external
 	// events so completion wakes can affect the same bounded control cycle.
 	if rt.Supervisor != nil {
@@ -714,16 +727,6 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.RemoteSubagentsExecuted = executed
 		if executed > 0 {
-			result.Worked = true
-		}
-	}
-	if rt.SubagentStatusIngressWorker != nil {
-		applied, err := rt.SubagentStatusIngressWorker.ApplyPending(ctx)
-		if err != nil {
-			return result, fmt.Errorf("subagent status ingress worker: %w", err)
-		}
-		result.SubagentStatusesApplied = applied
-		if applied > 0 {
 			result.Worked = true
 		}
 	}

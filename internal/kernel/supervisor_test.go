@@ -249,6 +249,42 @@ func TestSupervisor_ExpiresOrphanedSession(t *testing.T) {
 	}
 }
 
+func TestSupervisorTerminalObservationWinsAtDeadline(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 20, 15, 30, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "deadline-complete", TaskID: "task-deadline-complete", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "finish at boundary", ContextMode: "isolated", Attempt: 1, MaxAttempts: 2, Deadline: clock.Now()}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{
+		"deadline-complete": {ID: "deadline-complete", Attempt: 1, State: kernel.SessionStateComplete, Result: "remote result"},
+	}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord(rec.ID)
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateComplete || got.Result != "remote result" || got.ErrorCode != "" {
+			t.Fatalf("terminal evidence lost at deadline: %+v", got)
+		}
+		event, err := tx.ExternalEventByDeduplicationKey("subagent-terminal:" + rec.ID)
+		if err != nil {
+			return err
+		}
+		if event.Content.Text != "COMPLETE:remote result" {
+			t.Fatalf("terminal event=%+v", event)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSupervisorPersistsTerminalWakeEventExactlyOnce(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()

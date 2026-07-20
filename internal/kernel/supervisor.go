@@ -41,7 +41,13 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 
 		for _, rec := range active {
 			now := s.Clock.Now()
-			if !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
+			status, statusErr := s.Manager.Status(ctx, SessionID(rec.ID))
+			terminalForCurrentAttempt := statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStateComplete || status.State == SessionStateFailed)
+			// Positive terminal evidence for the active generation wins over the
+			// local deadline. This matters when authenticated remote completion was
+			// already durable before the deadline but only became process-visible in
+			// the current control cycle.
+			if !terminalForCurrentAttempt && !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
 				rec.State = domain.SubagentStateError
 				rec.ErrorCode = "deadline_exceeded"
 				rec.UpdatedAt = now
@@ -55,8 +61,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				continue
 			}
 
-			status, err := s.Manager.Status(ctx, SessionID(rec.ID))
-			if err != nil {
+			if statusErr != nil {
 				continue
 			}
 			if status.Attempt < rec.Attempt || status.Attempt > rec.Attempt+1 {
