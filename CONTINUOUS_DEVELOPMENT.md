@@ -763,3 +763,4 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 - [ ] `READY`  Modelar contrato de registro de subagentes / discovery na rede (Gossip/Kademlia baseline ou Registry estático inicial).
 - [ ] `READY`  Rascunhar port.Network interface no kernel.
 
+2026-07-19 22:15 — HEARTBEAT — Iniciada Fase 21 (Conexões P2P): implementada baseline de configuração mTLS restrita a TLS 1.3 em 'internal/network' e verificada atomicamente por testes de cobertura PKI local. Próximo passo será modelar o contrato de registro/discovery.
