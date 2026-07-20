@@ -7,10 +7,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
-	"motor-autonomo/internal/port"
 )
-
-var _ port.Network = (*StaticRegistry)(nil)
 
 func testPeer(id string) domain.PeerRecord {
 	return domain.PeerRecord{

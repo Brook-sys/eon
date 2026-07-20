@@ -31,4 +31,21 @@ type PeerRegistryPolicy struct {
 	EvictionTimeout time.Duration
 }
 
+// PeerRPCRequest is a bounded, authority-free request addressed to a
+// capability advertised by a peer. Payload is opaque to the network layer.
+type PeerRPCRequest struct {
+	RequestID string
+	PeerID    string
+	Capability string
+	Payload   []byte
+}
+
+// PeerRPCResponse preserves the remote result without granting it authority
+// over canonical state. Callers must validate the payload before use.
+type PeerRPCResponse struct {
+	RequestID string
+	PeerID    string
+	Payload   []byte
+}
+
 var ErrPeerNotFound = errors.New("peer not found in registry")
