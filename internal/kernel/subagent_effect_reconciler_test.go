@@ -2,6 +2,7 @@ package kernel_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,43 @@ func TestSubagentEffectReconcilerCompletesOnlyPositiveSpawnEvidence(t *testing.T
 		}
 		return nil
 	})
+}
+
+func TestSubagentEffectReconcilerBoundsRequestIDForMaximumDeliveryID(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	dispatch := seedDispatchWithID(t, store, clock.Now(), strings.Repeat("d", 128), "session-long-id")
+	leased, _ := domain.LeaseSubagentDispatch(dispatch, "worker", clock.Now(), clock.Now().Add(time.Second))
+	unknown, _ := domain.MarkAmbiguousSubagentDispatch(leased, "worker", clock.Now())
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentDispatch(unknown, dispatch.Status, dispatch.SendAttempt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	caller := dispatchCaller(func(_ context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		if len(request.RequestID) > 128 || strings.Contains(request.RequestID, string(dispatch.RequestID)) {
+			t.Fatalf("unbounded request id %q (%d bytes)", request.RequestID, len(request.RequestID))
+		}
+		lookup, _ := domain.DecodeSubagentReconcileRequest(request.Payload)
+		payload, _ := domain.EncodeSubagentReconcileResponse(domain.SubagentReconcileResponse{Kind: lookup.Kind, DeliveryID: lookup.DeliveryID, SessionID: lookup.SessionID, Attempt: lookup.Attempt, State: domain.SubagentReconcileFound, ReceiverSessionID: "remote-long-id"})
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+	})
+	reconciler := kernel.SubagentEffectReconciler{Store: store, Caller: caller, Clock: clock}
+	if n, err := reconciler.Reconcile(context.Background()); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentDispatch(dispatch.RequestID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentDispatchDelivered || got.ReceiverSessionID != "remote-long-id" {
+			t.Fatalf("dispatch=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestSubagentEffectReconcilerLeavesAbsentSpawnParked(t *testing.T) {

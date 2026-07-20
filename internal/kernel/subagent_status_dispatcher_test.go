@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,9 +16,13 @@ import (
 )
 
 func seedTerminalReceipt(t *testing.T, store port.Store, now time.Time) domain.SubagentSpawnReceipt {
+	return seedTerminalReceiptWithRequestID(t, store, now, "request-1")
+}
+
+func seedTerminalReceiptWithRequestID(t *testing.T, store port.Store, now time.Time, requestID string) domain.SubagentSpawnReceipt {
 	t.Helper()
 	record := domain.SubagentRecord{SchemaVersion: 1, ID: "receiver-1", TaskID: "receiver-task", MissionID: "mission-1", State: domain.SubagentStateComplete, StartedAt: now, UpdatedAt: now.Add(time.Second), Task: "work", ContextMode: "isolated", Result: "answer", MaxAttempts: 3}
-	receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: "request-1", SourceSessionID: "source-1", Attempt: 3, Task: "work", ContextMode: "isolated", ReceiverSessionID: record.ID, RecordedAt: now, Status: domain.SubagentSpawnReceiptComplete, UpdatedAt: now.Add(time.Second), Result: "answer"}
+	receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: requestID, SourceSessionID: "source-1", Attempt: 3, Task: "work", ContextMode: "isolated", ReceiverSessionID: record.ID, RecordedAt: now, Status: domain.SubagentSpawnReceiptComplete, UpdatedAt: now.Add(time.Second), Result: "answer"}
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.CreateSubagentRecord(record); err != nil {
 			return err
@@ -27,6 +32,30 @@ func seedTerminalReceipt(t *testing.T, store port.Store, now time.Time) domain.S
 		t.Fatal(err)
 	}
 	return receipt
+}
+
+func TestSubagentStatusDispatcherBoundsRequestIDForMaximumDeliveryID(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	receipt := seedTerminalReceiptWithRequestID(t, store, clock.Now(), strings.Repeat("r", 128))
+	clock.currentTime = clock.Now().Add(2 * time.Second)
+	var firstRequestID string
+	caller := dispatchCaller(func(_ context.Context, request domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {
+		if len(request.RequestID) > 128 || strings.Contains(request.RequestID, receipt.RequestID) {
+			t.Fatalf("unbounded request id %q (%d bytes)", request.RequestID, len(request.RequestID))
+		}
+		if firstRequestID == "" {
+			firstRequestID = request.RequestID
+		} else if request.RequestID != firstRequestID {
+			t.Fatalf("request id changed across equivalent delivery: %q != %q", request.RequestID, firstRequestID)
+		}
+		payload, _ := json.Marshal(map[string]any{"session_id": receipt.SourceSessionID, "state": kernel.SessionStateComplete})
+		return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+	})
+	dispatcher := kernel.SubagentStatusDispatcher{Store: store, Caller: caller, Clock: clock}
+	if n, err := dispatcher.DispatchTerminal(context.Background()); err != nil || n != 1 {
+		t.Fatalf("dispatch=(%d,%v)", n, err)
+	}
 }
 
 func TestSubagentStatusDispatcherUsesSourceGenerationAndMarksACK(t *testing.T) {

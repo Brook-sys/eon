@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-20-1700-groq-derived-rpc-id",
+  "fixture_path": "internal/evaluation/testdata/cognitive-tool-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "max_total_output_tokens": 128,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-gpt-oss-20b-phase47-derived-rpc-id",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-20b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens"
+    }
+  ]
+}

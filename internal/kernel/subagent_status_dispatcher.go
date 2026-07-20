@@ -93,7 +93,8 @@ func (d *SubagentStatusDispatcher) DispatchTerminal(ctx context.Context) (int, e
 			return processed, fmt.Errorf("encode subagent status: %w", err)
 		}
 		rpcCtx, cancel := context.WithTimeout(ctx, timeout)
-		response, callErr := d.Caller.Call(rpcCtx, domain.PeerRPCRequest{RequestID: "subagent-status:" + receipt.RequestID, PeerID: receipt.CallerPeerID, Capability: subagentStatusCapability, Payload: payload})
+		requestID := derivedSubagentRPCRequestID("subagent-status", receipt.CallerPeerID, receipt.RequestID, receipt.SourceSessionID, fmt.Sprint(receipt.Attempt))
+		response, callErr := d.Caller.Call(rpcCtx, domain.PeerRPCRequest{RequestID: requestID, PeerID: receipt.CallerPeerID, Capability: subagentStatusCapability, Payload: payload})
 		cancel()
 		if callErr != nil {
 			// The origin may have accepted the observation before the transport

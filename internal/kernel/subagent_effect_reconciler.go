@@ -3,8 +3,8 @@ package kernel
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -228,7 +228,8 @@ func (r *SubagentEffectReconciler) lookup(ctx context.Context, timeout time.Dura
 	}
 	rpcCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	response, err := r.Caller.Call(rpcCtx, domain.PeerRPCRequest{RequestID: fmt.Sprintf("reconcile:%s:%s", request.Kind, request.DeliveryID), PeerID: peerID, Capability: subagentReconcileCapability, Payload: payload})
+	requestID := derivedSubagentRPCRequestID("subagent-reconcile", peerID, string(request.Kind), request.DeliveryID, request.SessionID, strconv.Itoa(request.Attempt), request.Digest)
+	response, err := r.Caller.Call(rpcCtx, domain.PeerRPCRequest{RequestID: requestID, PeerID: peerID, Capability: subagentReconcileCapability, Payload: payload})
 	if err != nil {
 		return domain.SubagentReconcileResponse{}, false
 	}
