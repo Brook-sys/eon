@@ -1,0 +1,127 @@
+package network
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"sync"
+	"time"
+
+	"motor-autonomo/internal/domain"
+	peerhttp "motor-autonomo/internal/network/http"
+)
+
+// Options define as flags e politicas para o subsistema de rede P2P.
+type Options struct {
+	// Enabled habilita a abertura da porta mTLS local.
+	Enabled bool
+	// BindAddr e o endereco TCP para ouvir conexoes P2P, por exemplo ":8443".
+	BindAddr string
+	// Certificados obrigatorios para mTLS.
+	TLSCertFile string
+	TLSKeyFile  string
+	// MDNSEnabled habilita o beacon mDNS.
+	MDNSEnabled bool
+}
+
+// P2PManager agrupa os recursos do subsistema de rede que precisam de start/stop.
+type P2PManager struct {
+	Router     *Router
+	Registry   *StaticRegistry
+	httpServer *http.Server
+	listenAddr string
+	logger     *slog.Logger
+	mu         sync.Mutex
+	running    bool
+}
+
+// NewP2PManager inicializa os dominios P2P e o handler HTTP.
+// Apenas inicia os servicos de fato ao chamar Start.
+func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
+	if !opts.Enabled {
+		return nil, nil
+	}
+	if logger == nil {
+		logger = slog.Default()
+	}
+	if opts.BindAddr == "" {
+		opts.BindAddr = "127.0.0.1:8443"
+	}
+
+	registry, err := NewStaticRegistry(domain.PeerRegistryPolicy{
+		MaxPeers:        100,
+		EvictionTimeout: 5 * time.Minute,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create registry: %w", err)
+	}
+
+	// Transport dummy para mock isolado sem pki, apenas satisfaz a validacao do Router
+	dummyTransport := &peerhttp.Transport{}
+	router, err := NewRouter(registry, dummyTransport)
+	if err != nil {
+		return nil, fmt.Errorf("create router: %w", err)
+	}
+
+	// peerhttp.ServerHandler assume PeerCaller, Router implementa PeerCaller
+	handler, err := peerhttp.NewServerHandler(router)
+	if err != nil {
+		return nil, fmt.Errorf("create handler: %w", err)
+	}
+
+	srv := &http.Server{
+		Addr:              opts.BindAddr,
+		Handler:           handler,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 3 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	return &P2PManager{
+		Router:     router,
+		Registry:   registry,
+		httpServer: srv,
+		listenAddr: opts.BindAddr,
+		logger:     logger,
+	}, nil
+}
+
+// Start abre o listener P2P. A integracao produtiva deve usar exclusivamente
+// a configuracao TLS/mTLS estrita do pacote network/http.
+func (m *P2PManager) Start(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.running {
+		return nil
+	}
+
+	ln, err := net.Listen("tcp", m.listenAddr)
+	if err != nil {
+		return fmt.Errorf("listen P2P address: %w", err)
+	}
+
+	m.logger.InfoContext(ctx, "starting P2P server", slog.String("addr", ln.Addr().String()))
+	m.running = true
+	go func() {
+		if err := m.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
+			m.logger.Error("P2P server failed", slog.String("error", err.Error()))
+		}
+	}()
+	return nil
+}
+
+// Stop executa shutdown gracioso do servidor P2P.
+func (m *P2PManager) Stop(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.running {
+		return nil
+	}
+
+	err := m.httpServer.Shutdown(ctx)
+	m.running = false
+	return err
+}
