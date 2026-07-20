@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"motor-autonomo/internal/domain"
@@ -43,16 +44,68 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 		if err != nil {
 			return err
 		}
-		remaining := batch - len(dispatches)
-		if remaining > 0 {
-			statuses, err = reader.SubagentStatusDeliveriesRequiringReconciliation(remaining)
-		}
+		statuses, err = reader.SubagentStatusDeliveriesRequiringReconciliation(batch)
 		return err
 	}); err != nil {
 		return 0, err
 	}
+	candidates := make([]subagentReconcileCandidate, 0, len(dispatches)+len(statuses))
+	for i := range dispatches {
+		candidates = append(candidates, subagentReconcileCandidate{kind: domain.SubagentReconcileSpawn, updatedAt: dispatches[i].UpdatedAt, key: string(dispatches[i].RequestID), dispatch: &dispatches[i]})
+	}
+	for i := range statuses {
+		candidates = append(candidates, subagentReconcileCandidate{kind: domain.SubagentReconcileStatus, updatedAt: statuses[i].UpdatedAt, key: statuses[i].CallerPeerID + "\x00" + statuses[i].RequestID, status: &statuses[i]})
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].updatedAt.Equal(candidates[j].updatedAt) {
+			if candidates[i].kind == candidates[j].kind {
+				return candidates[i].key < candidates[j].key
+			}
+			return candidates[i].kind < candidates[j].kind
+		}
+		return candidates[i].updatedAt.Before(candidates[j].updatedAt)
+	})
+	if len(candidates) > batch {
+		candidates = candidates[:batch]
+	}
 	processed := 0
-	for _, dispatch := range dispatches {
+	for _, candidate := range candidates {
+		if candidate.dispatch == nil {
+			receipt := *candidate.status
+			state := "COMPLETE"
+			if receipt.Status == domain.SubagentSpawnReceiptFailed {
+				state = "FAILED"
+			}
+			digest, err := domain.SubagentTerminalStatusDigest(domain.SubagentTerminalStatus{DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, State: state, Result: receipt.Result, Failure: receipt.Failure})
+			if err != nil {
+				return processed, err
+			}
+			request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileStatus, DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, Digest: digest}
+			response, ok := r.lookup(ctx, timeout, receipt.CallerPeerID, request)
+			if !ok || response.State != domain.SubagentReconcileFound {
+				continue
+			}
+			if err := r.Store.Update(ctx, func(tx port.Transaction) error {
+				current, err := tx.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+				if err != nil {
+					return err
+				}
+				if current.StatusDelivery != domain.SubagentStatusDeliveryEffectUnknown && current.StatusDelivery != domain.SubagentStatusDeliveryInFlight {
+					return port.ErrConflict
+				}
+				next, err := domain.ResolveSubagentSpawnReceiptStatusFound(current, r.Clock.Now().UTC())
+				if err != nil {
+					return err
+				}
+				return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
+			}); err != nil && !errors.Is(err, port.ErrConflict) {
+				return processed, err
+			}
+			processed++
+			continue
+		}
+
+		dispatch := *candidate.dispatch
 		var record domain.SubagentRecord
 		if err := r.Store.View(ctx, func(reader port.Reader) error {
 			var err error
@@ -88,39 +141,15 @@ func (r *SubagentEffectReconciler) Reconcile(ctx context.Context) (int, error) {
 		}
 		processed++
 	}
-	for _, receipt := range statuses {
-		state := "COMPLETE"
-		if receipt.Status == domain.SubagentSpawnReceiptFailed {
-			state = "FAILED"
-		}
-		digest, err := domain.SubagentTerminalStatusDigest(domain.SubagentTerminalStatus{DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, State: state, Result: receipt.Result, Failure: receipt.Failure})
-		if err != nil {
-			return processed, err
-		}
-		request := domain.SubagentReconcileRequest{Kind: domain.SubagentReconcileStatus, DeliveryID: receipt.RequestID, SessionID: receipt.SourceSessionID, Attempt: receipt.Attempt, Digest: digest}
-		response, ok := r.lookup(ctx, timeout, receipt.CallerPeerID, request)
-		if !ok || response.State != domain.SubagentReconcileFound {
-			continue
-		}
-		if err := r.Store.Update(ctx, func(tx port.Transaction) error {
-			current, err := tx.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
-			if err != nil {
-				return err
-			}
-			if current.StatusDelivery != domain.SubagentStatusDeliveryEffectUnknown && current.StatusDelivery != domain.SubagentStatusDeliveryInFlight {
-				return port.ErrConflict
-			}
-			next, err := domain.ResolveSubagentSpawnReceiptStatusFound(current, r.Clock.Now().UTC())
-			if err != nil {
-				return err
-			}
-			return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
-		}); err != nil && !errors.Is(err, port.ErrConflict) {
-			return processed, err
-		}
-		processed++
-	}
 	return processed, nil
+}
+
+type subagentReconcileCandidate struct {
+	kind      domain.SubagentReconcileKind
+	updatedAt time.Time
+	key       string
+	dispatch  *domain.SubagentDispatch
+	status    *domain.SubagentSpawnReceipt
 }
 
 func (r *SubagentEffectReconciler) lookup(ctx context.Context, timeout time.Duration, peerID string, request domain.SubagentReconcileRequest) (domain.SubagentReconcileResponse, bool) {
