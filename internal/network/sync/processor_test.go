@@ -11,9 +11,16 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
+func TestInboxCanonicalizer_RejectsNilResolver(t *testing.T) {
+	_, err := peersync.NewBoundedInboxCanonicalizer(memory.New(), nil)
+	if err == nil || err.Error() != "peer sync canonicalization requires a conflict resolver" {
+		t.Errorf("expected ErrConflictResolverRequired, got %v", err)
+	}
+}
+
 func TestInboxCanonicalizer_Reconcile(t *testing.T) {
 	store := memory.New()
-	c := peersync.NewBoundedInboxCanonicalizer(store, nil)
+	c, _ := peersync.NewBoundedInboxCanonicalizer(store, &dummyResolver{disposition: peersync.DispositionDiscard})
 
 	// Test empty peerID
 	_, err := c.Reconcile(context.Background(), "")
@@ -70,7 +77,7 @@ func TestInboxCanonicalizer_Reconcile(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-	if count != 1 {
-		t.Errorf("expected count 1, got %v", count)
+	if count != 0 {
+		t.Errorf("expected count 0 for discarded event, got %v", count)
 	}
 }

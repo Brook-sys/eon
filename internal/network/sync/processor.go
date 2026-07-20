@@ -21,11 +21,14 @@ type BoundedInboxCanonicalizer struct {
 	resolver EventConflictResolver
 }
 
-func NewBoundedInboxCanonicalizer(store port.Store, resolver EventConflictResolver) *BoundedInboxCanonicalizer {
+func NewBoundedInboxCanonicalizer(store port.Store, resolver EventConflictResolver) (*BoundedInboxCanonicalizer, error) {
+	if resolver == nil {
+		return nil, ErrConflictResolverRequired
+	}
 	return &BoundedInboxCanonicalizer{
 		store:    store,
 		resolver: resolver,
-	}
+	}, nil
 }
 
 func (c *BoundedInboxCanonicalizer) Reconcile(ctx context.Context, peerID string) (int, error) {
@@ -60,19 +63,33 @@ func (c *BoundedInboxCanonicalizer) Reconcile(ctx context.Context, peerID string
 
 			// Delegate resolution of each event
 			for _, event := range record.Message.Events {
-				if c.resolver != nil {
-					disp, err := c.resolver.ResolveConflict(ctx, tx, event)
-					if err != nil {
-						return fmt.Errorf("failed to resolve conflict for event %s: %w", event.ID, err)
-					}
-					if disp == DispositionApply {
-						reconciled++
-						// TODO: actual apply to canonical state when storage supports it.
-					}
-					// DISCARD or ESCALATE (escalate might queue a notification later)
-				} else {
-					// Dummy default for now
+				// Filter events directly inside canonicalizer for valid Phase 25 test resolution
+				// and check against a real resolver implementation.
+				// (Validation of structural integrity is delegated via schema version checking)
+				if event.SchemaVersion != domain.SchemaVersionV1 || event.ID == "" {
+					// Discard inherently malformed remotes
+					continue
+				}
+
+				disp, err := c.resolver.ResolveConflict(ctx, tx, event)
+				if err != nil {
+					return fmt.Errorf("failed to resolve conflict for event %s: %w", event.ID, err)
+				}
+
+				switch disp {
+				case DispositionApply:
 					reconciled++
+					eventToApply := event
+					eventToApply.Sequence = 0 // Strip sequence since it belongs to the local log
+					if _, err := tx.AppendEvent(eventToApply); err != nil {
+						return fmt.Errorf("failed to apply event %s to canonical store: %w", event.ID, err)
+					}
+				case DispositionDiscard:
+					// Treat as safely processed without mutating canonical state.
+				case DispositionEscalate:
+					return fmt.Errorf("%w: event %s", ErrConflictEscalated, event.ID)
+				default:
+					return fmt.Errorf("%w: %s", ErrInvalidDisposition, disp)
 				}
 			}
 
