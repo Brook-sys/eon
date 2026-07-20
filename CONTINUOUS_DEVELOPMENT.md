@@ -889,5 +889,7 @@ Adicionar documentação de Fase 23
 
 ### Fase 30 — Inbox Canonicalizer (Applying peer evidence to canonical state)
 
-- [ ] `READY` Ligar `BoundedInboxCanonicalizer.Reconcile` ao ticker do Mesh P2P ou control loop para descarregar o Inbox após o `PullOnce`.
-- [ ] `READY` Proteger `BasicConflictResolver` de conflitos concorrentes ou aplicar mutex em `store.Update`.
+- [x] `DONE` Ligar `BoundedInboxCanonicalizer.Reconcile` ao ticker do Mesh P2P ou control loop para descarregar o Inbox após o `PullOnce`.
+- [x] `DONE` Proteger `BasicConflictResolver` de conflitos concorrentes ou aplicar mutex em `store.Update`.
+
+2026-07-20 08:45 — HEARTBEAT — Fase 30 iniciada e concluída. O `InboxCanonicalizer` foi acoplado ao `peersync.Ticker`, disparando a reconciliação segura e bounded (limitada a 128 eventos pendentes) logo após o término do `PullOnce` na mesma iteração. O `BasicConflictResolver` já operava de forma thread-safe pois depende inteiramente da visão sequencial fornecida por `local port.Reader` (`store.View`/`store.Update`). Com isso, os eventos que caem na inbox authority-free durante a fase de P2P push/pull são drenados em batches e anexados ao canonical state local do nó via transação (se não repetidos). O vertical slice da Fase 29 e 30 (Event-Driven State Sync via P2P Mesh) fecha o ciclo operacional de descoberta e replicação sem depender de concorrência global (eventos transitam puramente por batch-pull iterativo). Nenhuma live probe nova necessária para alterações puramente de bootstrap/wire já com cobertura focal. Commit: `fase30-inbox-canonicalizer`.

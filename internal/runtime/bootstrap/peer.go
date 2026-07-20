@@ -87,5 +87,11 @@ func buildPeerTransport(opts Options, store port.Store, now func() time.Time) (*
 	if err != nil {
 		return nil, fmt.Errorf("init peer sync ticker: %w", err)
 	}
+
+	canonicalizer, err := peersync.NewBoundedInboxCanonicalizer(store, peersync.NewBasicConflictResolver())
+	if err != nil {
+		return nil, fmt.Errorf("init inbox canonicalizer: %w", err)
+	}
+	bundle.Sync.AttachCanonicalizer(canonicalizer)
 	return bundle, nil
 }

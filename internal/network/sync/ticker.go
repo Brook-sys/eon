@@ -18,11 +18,17 @@ type puller interface {
 // It never drains in a tight loop: durable cursors provide forward progress
 // across ticks and process restarts.
 type Ticker struct {
-	service  puller
-	network  port.Network
-	localID  string
-	streamID string
-	interval time.Duration
+	service       puller
+	canonicalizer InboxCanonicalizer // Optional processor for inbox events
+	network       port.Network
+	localID       string
+	streamID      string
+	interval      time.Duration
+}
+
+// AttachCanonicalizer registers the inbox-to-canonical reconciler which runs immediately after PullOnce.
+func (t *Ticker) AttachCanonicalizer(c InboxCanonicalizer) {
+	t.canonicalizer = c
 }
 
 func NewTicker(service puller, network port.Network, localID, streamID string, interval time.Duration) (*Ticker, error) {
@@ -46,6 +52,10 @@ func (t *Ticker) Tick(ctx context.Context) error {
 		}
 		if _, err := t.service.PullOnce(ctx, t.network, peer.Identity.ID, t.localID, t.streamID, nil); err != nil && firstErr == nil {
 			firstErr = err
+		}
+		// Optional canonicalizer drains the inbox safely if wired.
+		if t.canonicalizer != nil {
+			_, _ = t.canonicalizer.Reconcile(ctx, peer.Identity.ID)
 		}
 	}
 	return firstErr
