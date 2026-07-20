@@ -77,6 +77,15 @@ func buildPeerTransport(opts Options, store port.Store, now func() time.Time) (*
 		return nil, fmt.Errorf("attach peer sync: %w", err)
 	}
 
-	// Combine into PeerTransport kernel bundle.
-	return kernel.NewPeerTransport(registry, caller), nil
+	// Combine into PeerTransport kernel bundle and attach the bounded mesh tick.
+	bundle := kernel.NewPeerTransport(registry, caller)
+	interval := opts.PeerSyncInterval
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	bundle.Sync, err = peersync.NewTicker(syncService, caller, opts.PeerNodeID, "events", interval)
+	if err != nil {
+		return nil, fmt.Errorf("init peer sync ticker: %w", err)
+	}
+	return bundle, nil
 }

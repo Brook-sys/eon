@@ -49,6 +49,9 @@ type Options struct {
 	PeerBindAddr string
 	// PeerNodeID is the stable local identity used in authenticated sync frames.
 	PeerNodeID string
+	// PeerSyncInterval bounds authority-free P2P event pull cadence.
+	// Zero defaults to 30 seconds when the peer listener is enabled.
+	PeerSyncInterval time.Duration
 	// PeerCert/PeerKey/PeerCACert are required when PeerBindAddr is set.
 	PeerCert   string
 	PeerKey    string

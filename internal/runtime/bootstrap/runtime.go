@@ -871,6 +871,13 @@ func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 	if rt == nil {
 		return errors.New("runtime is nil")
 	}
+	if rt.Peer != nil && rt.Peer.Sync != nil {
+		go func() {
+			if err := rt.Peer.Sync.Run(ctx); err != nil && ctx.Err() == nil {
+				rt.logger.Printf("peer sync loop exited: %v", err)
+			}
+		}()
+	}
 	idleMin, idleMax := rt.Opts.IdleMin, rt.Opts.IdleMax
 	idle := idleMin
 	for {

@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
 )
 
@@ -9,6 +10,7 @@ type PeerTransport struct {
 	Registry port.PeerRegistry
 	Caller   port.PeerCaller
 	Handler  port.PeerRPCHandler
+	Sync     *peersync.Ticker
 }
 
 // NewPeerTransport creates a new bridge.

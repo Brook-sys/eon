@@ -880,5 +880,5 @@ Adicionar documentação de Fase 23
 
 ### Fase 29 — Subagent Runtime Context Syncing (P2P State Push/Pull)
 
-- [ ] `READY` Ligar `sync.Service.PullOnce` ao ciclo do daemon P2P usando uma goroutine baseada em ticker para push/pull persistente (P2P Mesh Tick).
+- [x] `DONE` Ligar `sync.Service.PullOnce` ao ciclo do daemon P2P usando uma goroutine baseada em ticker para push/pull persistente (P2P Mesh Tick).
 - [ ] `READY` Tratar conflitos de `PeerSyncCursor` sob a nova regra de "event-driven recovery" implementada no router mTLS.
