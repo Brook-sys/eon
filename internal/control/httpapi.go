@@ -96,6 +96,8 @@ type API struct {
 	// SemanticMemory atomically updates the current view and append-only audit log.
 	SemanticMemory       *SemanticMemory
 	SemanticMemoryReader port.MemoryReader
+	// PeerManager is optional; nil disables P2P endpoints.
+	PeerManager *PeerManager
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -146,6 +148,7 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("POST /memories", a.handleSubmitMemory)
 	mux.HandleFunc("GET /memories", a.handleListMemories)
 	mux.HandleFunc("DELETE /memories/{id}", a.handleDeleteMemory)
+	mux.HandleFunc("POST /peers", a.handleAddPeer)
 	return mux
 }
 
@@ -1616,4 +1619,38 @@ func (a *API) handleDeleteMemory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *API) handleAddPeer(w http.ResponseWriter, r *http.Request) {
+	if a.PeerManager == nil {
+		http.Error(w, "peer manager is not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxSubmitBodyBytes+1))
+	if err != nil {
+		http.Error(w, "failed to read body", http.StatusInternalServerError)
+		return
+	}
+	if len(body) > maxSubmitBodyBytes {
+		http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
+	var cmd AddPeerCommand
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&cmd); err != nil {
+		http.Error(w, "invalid json format", http.StatusBadRequest)
+		return
+	}
+
+	if err := a.PeerManager.AddPeer(r.Context(), cmd); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, _ = w.Write([]byte(`{"status":"registered"}`))
 }

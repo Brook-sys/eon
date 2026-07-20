@@ -327,6 +327,11 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 		return nil, fmt.Errorf("peer transport: %w", err)
 	}
+	if peerTransport != nil {
+		controlAPI.PeerManager = &control.PeerManager{
+			Registry: peerTransport.Registry,
+		}
+	}
 
 	return &Runtime{
 		Opts:             opts,
