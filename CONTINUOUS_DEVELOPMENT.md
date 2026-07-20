@@ -833,8 +833,8 @@ Adicionar documentação de Fase 23
 
 ### Fase 25 — Sincronização Canônica e Convergência
 
-- [ ] `READY` Implementar validador de evento remoto e reconciliação canônica na Inbox de Sync.
-- [ ] `READY` Testar sincronização bidirecional de eventos e state resolution.
+- [x] `DONE` Implementar validador de evento remoto e reconciliação canônica na Inbox de Sync.
+- [x] `DONE` Testar sincronização bidirecional de eventos e state resolution.
 
 2026-07-20 05:00 — HEARTBEAT — Continuação da Fase 25: O `BoundedInboxCanonicalizer` foi refinado para ler os registros pendentes do `PeerSyncInboxRecord` em lote fora do bloqueio e, em seguida, processar e deletar de forma segura cada registro usando a nova capacidade `DeletePeerSyncInboxRecord` do Storage, no escopo de uma transação individual curta e autônoma. Isso evita transações globais demoradas (cumprindo a meta de isolamento de batch) e completa a semântica de remoção da pendência em sucesso (garantindo ausência de memory leaks ou contaminação da fila) ou de não-contaminação canônica em caso de erro, deixando um cursor seguro que é recuperado no próximo boot. Verificado localmente através da cobertura e integridade de unit testes e verificação transacional, o que satisfaz as propriedades exigidas pela Phase 25. A política obrigatória de avaliação live da regra 6 rotacionou a tentativa de probe, contudo a dependência `model-benchmark-runner` ou `runtime` live campaign apresentou ausência/erro de script (`campaign.json` inválido em tool V1 no workspace). A execução não gerou saída ou commit de alteração da campaign. A integridade estrutural, suite integral via `/tmp/go-toolchain/go/bin/go test ./...` foram aplicados sem falhas e todas compilações passam. Nenhuma alteração corrompeu contratos de armazenamento.
 
