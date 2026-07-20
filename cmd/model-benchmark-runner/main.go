@@ -15,6 +15,8 @@ import (
 	"motor-autonomo/internal/evaluation"
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/provider/openai"
+	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/tool/subagent"
 )
 
 func main() {
@@ -145,7 +147,11 @@ func runCampaign(manifestPath, outputDirectory string) error {
 		if err != nil {
 			return fmt.Errorf("binding %s: %w", target.BindingID, err)
 		}
-		report, err := (evaluation.Runner{Provider: provider, Estimator: estimator, Spec: spec, ModelLabel: target.Model}).Run(ctx, fixtures, matrix)
+		var tools []port.ToolDefinition
+		if strings.Contains(manifest.Name, "tool") || strings.Contains(manifest.FixturePath, "tool") {
+			tools = []port.ToolDefinition{subagent.RemoteToolDefinition()}
+		}
+		report, err := (evaluation.Runner{Provider: provider, Estimator: estimator, Spec: spec, ModelLabel: target.Model, Tools: tools}).Run(ctx, fixtures, matrix)
 		if err != nil {
 			return fmt.Errorf("binding %s: %w", target.BindingID, err)
 		}

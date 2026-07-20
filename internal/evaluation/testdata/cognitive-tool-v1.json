@@ -5,14 +5,14 @@
     {
       "id": "tool-search-single",
       "operation": "SYNTHESIZE",
-      "task": "Use the search tool to find the exact version number mentioned.",
+      "task": "Use the remote tool to find the exact version number mentioned. Call sessions_spawn_remote to route it.",
       "required_facts": [
-        {"id": "search-prompt", "text": "You must call the tool 'search_memory' with query 'version number' to find the answer.", "priority": 10}
+        {"id": "search-prompt", "text": "You must call the tool 'sessions_spawn_remote' with peer_id 'test', capability 'search_memory' and payload '{\"query\":\"version number\"}'.", "priority": 10}
       ],
       "optional_facts": [],
-      "constraints": ["Emit a tool call for 'search_memory' instead of plain text."],
+      "constraints": ["Emit a tool call for 'sessions_spawn_remote' instead of plain text."],
       "formats": ["JSON"],
-      "expected": {"tool_call_name": "search_memory"}
+      "expected": {"tool_call_name": "sessions_spawn_remote"}
     }
   ]
 }

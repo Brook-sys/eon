@@ -230,3 +230,27 @@ func TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies(t *testing.T) {
 		})
 	}
 }
+
+func TestProviderCompletesWithToolsAndReturnsToolCalls(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{
+		ExpectedPrompt: "call test tool", ExpectedModel: "fixture-model",
+		ResponseModel: "fixture-model-v1", InputTokens: 5, OutputTokens: 1,
+		ToolCalls: []struct{ Name string; Arguments string }{
+			{Name: "test_tool", Arguments: `{"arg":"val"}`},
+		},
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.CompleteWithTools(context.Background(), port.CompletionRequest{Prompt: "call test tool"}, []port.ToolDefinition{
+		{Name: "test_tool", Description: "desc", Parameters: []byte(`{"type":"object"}`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "test_tool" || result.ToolCalls[0].Arguments != `{"arg":"val"}` {
+		t.Fatalf("unexpected tool calls: %+v", result.ToolCalls)
+	}
+}

@@ -70,5 +70,9 @@ func (t *RemoteTool) Execute(ctx context.Context, input json.RawMessage) (string
 		return "", fmt.Errorf("delegation failed: %w", err)
 	}
 
+	if len(respPayload) > 2<<20 {
+		return "", fmt.Errorf("delegation failed: response exceeds 2MiB limit")
+	}
+
 	return string(respPayload), nil
 }

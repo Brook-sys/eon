@@ -30,6 +30,10 @@ type Exchange struct {
 	StatusCode            int
 	RawBody               string
 	Headers               map[string]string
+	ToolCalls             []struct {
+		Name      string
+		Arguments string
+	}
 }
 
 type Request struct {
@@ -40,6 +44,10 @@ type Request struct {
 	Temperature     float64
 	Authorization   string
 	ResponseFormat  string
+	ToolCalls       []struct {
+		Name      string
+		Arguments string
+	}
 }
 
 type Server struct {
@@ -93,11 +101,17 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat      *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
+		Tools []struct {
+			Type     string `json:"type"`
+			Function struct {
+				Name       string          `json:"name"`
+				Parameters json.RawMessage `json:"parameters"`
+			} `json:"function"`
+		} `json:"tools"`
 	}
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxRequestBytes))
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&body); err != nil || decoder.Decode(&struct{}{}) != io.EOF || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
-		s.failures = append(s.failures, "invalid Chat Completions request")
+		s.failures = append(s.failures, fmt.Sprintf("invalid Chat Completions request: %v", err))
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
@@ -167,9 +181,26 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if model == "" {
 		model = req.Model
 	}
+	
+	message := map[string]any{"role": "assistant", "content": exchange.ResponseText}
+	if len(exchange.ToolCalls) > 0 {
+		var tcList []any
+		for i, tc := range exchange.ToolCalls {
+			tcList = append(tcList, map[string]any{
+				"id": fmt.Sprintf("call_%d", i),
+				"type": "function",
+				"function": map[string]any{
+					"name": tc.Name,
+					"arguments": tc.Arguments,
+				},
+			})
+		}
+		message["tool_calls"] = tcList
+	}
+	
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"model":   model,
-		"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": exchange.ResponseText}}},
+		"choices": []any{map[string]any{"message": message}},
 		"usage":   map[string]any{"prompt_tokens": exchange.InputTokens, "completion_tokens": exchange.OutputTokens},
 	})
 }

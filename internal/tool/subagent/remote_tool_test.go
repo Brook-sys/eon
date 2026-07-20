@@ -68,6 +68,29 @@ func TestRemoteTool_Execute(t *testing.T) {
 		}
 	})
 
+	t.Run("response exceeds limit", func(t *testing.T) {
+		caller := &dummyPeerCaller{
+			t: t,
+			resp: domain.PeerRPCResponse{
+				RequestID: "req-xyz",
+				PeerID:    "peer-456",
+				Payload:   make([]byte, (2<<20)+1), // > 2MiB
+			},
+		}
+		delegator := &SubagentDelegator{Caller: caller}
+		tool := &RemoteTool{
+			Delegator: delegator,
+			CallerID:  "my-agent-1",
+			IDGen:     idGen,
+		}
+
+		input := []byte(`{"peer_id":"peer-456","capability":"do_work","payload":{"target":"sys"}}`)
+		_, err := tool.Execute(ctx, input)
+		if err == nil || err.Error() != "delegation failed: response exceeds 2MiB limit" {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
 	t.Run("invalid json", func(t *testing.T) {
 		tool := &RemoteTool{}
 		input := []byte(`{bad json}`)

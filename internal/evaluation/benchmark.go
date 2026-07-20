@@ -239,6 +239,8 @@ type Runner struct {
 	// call fails before returning a ModelResult. This prevents failed live
 	// campaigns from being mislabeled as offline compile-only reports.
 	ModelLabel string
+	// Tools holds optional tool definitions for the runner to pass to the provider.
+	Tools []port.ToolDefinition
 }
 
 func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Report, error) {
@@ -271,7 +273,12 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 				run.EstimatedInputTokens = compiled.EstimatedInputTokens
 				run.OmittedFactIDs = compiled.OmittedFactIDs
 				started := time.Now()
-				result, err := r.Provider.Complete(ctx, compiled.Request)
+				var result port.CompletionResult
+				if activeToolProvider, ok := r.Provider.(port.ModelToolProvider); ok && len(r.Tools) > 0 {
+					result, err = activeToolProvider.CompleteWithTools(ctx, compiled.Request, r.Tools)
+				} else {
+					result, err = r.Provider.Complete(ctx, compiled.Request)
+				}
 				run.DurationMillis = time.Since(started).Milliseconds()
 				if err != nil {
 					run.ErrorKind = "PROVIDER"
@@ -291,6 +298,18 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 					model = result.Model
 				}
 				run.ActualInputTokens, run.OutputTokens, run.Output = result.InputTokens, result.OutputTokens, result.Text
+				
+				if len(result.ToolCalls) > 0 {
+					var names []string
+					for _, tc := range result.ToolCalls {
+						names = append(names, tc.Name)
+					}
+					// Se o teste espera um tool_call_name e obtivemos tools, injetamos isso no Output como JSON sintético
+					if _, expectsTool := c.Expected["tool_call_name"]; expectsTool {
+						result.Text = fmt.Sprintf(`{"tool_call_name":"%s"}`, strings.Join(names, ","))
+					}
+				}
+				
 				values, err := Parse(format, result.Text, sortedKeys(c.Expected))
 				if err != nil {
 					run.ErrorKind = "VALIDATION"
