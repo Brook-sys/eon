@@ -92,6 +92,7 @@ func (s *Store) SetActiveConfig(ctx context.Context, scope domain.ConfigScope, v
 }
 
 type state struct {
+	subagentRecords        map[string]domain.SubagentRecord
 	missionRevisions       map[domain.MissionRevisionID]domain.MissionRevision
 	activeMissions         map[domain.MissionID]domain.MissionRevisionID
 	operationSpecs         map[domain.OperationSpecID]domain.OperationSpec
@@ -154,6 +155,9 @@ func New() *Store { return &Store{state: newState()} }
 
 func newState() state {
 	return state{
+
+		subagentRecords: make(map[string]domain.SubagentRecord),
+
 		missionRevisions:          make(map[domain.MissionRevisionID]domain.MissionRevision),
 		activeMissions:            make(map[domain.MissionID]domain.MissionRevisionID),
 		operationSpecs:            make(map[domain.OperationSpecID]domain.OperationSpec),
@@ -2416,6 +2420,9 @@ func (t transaction) markDependentArtifactsStale(changedKeys []string) error {
 
 func cloneState(src state) state {
 	dst := newState()
+	for k, v := range src.subagentRecords {
+		dst.subagentRecords[k] = v
+	}
 	for k, v := range src.missionRevisions {
 		dst.missionRevisions[k] = cloneMission(v)
 	}
@@ -2847,4 +2854,53 @@ func (t transaction) DeletePeerSyncInboxRecord(peerID, originID, messageID strin
 	}
 	delete(t.state.peerSyncInbox, key)
 	return nil
+}
+
+func (t transaction) CreateSubagentRecord(record domain.SubagentRecord) error {
+	if err := record.Validate(); err != nil {
+		return fmt.Errorf("validate subagent record: %w", err)
+	}
+	if _, exists := t.state.subagentRecords[record.ID]; exists {
+		return fmt.Errorf("%w: subagent record %s already exists", port.ErrConflict, record.ID)
+	}
+	t.state.subagentRecords[record.ID] = record
+	return nil
+}
+
+func (t transaction) SaveSubagentRecord(record domain.SubagentRecord) error {
+	if err := record.Validate(); err != nil {
+		return fmt.Errorf("validate subagent record: %w", err)
+	}
+	if _, exists := t.state.subagentRecords[record.ID]; !exists {
+		return port.ErrNotFound
+	}
+	t.state.subagentRecords[record.ID] = record
+	return nil
+}
+
+func (t transaction) SubagentRecord(id string) (domain.SubagentRecord, error) {
+	return reader{t.state}.SubagentRecord(id)
+}
+func (r reader) SubagentRecord(id string) (domain.SubagentRecord, error) {
+	record, exists := r.state.subagentRecords[id]
+	if !exists {
+		return domain.SubagentRecord{}, port.ErrNotFound
+	}
+	return record, nil
+}
+
+func (t transaction) SubagentRecordsByState(state domain.SubagentState, limit int) ([]domain.SubagentRecord, error) {
+	return reader{t.state}.SubagentRecordsByState(state, limit)
+}
+func (r reader) SubagentRecordsByState(state domain.SubagentState, limit int) ([]domain.SubagentRecord, error) {
+	var result []domain.SubagentRecord
+	for _, record := range r.state.subagentRecords {
+		if record.State == state {
+			result = append(result, record)
+			if limit > 0 && len(result) >= limit {
+				break
+			}
+		}
+	}
+	return result, nil
 }

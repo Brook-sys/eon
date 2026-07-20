@@ -202,6 +202,8 @@ type ContinuityReader interface {
 	WorkOpportunities(domain.MissionRevisionID, domain.WorkOpportunityStatus) ([]domain.WorkOpportunity, error)
 	ContinuityDiagnosis(domain.ContinuityDiagnosisID) (domain.ContinuityDiagnosis, error)
 	LatestContinuityDiagnosis(domain.MissionRevisionID) (domain.ContinuityDiagnosis, error)
+	SubagentRecord(id string) (domain.SubagentRecord, error)
+	SubagentRecordsByState(state domain.SubagentState, limit int) ([]domain.SubagentRecord, error)
 }
 
 // ContinuityWriter persists frontier opportunities and continuity diagnoses.
@@ -209,6 +211,8 @@ type ContinuityWriter interface {
 	CreateWorkOpportunity(domain.WorkOpportunity) error
 	SaveWorkOpportunity(domain.WorkOpportunity) error
 	CreateContinuityDiagnosis(domain.ContinuityDiagnosis) error
+	CreateSubagentRecord(domain.SubagentRecord) error
+	SaveSubagentRecord(domain.SubagentRecord) error
 }
 
 // ResourceReader exposes ResourceGate usage snapshots (FR-RES-001).
