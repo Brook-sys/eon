@@ -3004,6 +3004,33 @@ func (r reader) TerminalUndeliveredSubagentSpawnReceipts(limit int) ([]domain.Su
 	}
 	return result, nil
 }
+func (t transaction) SubagentStatusDeliveriesRequiringReconciliation(limit int) ([]domain.SubagentSpawnReceipt, error) {
+	return reader(t).SubagentStatusDeliveriesRequiringReconciliation(limit)
+}
+func (r reader) SubagentStatusDeliveriesRequiringReconciliation(limit int) ([]domain.SubagentSpawnReceipt, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("effect-unknown subagent status query requires positive limit")
+	}
+	result := make([]domain.SubagentSpawnReceipt, 0, limit)
+	for _, receipt := range r.state.subagentSpawnReceipts {
+		if receipt.StatusDelivery == domain.SubagentStatusDeliveryEffectUnknown || receipt.StatusDelivery == domain.SubagentStatusDeliveryInFlight {
+			result = append(result, receipt)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].UpdatedAt.Equal(result[j].UpdatedAt) {
+			if result[i].CallerPeerID == result[j].CallerPeerID {
+				return result[i].RequestID < result[j].RequestID
+			}
+			return result[i].CallerPeerID < result[j].CallerPeerID
+		}
+		return result[i].UpdatedAt.Before(result[j].UpdatedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
 
 func (t transaction) SaveSubagentSpawnReceipt(v domain.SubagentSpawnReceipt, expectedStatus domain.SubagentSpawnReceiptStatus, expectedUpdatedAt time.Time) error {
 	if err := v.Validate(); err != nil {
@@ -3143,6 +3170,30 @@ func (r reader) DueSubagentDispatches(now time.Time, limit int) ([]domain.Subage
 			return result[i].RequestID < result[j].RequestID
 		}
 		return result[i].AvailableAt.Before(result[j].AvailableAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+func (t transaction) EffectUnknownSubagentDispatches(limit int) ([]domain.SubagentDispatch, error) {
+	return reader(t).EffectUnknownSubagentDispatches(limit)
+}
+func (r reader) EffectUnknownSubagentDispatches(limit int) ([]domain.SubagentDispatch, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("effect-unknown subagent dispatch query requires positive limit")
+	}
+	result := make([]domain.SubagentDispatch, 0, limit)
+	for _, dispatch := range r.state.subagentDispatches {
+		if dispatch.Status == domain.SubagentDispatchEffectUnknown {
+			result = append(result, dispatch)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].UpdatedAt.Equal(result[j].UpdatedAt) {
+			return result[i].RequestID < result[j].RequestID
+		}
+		return result[i].UpdatedAt.Before(result[j].UpdatedAt)
 	})
 	if len(result) > limit {
 		result = result[:limit]

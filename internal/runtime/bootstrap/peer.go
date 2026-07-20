@@ -11,6 +11,7 @@ import (
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/network"
 	peerhttp "motor-autonomo/internal/network/http"
+	"motor-autonomo/internal/network/subagentreconcile"
 	"motor-autonomo/internal/network/subagentspawn"
 	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
@@ -79,6 +80,13 @@ func buildPeerTransport(opts Options, store port.Store, now func() time.Time, se
 		return nil, fmt.Errorf("attach peer sync: %w", err)
 	}
 	if sessions != nil {
+		reconcileService, reconcileErr := subagentreconcile.NewService(store)
+		if reconcileErr != nil {
+			return nil, fmt.Errorf("init subagent reconciliation: %w", reconcileErr)
+		}
+		if reconcileErr := caller.AttachSubagentReconciliation(reconcileService); reconcileErr != nil {
+			return nil, fmt.Errorf("attach subagent reconciliation: %w", reconcileErr)
+		}
 		statusService, statusErr := subagentstatus.NewService(sessions)
 		if statusErr != nil {
 			return nil, fmt.Errorf("init subagent status ingress: %w", statusErr)

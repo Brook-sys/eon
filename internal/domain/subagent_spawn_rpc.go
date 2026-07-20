@@ -257,6 +257,32 @@ func MarkSubagentSpawnReceiptStatusEffectUnknown(current SubagentSpawnReceipt, n
 	return next, next.Validate()
 }
 
+func ResolveSubagentSpawnReceiptStatusNotFound(current SubagentSpawnReceipt, now time.Time) (SubagentSpawnReceipt, error) {
+	if err := current.Validate(); err != nil {
+		return SubagentSpawnReceipt{}, err
+	}
+	current = current.normalizedQueueState()
+	if current.StatusDelivery != SubagentStatusDeliveryEffectUnknown || now.IsZero() || now.Before(current.UpdatedAt) {
+		return SubagentSpawnReceipt{}, ErrInvalidSubagentSpawnRPC
+	}
+	next := current
+	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryPending, now
+	return next, next.Validate()
+}
+
+func ResolveSubagentSpawnReceiptStatusFound(current SubagentSpawnReceipt, now time.Time) (SubagentSpawnReceipt, error) {
+	if err := current.Validate(); err != nil {
+		return SubagentSpawnReceipt{}, err
+	}
+	current = current.normalizedQueueState()
+	if (current.StatusDelivery != SubagentStatusDeliveryEffectUnknown && current.StatusDelivery != SubagentStatusDeliveryInFlight) || now.IsZero() || now.Before(current.UpdatedAt) {
+		return SubagentSpawnReceipt{}, ErrInvalidSubagentSpawnRPC
+	}
+	next := current
+	next.StatusDelivery, next.UpdatedAt = SubagentStatusDeliveryDelivered, now
+	return next, next.Validate()
+}
+
 // FailExpiredSubagentSpawnReceipt parks an expired execution lease as a
 // terminal failure. Re-executing after lease loss would be unsafe because the
 // prior worker may have produced an external/model effect before crashing.

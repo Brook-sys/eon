@@ -62,6 +62,7 @@ type Runtime struct {
 	Subagents                   kernel.SessionManager
 	Supervisor                  *kernel.Supervisor
 	SubagentDispatcher          *kernel.SubagentDispatcher
+	SubagentEffectReconciler    *kernel.SubagentEffectReconciler
 	RemoteSubagentWorker        *kernel.RemoteSubagentWorker
 	SubagentStatusDispatcher    *kernel.SubagentStatusDispatcher
 	SubagentStatusIngressWorker *kernel.SubagentStatusIngressWorker
@@ -381,11 +382,13 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 	}
 	var subagentDispatcher *kernel.SubagentDispatcher
+	var subagentEffectReconciler *kernel.SubagentEffectReconciler
 	var remoteSubagentWorker *kernel.RemoteSubagentWorker
 	var subagentStatusDispatcher *kernel.SubagentStatusDispatcher
 	var subagentStatusIngressWorker *kernel.SubagentStatusIngressWorker
 	if peerTransport != nil && sessionManager != nil {
 		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
+		subagentEffectReconciler = &kernel.SubagentEffectReconciler{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
 		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
 		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: store, Manager: sessionManager, Clock: clock, Batch: 4}
 		if modelExec != nil && modelExec.Provider != nil {
@@ -422,6 +425,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Subagents:                   sessionManager,
 		Supervisor:                  supervisor,
 		SubagentDispatcher:          subagentDispatcher,
+		SubagentEffectReconciler:    subagentEffectReconciler,
 		RemoteSubagentWorker:        remoteSubagentWorker,
 		SubagentStatusDispatcher:    subagentStatusDispatcher,
 		SubagentStatusIngressWorker: subagentStatusIngressWorker,
@@ -598,6 +602,7 @@ type CycleResult struct {
 	LeasesReconciled           int
 	SubagentsReconciled        int
 	SubagentDispatches         int
+	SubagentEffectsReconciled  int
 	RemoteSubagentsExecuted    int
 	SubagentStatusesDispatched int
 	SubagentStatusesApplied    int
@@ -679,6 +684,16 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		}
 		result.SubagentsReconciled = reconciled
 		if reconciled > 0 {
+			result.Worked = true
+		}
+	}
+	if rt.SubagentEffectReconciler != nil {
+		reconciled, err := rt.SubagentEffectReconciler.Reconcile(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent effect reconciler: %w", err)
+		}
+		if reconciled > 0 {
+			result.SubagentEffectsReconciled = reconciled
 			result.Worked = true
 		}
 	}

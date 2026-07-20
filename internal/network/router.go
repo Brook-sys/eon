@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/network/subagentreconcile"
 	"motor-autonomo/internal/network/subagentspawn"
 	"motor-autonomo/internal/network/subagentstatus"
 	peersync "motor-autonomo/internal/network/sync"
@@ -28,6 +29,7 @@ type Router struct {
 	sync      peersync.Handler
 	statuses  subagentstatus.Handler
 	spawns    subagentspawn.Handler
+	reconcile subagentreconcile.Handler
 	localID   string
 }
 
@@ -79,10 +81,27 @@ func (r *Router) Handle(ctx context.Context, request domain.PeerRPCRequest) (dom
 		if err != nil {
 			return domain.PeerRPCResponse{}, err
 		}
+	case subagentreconcile.Capability:
+		if r.reconcile == nil {
+			return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
+		}
+		var err error
+		payload, err = r.reconcile.Handle(ctx, request.CallerID, request.Payload)
+		if err != nil {
+			return domain.PeerRPCResponse{}, err
+		}
 	default:
 		return domain.PeerRPCResponse{}, ErrInvalidRPCRequest
 	}
 	return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
+}
+
+func (r *Router) AttachSubagentReconciliation(service subagentreconcile.Handler) error {
+	if service == nil {
+		return ErrInvalidRPCRequest
+	}
+	r.reconcile = service
+	return nil
 }
 
 // AttachSync installs the authority-free event-sync handler. The router still
