@@ -2944,6 +2944,85 @@ func (t transaction) CreateSubagentSpawnReceipt(v domain.SubagentSpawnReceipt) e
 	return nil
 }
 
+func (t transaction) DueSubagentSpawnReceipts(now time.Time, limit int) ([]domain.SubagentSpawnReceipt, error) {
+	return reader(t).DueSubagentSpawnReceipts(now, limit)
+}
+func (r reader) DueSubagentSpawnReceipts(now time.Time, limit int) ([]domain.SubagentSpawnReceipt, error) {
+	if now.IsZero() || limit <= 0 {
+		return nil, fmt.Errorf("subagent spawn receipt query requires time and positive limit")
+	}
+	result := make([]domain.SubagentSpawnReceipt, 0, limit)
+	for _, receipt := range r.state.subagentSpawnReceipts {
+		if receipt.Due(now) {
+			result = append(result, receipt)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].RecordedAt.Equal(result[j].RecordedAt) {
+			if result[i].CallerPeerID == result[j].CallerPeerID {
+				return result[i].RequestID < result[j].RequestID
+			}
+			return result[i].CallerPeerID < result[j].CallerPeerID
+		}
+		return result[i].RecordedAt.Before(result[j].RecordedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+
+func (t transaction) TerminalUndeliveredSubagentSpawnReceipts(limit int) ([]domain.SubagentSpawnReceipt, error) {
+	return reader(t).TerminalUndeliveredSubagentSpawnReceipts(limit)
+}
+func (r reader) TerminalUndeliveredSubagentSpawnReceipts(limit int) ([]domain.SubagentSpawnReceipt, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("terminal subagent spawn receipt query requires positive limit")
+	}
+	result := make([]domain.SubagentSpawnReceipt, 0, limit)
+	for _, receipt := range r.state.subagentSpawnReceipts {
+		if (receipt.Status == domain.SubagentSpawnReceiptComplete || receipt.Status == domain.SubagentSpawnReceiptFailed) && (receipt.StatusDelivery == "" || receipt.StatusDelivery == domain.SubagentStatusDeliveryPending) {
+			result = append(result, receipt)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].UpdatedAt.Equal(result[j].UpdatedAt) {
+			if result[i].CallerPeerID == result[j].CallerPeerID {
+				return result[i].RequestID < result[j].RequestID
+			}
+			return result[i].CallerPeerID < result[j].CallerPeerID
+		}
+		return result[i].UpdatedAt.Before(result[j].UpdatedAt)
+	})
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+
+func (t transaction) SaveSubagentSpawnReceipt(v domain.SubagentSpawnReceipt, expectedStatus domain.SubagentSpawnReceiptStatus, expectedUpdatedAt time.Time) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate subagent spawn receipt: %w", err)
+	}
+	key := subagentSpawnReceiptKey(v.CallerPeerID, v.RequestID)
+	current, ok := t.state.subagentSpawnReceipts[key]
+	if !ok {
+		return notFound("subagent spawn receipt", v.RequestID)
+	}
+	currentStatus, currentUpdatedAt := current.Status, current.UpdatedAt
+	if currentStatus == "" && currentUpdatedAt.IsZero() {
+		currentStatus, currentUpdatedAt = domain.SubagentSpawnReceiptPending, current.RecordedAt
+	}
+	if currentStatus != expectedStatus || !currentUpdatedAt.Equal(expectedUpdatedAt) {
+		return fmt.Errorf("%w: stale subagent spawn receipt state", port.ErrConflict)
+	}
+	if !v.Matches(current.CallerPeerID, domain.SubagentSpawnRequest{RequestID: current.RequestID, SessionID: current.SourceSessionID, Attempt: current.Attempt, Task: current.Task, ContextMode: current.ContextMode}) || v.ReceiverSessionID != current.ReceiverSessionID || !v.RecordedAt.Equal(current.RecordedAt) {
+		return fmt.Errorf("%w: immutable subagent spawn receipt identity changed", port.ErrConflict)
+	}
+	t.state.subagentSpawnReceipts[key] = v
+	return nil
+}
+
 func (t transaction) SubagentDispatch(id domain.SubagentDispatchRequestID) (domain.SubagentDispatch, error) {
 	return reader(t).SubagentDispatch(id)
 }
@@ -3024,7 +3103,7 @@ func (t transaction) SaveSubagentDispatch(v domain.SubagentDispatch, expectedSta
 	if current.Status != expectedStatus || current.SendAttempt != expectedSendAttempt {
 		return fmt.Errorf("%w: stale subagent dispatch state", port.ErrConflict)
 	}
-	if current.SessionID != v.SessionID || current.Attempt != v.Attempt || current.PeerID != v.PeerID || current.RequestID != v.RequestID || current.CreatedAt != v.CreatedAt || current.MaxSendAttempts != v.MaxSendAttempts {
+	if current.SessionID != v.SessionID || current.Attempt != v.Attempt || current.PeerID != v.PeerID || current.RequestID != v.RequestID || current.CreatedAt != v.CreatedAt || current.MaxSendAttempts != v.MaxSendAttempts || (current.ReceiverSessionID != "" && current.ReceiverSessionID != v.ReceiverSessionID) {
 		return fmt.Errorf("%w: immutable subagent dispatch fields changed", port.ErrConflict)
 	}
 	t.state.subagentDispatches[v.RequestID] = v

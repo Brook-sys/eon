@@ -51,7 +51,7 @@ func TestSubagentDispatcherDeliversCorrelatedAcknowledgement(t *testing.T) {
 	}
 	_ = store.View(context.Background(), func(r port.Reader) error {
 		got, _ := r.SubagentDispatch(dispatch.RequestID)
-		if got.Status != domain.SubagentDispatchDelivered || got.SendAttempt != 1 {
+		if got.Status != domain.SubagentDispatchDelivered || got.SendAttempt != 1 || got.ReceiverSessionID != "remote-1" {
 			t.Fatalf("dispatch = %+v", got)
 		}
 		return nil

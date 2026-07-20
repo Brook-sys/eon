@@ -49,20 +49,24 @@ func (s SubagentDispatchStatus) RequiresReconciliation() bool {
 // generation. RequestID and (SessionID, Attempt) are immutable; SendAttempt is
 // transport retry state and never changes generation identity.
 type SubagentDispatch struct {
-	SchemaVersion   int                       `json:"schema_version"`
-	RequestID       SubagentDispatchRequestID `json:"request_id"`
-	SessionID       string                    `json:"session_id"`
-	Attempt         int                       `json:"attempt"`
-	PeerID          string                    `json:"peer_id"`
-	Status          SubagentDispatchStatus    `json:"status"`
-	SendAttempt     uint32                    `json:"send_attempt"`
-	MaxSendAttempts uint32                    `json:"max_send_attempts"`
-	AvailableAt     time.Time                 `json:"available_at"`
-	LeaseOwner      string                    `json:"lease_owner,omitempty"`
-	LeaseUntil      time.Time                 `json:"lease_until,omitempty"`
-	LastFailureCode string                    `json:"last_failure_code,omitempty"`
-	CreatedAt       time.Time                 `json:"created_at"`
-	UpdatedAt       time.Time                 `json:"updated_at"`
+	SchemaVersion int                       `json:"schema_version"`
+	RequestID     SubagentDispatchRequestID `json:"request_id"`
+	SessionID     string                    `json:"session_id"`
+	Attempt       int                       `json:"attempt"`
+	PeerID        string                    `json:"peer_id"`
+	// ReceiverSessionID is populated only after a correlated accepted ACK. It
+	// is diagnostic/reconciliation identity; origin lifecycle correlation
+	// continues to use SessionID and Attempt.
+	ReceiverSessionID string                 `json:"receiver_session_id,omitempty"`
+	Status            SubagentDispatchStatus `json:"status"`
+	SendAttempt       uint32                 `json:"send_attempt"`
+	MaxSendAttempts   uint32                 `json:"max_send_attempts"`
+	AvailableAt       time.Time              `json:"available_at"`
+	LeaseOwner        string                 `json:"lease_owner,omitempty"`
+	LeaseUntil        time.Time              `json:"lease_until,omitempty"`
+	LastFailureCode   string                 `json:"last_failure_code,omitempty"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 func (d SubagentDispatch) Validate() error {
@@ -75,32 +79,35 @@ func (d SubagentDispatch) Validate() error {
 	if d.Attempt < 0 || d.MaxSendAttempts == 0 || d.SendAttempt > d.MaxSendAttempts || d.UpdatedAt.Before(d.CreatedAt) {
 		return errors.New("subagent dispatch has invalid attempts or timestamps")
 	}
-	if len(d.RequestID) > 128 || len(d.SessionID) > 128 || len(d.PeerID) > 128 || len(d.LeaseOwner) > 128 || len(d.LastFailureCode) > 128 {
+	if len(d.RequestID) > 128 || len(d.SessionID) > 128 || len(d.PeerID) > 128 || len(d.ReceiverSessionID) > 128 || len(d.LeaseOwner) > 128 || len(d.LastFailureCode) > 128 {
 		return errors.New("subagent dispatch field exceeds byte limit")
 	}
 	switch d.Status {
 	case SubagentDispatchPending, SubagentDispatchRetry:
-		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() {
+		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || d.ReceiverSessionID != "" {
 			return errors.New("available subagent dispatch contains lease")
 		}
 	case SubagentDispatchLeased:
-		if strings.TrimSpace(d.LeaseOwner) == "" || d.LeaseUntil.IsZero() || !d.LeaseUntil.After(d.UpdatedAt) {
+		if strings.TrimSpace(d.LeaseOwner) == "" || d.LeaseUntil.IsZero() || !d.LeaseUntil.After(d.UpdatedAt) || d.ReceiverSessionID != "" {
 			return errors.New("leased subagent dispatch has invalid lease")
 		}
 	case SubagentDispatchEffectUnknown:
-		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || strings.TrimSpace(d.LastFailureCode) == "" {
+		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || strings.TrimSpace(d.LastFailureCode) == "" || d.ReceiverSessionID != "" {
 			return errors.New("effect-unknown subagent dispatch has invalid fields")
 		}
 	case SubagentDispatchDelivered:
-		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || d.LastFailureCode != "" {
+		// ReceiverSessionID was introduced after the outbox. Empty remains valid
+		// for checkpoints delivered by older binaries; every new completion path
+		// requires and persists it.
+		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || d.LastFailureCode != "" || (d.ReceiverSessionID != "" && !ValidSubagentRPCField(d.ReceiverSessionID)) {
 			return errors.New("delivered subagent dispatch has invalid fields")
 		}
 	case SubagentDispatchDead:
-		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || strings.TrimSpace(d.LastFailureCode) == "" {
+		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || strings.TrimSpace(d.LastFailureCode) == "" || d.ReceiverSessionID != "" {
 			return errors.New("dead subagent dispatch has invalid fields")
 		}
 	case SubagentDispatchCancelled:
-		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() {
+		if d.LeaseOwner != "" || !d.LeaseUntil.IsZero() || d.ReceiverSessionID != "" {
 			return errors.New("cancelled subagent dispatch contains lease")
 		}
 	}
@@ -131,15 +138,15 @@ func LeaseSubagentDispatch(current SubagentDispatch, owner string, now, until ti
 	return next, next.Validate()
 }
 
-func CompleteSubagentDispatch(current SubagentDispatch, owner string, now time.Time) (SubagentDispatch, error) {
+func CompleteSubagentDispatch(current SubagentDispatch, owner, receiverSessionID string, now time.Time) (SubagentDispatch, error) {
 	if err := current.Validate(); err != nil {
 		return SubagentDispatch{}, err
 	}
-	if current.Status != SubagentDispatchLeased || current.LeaseOwner != owner || now.IsZero() || now.Before(current.UpdatedAt) {
+	if current.Status != SubagentDispatchLeased || current.LeaseOwner != owner || !ValidSubagentRPCField(receiverSessionID) || now.IsZero() || now.Before(current.UpdatedAt) {
 		return SubagentDispatch{}, errors.New("subagent dispatch completion does not match active lease")
 	}
 	next := current
-	next.Status, next.UpdatedAt, next.LastFailureCode = SubagentDispatchDelivered, now, ""
+	next.Status, next.UpdatedAt, next.LastFailureCode, next.ReceiverSessionID = SubagentDispatchDelivered, now, "", receiverSessionID
 	next.LeaseOwner, next.LeaseUntil = "", time.Time{}
 	return next, next.Validate()
 }
@@ -231,15 +238,15 @@ func ResolveSubagentDispatchEffectUnknown(current SubagentDispatch, now, retryAt
 	return next, next.Validate()
 }
 
-func CompleteSubagentDispatchAfterReconcile(current SubagentDispatch, now time.Time) (SubagentDispatch, error) {
+func CompleteSubagentDispatchAfterReconcile(current SubagentDispatch, receiverSessionID string, now time.Time) (SubagentDispatch, error) {
 	if err := current.Validate(); err != nil {
 		return SubagentDispatch{}, err
 	}
-	if current.Status != SubagentDispatchEffectUnknown || now.IsZero() || now.Before(current.UpdatedAt) {
+	if current.Status != SubagentDispatchEffectUnknown || !ValidSubagentRPCField(receiverSessionID) || now.IsZero() || now.Before(current.UpdatedAt) {
 		return SubagentDispatch{}, errors.New("reconcile completion requires EFFECT_UNKNOWN dispatch")
 	}
 	next := current
-	next.Status, next.UpdatedAt, next.LastFailureCode = SubagentDispatchDelivered, now, ""
+	next.Status, next.UpdatedAt, next.LastFailureCode, next.ReceiverSessionID = SubagentDispatchDelivered, now, "", receiverSessionID
 	return next, next.Validate()
 }
 

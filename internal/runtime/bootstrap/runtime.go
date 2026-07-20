@@ -59,9 +59,11 @@ type Runtime struct {
 	LeaseReaper kernel.LeaseReaper
 	// Subagents and Supervisor share one manager so model tool calls, durable
 	// lifecycle records, and cycle reconciliation observe the same sessions.
-	Subagents          kernel.SessionManager
-	Supervisor         *kernel.Supervisor
-	SubagentDispatcher *kernel.SubagentDispatcher
+	Subagents                kernel.SessionManager
+	Supervisor               *kernel.Supervisor
+	SubagentDispatcher       *kernel.SubagentDispatcher
+	RemoteSubagentWorker     *kernel.RemoteSubagentWorker
+	SubagentStatusDispatcher *kernel.SubagentStatusDispatcher
 	// subagentTools is retained separately so dynamic model-executor reloads
 	// preserve the lifecycle tools rather than rebuilding an fs/exec-only catalog.
 	subagentTools tool.Provider
@@ -378,8 +380,14 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		}
 	}
 	var subagentDispatcher *kernel.SubagentDispatcher
+	var remoteSubagentWorker *kernel.RemoteSubagentWorker
+	var subagentStatusDispatcher *kernel.SubagentStatusDispatcher
 	if peerTransport != nil && sessionManager != nil {
 		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
+		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
+		if modelExec != nil && modelExec.Provider != nil {
+			remoteSubagentWorker = &kernel.RemoteSubagentWorker{Store: store, Manager: sessionManager, Executor: kernel.ModelRemoteSubagentExecutor{Provider: modelExec.Provider, MaxOutputTokens: 512}, Clock: clock, Owner: opts.RuntimeName, Batch: 2, Lease: 2 * time.Minute, Timeout: 90 * time.Second}
+		}
 	}
 
 	if p2pManager != nil {
@@ -407,27 +415,29 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			Web:   webExec,
 			Model: modelExec,
 		},
-		LeaseReaper:        leaseReaper,
-		Subagents:          sessionManager,
-		Supervisor:         supervisor,
-		SubagentDispatcher: subagentDispatcher,
-		subagentTools:      subagentTools,
-		Model:              modelExec,
-		Web:                webExec,
-		File:               fileExec,
-		Peer:               peerTransport,
-		Registry:           registry,
-		Cooldowns:          cooldowns,
-		Inspect:            inspectAPI,
-		Control:            controlAPI,
-		Dashboard:          dash,
-		Handler:            handler,
-		TelegramAdapter:    telegramBits.Adapter,
-		TelegramWorker:     telegramBits.Worker,
-		TelegramIngress:    telegramBits.Ingress,
-		Telemetry:          telemetry,
-		cycleTelemetry:     observability.NewCycleInstruments(telemetry),
-		logger:             log.Default(),
+		LeaseReaper:              leaseReaper,
+		Subagents:                sessionManager,
+		Supervisor:               supervisor,
+		SubagentDispatcher:       subagentDispatcher,
+		RemoteSubagentWorker:     remoteSubagentWorker,
+		SubagentStatusDispatcher: subagentStatusDispatcher,
+		subagentTools:            subagentTools,
+		Model:                    modelExec,
+		Web:                      webExec,
+		File:                     fileExec,
+		Peer:                     peerTransport,
+		Registry:                 registry,
+		Cooldowns:                cooldowns,
+		Inspect:                  inspectAPI,
+		Control:                  controlAPI,
+		Dashboard:                dash,
+		Handler:                  handler,
+		TelegramAdapter:          telegramBits.Adapter,
+		TelegramWorker:           telegramBits.Worker,
+		TelegramIngress:          telegramBits.Ingress,
+		Telemetry:                telemetry,
+		cycleTelemetry:           observability.NewCycleInstruments(telemetry),
+		logger:                   log.Default(),
 	}, nil
 }
 
@@ -572,28 +582,30 @@ func (rt *Runtime) Close(ctx context.Context) error {
 
 // CycleResult summarizes one control-loop iteration for tests and diagnostics.
 type CycleResult struct {
-	CommandsProcessed   int
-	EventsProcessed     int
-	MemoriesCompacted   int
-	RemindersScheduled  int
-	DeliveriesProcessed int
-	TelegramFetched     int
-	TelegramAccepted    int
-	TelegramRejected    int
-	TelegramDuplicate   int
-	LeasesReconciled    int
-	SubagentsReconciled int
-	SubagentDispatches  int
-	SchedulerRan        bool
-	SchedulerSteps      int
-	SchedulerKind       kernel.DecisionKind
-	OperationsExecuted  int
-	OperationsSkipped   int
-	DispatchBudgetHit   bool
-	CycleBudgetHit      bool
-	CadenceVersion      string
-	Worked              bool
-	Stopping            bool
+	CommandsProcessed          int
+	EventsProcessed            int
+	MemoriesCompacted          int
+	RemindersScheduled         int
+	DeliveriesProcessed        int
+	TelegramFetched            int
+	TelegramAccepted           int
+	TelegramRejected           int
+	TelegramDuplicate          int
+	LeasesReconciled           int
+	SubagentsReconciled        int
+	SubagentDispatches         int
+	RemoteSubagentsExecuted    int
+	SubagentStatusesDispatched int
+	SchedulerRan               bool
+	SchedulerSteps             int
+	SchedulerKind              kernel.DecisionKind
+	OperationsExecuted         int
+	OperationsSkipped          int
+	DispatchBudgetHit          bool
+	CycleBudgetHit             bool
+	CadenceVersion             string
+	Worked                     bool
+	Stopping                   bool
 }
 
 // ProcessCycle drains inboxes and steps the scheduler under cadence budgets.
@@ -671,6 +683,26 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 			return result, fmt.Errorf("subagent dispatcher: %w", err)
 		}
 		result.SubagentDispatches = dispatched
+		if dispatched > 0 {
+			result.Worked = true
+		}
+	}
+	if rt.RemoteSubagentWorker != nil {
+		executed, err := rt.RemoteSubagentWorker.ExecuteDue(ctx)
+		if err != nil {
+			return result, fmt.Errorf("remote subagent worker: %w", err)
+		}
+		result.RemoteSubagentsExecuted = executed
+		if executed > 0 {
+			result.Worked = true
+		}
+	}
+	if rt.SubagentStatusDispatcher != nil {
+		dispatched, err := rt.SubagentStatusDispatcher.DispatchTerminal(ctx)
+		if err != nil {
+			return result, fmt.Errorf("subagent status dispatcher: %w", err)
+		}
+		result.SubagentStatusesDispatched = dispatched
 		if dispatched > 0 {
 			result.Worked = true
 		}

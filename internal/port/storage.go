@@ -208,6 +208,8 @@ type ContinuityReader interface {
 	SubagentDispatchByGeneration(sessionID string, attempt int) (domain.SubagentDispatch, error)
 	DueSubagentDispatches(time.Time, int) ([]domain.SubagentDispatch, error)
 	SubagentSpawnReceipt(callerPeerID, requestID string) (domain.SubagentSpawnReceipt, error)
+	DueSubagentSpawnReceipts(time.Time, int) ([]domain.SubagentSpawnReceipt, error)
+	TerminalUndeliveredSubagentSpawnReceipts(int) ([]domain.SubagentSpawnReceipt, error)
 }
 
 // ContinuityWriter persists frontier opportunities and continuity diagnoses.
@@ -220,6 +222,7 @@ type ContinuityWriter interface {
 	CreateSubagentDispatch(domain.SubagentDispatch) error
 	SaveSubagentDispatch(domain.SubagentDispatch, domain.SubagentDispatchStatus, uint32) error
 	CreateSubagentSpawnReceipt(domain.SubagentSpawnReceipt) error
+	SaveSubagentSpawnReceipt(domain.SubagentSpawnReceipt, domain.SubagentSpawnReceiptStatus, time.Time) error
 }
 
 // ResourceReader exposes ResourceGate usage snapshots (FR-RES-001).

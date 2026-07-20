@@ -126,7 +126,7 @@ func (d *SubagentDispatcher) DispatchDue(ctx context.Context) (int, error) {
 			}
 			var next domain.SubagentDispatch
 			if callErr == nil && ack.Accepted {
-				next, err = domain.CompleteSubagentDispatch(current, d.Owner, finished)
+				next, err = domain.CompleteSubagentDispatch(current, d.Owner, ack.ReceiverSessionID, finished)
 			} else if callErr != nil {
 				next, err = domain.MarkAmbiguousSubagentDispatch(current, d.Owner, finished)
 			} else {
