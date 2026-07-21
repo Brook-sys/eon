@@ -126,19 +126,39 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		}
 
 		if err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: leased.ReceiverAttempt, State: SessionStateRunning}); err != nil {
+			// The canonical generation can become terminal or be replaced after
+			// the durable claim but before RUNNING becomes process-visible. Do not
+			// execute work which the receiver lifecycle no longer accepts.
+			if errors.Is(err, ErrSessionTerminal) || errors.Is(err, ErrSessionAttempt) || errors.Is(err, ErrSessionNotFound) {
+				if failErr := w.failLeased(ctx, leased, "receiver_generation_inactive_before_execution"); failErr != nil && !errors.Is(failErr, port.ErrConflict) {
+					return processed, failErr
+				}
+				processed++
+				continue
+			}
 			return processed, fmt.Errorf("publish receiver running status: %w", err)
 		}
 		execCtx, cancel := context.WithTimeout(ctx, timeout)
 		result, execErr := w.Executor.ExecuteRemoteSubagent(execCtx, leased.Task, leased.ContextMode)
 		cancel()
 		finished := w.Clock.Now().UTC()
+		terminalAccepted := false
 		if err := w.Store.Update(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentSpawnReceipt(leased.CallerPeerID, leased.RequestID)
 			if err != nil {
 				return err
 			}
+			record, err := tx.SubagentRecord(current.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
 			var next domain.SubagentSpawnReceipt
-			if execErr == nil {
+			active := record.Attempt == current.ReceiverAttempt &&
+				(record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) &&
+				(record.Deadline.IsZero() || finished.Before(record.Deadline))
+			if !active {
+				next, err = domain.FailSubagentSpawnReceipt(current, w.Owner, "receiver_generation_inactive_after_execution", finished)
+			} else if execErr == nil {
 				next, err = domain.CompleteSubagentSpawnReceipt(current, w.Owner, result, finished)
 			} else {
 				next, err = domain.FailSubagentSpawnReceipt(current, w.Owner, boundedFailure(execErr), finished)
@@ -146,9 +166,17 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			if err != nil {
 				return err
 			}
-			return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
+			if err := tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt); err != nil {
+				return err
+			}
+			terminalAccepted = active
+			return nil
 		}); err != nil {
 			return processed, err
+		}
+		if !terminalAccepted {
+			processed++
+			continue
 		}
 		terminal := SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: leased.ReceiverAttempt, State: SessionStateComplete, Result: result}
 		if execErr != nil {
@@ -160,6 +188,21 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		processed++
 	}
 	return processed, nil
+}
+
+func (w *RemoteSubagentWorker) failLeased(ctx context.Context, leased domain.SubagentSpawnReceipt, failure string) error {
+	now := w.Clock.Now().UTC()
+	return w.Store.Update(ctx, func(tx port.Transaction) error {
+		current, err := tx.SubagentSpawnReceipt(leased.CallerPeerID, leased.RequestID)
+		if err != nil {
+			return err
+		}
+		next, err := domain.FailSubagentSpawnReceipt(current, w.Owner, failure, now)
+		if err != nil {
+			return err
+		}
+		return tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt)
+	})
 }
 
 func (w *RemoteSubagentWorker) failExpired(ctx context.Context, candidate domain.SubagentSpawnReceipt) error {

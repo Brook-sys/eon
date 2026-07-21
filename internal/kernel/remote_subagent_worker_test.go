@@ -122,6 +122,96 @@ func TestRemoteSubagentWorkerExecutesAndCommitsTerminalReceipt(t *testing.T) {
 	}
 }
 
+type publishHookManager struct {
+	kernel.SessionManager
+	onRunning func(context.Context, kernel.SubagentObservation) error
+}
+
+func (m publishHookManager) PublishStatus(ctx context.Context, observation kernel.SubagentObservation) error {
+	if observation.State == kernel.SessionStateRunning && m.onRunning != nil {
+		if err := m.onRunning(ctx, observation); err != nil {
+			return err
+		}
+	}
+	return m.SessionManager.PublishStatus(ctx, observation)
+}
+
+func TestRemoteSubagentWorkerFencesGenerationLostAfterClaimBeforeExecution(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	base := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, base, clock.Now())
+	manager := publishHookManager{SessionManager: base, onRunning: func(ctx context.Context, observation kernel.SubagentObservation) error {
+		if err := base.PublishStatus(ctx, kernel.SubagentObservation{ID: observation.ID, Attempt: observation.Attempt, State: kernel.SessionStateFailed, Failure: "canonical timeout"}); err != nil {
+			return err
+		}
+		return nil
+	}}
+	var calls atomic.Int32
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+		calls.Add(1)
+		return "must not execute", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+		t.Fatalf("execute=(%d,%v)", n, err)
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("executor calls=%d", calls.Load())
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "receiver_generation_inactive_before_execution" || got.StatusDelivery != domain.SubagentStatusDeliveryPending {
+			t.Fatalf("receipt=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRemoteSubagentWorkerRejectsResultWhenGenerationEndsDuringExecution(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	manager := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Lease: time.Minute, Timeout: 30 * time.Second, Executor: kernel.RemoteSubagentExecutorFunc(func(ctx context.Context, task, mode string) (string, error) {
+		if err := store.Update(ctx, func(tx port.Transaction) error {
+			record, err := tx.SubagentRecord(receipt.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
+			record.State, record.UpdatedAt, record.ErrorCode = domain.SubagentStateError, clock.Now().Add(time.Second), "deadline_exceeded"
+			return tx.SaveSubagentRecord(record)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		clock.currentTime = clock.Now().Add(time.Second)
+		return "stale result", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+		t.Fatalf("execute=(%d,%v)", n, err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "receiver_generation_inactive_after_execution" || got.Result != "" || got.StatusDelivery != domain.SubagentStatusDeliveryPending {
+			t.Fatalf("receipt=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	status, err := manager.Status(context.Background(), kernel.SessionID(receipt.ReceiverSessionID))
+	if err != nil || status.State != kernel.SessionStateRunning {
+		t.Fatalf("status=(%+v,%v)", status, err)
+	}
+}
+
 func TestRemoteSubagentWorkersDoNotDoubleClaim(t *testing.T) {
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
