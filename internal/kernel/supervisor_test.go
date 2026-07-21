@@ -423,6 +423,50 @@ func TestSupervisorIgnoresTerminalReceiptFromPreviousReceiverAttempt(t *testing.
 	}
 }
 
+func TestSupervisorDoesNotReplaceConflictingManagerTerminalFromDurableReceipt(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 12, 40, 0, 0, time.UTC)}
+	record := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "receiver-conflict", TaskID: "task-conflict", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "preserve canonical terminal", ContextMode: "isolated", Attempt: 0, MaxAttempts: 1, Deadline: clock.Now().Add(time.Minute)}
+	receipt := domain.SubagentSpawnReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: "peer-origin", RequestID: "conflicting-request", SourceSessionID: "source-session", Attempt: 0, Task: record.Task, ContextMode: record.ContextMode, ReceiverSessionID: record.ID, ReceiverAttempt: record.Attempt, RecordedAt: clock.Now().Add(-time.Minute), Status: domain.SubagentSpawnReceiptComplete, UpdatedAt: clock.Now(), Result: "conflicting durable result", StatusDelivery: domain.SubagentStatusDeliveryPending}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		if err := tx.CreateSubagentRecord(record); err != nil {
+			return err
+		}
+		return tx.CreateSubagentSpawnReceipt(receipt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	manager := kernel.NewLocalSessionManager(clock)
+	status := kernel.SubagentStatus{ID: kernel.SessionID(record.ID), Attempt: record.Attempt, State: kernel.SessionStateRunning, Spec: kernel.SubagentSpec{Task: record.Task, ContextMode: record.ContextMode, Labels: map[string]string{"task_id": record.TaskID}}, StartedAt: record.StartedAt}
+	if err := manager.Restore(ctx, status); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: status.ID, Attempt: status.Attempt, State: kernel.SessionStateComplete, Result: "canonical manager result"}); err != nil {
+		t.Fatal(err)
+	}
+	supervisor := kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	gotStatus, err := manager.Status(ctx, kernel.SessionID(record.ID))
+	if err != nil || gotStatus.State != kernel.SessionStateComplete || gotStatus.Result != "canonical manager result" {
+		t.Fatalf("manager terminal replaced=(%+v,%v)", gotStatus, err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		got, err := r.SubagentRecord(record.ID)
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateComplete || got.Result != "canonical manager result" {
+			t.Fatalf("canonical record=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func mustLeaseReceipt(t *testing.T, receipt domain.SubagentSpawnReceipt, owner string, now, leaseUntil time.Time) domain.SubagentSpawnReceipt {
 	t.Helper()
 	leased, err := domain.LeaseSubagentSpawnReceipt(receipt, owner, now, leaseUntil)

@@ -43,24 +43,32 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 
 		for _, rec := range active {
 			now := s.Clock.Now()
+			status, statusErr := s.Manager.Status(ctx, SessionID(rec.ID))
 			// Receiver execution commits its terminal receipt before publishing to
 			// the process-local manager. Repair that split during normal operation,
 			// not only at bootstrap, so a transient publication failure cannot hold a
 			// concurrency slot until restart or let the local deadline defeat an
 			// already durable terminal outcome. The lookup is generation-scoped.
+			// Publish only when the manager still exposes that exact active generation:
+			// a manager terminal is authoritative process-local evidence, and replacing
+			// it from a conflicting durable receipt would turn deterministic storage
+			// election into silent terminal corruption.
 			terminal, terminalErr := tx.TerminalSubagentSpawnReceiptForReceiver(rec.ID, rec.Attempt)
 			if terminalErr == nil {
-				observation, err := TerminalSubagentObservation(terminal)
-				if err != nil {
-					return err
-				}
-				if err := s.Manager.PublishStatus(ctx, observation); err != nil {
-					return err
+				managerGenerationActive := statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStatePending || status.State == SessionStateRunning)
+				if managerGenerationActive {
+					observation, err := TerminalSubagentObservation(terminal)
+					if err != nil {
+						return err
+					}
+					if err := s.Manager.PublishStatus(ctx, observation); err != nil {
+						return err
+					}
+					status, statusErr = s.Manager.Status(ctx, SessionID(rec.ID))
 				}
 			} else if !errors.Is(terminalErr, port.ErrNotFound) {
 				return terminalErr
 			}
-			status, statusErr := s.Manager.Status(ctx, SessionID(rec.ID))
 			// Retry is deliberately issued before its durable generation is
 			// published. If that transaction rolls back, the transport can already
 			// be anywhere in attempt+1 (not only PENDING). Treat the immediately
