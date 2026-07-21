@@ -3,6 +3,7 @@ package inspect_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -98,6 +99,97 @@ func TestProjectorOverviewAndEventPagination(t *testing.T) {
 		if event.OperationID != operation.ID {
 			t.Fatalf("filter leak: %#v", event)
 		}
+	}
+}
+
+func TestProjectorFilteredEventPaginationFindsLaterSparseMatch(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 21, 18, 0, 0, 0, time.UTC)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 1; i <= inspect.MaxEventPageLimit+1; i++ {
+			kind := "noise"
+			if i == inspect.MaxEventPageLimit+1 {
+				kind = "wanted"
+			}
+			_, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID(fmt.Sprintf("event_sparse_%03d", i)),
+				Kind:          kind,
+				OccurredAt:    now.Add(time.Duration(i) * time.Millisecond),
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	page, err := projector.ListEvents(context.Background(), inspect.EventFilter{Kind: "wanted", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Events) != 1 || page.Events[0].Kind != "wanted" {
+		t.Fatalf("filtered page = %#v, want later sparse match", page)
+	}
+	if page.HasMore {
+		t.Fatal("has_more = true after final matching event")
+	}
+}
+
+func TestProjectorFilteredEventPaginationDoesNotSkipMatchBeyondProbeWindow(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 21, 18, 5, 0, 0, time.UTC)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 1; i <= inspect.MaxEventPageLimit+2; i++ {
+			kind := "noise"
+			if i == 1 || i == inspect.MaxEventPageLimit+2 {
+				kind = "wanted"
+			}
+			_, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID(fmt.Sprintf("event_gap_%03d", i)),
+				Kind:          kind,
+				OccurredAt:    now.Add(time.Duration(i) * time.Millisecond),
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := projector.ListEvents(context.Background(), inspect.EventFilter{Kind: "wanted", Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Events) != 1 || first.Events[0].Sequence != 1 || !first.HasMore {
+		t.Fatalf("first page = %#v, want sequence 1 with has_more", first)
+	}
+	second, err := projector.ListEvents(context.Background(), inspect.EventFilter{
+		AfterSequence: first.NextSequence,
+		Kind:          "wanted",
+		Limit:         1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Events) != 1 || second.Events[0].Sequence != inspect.MaxEventPageLimit+2 {
+		t.Fatalf("second page = %#v, want later match without skip", second)
+	}
+	if second.HasMore {
+		t.Fatal("has_more = true after final matching event")
 	}
 }
 

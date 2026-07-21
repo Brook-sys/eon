@@ -1,0 +1,1 @@
+{"schema_version":1,"started_unix_ms":1784657137156,"finished_unix_ms":1784657137620,"wall_latency_ms":464,"credential_source":"authorized local env file exported only to subprocess shell; secret not recorded","exit_status":0,"preflight_error":"initial fixture used unsupported operation DECIDE; corrected before live request"}

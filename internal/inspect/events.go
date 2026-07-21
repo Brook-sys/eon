@@ -52,16 +52,21 @@ func (p *Projector) ListEvents(ctx context.Context, filter EventFilter) (EventPa
 
 	var page EventPage
 	err := p.Store.View(ctx, func(r port.Reader) error {
-		// Over-fetch when filters are present so a sparse page can still fill.
-		batchLimit := limit
-		if filterApplied {
-			batchLimit = MaxEventPageLimit
-		}
+		// A filtered page may be sparse, so scan bounded batches until the page
+		// is full and one later match is proven, the log ends, or the global
+		// scan ceiling is reached. The continuation cursor advances across
+		// examined non-matches so sparse filters always make progress.
 		after := filter.AfterSequence
 		matched := make([]domain.Event, 0, limit)
-		var lastSeen uint64 = after
+		lastSeen := after
+		scanned := 0
 		hasMore := false
-		for {
+		stoppedBeforeMatch := false
+		for scanned < maxCorrelationEventScan {
+			batchLimit := MaxEventPageLimit
+			if remaining := maxCorrelationEventScan - scanned; remaining < batchLimit {
+				batchLimit = remaining
+			}
 			batch, err := r.Events(after, batchLimit)
 			if err != nil {
 				return err
@@ -74,53 +79,34 @@ func (p *Projector) ListEvents(ctx context.Context, filter EventFilter) (EventPa
 				if !eventMatches(event, filter) {
 					continue
 				}
-				matched = append(matched, event)
 				if len(matched) == limit {
-					// There may still be more matching events after this one.
+					// This match belongs to the next page. Resume from the last
+					// returned match so it cannot be skipped.
 					hasMore = true
-					// Confirm at least one later event exists, matching or not.
-					// Clients resume from NextSequence = last matched sequence.
-					goto done
+					stoppedBeforeMatch = true
+					break
 				}
+				matched = append(matched, event)
 			}
+			if stoppedBeforeMatch {
+				break
+			}
+			scanned += len(batch)
 			after = batch[len(batch)-1].Sequence
 			if len(batch) < batchLimit {
 				break
 			}
-			// Hard stop: avoid unbounded scans in a single request.
-			if after-filter.AfterSequence >= 5000 {
-				hasMore = true
-				break
-			}
 		}
-	done:
+
 		next := lastSeen
-		if len(matched) > 0 {
+		if stoppedBeforeMatch {
 			next = matched[len(matched)-1].Sequence
-		}
-		// If we filled the page, verify whether anything remains after next.
-		if hasMore && len(matched) == limit {
-			rest, err := r.Events(next, 1)
+		} else if scanned >= maxCorrelationEventScan {
+			rest, err := r.Events(after, 1)
 			if err != nil {
 				return err
 			}
 			hasMore = len(rest) > 0
-			// When filters are applied, remaining unfiltered events may still
-			// fail the filter; clients still resume correctly via next sequence.
-			if filterApplied && hasMore {
-				// Best-effort: scan a little further for any remaining match.
-				probe, err := r.Events(next, MaxEventPageLimit)
-				if err != nil {
-					return err
-				}
-				hasMore = false
-				for _, event := range probe {
-					if eventMatches(event, filter) {
-						hasMore = true
-						break
-					}
-				}
-			}
 		}
 		page = EventPage{
 			SchemaVersion: domain.SchemaVersionV1,

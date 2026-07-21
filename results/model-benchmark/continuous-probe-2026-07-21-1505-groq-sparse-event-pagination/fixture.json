@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "name": "phase63-sparse-pagination-v1",
+  "cases": [
+    {
+      "id": "sparse-filter-cursor",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe pagination rule when a filtered event page is full and the bounded scan has not proven end of log.",
+      "required_facts": [
+        {
+          "id": "f1",
+          "text": "A filtered page returned its limit of matching events. Later matching events may be separated by more than one storage batch of non-matching events.",
+          "priority": 10
+        },
+        {
+          "id": "f2",
+          "text": "The API must never skip a matching event and each continuation must remain bounded.",
+          "priority": 10
+        }
+      ],
+      "optional_facts": [
+        {
+          "id": "n1",
+          "text": "An empty later page is acceptable when it proves the bounded scan reached the end of the log.",
+          "priority": 1
+        }
+      ],
+      "constraints": [
+        "Choose only one rule."
+      ],
+      "formats": [
+        "CHOICE"
+      ],
+      "expected": {
+        "rule": "scan_bounded_until_next_match_or_eof"
+      }
+    }
+  ]
+}
