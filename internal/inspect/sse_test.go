@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -176,4 +177,81 @@ func TestEventStreamResumesFromAfterSequence(t *testing.T) {
 			t.Fatalf("stream replayed sequence %d", seq)
 		}
 	}
+}
+
+func TestFilteredEventStreamAdvancesAcrossBoundedSparseWindows(t *testing.T) {
+	store, _, _, now := seedRuntime(t)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < 5001; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_stream_noise_" + strconv.Itoa(i+1)),
+				Kind:          "test.unrelated",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Millisecond),
+				PayloadRef:    "noise",
+			}); err != nil {
+				return err
+			}
+		}
+		_, err := tx.AppendEvent(domain.Event{
+			SchemaVersion: domain.SchemaVersionV1,
+			ID:            "event_stream_sparse_match",
+			Kind:          "test.sparse_match",
+			OccurredAt:    now.Add(6 * time.Second),
+			PayloadRef:    "match",
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/events/stream?kind=test.sparse_match&poll_ms=50&limit=1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		if scanner.Text() != "event: event" {
+			continue
+		}
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+			var event domain.Event
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &event); err != nil {
+				t.Fatal(err)
+			}
+			if event.ID != "event_stream_sparse_match" {
+				t.Fatalf("event = %#v", event)
+			}
+			return
+		}
+	}
+	if err := scanner.Err(); err != nil && ctx.Err() == nil {
+		t.Fatal(err)
+	}
+	t.Fatal("filtered stream did not advance beyond the first bounded sparse window")
 }

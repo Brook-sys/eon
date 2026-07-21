@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase65-sparse-sse-cursor-v1",
+  "cases": [
+    {
+      "id": "bounded-empty-page",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe continuation rule for a filtered SSE consumer when a bounded event scan returns no matches but next_sequence advanced across examined non-matches and has_more is true.",
+      "required_facts": [
+        {"id":"f1","text":"Advancing only after emitted matches rescans the same bounded sparse window forever.","priority":10},
+        {"id":"f2","text":"next_sequence identifies the durable examined cursor while preserving later matches.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"advance_to_page_next_sequence"}
+    }
+  ]
+}

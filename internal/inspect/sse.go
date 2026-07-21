@@ -103,6 +103,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+		previousAfter := filter.AfterSequence
 		if len(page.Events) > 0 {
 			idleTicks = 0
 			for _, event := range page.Events {
@@ -110,8 +111,14 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 				if err := writeSSE(w, flusher, "event", id, event); err != nil {
 					return
 				}
-				filter.AfterSequence = event.Sequence
 			}
+		}
+		// ListEvents may examine thousands of non-matching events after the last
+		// emitted match (or return no matches at all). Advance by the examined
+		// cursor, not only by emitted event IDs, otherwise a sparse filtered stream
+		// can rescan the same bounded window forever and never reach a later match.
+		filter.AfterSequence = page.NextSequence
+		if len(page.Events) > 0 || page.NextSequence > previousAfter {
 			if err := writeSSE(w, flusher, "page", strconv.FormatUint(page.NextSequence, 10), map[string]any{
 				"after_sequence": page.AfterSequence,
 				"next_sequence":  page.NextSequence,
@@ -124,7 +131,8 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 				// Drain without sleeping while backlog remains.
 				continue
 			}
-		} else {
+		}
+		if len(page.Events) == 0 {
 			idleTicks++
 			if idleTicks >= maxSSEIdleTicks {
 				idleTicks = 0

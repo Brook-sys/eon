@@ -1,0 +1,1 @@
+{"schema_version":1,"started_unix_ms":1784659600858,"finished_unix_ms":1784659601490,"wall_latency_ms":632,"credential_source":"authorized local env file exported only to subprocess shell; secret not recorded","exit_status":0,"preflight_note":"initial local invocation used unsupported -output flag and failed before any provider request; corrected to -out"}
