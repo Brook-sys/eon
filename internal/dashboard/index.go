@@ -855,10 +855,23 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     box.scrollTop = box.scrollHeight;
   }
 
-  function advanceStreamCursor(sequence) {
+  function validStreamCursor(sequence) {
     const next = String(sequence || "").trim();
-    if (!/^(0|[1-9][0-9]*)$/.test(next)) return;
-    if (next.length > maxUint64Decimal.length || (next.length === maxUint64Decimal.length && next > maxUint64Decimal)) return;
+    if (!/^(0|[1-9][0-9]*)$/.test(next)) return null;
+    if (next.length > maxUint64Decimal.length || (next.length === maxUint64Decimal.length && next > maxUint64Decimal)) return null;
+    return next;
+  }
+
+  function resetStreamCursor(sequence) {
+    const next = validStreamCursor(sequence);
+    if (next === null) return;
+    lastSeq = next;
+    el("afterSeq").value = next;
+  }
+
+  function advanceStreamCursor(sequence) {
+    const next = validStreamCursor(sequence);
+    if (next === null) return;
     if (next.length < lastSeq.length || (next.length === lastSeq.length && next < lastSeq)) return;
     lastSeq = next;
     el("afterSeq").value = next;
@@ -878,7 +891,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     es.addEventListener("ready", function (ev) {
       el("streamBadge").textContent = "SSE live";
       el("streamBadge").className = "badge live";
-      advanceStreamCursor(ev.lastEventId);
+      // A ready frame belongs to a newly created stream and carries the
+      // server-accepted baseline. It may intentionally rewind an older stream.
+      resetStreamCursor(ev.lastEventId);
       appendTimeline("# ready " + ev.data);
     });
     es.addEventListener("event", function (ev) {

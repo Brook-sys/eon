@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase68-dashboard-stream-rewind-v1",
+  "cases": [
+    {
+      "id": "new-stream-authoritative-baseline",
+      "operation": "SYNTHESIZE",
+      "task": "Choose how a dashboard should handle an SSE ready frame with id=10 after its previous connection had advanced an in-memory cursor to 900. The operator intentionally entered after_sequence=10 to replay history.",
+      "required_facts": [
+        {"id":"f1","text":"The ready frame belongs to a newly created EventSource connection and carries the server-accepted resume cursor.","priority":10},
+        {"id":"f2","text":"A monotonic comparison against the prior connection's cursor 900 would reject all progress below 900.","priority":10},
+        {"id":"f3","text":"Event and page frames after ready must remain monotonic within the new connection.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"reset_on_ready_then_advance_monotonically"}
+    }
+  ]
+}

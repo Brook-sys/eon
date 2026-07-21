@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -130,8 +131,10 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"GET /events paginado",
 		"inspectorRequestGeneration",
 		"requestGeneration !== inspectorRequestGeneration",
+		"function validStreamCursor(sequence)",
+		"function resetStreamCursor(sequence)",
 		"function advanceStreamCursor(sequence)",
-		"advanceStreamCursor(ev.lastEventId)",
+		"resetStreamCursor(ev.lastEventId)",
 		"maxUint64Decimal = \"18446744073709551615\"",
 		"/^(0|[1-9][0-9]*)$/.test(next)",
 		"next.length > maxUint64Decimal.length",
@@ -289,6 +292,76 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	if !strings.Contains(chunk, "event: ready") && !strings.Contains(chunk, "data:") {
 		t.Fatalf("unexpected stream prelude %q", chunk)
 	}
+}
+
+func TestDashboardStreamCursorReadyResetsNewStreamBaseline(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const afterSeq = {value: "0"};
+const el = (id) => { if (id !== "afterSeq") throw new Error("unexpected element " + id); return afterSeq; };
+let lastSeq = "0";
+` + valid + "\n" + reset + "\n" + advance + `
+resetStreamCursor("900");
+resetStreamCursor("10");
+if (lastSeq !== "10" || afterSeq.value !== "10") throw new Error("ready did not reset baseline");
+advanceStreamCursor("250");
+if (lastSeq !== "250" || afterSeq.value !== "250") throw new Error("page did not advance from reset baseline");
+advanceStreamCursor("200");
+if (lastSeq !== "250" || afterSeq.value !== "250") throw new Error("regressive frame was accepted");
+resetStreamCursor("18446744073709551616");
+if (lastSeq !== "250") throw new Error("uint64 overflow was accepted");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard cursor behavior failed: %v\n%s", err, output)
+	}
+}
+
+func renderDashboardForTest(t *testing.T) string {
+	t.Helper()
+	ui, err := dashboard.New(http.NotFoundHandler(), http.NotFoundHandler())
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	ui.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("dashboard status = %d", recorder.Code)
+	}
+	return recorder.Body.String()
+}
+
+func extractJSFunction(t *testing.T, source, name string) string {
+	t.Helper()
+	start := strings.Index(source, "function "+name+"(")
+	if start < 0 {
+		t.Fatalf("JavaScript function %s not found", name)
+	}
+	open := strings.Index(source[start:], "{")
+	if open < 0 {
+		t.Fatalf("JavaScript function %s has no body", name)
+	}
+	open += start
+	depth := 0
+	for i := open; i < len(source); i++ {
+		switch source[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return source[start : i+1]
+			}
+		}
+	}
+	t.Fatalf("JavaScript function %s is unterminated", name)
+	return ""
 }
 
 func truncate(s string, n int) string {

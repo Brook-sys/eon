@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase68-dashboard-stream-rewind-v1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "runs": [
+    {
+      "case_id": "new-stream-authoritative-baseline",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 269,
+      "actual_input_tokens": 218,
+      "output_tokens": 128,
+      "duration_millis": 3250,
+      "syntax_valid": true,
+      "semantically_correct": false,
+      "output": "rule=reset_on_ready_then_advance_mon",
+      "values": {
+        "rule": "reset_on_ready_then_advance_mon"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 0,
+    "input_tokens": 218,
+    "output_tokens": 128,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}
