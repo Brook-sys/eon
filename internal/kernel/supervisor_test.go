@@ -394,6 +394,44 @@ func TestSupervisorTerminalObservationWinsAtDeadline(t *testing.T) {
 	}
 }
 
+func TestSupervisorIgnoresTerminalReceiptFromPreviousReceiverAttempt(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 12, 20, 0, 0, time.UTC)}
+	record := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "receiver-generation", TaskID: "task-generation", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "current attempt", ContextMode: "isolated", Attempt: 1, MaxAttempts: 2, Deadline: clock.Now().Add(time.Minute)}
+	receipt := domain.SubagentSpawnReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: "peer-origin", RequestID: "old-request", SourceSessionID: "source-session", Attempt: 0, Task: record.Task, ContextMode: record.ContextMode, ReceiverSessionID: record.ID, ReceiverAttempt: 0, RecordedAt: clock.Now().Add(-time.Minute), Status: domain.SubagentSpawnReceiptPending, UpdatedAt: clock.Now().Add(-time.Minute)}
+	terminal, err := domain.CompleteSubagentSpawnReceipt(mustLeaseReceipt(t, receipt, "old-worker", clock.Now().Add(-30*time.Second), clock.Now().Add(30*time.Second)), "old-worker", "stale result", clock.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		if err := tx.CreateSubagentRecord(record); err != nil {
+			return err
+		}
+		return tx.CreateSubagentSpawnReceipt(terminal)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{kernel.SessionID(record.ID): {ID: kernel.SessionID(record.ID), Attempt: 1, State: kernel.SessionStateRunning}}}
+	supervisor := kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 0 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	status, err := manager.Status(ctx, kernel.SessionID(record.ID))
+	if err != nil || status.Attempt != 1 || status.State != kernel.SessionStateRunning {
+		t.Fatalf("active generation changed=(%+v,%v)", status, err)
+	}
+}
+
+func mustLeaseReceipt(t *testing.T, receipt domain.SubagentSpawnReceipt, owner string, now, leaseUntil time.Time) domain.SubagentSpawnReceipt {
+	t.Helper()
+	leased, err := domain.LeaseSubagentSpawnReceipt(receipt, owner, now, leaseUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return leased
+}
+
 func TestSupervisorPersistsTerminalWakeEventExactlyOnce(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()

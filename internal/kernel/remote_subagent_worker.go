@@ -23,6 +23,31 @@ func (f RemoteSubagentExecutorFunc) ExecuteRemoteSubagent(ctx context.Context, t
 	return f(ctx, task, contextMode)
 }
 
+// TerminalSubagentObservation converts a durable receiver execution outcome
+// into the process-local projection used by SessionManager. Keeping this
+// conversion in the kernel makes startup restore and live reconciliation obey
+// the same generation/result semantics.
+func TerminalSubagentObservation(receipt domain.SubagentSpawnReceipt) (SubagentObservation, error) {
+	if err := receipt.Validate(); err != nil {
+		return SubagentObservation{}, err
+	}
+	observation := SubagentObservation{
+		ID:      SessionID(receipt.ReceiverSessionID),
+		Attempt: receipt.ReceiverAttempt,
+		State:   SessionStateComplete,
+		Result:  receipt.Result,
+	}
+	switch receipt.Status {
+	case domain.SubagentSpawnReceiptComplete:
+		return observation, nil
+	case domain.SubagentSpawnReceiptFailed:
+		observation.State, observation.Result, observation.Failure = SessionStateFailed, "", receipt.Failure
+		return observation, nil
+	default:
+		return SubagentObservation{}, domain.ErrInvalidSubagentSpawnRPC
+	}
+}
+
 // RemoteSubagentWorker claims durable inbound spawn receipts and executes each
 // admitted generation at most once concurrently. Terminal results are committed
 // before any outbound status delivery so restart never re-executes them.

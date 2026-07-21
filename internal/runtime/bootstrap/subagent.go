@@ -91,9 +91,9 @@ func restoreSubagents(ctx context.Context, store port.Store, manager kernel.Sess
 				// crash in between cannot leave the receiver active until its deadline.
 				terminal, err := reader.TerminalSubagentSpawnReceiptForReceiver(record.ID, record.Attempt)
 				if err == nil {
-					observation := kernel.SubagentObservation{ID: kernel.SessionID(record.ID), Attempt: record.Attempt, State: kernel.SessionStateComplete, Result: terminal.Result}
-					if terminal.Status == domain.SubagentSpawnReceiptFailed {
-						observation.State, observation.Result, observation.Failure = kernel.SessionStateFailed, "", terminal.Failure
+					observation, err := kernel.TerminalSubagentObservation(terminal)
+					if err != nil {
+						return err
 					}
 					if err := manager.PublishStatus(ctx, observation); err != nil {
 						return err

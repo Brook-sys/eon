@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "phase58-live-terminal-recovery-groq",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-tool-v1.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 192,
+  "max_total_output_tokens": 192,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "groq-llama31-8b-phase58",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens"
+    }
+  ]
+}

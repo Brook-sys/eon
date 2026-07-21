@@ -314,6 +314,114 @@ func (m failedPublishErrorManager) PublishStatus(ctx context.Context, observatio
 	return m.SessionManager.PublishStatus(ctx, observation)
 }
 
+type failTerminalOnceManager struct {
+	kernel.SessionManager
+	err    error
+	failed atomic.Bool
+}
+
+func (m *failTerminalOnceManager) PublishStatus(ctx context.Context, observation kernel.SubagentObservation) error {
+	if (observation.State == kernel.SessionStateComplete || observation.State == kernel.SessionStateFailed) && m.failed.CompareAndSwap(false, true) {
+		return m.err
+	}
+	return m.SessionManager.PublishStatus(ctx, observation)
+}
+
+func TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure(t *testing.T) {
+	tests := []struct {
+		name          string
+		executionErr  error
+		wantState     domain.SubagentState
+		wantReceipt   domain.SubagentSpawnReceiptStatus
+		wantResult    string
+		wantErrorCode string
+	}{
+		{name: "complete", wantState: domain.SubagentStateComplete, wantReceipt: domain.SubagentSpawnReceiptComplete, wantResult: "durable evidence"},
+		{name: "failed", executionErr: errors.New("provider unavailable"), wantState: domain.SubagentStateError, wantReceipt: domain.SubagentSpawnReceiptFailed, wantErrorCode: "provider unavailable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := memory.New()
+			clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+			base := kernel.NewLocalSessionManager(clock)
+			receipt := seedRemoteReceipt(t, store, base, clock.Now())
+			if err := store.Update(ctx, func(tx port.Transaction) error {
+				record, err := tx.SubagentRecord(receipt.ReceiverSessionID)
+				if err != nil {
+					return err
+				}
+				record.MaxAttempts = 1
+				return tx.SaveSubagentRecord(record)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			publishErr := errors.New("manager publication unavailable")
+			manager := &failTerminalOnceManager{SessionManager: base, err: publishErr}
+			var calls atomic.Int32
+			worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Lease: time.Minute, Timeout: 30 * time.Second, Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+				calls.Add(1)
+				return "durable evidence", tt.executionErr
+			})}
+			if n, err := worker.ExecuteDue(ctx); n != 0 || !errors.Is(err, publishErr) {
+				t.Fatalf("execute=(%d,%v)", n, err)
+			}
+			if calls.Load() != 1 {
+				t.Fatalf("executor calls=%d", calls.Load())
+			}
+			if err := store.View(ctx, func(r port.Reader) error {
+				got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+				if err != nil {
+					return err
+				}
+				if got.Status != tt.wantReceipt {
+					t.Fatalf("receipt=%+v", got)
+				}
+				record, err := r.SubagentRecord(receipt.ReceiverSessionID)
+				if err != nil {
+					return err
+				}
+				if record.State != domain.SubagentStatePending {
+					t.Fatalf("record changed before reconciliation: %+v", record)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			status, err := base.Status(ctx, kernel.SessionID(receipt.ReceiverSessionID))
+			if err != nil || status.State != kernel.SessionStateRunning {
+				t.Fatalf("status before recovery=(%+v,%v)", status, err)
+			}
+
+			supervisor := kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+			if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+				t.Fatalf("reconcile=(%d,%v)", n, err)
+			}
+			if calls.Load() != 1 {
+				t.Fatalf("terminal recovery re-executed work: calls=%d", calls.Load())
+			}
+			if err := store.View(ctx, func(r port.Reader) error {
+				record, err := r.SubagentRecord(receipt.ReceiverSessionID)
+				if err != nil {
+					return err
+				}
+				if record.State != tt.wantState || record.Result != tt.wantResult || record.ErrorCode != tt.wantErrorCode {
+					t.Fatalf("recovered record=%+v", record)
+				}
+				if _, err := r.ExternalEventByDeduplicationKey("subagent-terminal:" + receipt.ReceiverSessionID); err != nil {
+					return err
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if n, err := supervisor.Reconcile(ctx); err != nil || n != 0 {
+				t.Fatalf("terminal replay=(%d,%v)", n, err)
+			}
+		})
+	}
+}
+
 func TestRemoteSubagentWorkerSurfacesUnknownExpiredFailurePublicationError(t *testing.T) {
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
