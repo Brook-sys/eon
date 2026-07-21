@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase77-dashboard-duplicate-event-v1",
+  "cases": [
+    {
+      "id": "duplicate-sse-event-id",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe dashboard rule when an SSE application event repeats the last already accepted event ID but carries a different payload.",
+      "required_facts": [
+        {"id":"f1","text":"Every application event represents a new durable event-log sequence and therefore must advance strictly beyond the accepted cursor.","priority":10},
+        {"id":"f2","text":"Equality remains valid for ready and page boundaries because those frames may confirm an already accepted cursor without adding a new application event.","priority":10},
+        {"id":"f3","text":"A repeated or regressive application event ID must close the stream, preserve the accepted cursor, reject the replayed payload, and fence queued callbacks.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"application_event_id_must_strictly_advance_or_fail_closed"}
+    }
+  ]
+}

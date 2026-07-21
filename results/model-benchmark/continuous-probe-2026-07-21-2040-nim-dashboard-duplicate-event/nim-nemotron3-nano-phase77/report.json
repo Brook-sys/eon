@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase77-dashboard-duplicate-event-v1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "runs": [
+    {
+      "case_id": "duplicate-sse-event-id",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 298,
+      "actual_input_tokens": 214,
+      "output_tokens": 192,
+      "duration_millis": 2241,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "We need to output exactly one line per key as KEY=VALUE. The allowed outputs: \"A: rule=application_event_id_must_strictly_advance_or_fail_closed\". The task: Choose the safe dashboard rule when an SSE application event repeats the last already accepted event ID but carries a different payload.\n\nWe have facts: F1 says every application event must advance strictly beyond accepted cursor. F2 says equality remains valid for ready and page boundaries because those frames may confirm an already accepted cursor without adding a new application event. F3 says a repeated or regressive application event ID must close the stream, preserve the accepted cursor, reject the replayed payload, and fence queued callbacks.\n\nWe need to choose the safe dashboard rule. The allowed output is a specific key-value: \"A: rule=application_event_id_must_strictly_advance_or_fail_closed\". That seems to be the rule name? The allowed outputs"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 214,
+    "output_tokens": 192,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 1,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}

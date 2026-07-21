@@ -978,8 +978,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       if (!streamIsCurrent(connectionGeneration)) return;
       // EventSource accepts the frame ID independently from application JSON.
       // Preserve that durable cursor even if a malformed payload cannot render.
-      if (!advanceStreamCursor(ev.lastEventId)) {
-        failStreamProtocol(connectionGeneration, "event com cursor inválido ou regressivo");
+      // Every application event represents a new log sequence and must advance
+      // strictly. Equality remains valid for ready/page frames because a
+      // reconnect handshake or page boundary can repeat the accepted cursor,
+      // but accepting an equal event ID would render replayed or conflicting
+      // payload as fresh evidence.
+      const previousCursor = lastSeq;
+      if (!advanceStreamCursor(ev.lastEventId) || (lastSeq.length === previousCursor.length && lastSeq <= previousCursor)) {
+        failStreamProtocol(connectionGeneration, "event com cursor inválido, repetido ou regressivo");
         return;
       }
       try {
