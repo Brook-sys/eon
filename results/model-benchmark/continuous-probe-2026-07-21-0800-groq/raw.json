@@ -1,0 +1,39 @@
+{
+  "response": {
+    "id": "chatcmpl-c6446b13-3bad-47d4-a9ca-a2d41f548b3c",
+    "object": "chat.completion",
+    "created": 1784632086,
+    "model": "llama-3.1-8b-instant",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "{\"tool_call_name\":\"sessions_spawn_remote\",\"arguments\":{\"task\":\"analyze logs\",\"peer_id\":\"node-1\"}}"
+        },
+        "logprobs": null,
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "queue_time": 0.152131792,
+      "prompt_tokens": 95,
+      "prompt_time": 0.008034856,
+      "completion_tokens": 24,
+      "completion_time": 0.031147031,
+      "total_tokens": 119,
+      "total_time": 0.039181887
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_020e283281",
+    "x_groq": {
+      "id": "req_01ky25s43ne75sc05z69g8c4p4",
+      "seed": 118434703
+    },
+    "service_tier": "on_demand"
+  },
+  "transport": {
+    "http_code": 200,
+    "time_total": 0.304967
+  }
+}

@@ -181,17 +181,18 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 }
 
 func (m *PersistentSessionManager) rollbackSpawn(ctx context.Context, id SessionID, cause error) error {
-	// Only compensate process-local admissions that never became durable. If a
-	// record already exists under the same identity, rolling it back would
-	// destroy a live session that merely failed an idempotent write/check.
-	var durableExists bool
-	_ = m.store.View(context.WithoutCancel(ctx), func(reader port.Reader) error {
+	// Only compensate process-local admissions that are definitively absent from
+	// durable storage. A failed Update can be outcome-ambiguous, and an unknown
+	// verification result must not destroy a session whose commit may exist.
+	verifyErr := m.store.View(context.WithoutCancel(ctx), func(reader port.Reader) error {
 		_, err := reader.SubagentRecord(string(id))
-		durableExists = err == nil
-		return nil
+		return err
 	})
-	if durableExists {
+	switch {
+	case verifyErr == nil:
 		return cause
+	case !errors.Is(verifyErr, port.ErrNotFound):
+		return errors.Join(cause, fmt.Errorf("verify durable subagent %s before rollback: %w", id, verifyErr))
 	}
 	if rollbackErr := m.manager.RollbackSpawn(context.WithoutCancel(ctx), id); rollbackErr != nil {
 		return errors.Join(cause, fmt.Errorf("rollback process-local subagent %s: %w", id, rollbackErr))

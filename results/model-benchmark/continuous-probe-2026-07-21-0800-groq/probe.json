@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-07-21T08:00:00-03:00",
+  "provider": "groq",
+  "model": "llama-3.1-8b-instant",
+  "fixture": "cognitive-tool-v1",
+  "calls": 1,
+  "max_tokens": 128,
+  "timeout_s": 30,
+  "retries": 0,
+  "results": [{
+    "http_code": 200,
+    "latency_ms": 305,
+    "input_tokens": 95,
+    "output_tokens": 24,
+    "syntax_valid": true,
+    "semantic_correct": true,
+    "tool_call": "sessions_spawn_remote",
+    "provider_error": false,
+    "rate_limit": false
+  }],
+  "verdict": "QUALIFIED",
+  "notes": "Rotated from NIM nemotron-3-nano-30b-a3b (last probe 2026-07-20 17:40). Clean pass, no retry. Model correctly selected sessions_spawn_remote with expected arguments."
+}
