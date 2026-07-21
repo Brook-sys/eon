@@ -14,7 +14,29 @@ import (
 const (
 	defaultSSEPollInterval = 250 * time.Millisecond
 	maxSSEIdleTicks        = 40 // ~10s with default poll; send keep-alive comment
+	maxSSEImmediatePages   = 8  // bound projection work before yielding to the poll timer
 )
+
+type sseDrainPacer struct {
+	immediatePages int
+}
+
+// continueImmediately permits short bursts while a finite backlog remains,
+// but forces a timer yield after a bounded number of pages. Without this
+// pacing, continuous ingestion can keep HasMore true forever and monopolize a
+// handler goroutine in projection/flush work without observing the poll pace.
+func (p *sseDrainPacer) continueImmediately(hasMore bool) bool {
+	if !hasMore {
+		p.immediatePages = 0
+		return false
+	}
+	p.immediatePages++
+	if p.immediatePages < maxSSEImmediatePages {
+		return true
+	}
+	p.immediatePages = 0
+	return false
+}
 
 // StreamEventsHandler streams append-only event pages as Server-Sent Events.
 // Clients resume with Last-Event-ID or ?after_sequence=. The stream never mutates state.
@@ -94,6 +116,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	idleTicks := 0
+	drainPacer := sseDrainPacer{}
 	for {
 		if err := ctx.Err(); err != nil {
 			return
@@ -130,10 +153,13 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			}); err != nil {
 				return
 			}
-			if page.HasMore {
-				// Drain without sleeping while backlog remains.
+			if drainPacer.continueImmediately(page.HasMore) {
+				// Drain finite backlog in bounded bursts. The pacer forces a
+				// poll-timer yield if ingestion keeps HasMore true continuously.
 				continue
 			}
+		} else {
+			drainPacer.continueImmediately(false)
 		}
 		if len(page.Events) == 0 {
 			idleTicks++

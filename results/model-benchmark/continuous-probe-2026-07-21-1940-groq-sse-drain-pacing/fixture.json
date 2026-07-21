@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase74-sse-drain-pacing-v1",
+  "cases": [
+    {
+      "id": "continuous-sse-backlog",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe server-side pacing rule when an SSE event projection reports has_more=true continuously because new events arrive at least as fast as pages are drained.",
+      "required_facts": [
+        {"id":"f1","text":"Continuing immediately for every has_more page can monopolize projection and flush work indefinitely under continuous ingestion.","priority":10},
+        {"id":"f2","text":"Finite backlog should still drain promptly without sleeping after every page.","priority":10},
+        {"id":"f3","text":"Cursor progress and page delivery must be preserved; pacing must not drop or rewind events.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"drain_bounded_page_bursts_then_yield_to_poll_timer_preserve_cursor"}
+    }
+  ]
+}
