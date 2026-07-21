@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "phase69-dashboard-stream-generation-nim-fallback",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/results/model-benchmark/continuous-probe-2026-07-21-1700-nim-dashboard-stream-generation/fixture.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 192,
+  "max_total_output_tokens": 192,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "nvidia-nim",
+      "binding_id": "nim-llama31-8b-phase69",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase69-dashboard-stream-generation-v1",
+  "model": "llama-3.1-8b-instant",
+  "runs": [
+    {
+      "case_id": "closed-eventsource-late-frame",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 258,
+      "actual_input_tokens": 204,
+      "output_tokens": 10,
+      "duration_millis": 342,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "rule=ignore_callbacks_from_stale_connection_generation",
+      "values": {
+        "rule": "ignore_callbacks_from_stale_connection_generation"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 1,
+    "input_tokens": 204,
+    "output_tokens": 10,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}

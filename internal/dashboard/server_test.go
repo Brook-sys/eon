@@ -134,6 +134,9 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"function validStreamCursor(sequence)",
 		"function resetStreamCursor(sequence)",
 		"function advanceStreamCursor(sequence)",
+		"function streamIsCurrent(connectionGeneration)",
+		"const connectionGeneration = ++streamGeneration",
+		"if (!streamIsCurrent(connectionGeneration)) return",
 		"resetStreamCursor(ev.lastEventId)",
 		"maxUint64Decimal = \"18446744073709551615\"",
 		"/^(0|[1-9][0-9]*)$/.test(next)",
@@ -291,6 +294,77 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	chunk := string(buf[:n])
 	if !strings.Contains(chunk, "event: ready") && !strings.Contains(chunk, "data:") {
 		t.Fatalf("unexpected stream prelude %q", chunk)
+	}
+}
+
+func TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "900"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => {
+  if (!elements[id]) throw new Error("unexpected element " + id);
+  return elements[id];
+};
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "900";
+const streams = [];
+class EventSource {
+  constructor(url) { this.url = url; this.listeners = {}; this.closed = false; streams.push(this); }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + connect + `
+connectStream();
+const first = streams[0];
+elements.afterSeq.value = "10";
+connectStream();
+const second = streams[1];
+if (!first.closed) throw new Error("first EventSource was not closed");
+second.emit("ready", {lastEventId: "10", data: "second ready"});
+second.emit("page", {lastEventId: "20", data: "second page"});
+const baseline = JSON.stringify({
+  lastSeq,
+  afterSeq: elements.afterSeq.value,
+  timeline: elements.timeline.textContent,
+  badge: elements.streamBadge.textContent,
+  badgeClass: elements.streamBadge.className
+});
+first.emit("ready", {lastEventId: "900", data: "stale ready"});
+first.emit("event", {lastEventId: "901", data: JSON.stringify({sequence: 901, kind: "stale"})});
+first.emit("page", {lastEventId: "902", data: "stale page"});
+first.emit("error", {data: "stale error"});
+first.onerror();
+const afterStaleCallbacks = JSON.stringify({
+  lastSeq,
+  afterSeq: elements.afterSeq.value,
+  timeline: elements.timeline.textContent,
+  badge: elements.streamBadge.textContent,
+  badgeClass: elements.streamBadge.className
+});
+if (afterStaleCallbacks !== baseline) throw new Error("stale callbacks mutated replacement stream state");
+if (lastSeq !== "20" || elements.afterSeq.value !== "20") throw new Error("replacement cursor was not authoritative");
+if (elements.streamBadge.textContent !== "SSE live") throw new Error("stale onerror changed replacement badge");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard stream generation behavior failed: %v\n%s", err, output)
 	}
 }
 

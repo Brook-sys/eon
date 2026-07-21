@@ -502,6 +502,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   const el = (id) => document.getElementById(id);
   const maxUint64Decimal = "18446744073709551615";
   let es = null;
+  let streamGeneration = 0;
   let lastSeq = "0";
   let lastMissionRevision = null;
   let inspectorRequestGeneration = 0;
@@ -877,8 +878,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     el("afterSeq").value = next;
   }
 
+  function streamIsCurrent(connectionGeneration) {
+    return connectionGeneration === streamGeneration;
+  }
+
   function connectStream() {
     if (es) { es.close(); es = null; }
+    const connectionGeneration = ++streamGeneration;
     const after = el("afterSeq").value.trim() || "0";
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";
@@ -889,6 +895,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     el("streamBadge").textContent = "SSE connecting";
     el("streamBadge").className = "badge";
     es.addEventListener("ready", function (ev) {
+      if (!streamIsCurrent(connectionGeneration)) return;
       el("streamBadge").textContent = "SSE live";
       el("streamBadge").className = "badge live";
       // A ready frame belongs to a newly created stream and carries the
@@ -897,6 +904,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       appendTimeline("# ready " + ev.data);
     });
     es.addEventListener("event", function (ev) {
+      if (!streamIsCurrent(connectionGeneration)) return;
       try {
         const data = JSON.parse(ev.data);
         advanceStreamCursor(ev.lastEventId);
@@ -906,13 +914,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       }
     });
     es.addEventListener("page", function (ev) {
+      if (!streamIsCurrent(connectionGeneration)) return;
       advanceStreamCursor(ev.lastEventId);
       appendTimeline("# page " + ev.data);
     });
     es.addEventListener("error", function (ev) {
+      if (!streamIsCurrent(connectionGeneration)) return;
       if (ev && ev.data) appendTimeline("# error " + ev.data);
     });
     es.onerror = function () {
+      if (!streamIsCurrent(connectionGeneration)) return;
       el("streamBadge").textContent = "SSE error/retry";
       el("streamBadge").className = "badge err";
     };

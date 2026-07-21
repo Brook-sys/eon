@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase69-dashboard-stream-generation-v1",
+  "cases": [
+    {
+      "id": "closed-eventsource-late-frame",
+      "operation": "SYNTHESIZE",
+      "task": "Choose how a dashboard should handle a late SSE page frame from EventSource connection A after the operator has closed A and opened connection B with an intentional rewind cursor.",
+      "required_facts": [
+        {"id":"f1","text":"Closing EventSource A does not prove that an already queued callback from A cannot run later.","priority":10},
+        {"id":"f2","text":"A late frame from A could overwrite B's authoritative cursor baseline.","priority":10},
+        {"id":"f3","text":"Each callback can capture a connection generation and mutate UI state only when it still matches the current generation.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"ignore_callbacks_from_stale_connection_generation"}
+    }
+  ]
+}
