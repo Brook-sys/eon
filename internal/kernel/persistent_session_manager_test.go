@@ -55,6 +55,41 @@ func TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent(t *testing.T)
 	}
 }
 
+func TestPersistentSessionManagerRemoteSpawnIsSingleGeneration(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 9, 35, 0, 0, time.UTC)}
+	local, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{MissionID: "mission-remote", MaxAttempts: 3, Timeout: 5 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := domain.SubagentSpawnRequest{RequestID: "request-1", SessionID: "source-1", Attempt: 2, Task: "inspect", ContextMode: "isolated"}
+	ack, err := manager.AcceptRemoteSpawn(ctx, "peer-origin", request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(ack.ReceiverSessionID)
+		if err != nil {
+			return err
+		}
+		receipt, err := r.SubagentSpawnReceipt("peer-origin", request.RequestID)
+		if err != nil {
+			return err
+		}
+		if record.MaxAttempts != 1 || receipt.ReceiverAttempt != record.Attempt {
+			t.Fatalf("record=%+v receipt=%+v", record, receipt)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // failingUpdateStore wraps a real store but injects an error on the first Update
 // call, simulating a persistence failure after process-local admission.
 type failingUpdateStore struct {

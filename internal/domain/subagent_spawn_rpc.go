@@ -75,14 +75,18 @@ func (s SubagentStatusDeliveryState) valid() bool {
 // request identity and the exact successful acknowledgement so a response lost
 // after commit can be replayed after process restart without spawning again.
 type SubagentSpawnReceipt struct {
-	SchemaVersion     int                         `json:"schema_version"`
-	CallerPeerID      string                      `json:"caller_peer_id"`
-	RequestID         string                      `json:"request_id"`
-	SourceSessionID   string                      `json:"source_session_id"`
-	Attempt           int                         `json:"attempt"`
-	Task              string                      `json:"task"`
-	ContextMode       string                      `json:"context_mode"`
-	ReceiverSessionID string                      `json:"receiver_session_id"`
+	SchemaVersion     int    `json:"schema_version"`
+	CallerPeerID      string `json:"caller_peer_id"`
+	RequestID         string `json:"request_id"`
+	SourceSessionID   string `json:"source_session_id"`
+	Attempt           int    `json:"attempt"`
+	Task              string `json:"task"`
+	ContextMode       string `json:"context_mode"`
+	ReceiverSessionID string `json:"receiver_session_id"`
+	// ReceiverAttempt identifies the process-local receiver generation that
+	// owns this execution receipt. It is distinct from Attempt, which belongs
+	// to the caller's source session generation.
+	ReceiverAttempt   int                         `json:"receiver_attempt"`
 	RecordedAt        time.Time                   `json:"recorded_at"`
 	Status            SubagentSpawnReceiptStatus  `json:"status,omitempty"`
 	LeaseOwner        string                      `json:"lease_owner,omitempty"`
@@ -97,7 +101,7 @@ type SubagentSpawnReceipt struct {
 
 func (r SubagentSpawnReceipt) Validate() error {
 	request := SubagentSpawnRequest{RequestID: r.RequestID, SessionID: r.SourceSessionID, Attempt: r.Attempt, Task: r.Task, ContextMode: r.ContextMode}
-	if r.SchemaVersion != SchemaVersionV1 || !ValidSubagentRPCField(r.CallerPeerID) || ValidateSubagentSpawnRequest(request) != nil || !ValidSubagentRPCField(r.ReceiverSessionID) || r.RecordedAt.IsZero() {
+	if r.SchemaVersion != SchemaVersionV1 || !ValidSubagentRPCField(r.CallerPeerID) || ValidateSubagentSpawnRequest(request) != nil || !ValidSubagentRPCField(r.ReceiverSessionID) || r.ReceiverAttempt < 0 || r.RecordedAt.IsZero() {
 		return ErrInvalidSubagentSpawnRPC
 	}
 	// Receipts written before the receiver queue was introduced had none of the

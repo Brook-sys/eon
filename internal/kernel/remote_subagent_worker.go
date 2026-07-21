@@ -77,7 +77,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			if err := w.failExpired(ctx, candidate); err != nil && !errors.Is(err, port.ErrConflict) {
 				return processed, err
 			}
-			_ = w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(candidate.ReceiverSessionID), Attempt: 0, State: SessionStateFailed, Failure: "execution_lease_expired_effect_unknown"})
+			_ = w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(candidate.ReceiverSessionID), Attempt: candidate.ReceiverAttempt, State: SessionStateFailed, Failure: "execution_lease_expired_effect_unknown"})
 			processed++
 			continue
 		}
@@ -104,7 +104,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			return processed, err
 		}
 
-		if err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: 0, State: SessionStateRunning}); err != nil {
+		if err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: leased.ReceiverAttempt, State: SessionStateRunning}); err != nil {
 			return processed, fmt.Errorf("publish receiver running status: %w", err)
 		}
 		execCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -129,7 +129,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		}); err != nil {
 			return processed, err
 		}
-		terminal := SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: 0, State: SessionStateComplete, Result: result}
+		terminal := SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: leased.ReceiverAttempt, State: SessionStateComplete, Result: result}
 		if execErr != nil {
 			terminal.State, terminal.Result, terminal.Failure = SessionStateFailed, "", boundedFailure(execErr)
 		}

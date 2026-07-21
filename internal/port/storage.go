@@ -209,7 +209,7 @@ type ContinuityReader interface {
 	DueSubagentDispatches(time.Time, int) ([]domain.SubagentDispatch, error)
 	EffectUnknownSubagentDispatches(time.Time, int) ([]domain.SubagentDispatch, error)
 	SubagentSpawnReceipt(callerPeerID, requestID string) (domain.SubagentSpawnReceipt, error)
-	TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string) (domain.SubagentSpawnReceipt, error)
+	TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string, receiverAttempt int) (domain.SubagentSpawnReceipt, error)
 	DueSubagentSpawnReceipts(time.Time, int) ([]domain.SubagentSpawnReceipt, error)
 	TerminalUndeliveredSubagentSpawnReceipts(int) ([]domain.SubagentSpawnReceipt, error)
 	SubagentStatusDeliveriesRequiringReconciliation(time.Time, int) ([]domain.SubagentSpawnReceipt, error)

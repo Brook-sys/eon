@@ -430,6 +430,47 @@ func TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle(t *testing.T) {
 	}
 }
 
+func TestOpenDoesNotRestoreReceiverTerminalFromPreviousGeneration(t *testing.T) {
+	ctx := context.Background()
+	dbPath := t.TempDir() + "/runtime.db"
+	opts := bootstrap.Options{StoreBackend: bootstrap.StorageSQLite, SQLitePath: dbPath, MissionID: "mission-receiver-generation", Subagent: &bootstrap.SubagentOptions{Enabled: true, MaxConcurrent: 2, MaxAttempts: 2, Timeout: time.Minute}}
+	first, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := first.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "receiver work", ContextMode: "isolated", Labels: map[string]string{"task_id": "receiver-generation"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := first.Clock.Now().UTC()
+	if err := first.Store.Update(ctx, func(tx port.Transaction) error {
+		record, err := tx.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		record.Attempt, record.State, record.UpdatedAt = 1, domain.SubagentStatePending, now.Add(time.Second)
+		if err := tx.SaveSubagentRecord(record); err != nil {
+			return err
+		}
+		receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: "request-old", SourceSessionID: "source-old", Attempt: 0, Task: "receiver work", ContextMode: "isolated", ReceiverSessionID: string(id), ReceiverAttempt: 0, RecordedAt: now, Status: domain.SubagentSpawnReceiptComplete, UpdatedAt: now.Add(time.Second), Result: "stale result", StatusDelivery: domain.SubagentStatusDeliveryPending}
+		return tx.CreateSubagentSpawnReceipt(receipt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	second, err := bootstrap.Open(ctx, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = second.Close(ctx) })
+	status, err := second.Subagents.Status(ctx, id)
+	if err != nil || status.Attempt != 1 || status.State != kernel.SessionStatePending || status.Result != "" {
+		t.Fatalf("restored status=%+v err=%v", status, err)
+	}
+}
+
 func TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart(t *testing.T) {
 	ctx := context.Background()
 	dbPath := t.TempDir() + "/runtime.db"

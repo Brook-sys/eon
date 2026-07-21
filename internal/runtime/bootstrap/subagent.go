@@ -89,7 +89,7 @@ func restoreSubagents(ctx context.Context, store port.Store, manager kernel.Sess
 				// Receiver execution commits its terminal receipt before publishing to
 				// the process-local manager. Rehydrate that durable terminal first so a
 				// crash in between cannot leave the receiver active until its deadline.
-				terminal, err := reader.TerminalSubagentSpawnReceiptForReceiver(record.ID)
+				terminal, err := reader.TerminalSubagentSpawnReceiptForReceiver(record.ID, record.Attempt)
 				if err == nil {
 					observation := kernel.SubagentObservation{ID: kernel.SessionID(record.ID), Attempt: record.Attempt, State: kernel.SessionStateComplete, Result: terminal.Result}
 					if terminal.Status == domain.SubagentSpawnReceiptFailed {

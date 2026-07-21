@@ -104,6 +104,13 @@ func TestSubagentSpawnReceiptStorageDueSaveAndCheckpoint(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	mutatedGeneration := delivered
+	mutatedGeneration.ReceiverAttempt++
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentSpawnReceipt(mutatedGeneration, delivered.Status, delivered.UpdatedAt)
+	}); !errors.Is(err, port.ErrConflict) {
+		t.Fatalf("receiver generation mutation error=%v", err)
+	}
 	if err := store.View(context.Background(), func(r port.Reader) error {
 		pending, err := r.TerminalUndeliveredSubagentSpawnReceipts(10)
 		if err != nil {
@@ -156,11 +163,13 @@ func TestTerminalSubagentSpawnReceiptForReceiverElectsDeterministically(t *testi
 	late := makeTerminal("peer-a", "late", now, now.Add(3*time.Second), domain.SubagentSpawnReceiptComplete)
 	tieB := makeTerminal("peer-b", "tie-b", now.Add(time.Second), now.Add(2*time.Second), domain.SubagentSpawnReceiptFailed)
 	tieA := makeTerminal("peer-a", "tie-a", now.Add(time.Second), now.Add(2*time.Second), domain.SubagentSpawnReceiptComplete)
+	newGeneration := makeTerminal("peer-c", "new-generation", now, now.Add(time.Second), domain.SubagentSpawnReceiptComplete)
+	newGeneration.ReceiverAttempt = 1
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.CreateSubagentRecord(record); err != nil {
 			return err
 		}
-		for _, receipt := range []domain.SubagentSpawnReceipt{late, tieB, tieA} {
+		for _, receipt := range []domain.SubagentSpawnReceipt{late, tieB, tieA, newGeneration} {
 			if err := tx.CreateSubagentSpawnReceipt(receipt); err != nil {
 				return err
 			}
@@ -170,14 +179,18 @@ func TestTerminalSubagentSpawnReceiptForReceiverElectsDeterministically(t *testi
 		t.Fatal(err)
 	}
 	if err := store.View(context.Background(), func(r port.Reader) error {
-		winner, err := r.TerminalSubagentSpawnReceiptForReceiver(record.ID)
+		winner, err := r.TerminalSubagentSpawnReceiptForReceiver(record.ID, 0)
 		if err != nil {
 			return err
 		}
 		if winner.RequestID != tieA.RequestID {
 			t.Fatalf("winner=%+v", winner)
 		}
-		if _, err := r.TerminalSubagentSpawnReceiptForReceiver("missing"); !errors.Is(err, port.ErrNotFound) {
+		winner, err = r.TerminalSubagentSpawnReceiptForReceiver(record.ID, 1)
+		if err != nil || winner.RequestID != newGeneration.RequestID {
+			t.Fatalf("generation 1 winner=%+v err=%v", winner, err)
+		}
+		if _, err := r.TerminalSubagentSpawnReceiptForReceiver("missing", 0); !errors.Is(err, port.ErrNotFound) {
 			t.Fatalf("missing error=%v", err)
 		}
 		return nil

@@ -113,6 +113,13 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 		MaxAttempts:     m.policy.MaxAttempts,
 		Deadline:        now.Add(m.policy.Timeout),
 	}
+	// A receiver spawn receipt currently represents exactly one execution
+	// generation. Until the inbound queue itself can create generation-scoped
+	// retry receipts, fail closed instead of rearming the local session without
+	// durable work for the new generation.
+	if callerPeerID != "" {
+		record.MaxAttempts = 1
+	}
 	var dispatch domain.SubagentDispatch
 	if record.TransportPeerID != "" {
 		_ = m.store.View(ctx, func(reader port.Reader) error {
@@ -161,9 +168,9 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 			}
 		}
 		if callerPeerID != "" {
-			receipt := domain.SubagentSpawnReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: callerPeerID, RequestID: request.RequestID, SourceSessionID: request.SessionID, Attempt: request.Attempt, Task: request.Task, ContextMode: request.ContextMode, ReceiverSessionID: string(id), RecordedAt: now}
+			receipt := domain.SubagentSpawnReceipt{SchemaVersion: domain.SchemaVersionV1, CallerPeerID: callerPeerID, RequestID: request.RequestID, SourceSessionID: request.SessionID, Attempt: request.Attempt, Task: request.Task, ContextMode: request.ContextMode, ReceiverSessionID: string(id), ReceiverAttempt: record.Attempt, RecordedAt: now}
 			if existing, readErr := tx.SubagentSpawnReceipt(callerPeerID, request.RequestID); readErr == nil {
-				if !existing.Matches(callerPeerID, request) || existing.ReceiverSessionID != string(id) {
+				if !existing.Matches(callerPeerID, request) || existing.ReceiverSessionID != string(id) || existing.ReceiverAttempt != record.Attempt {
 					return fmt.Errorf("%w: durable subagent spawn receipt differs", ErrSessionConflict)
 				}
 			} else if !errors.Is(readErr, port.ErrNotFound) {

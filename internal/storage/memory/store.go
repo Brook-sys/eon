@@ -2931,14 +2931,14 @@ func (r reader) SubagentSpawnReceipt(callerPeerID, requestID string) (domain.Sub
 	}
 	return v, nil
 }
-func (t transaction) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string) (domain.SubagentSpawnReceipt, error) {
-	return reader(t).TerminalSubagentSpawnReceiptForReceiver(receiverSessionID)
+func (t transaction) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string, receiverAttempt int) (domain.SubagentSpawnReceipt, error) {
+	return reader(t).TerminalSubagentSpawnReceiptForReceiver(receiverSessionID, receiverAttempt)
 }
-func (r reader) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string) (domain.SubagentSpawnReceipt, error) {
+func (r reader) TerminalSubagentSpawnReceiptForReceiver(receiverSessionID string, receiverAttempt int) (domain.SubagentSpawnReceipt, error) {
 	var winner domain.SubagentSpawnReceipt
 	found := false
 	for _, receipt := range r.state.subagentSpawnReceipts {
-		if receipt.ReceiverSessionID != receiverSessionID || (receipt.Status != domain.SubagentSpawnReceiptComplete && receipt.Status != domain.SubagentSpawnReceiptFailed) {
+		if receipt.ReceiverSessionID != receiverSessionID || receipt.ReceiverAttempt != receiverAttempt || (receipt.Status != domain.SubagentSpawnReceiptComplete && receipt.Status != domain.SubagentSpawnReceiptFailed) {
 			continue
 		}
 		if !found || terminalSubagentSpawnReceiptLess(receipt, winner) {
@@ -3080,7 +3080,7 @@ func (t transaction) SaveSubagentSpawnReceipt(v domain.SubagentSpawnReceipt, exp
 	if currentStatus != expectedStatus || !currentUpdatedAt.Equal(expectedUpdatedAt) {
 		return fmt.Errorf("%w: stale subagent spawn receipt state", port.ErrConflict)
 	}
-	if !v.Matches(current.CallerPeerID, domain.SubagentSpawnRequest{RequestID: current.RequestID, SessionID: current.SourceSessionID, Attempt: current.Attempt, Task: current.Task, ContextMode: current.ContextMode}) || v.ReceiverSessionID != current.ReceiverSessionID || !v.RecordedAt.Equal(current.RecordedAt) {
+	if !v.Matches(current.CallerPeerID, domain.SubagentSpawnRequest{RequestID: current.RequestID, SessionID: current.SourceSessionID, Attempt: current.Attempt, Task: current.Task, ContextMode: current.ContextMode}) || v.ReceiverSessionID != current.ReceiverSessionID || v.ReceiverAttempt != current.ReceiverAttempt || !v.RecordedAt.Equal(current.RecordedAt) {
 		return fmt.Errorf("%w: immutable subagent spawn receipt identity changed", port.ErrConflict)
 	}
 	t.state.subagentSpawnReceipts[key] = v
