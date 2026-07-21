@@ -500,8 +500,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   const controlBase = API_BASE + "/control";
 
   const el = (id) => document.getElementById(id);
+  const maxUint64Decimal = "18446744073709551615";
   let es = null;
-  let lastSeq = 0;
+  let lastSeq = "0";
   let lastMissionRevision = null;
   let inspectorRequestGeneration = 0;
 
@@ -854,6 +855,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     box.scrollTop = box.scrollHeight;
   }
 
+  function advanceStreamCursor(sequence) {
+    const next = String(sequence || "").trim();
+    if (!/^(0|[1-9][0-9]*)$/.test(next)) return;
+    if (next.length > maxUint64Decimal.length || (next.length === maxUint64Decimal.length && next > maxUint64Decimal)) return;
+    if (next.length < lastSeq.length || (next.length === lastSeq.length && next < lastSeq)) return;
+    lastSeq = next;
+    el("afterSeq").value = next;
+  }
+
   function connectStream() {
     if (es) { es.close(); es = null; }
     const after = el("afterSeq").value.trim() || "0";
@@ -868,21 +878,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     es.addEventListener("ready", function (ev) {
       el("streamBadge").textContent = "SSE live";
       el("streamBadge").className = "badge live";
+      advanceStreamCursor(ev.lastEventId);
       appendTimeline("# ready " + ev.data);
     });
     es.addEventListener("event", function (ev) {
       try {
         const data = JSON.parse(ev.data);
-        if (data.sequence) {
-          lastSeq = data.sequence;
-          el("afterSeq").value = String(lastSeq);
-        }
+        advanceStreamCursor(ev.lastEventId);
         appendTimeline(String(data.sequence||"?") + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
       } catch {
         appendTimeline(ev.data);
       }
     });
     es.addEventListener("page", function (ev) {
+      advanceStreamCursor(ev.lastEventId);
       appendTimeline("# page " + ev.data);
     });
     es.addEventListener("error", function (ev) {

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase67-dashboard-page-cursor-v1",
+  "cases": [
+    {
+      "id": "filtered-page-cursor",
+      "operation": "SYNTHESIZE",
+      "task": "Choose how an operator dashboard should persist its editable reconnect cursor after an SSE page frame reports next_sequence=5000 but emitted zero matching events.",
+      "required_facts": [
+        {"id":"f1","text":"The server examined all event sequences through 5000 and emitted a page frame with next_sequence=5000.","priority":10},
+        {"id":"f2","text":"No correlated event was emitted, so updating the cursor only from event frames leaves the dashboard input stale.","priority":10},
+        {"id":"f3","text":"A later manual reconnect uses the dashboard input as after_sequence.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"advance_dashboard_cursor_to_page_next_sequence_monotonically"}
+    }
+  ]
+}
