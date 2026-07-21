@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-07-21T14:05:00-03:00",
+  "provider": "groq",
+  "model": "llama-3.1-8b-instant",
+  "fixture": "phase61-extract-json-v1",
+  "objective": "Exercise a different provider and a simple strict-JSON extraction task while hardening bounded completeness signals in inspector audit projections.",
+  "calls": 1,
+  "max_calls": 1,
+  "context_tokens": 2048,
+  "max_output_tokens": 128,
+  "max_total_output_tokens": 128,
+  "timeout_seconds": 30,
+  "retries": 0,
+  "results": [
+    {
+      "http_code": 200,
+      "latency_ms": 561,
+      "input_tokens": 172,
+      "output_tokens": 128,
+      "syntax_valid": false,
+      "semantic_correct": false,
+      "provider_error": false,
+      "rate_limit": false,
+      "timeout": false,
+      "error_kind": "VALIDATION"
+    }
+  ],
+  "analysis": "The authenticated Groq endpoint completed one bounded inference with no provider, quota, or timeout error. The deployment emitted a truncated Python implementation instead of the required JSON object and consumed the full 128-token output ceiling, so syntax and semantic validation both failed. This is current evidence of instruction/framing variability under a tight output cap, not authority to change routing or canonical state.",
+  "comparison": "The same Groq deployment produced valid strict JSON for the tool-routing fixture at 12:30, but later failed that framing at 12:50. This different EXTRACT task also failed strict JSON, reinforcing observed variability while changing both task class and prompt rather than repeating the prior tool case.",
+  "next_experiment": "Rotate back to NVIDIA NIM or another healthy deployment and compare the same one-case extraction fixture with a 192-token ceiling before drawing a model-format compatibility conclusion."
+}

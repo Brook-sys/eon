@@ -15,20 +15,21 @@ import (
 // OperationDetail reconstructs an operation and the official records that
 // explain its outcome without relying on model chain-of-thought.
 type OperationDetail struct {
-	SchemaVersion  int                        `json:"schema_version"`
-	Operation      domain.Operation           `json:"operation"`
-	Spec           *domain.OperationSpec      `json:"spec,omitempty"`
-	Inquiry        *domain.Inquiry            `json:"inquiry,omitempty"`
-	Question       *domain.Question           `json:"question,omitempty"`
-	RawOutputs     []domain.RawModelOutput    `json:"raw_model_outputs"`
-	Proposed       []domain.ProposedChangeSet `json:"proposed_change_sets"`
-	Accepted       []domain.AcceptedChangeSet `json:"accepted_change_sets"`
-	Commits        []domain.Commit            `json:"commits"`
-	CommitReceipts []domain.CommitReceipt     `json:"commit_receipts"`
-	Validations    []domain.ValidationReceipt `json:"validation_receipts"`
-	Events         []domain.Event             `json:"events"`
-	Idempotency    *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
-	HeadCommit     *domain.Commit             `json:"head_commit,omitempty"`
+	SchemaVersion   int                        `json:"schema_version"`
+	Operation       domain.Operation           `json:"operation"`
+	Spec            *domain.OperationSpec      `json:"spec,omitempty"`
+	Inquiry         *domain.Inquiry            `json:"inquiry,omitempty"`
+	Question        *domain.Question           `json:"question,omitempty"`
+	RawOutputs      []domain.RawModelOutput    `json:"raw_model_outputs"`
+	Proposed        []domain.ProposedChangeSet `json:"proposed_change_sets"`
+	Accepted        []domain.AcceptedChangeSet `json:"accepted_change_sets"`
+	Commits         []domain.Commit            `json:"commits"`
+	CommitReceipts  []domain.CommitReceipt     `json:"commit_receipts"`
+	Validations     []domain.ValidationReceipt `json:"validation_receipts"`
+	Events          []domain.Event             `json:"events"`
+	EventsTruncated bool                       `json:"events_truncated"`
+	Idempotency     *domain.IdempotencyRecord  `json:"idempotency,omitempty"`
+	HeadCommit      *domain.Commit             `json:"head_commit,omitempty"`
 	// ModelRouting is a derived, read-only summary of P2 binding selections.
 	// Empty when the operation has no persisted routing decision.
 	ModelRouting *ModelRoutingSummary `json:"model_routing,omitempty"`
@@ -105,13 +106,14 @@ type ModelAdaptationPlanView struct {
 
 // CommitDetail correlates a commit with its proposal and validation receipts.
 type CommitDetail struct {
-	SchemaVersion int                        `json:"schema_version"`
-	Commit        domain.Commit              `json:"commit"`
-	Receipt       *domain.CommitReceipt      `json:"commit_receipt,omitempty"`
-	Accepted      *domain.AcceptedChangeSet  `json:"accepted_change_set,omitempty"`
-	Proposed      *domain.ProposedChangeSet  `json:"proposed_change_set,omitempty"`
-	Validations   []domain.ValidationReceipt `json:"validation_receipts"`
-	Events        []domain.Event             `json:"events"`
+	SchemaVersion   int                        `json:"schema_version"`
+	Commit          domain.Commit              `json:"commit"`
+	Receipt         *domain.CommitReceipt      `json:"commit_receipt,omitempty"`
+	Accepted        *domain.AcceptedChangeSet  `json:"accepted_change_set,omitempty"`
+	Proposed        *domain.ProposedChangeSet  `json:"proposed_change_set,omitempty"`
+	Validations     []domain.ValidationReceipt `json:"validation_receipts"`
+	Events          []domain.Event             `json:"events"`
+	EventsTruncated bool                       `json:"events_truncated"`
 }
 
 // CommandDetail shows an operator command and its receipt without write access.
@@ -123,7 +125,7 @@ type CommandDetail struct {
 	EventsTruncated bool                   `json:"events_truncated"`
 }
 
-const maxCommandEventScan = 5000
+const maxCorrelationEventScan = 5000
 
 // OperationInspector loads one operation and related official records.
 func (p *Projector) OperationInspector(ctx context.Context, operationID domain.OperationID) (OperationDetail, error) {
@@ -174,11 +176,12 @@ func (p *Projector) OperationInspector(ctx context.Context, operationID domain.O
 		}
 
 		// Correlate by scanning the event log for this operation.
-		events, err := collectMatchingEvents(r, EventFilter{OperationID: operationID, Limit: MaxEventPageLimit})
+		events, truncated, err := collectMatchingEvents(r, EventFilter{OperationID: operationID, Limit: MaxEventPageLimit})
 		if err != nil {
 			return err
 		}
 		detail.Events = events
+		detail.EventsTruncated = truncated
 
 		// Commit linkage is carried on events and on the operation idempotency key.
 		seenCommits := map[domain.CommitID]struct{}{}
@@ -486,11 +489,12 @@ func (p *Projector) CommitInspector(ctx context.Context, commitID domain.CommitI
 		} else if !errors.Is(err, port.ErrNotFound) {
 			return err
 		}
-		events, err := collectMatchingEvents(r, EventFilter{CommitID: commitID, Limit: MaxEventPageLimit})
+		events, truncated, err := collectMatchingEvents(r, EventFilter{CommitID: commitID, Limit: MaxEventPageLimit})
 		if err != nil {
 			return err
 		}
 		detail.Events = events
+		detail.EventsTruncated = truncated
 		return nil
 	})
 	return detail, err
@@ -533,9 +537,9 @@ func (p *Projector) CommandInspector(ctx context.Context, commandID domain.Comma
 func collectCommandEvents(r port.Reader, commandID domain.CommandID, receipt domain.CommandReceipt) ([]domain.Event, bool, error) {
 	matched := make([]domain.Event, 0)
 	var after uint64
-	for scanned := 0; scanned < maxCommandEventScan; {
+	for scanned := 0; scanned < maxCorrelationEventScan; {
 		limit := MaxEventPageLimit
-		if remaining := maxCommandEventScan - scanned; remaining < limit {
+		if remaining := maxCorrelationEventScan - scanned; remaining < limit {
 			limit = remaining
 		}
 		batch, err := r.Events(after, limit)
@@ -611,7 +615,7 @@ func appendUniqueValidation(items []domain.ValidationReceipt, item domain.Valida
 	return append(items, item)
 }
 
-func collectMatchingEvents(r port.Reader, filter EventFilter) ([]domain.Event, error) {
+func collectMatchingEvents(r port.Reader, filter EventFilter) ([]domain.Event, bool, error) {
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = DefaultEventPageLimit
@@ -621,29 +625,38 @@ func collectMatchingEvents(r port.Reader, filter EventFilter) ([]domain.Event, e
 	}
 	matched := make([]domain.Event, 0, limit)
 	after := filter.AfterSequence
-	for {
-		batch, err := r.Events(after, MaxEventPageLimit)
+	for scanned := 0; scanned < maxCorrelationEventScan; {
+		batchLimit := MaxEventPageLimit
+		if remaining := maxCorrelationEventScan - scanned; remaining < batchLimit {
+			batchLimit = remaining
+		}
+		batch, err := r.Events(after, batchLimit)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if len(batch) == 0 {
-			break
+			return matched, false, nil
 		}
 		for _, event := range batch {
 			if !eventMatches(event, filter) {
 				continue
 			}
-			matched = append(matched, event)
-			if len(matched) >= limit {
-				return matched, nil
+			if len(matched) == limit {
+				return matched, true, nil
 			}
+			matched = append(matched, event)
 		}
+		scanned += len(batch)
 		after = batch[len(batch)-1].Sequence
-		if len(batch) < MaxEventPageLimit {
-			break
+		if len(batch) < batchLimit {
+			return matched, false, nil
 		}
 	}
-	return matched, nil
+	rest, err := r.Events(after, 1)
+	if err != nil {
+		return nil, false, err
+	}
+	return matched, len(rest) > 0, nil
 }
 
 // Health is a process liveness projection independent of mission detail.

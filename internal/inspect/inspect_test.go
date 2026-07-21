@@ -227,6 +227,84 @@ func TestOperationInspectorOmitsModelRecoveryWithoutSignal(t *testing.T) {
 	}
 }
 
+func TestOperationInspectorReportsCorrelatedEventProjectionTruncation(t *testing.T) {
+	store, _, operation, now := seedRuntime(t)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < inspect.MaxEventPageLimit+1; i++ {
+			kind := "operation.model_invoked"
+			if i == inspect.MaxEventPageLimit {
+				kind = "operation.model_exhausted"
+			}
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_operation_many_" + itoa(uint64(i+1))),
+				Kind:          kind,
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Second),
+				OperationID:   operation.ID,
+				PayloadRef:    "operation-event;recovery=1",
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !detail.EventsTruncated {
+		t.Fatal("events_truncated = false, want true after correlated-event projection limit")
+	}
+	if len(detail.Events) != inspect.MaxEventPageLimit {
+		t.Fatalf("events = %d, want %d", len(detail.Events), inspect.MaxEventPageLimit)
+	}
+	if detail.ModelRecovery == nil {
+		t.Fatal("expected bounded recovery summary")
+	}
+	if detail.ModelRecovery.Exhausted {
+		t.Fatal("summary invented exhausted state from an event outside the bounded projection")
+	}
+}
+
+func TestOperationInspectorReportsGlobalScanTruncation(t *testing.T) {
+	store, _, operation, now := seedRuntime(t)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < 5001; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_operation_noise_" + itoa(uint64(i+1))),
+				Kind:          "test.unrelated",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Second),
+				PayloadRef:    "unrelated",
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.OperationInspector(context.Background(), operation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !detail.EventsTruncated {
+		t.Fatal("events_truncated = false, want true after global scan limit")
+	}
+}
+
 func TestOperationInspectorCorrelatesCommitChain(t *testing.T) {
 	store, mission, operation, now := seedRuntime(t)
 	commit := domain.Commit{
@@ -316,6 +394,84 @@ func TestOperationInspectorCorrelatesCommitChain(t *testing.T) {
 	}
 	if commitDetail.Proposed == nil || commitDetail.Accepted == nil || commitDetail.Receipt == nil {
 		t.Fatalf("commit detail incomplete: %#v", commitDetail)
+	}
+}
+
+func TestCommitInspectorReportsCorrelatedEventProjectionTruncation(t *testing.T) {
+	store, mission, operation, now := seedRuntime(t)
+	commit := domain.Commit{
+		SchemaVersion: domain.SchemaVersionV1, ID: "commit_many_events", AcceptedChangeSetID: "accepted_many_events",
+		MissionRevision: mission.ID, BaseCommitID: domain.GenesisCommitID, Version: 1,
+		CommittedAt: now, ReceiptID: "receipt_many_events", IdempotencyKey: operation.IdempotencyKey,
+	}
+	accepted := domain.AcceptedChangeSet{
+		SchemaVersion: domain.SchemaVersionV1, ID: commit.AcceptedChangeSetID, ProposedChangeSetID: "proposed_many_events",
+		ValidationReceiptIDs: []domain.ReceiptID{"validation_many_events"}, AcceptedAt: now, PolicyVersion: "v1",
+	}
+	proposed := domain.ProposedChangeSet{
+		SchemaVersion: domain.SchemaVersionV1, ID: accepted.ProposedChangeSetID, MissionRevision: mission.ID,
+		OperationID: operation.ID, BaseCommitID: domain.GenesisCommitID, ReadSet: []string{}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "observation_many_events", PayloadRef: "payload_many_events"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"}, Provenance: "test", IdempotencyKey: operation.IdempotencyKey,
+	}
+	validation := domain.ValidationReceipt{
+		SchemaVersion: domain.SchemaVersionV1, ID: accepted.ValidationReceiptIDs[0], OperationID: operation.ID,
+		ChangeSetID: proposed.ID, ValidatorID: "schema", Passed: true, ArtifactRef: "artifact_many_events", ProducedAt: now,
+	}
+	raw := domain.RawModelOutput{
+		SchemaVersion: domain.SchemaVersionV1, ID: validation.ArtifactRef, OperationID: operation.ID,
+		Model: "test", Content: `{"ok":true}`, ContentHash: "hash_many_events", CreatedAt: now,
+	}
+	receipt := domain.CommitReceipt{
+		SchemaVersion: domain.SchemaVersionV1, ID: commit.ReceiptID, CommitID: commit.ID,
+		ChangeSetID: accepted.ID, OperationID: operation.ID, Version: 1, ProducedAt: now,
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendRawModelOutput(raw); err != nil {
+			return err
+		}
+		if err := tx.AppendProposedChangeSet(proposed); err != nil {
+			return err
+		}
+		if err := tx.AppendValidationReceipt(validation); err != nil {
+			return err
+		}
+		if err := tx.AppendAcceptedChangeSet(accepted); err != nil {
+			return err
+		}
+		if err := tx.ApplyCommit(commit, receipt, proposed.Changes); err != nil {
+			return err
+		}
+		for i := 0; i < inspect.MaxEventPageLimit+1; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_commit_many_" + itoa(uint64(i+1))),
+				Kind:          "knowledge.commit.audit",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Second),
+				CommitID:      commit.ID,
+				PayloadRef:    string(commit.ID),
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.CommitInspector(context.Background(), commit.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !detail.EventsTruncated {
+		t.Fatal("events_truncated = false, want true after correlated-event projection limit")
+	}
+	if len(detail.Events) != inspect.MaxEventPageLimit {
+		t.Fatalf("events = %d, want %d", len(detail.Events), inspect.MaxEventPageLimit)
 	}
 }
 
