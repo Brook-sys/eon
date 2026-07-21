@@ -128,6 +128,8 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"audit_events",
 		"projeção de eventos incompleta",
 		"GET /events paginado",
+		"inspectorRequestGeneration",
+		"requestGeneration !== inspectorRequestGeneration",
 		"open_candidates",
 		"frontier_families",
 		"frontier_hygiene",

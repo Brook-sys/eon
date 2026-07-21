@@ -829,6 +829,71 @@ func TestCommandInspectorReportsGlobalScanTruncation(t *testing.T) {
 	}
 }
 
+func TestCommandInspectorDoesNotBorrowSpecializedEventWithSharedResultRef(t *testing.T) {
+	store, mission, _, now := seedRuntime(t)
+	first, _ := seedPendingCommand(t, store, mission, now, "cmd_pause_first", "receipt_pause_first")
+	processor, err := kernel.NewCommandProcessor(store, source.NewManualClock(now), source.NewSequenceIDGenerator(700))
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstReceipt, err := processor.Process(context.Background(), first.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstReceipt.ResultRef == "" {
+		t.Fatal("first command has no result ref")
+	}
+
+	// A later idempotent pause reaches the same domain result ref. Before
+	// command-qualified effect refs, its specialized event was indistinguishable
+	// from the first command by result_ref alone.
+	second, _ := seedPendingCommand(t, store, mission, now.Add(time.Minute), "cmd_pause_second", "receipt_pause_second")
+	secondProcessor, err := kernel.NewCommandProcessor(store, source.NewManualClock(now.Add(time.Minute)), source.NewSequenceIDGenerator(800))
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondReceipt, err := secondProcessor.Process(context.Background(), second.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secondReceipt.ResultRef != firstReceipt.ResultRef {
+		t.Fatalf("shared result ref = %q, want %q", secondReceipt.ResultRef, firstReceipt.ResultRef)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []struct {
+		command domain.CommandID
+		other   domain.CommandID
+		result  string
+	}{
+		{command: first.ID, other: second.ID, result: firstReceipt.ResultRef},
+		{command: second.ID, other: first.ID, result: secondReceipt.ResultRef},
+	} {
+		detail, err := projector.CommandInspector(context.Background(), want.command)
+		if err != nil {
+			t.Fatal(err)
+		}
+		specialized := 0
+		for _, event := range detail.Events {
+			if event.PayloadRef == string(want.other)+":"+want.result {
+				t.Fatalf("command %s borrowed another command event: %#v", want.command, event)
+			}
+			if event.Kind == kernel.EventMissionPaused {
+				specialized++
+				if event.PayloadRef != string(want.command)+":"+want.result {
+					t.Fatalf("specialized event is not command-qualified: %#v", event)
+				}
+			}
+		}
+		if specialized != 1 {
+			t.Fatalf("command %s specialized events = %d, want 1: %#v", want.command, specialized, detail.Events)
+		}
+	}
+}
+
 func seedPendingCommand(t *testing.T, store port.Store, mission domain.MissionRevision, now time.Time, commandID domain.CommandID, receiptID domain.ReceiptID) (domain.OperatorCommand, domain.CommandReceipt) {
 	t.Helper()
 	revision := mission.Revision

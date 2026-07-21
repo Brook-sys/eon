@@ -503,6 +503,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   let es = null;
   let lastSeq = 0;
   let lastMissionRevision = null;
+  let inspectorRequestGeneration = 0;
 
   function setError(msg) {
     el("globalError").textContent = msg || "";
@@ -1570,6 +1571,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
   async function loadInspector() {
+    const requestGeneration = ++inspectorRequestGeneration;
     el("inspOk").textContent = "";
     el("inspErr").textContent = "";
     const kind = el("inspKind").value;
@@ -1588,11 +1590,17 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     }
     try {
       const body = await getJSON(inspectBase + path);
+      // A slower previous selection must never overwrite a newer inspector
+      // request. Also fence edits made while this request was in flight.
+      if (requestGeneration !== inspectorRequestGeneration ||
+          kind !== el("inspKind").value || id !== el("inspId").value.trim()) return;
       renderInspector(kind, body);
       el("inspOk").textContent = "carregado " + kind + " " + id;
       // scroll inspector into view for operator workflow
       el("inspSummary").scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (err) {
+      if (requestGeneration !== inspectorRequestGeneration ||
+          kind !== el("inspKind").value || id !== el("inspId").value.trim()) return;
       el("inspErr").textContent = String(err.message || err);
     }
   }

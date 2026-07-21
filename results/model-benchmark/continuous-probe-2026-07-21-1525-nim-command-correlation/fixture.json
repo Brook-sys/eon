@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase64-command-correlation-v1",
+  "cases": [
+    {
+      "id": "shared-result-ref",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe audit correlation rule for specialized command events when distinct commands can produce the same domain result_ref.",
+      "required_facts": [
+        {"id":"f1","text":"Two distinct idempotent commands can produce the same result_ref, so result_ref alone is not command identity.","priority":10},
+        {"id":"f2","text":"The inspector must include the specialized effect for its command without borrowing another command's event.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"bind_effect_event_to_command_id"}
+    }
+  ]
+}

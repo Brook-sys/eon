@@ -191,7 +191,11 @@ func (p *CommandProcessor) appendEffectEvents(tx port.Transaction, command domai
 		ID:            domain.EventID(eventID),
 		Kind:          kind,
 		OccurredAt:    now,
-		PayloadRef:    resultRef,
+		// Result refs such as mission_1@1:PAUSED and process:stopping are not
+		// command-unique. Bind every effect event to its originating command so
+		// read models cannot attribute a later identical transition to an older
+		// receipt that happens to share the same result ref.
+		PayloadRef: string(command.ID) + ":" + resultRef,
 	}
 	if command.Target.MissionID != "" {
 		if active, err := tx.ActiveMissionRevision(command.Target.MissionID); err == nil {
@@ -213,7 +217,7 @@ func (p *CommandProcessor) appendEffectEvents(tx port.Transaction, command domai
 			Kind:            EventOperatorCommandApplied,
 			OccurredAt:      now,
 			MissionRevision: event.MissionRevision,
-			PayloadRef:      string(command.ID) + ":" + resultRef,
+			PayloadRef:      event.PayloadRef,
 		}); err != nil {
 			return err
 		}

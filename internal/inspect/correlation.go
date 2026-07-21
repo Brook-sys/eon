@@ -574,8 +574,7 @@ func commandEventMatches(event domain.Event, commandID domain.CommandID, receipt
 	commandRef := string(commandID)
 	payloadMatches := event.PayloadRef == commandRef ||
 		event.PayloadRef == commandRef+":"+receipt.ResultRef ||
-		(receipt.FailureCode != "" && event.PayloadRef == commandRef+":"+receipt.FailureCode) ||
-		event.PayloadRef == receipt.ResultRef
+		(receipt.FailureCode != "" && event.PayloadRef == commandRef+":"+receipt.FailureCode)
 	if !payloadMatches {
 		return false
 	}
