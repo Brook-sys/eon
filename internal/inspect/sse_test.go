@@ -179,6 +179,72 @@ func TestEventStreamResumesFromAfterSequence(t *testing.T) {
 	}
 }
 
+func TestEventStreamReadyPreservesAcceptedResumeCursor(t *testing.T) {
+	store, _, _, now := seedRuntime(t)
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	for _, tc := range []struct {
+		name       string
+		queryAfter string
+		headerLast string
+		wantID     string
+	}{
+		{name: "query cursor", queryAfter: "1", wantID: "1"},
+		{name: "Last-Event-ID wins", queryAfter: "1", headerLast: "2", wantID: "2"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/events/stream?after_sequence="+tc.queryAfter+"&poll_ms=50", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.headerLast != "" {
+				req.Header.Set("Last-Event-ID", tc.headerLast)
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+
+			scanner := bufio.NewScanner(resp.Body)
+			var eventName, eventID string
+			for scanner.Scan() {
+				line := scanner.Text()
+				switch {
+				case strings.HasPrefix(line, "event: "):
+					eventName = strings.TrimPrefix(line, "event: ")
+				case strings.HasPrefix(line, "id: "):
+					eventID = strings.TrimPrefix(line, "id: ")
+				case line == "":
+					if eventName != "ready" {
+						t.Fatalf("first frame = %q, want ready", eventName)
+					}
+					if eventID != tc.wantID {
+						t.Fatalf("ready id = %q, want accepted cursor %q", eventID, tc.wantID)
+					}
+					return
+				}
+			}
+			if err := scanner.Err(); err != nil {
+				t.Fatal(err)
+			}
+			t.Fatal("stream ended before ready frame")
+		})
+	}
+}
+
 func TestFilteredEventStreamAdvancesAcrossBoundedSparseWindows(t *testing.T) {
 	store, _, _, now := seedRuntime(t)
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {

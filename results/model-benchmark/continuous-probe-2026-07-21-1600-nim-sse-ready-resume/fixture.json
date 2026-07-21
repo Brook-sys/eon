@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase66-sse-ready-resume-v1",
+  "cases": [
+    {
+      "id": "ready-frame-resume",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe SSE ready-frame ID when a client reconnects with Last-Event-ID=5000 and no later matching event has yet been emitted.",
+      "required_facts": [
+        {"id":"f1","text":"Browsers update Last-Event-ID when any SSE frame carries an id.","priority":10},
+        {"id":"f2","text":"Sending id 0 on ready can reset the durable resume cursor before the next event or page frame.","priority":10},
+        {"id":"f3","text":"The server has already validated and accepted cursor 5000.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"ready_id_equals_accepted_resume_cursor"}
+    }
+  ]
+}

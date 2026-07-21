@@ -80,7 +80,10 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	// Hello event helps the client confirm the stream is live.
-	if err := writeSSE(w, flusher, "ready", "0", map[string]any{
+	// Preserve the accepted resume cursor in the ready frame. Browsers update
+	// Last-Event-ID for every SSE frame carrying an id; resetting it to zero here
+	// would make a disconnect before the next event/page replay the log prefix.
+	if err := writeSSE(w, flusher, "ready", strconv.FormatUint(after, 10), map[string]any{
 		"schema_version": domain.SchemaVersionV1,
 		"after_sequence": after,
 		"generated_at":   a.Projector.Clock().UTC().Format(time.RFC3339Nano),
