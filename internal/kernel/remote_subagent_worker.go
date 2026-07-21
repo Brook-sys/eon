@@ -74,10 +74,22 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		// An expired lease means execution may have happened without a durable
 		// terminal commit. Park it as failed rather than executing ambiguously.
 		if candidate.Status == domain.SubagentSpawnReceiptLeased {
-			if err := w.failExpired(ctx, candidate); err != nil && !errors.Is(err, port.ErrConflict) {
+			if err := w.failExpired(ctx, candidate); err != nil {
+				// A conflicting worker may already have committed the real terminal
+				// outcome. Never publish failure from the stale due-list snapshot.
+				if errors.Is(err, port.ErrConflict) {
+					continue
+				}
 				return processed, err
 			}
-			_ = w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(candidate.ReceiverSessionID), Attempt: candidate.ReceiverAttempt, State: SessionStateFailed, Failure: "execution_lease_expired_effect_unknown"})
+			if err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(candidate.ReceiverSessionID), Attempt: candidate.ReceiverAttempt, State: SessionStateFailed, Failure: "execution_lease_expired_effect_unknown"}); err != nil {
+				// Durable failure is already committed. Generation fences are an
+				// expected concurrent outcome; unknown manager failures remain visible
+				// so the control cycle cannot falsely report successful convergence.
+				if !errors.Is(err, ErrSessionTerminal) && !errors.Is(err, ErrSessionAttempt) && !errors.Is(err, ErrSessionNotFound) {
+					return processed, fmt.Errorf("publish expired receiver lease failure: %w", err)
+				}
+			}
 			processed++
 			continue
 		}

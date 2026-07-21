@@ -267,3 +267,86 @@ func TestRemoteSubagentWorkerParksExpiredLeaseWithoutReexecution(t *testing.T) {
 		return nil
 	})
 }
+
+type conflictingUpdateStore struct{ port.Store }
+
+func (s conflictingUpdateStore) Update(context.Context, func(port.Transaction) error) error {
+	return port.ErrConflict
+}
+
+func TestRemoteSubagentWorkerDoesNotPublishExpiredFailureAfterCommitConflict(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	manager := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+	leased, err := domain.LeaseSubagentSpawnReceipt(receipt, "crashed-worker", clock.Now(), clock.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentSpawnReceipt(leased, receipt.Status, receipt.UpdatedAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	clock.currentTime = clock.Now().Add(2 * time.Minute)
+	worker := kernel.RemoteSubagentWorker{Store: conflictingUpdateStore{Store: store}, Manager: manager, Clock: clock, Owner: "new-worker", Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+		t.Fatal("ambiguous expired execution must not be repeated")
+		return "", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 0 {
+		t.Fatalf("recover=(%d,%v)", n, err)
+	}
+	status, err := manager.Status(context.Background(), kernel.SessionID(receipt.ReceiverSessionID))
+	if err != nil || status.State != kernel.SessionStatePending {
+		t.Fatalf("status=(%+v,%v)", status, err)
+	}
+}
+
+type failedPublishErrorManager struct {
+	kernel.SessionManager
+	err error
+}
+
+func (m failedPublishErrorManager) PublishStatus(ctx context.Context, observation kernel.SubagentObservation) error {
+	if observation.State == kernel.SessionStateFailed {
+		return m.err
+	}
+	return m.SessionManager.PublishStatus(ctx, observation)
+}
+
+func TestRemoteSubagentWorkerSurfacesUnknownExpiredFailurePublicationError(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	base := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, base, clock.Now())
+	leased, err := domain.LeaseSubagentSpawnReceipt(receipt, "crashed-worker", clock.Now(), clock.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		return tx.SaveSubagentSpawnReceipt(leased, receipt.Status, receipt.UpdatedAt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	clock.currentTime = clock.Now().Add(2 * time.Minute)
+	publishErr := errors.New("manager unavailable")
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: failedPublishErrorManager{SessionManager: base, err: publishErr}, Clock: clock, Owner: "new-worker", Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+		t.Fatal("ambiguous expired execution must not be repeated")
+		return "", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); n != 0 || !errors.Is(err, publishErr) {
+		t.Fatalf("recover=(%d,%v)", n, err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "execution_lease_expired_effect_unknown" {
+			t.Fatalf("receipt=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
