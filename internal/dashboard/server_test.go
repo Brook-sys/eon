@@ -576,6 +576,58 @@ if (!elements.timeline.textContent.includes("continued")) throw new Error("event
 	}
 }
 
+func TestDashboardReconnectReadyCannotRewindAcceptedCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "900"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "900";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "900", data: "initial"});
+stream.emit("event", {lastEventId: "950", data: JSON.stringify({sequence: 950, kind: "accepted"})});
+stream.onerror();
+stream.emit("ready", {lastEventId: "900", data: "reconnect stale baseline"});
+if (!stream.closed || es !== null) throw new Error("regressive reconnect ready did not close the stream");
+if (streamGeneration !== 2) throw new Error("regressive reconnect ready did not fence callbacks");
+if (lastSeq !== "950" || elements.afterSeq.value !== "950") throw new Error("regressive reconnect ready rewound cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("regressive reconnect ready was not visible");
+const baseline = elements.timeline.textContent;
+stream.emit("event", {lastEventId: "951", data: JSON.stringify({sequence: 951, kind: "stale"})});
+if (elements.timeline.textContent !== baseline || lastSeq !== "950") throw new Error("callback after reconnect protocol failure was not fenced");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard reconnect ready cursor behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardTimelineRetentionIsBoundedAndVisible(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")

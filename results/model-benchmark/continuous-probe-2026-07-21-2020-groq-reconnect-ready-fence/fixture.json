@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase76-reconnect-ready-fence-v1",
+  "cases": [
+    {
+      "id": "automatic-sse-reconnect-ready",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe client cursor rule when the same EventSource automatically reconnects after already accepting events and the server sends another ready frame.",
+      "required_facts": [
+        {"id":"f1","text":"The first ready of a newly constructed EventSource may establish an intentionally rewound manual baseline.","priority":10},
+        {"id":"f2","text":"A later ready on the same EventSource follows an automatic reconnect and must not rewind a cursor already advanced by accepted event or page frames.","priority":10},
+        {"id":"f3","text":"A malformed or regressive reconnect ready must close the stream, preserve the accepted cursor, and fence queued callbacks.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"first_ready_may_reset_reconnect_ready_must_advance_or_fail_closed"}
+    }
+  ]
+}

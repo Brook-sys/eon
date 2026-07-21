@@ -953,18 +953,23 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     if (es) es.close();
     es = candidate;
     const connectionGeneration = ++streamGeneration;
+    let readySeen = false;
     el("timeline").textContent = "conectando " + url + "…\n";
     el("timeline").dataset.empty = "0";
     el("streamBadge").textContent = "SSE connecting";
     el("streamBadge").className = "badge";
     es.addEventListener("ready", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      // A ready frame belongs to a newly created stream and carries the
-      // server-accepted baseline. It may intentionally rewind an older stream.
-      if (!resetStreamCursor(ev.lastEventId)) {
-        failStreamProtocol(connectionGeneration, "ready sem cursor uint64 canônico");
+      // Only the first ready of a newly created EventSource may intentionally
+      // reset the baseline for a manual rewind. Later ready frames belong to
+      // native automatic reconnects of the same source and must remain
+      // monotonic; otherwise a stale or faulty server could rewind the cursor.
+      const accepted = readySeen ? advanceStreamCursor(ev.lastEventId) : resetStreamCursor(ev.lastEventId);
+      if (!accepted) {
+        failStreamProtocol(connectionGeneration, readySeen ? "ready de reconnect com cursor inválido ou regressivo" : "ready sem cursor uint64 canônico");
         return;
       }
+      readySeen = true;
       el("streamBadge").textContent = "SSE live";
       el("streamBadge").className = "badge live";
       appendTimeline("# ready " + ev.data);
