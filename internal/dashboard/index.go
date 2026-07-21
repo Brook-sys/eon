@@ -337,7 +337,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
     <section>
       <h2>Inspetor de execução</h2>
-      <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem.</p>
+      <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem. Projeções bounded sinalizam explicitamente quando a auditoria está incompleta.</p>
       <div class="row">
         <label>tipo
           <select id="inspKind">
@@ -1432,6 +1432,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     el("inspJSON").textContent = pretty(body);
     el("inspJSON").className = "prebox";
 
+    const eventsTruncated = body.events_truncated === true;
+    const auditCompleteness = eventsTruncated ? "INCOMPLETA (limite bounded atingido)" : "completa no log examinado";
+    const renderEvents = function () {
+      el("inspEvents").textContent = (eventsTruncated
+        ? "ATENÇÃO: projeção de eventos incompleta; use GET /events paginado para continuar a auditoria.\n\n"
+        : "") + pretty(body.events || []);
+      el("inspEvents").className = eventsTruncated ? "prebox status-PAUSED" : "prebox";
+    };
+
     if (kind === "operation") {
       const op = body.operation || {};
       let sum = '<dl class="kv">';
@@ -1444,6 +1453,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       sum += '<dt>commits</dt><dd>' + esc(String((body.commits || []).length)) + "</dd>";
       sum += '<dt>raw_outputs</dt><dd>' + esc(String((body.raw_model_outputs || []).length)) + "</dd>";
       sum += '<dt>validations</dt><dd>' + esc(String((body.validation_receipts || []).length)) + "</dd>";
+      sum += '<dt>audit_events</dt><dd class="' + (eventsTruncated ? "status-PAUSED" : "status-APPLIED") + '">' + esc(auditCompleteness) + "</dd>";
       if (body.redaction) {
         sum += '<dt>redaction</dt><dd>applied=' + esc(String(!!body.redaction.applied))
           + " secrets=" + esc(String(body.redaction.secret_matches || 0))
@@ -1486,8 +1496,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       });
       el("inspRaw").className = "prebox";
 
-      el("inspEvents").textContent = pretty(body.events || []);
-      el("inspEvents").className = "prebox";
+      renderEvents();
 
       el("inspSummary").querySelectorAll("button[data-inspect-commit]").forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -1507,6 +1516,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       if (body.proposed_change_set && body.proposed_change_set.operation_id) {
         sum += '<dt>operation</dt><dd>' + esc(body.proposed_change_set.operation_id) + "</dd>";
       }
+      sum += '<dt>audit_events</dt><dd class="' + (eventsTruncated ? "status-PAUSED" : "status-APPLIED") + '">' + esc(auditCompleteness) + "</dd>";
       sum += "</dl>";
       if (body.proposed_change_set && body.proposed_change_set.operation_id) {
         sum += '<div class="ops"><button type="button" data-inspect-op="' + esc(body.proposed_change_set.operation_id) + '">Abrir operation</button></div>';
@@ -1526,8 +1536,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       el("inspChangeset").className = "prebox";
       el("inspRaw").textContent = pretty({ validation_receipts: body.validation_receipts || [] });
       el("inspRaw").className = "prebox";
-      el("inspEvents").textContent = pretty(body.events || []);
-      el("inspEvents").className = "prebox";
+      renderEvents();
       el("inspSummary").querySelectorAll("button[data-inspect-op]").forEach(function (btn) {
         btn.addEventListener("click", function () {
           el("inspKind").value = "operation";
@@ -1545,6 +1554,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       sum += '<dt>receipt_state</dt><dd>' + esc(receipt.state || "") + "</dd>";
       sum += '<dt>result_ref</dt><dd>' + esc(receipt.result_ref || "") + "</dd>";
       sum += '<dt>failure</dt><dd>' + esc(receipt.failure_code || "—") + "</dd>";
+      sum += '<dt>audit_events</dt><dd class="' + (eventsTruncated ? "status-PAUSED" : "status-APPLIED") + '">' + esc(auditCompleteness) + "</dd>";
       sum += "</dl>";
       el("inspSummary").innerHTML = sum;
       el("inspSummary").className = "";
@@ -1554,8 +1564,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       el("inspChangeset").className = "prebox muted";
       el("inspRaw").textContent = pretty({ note: "no model raw output on commands" });
       el("inspRaw").className = "prebox muted";
-      el("inspEvents").textContent = pretty(body.events || []);
-      el("inspEvents").className = "prebox";
+      renderEvents();
     }
     showInspPanel("summary");
   }

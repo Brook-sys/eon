@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "name": "phase62-inspector-ui-completeness-nim",
+  "fixture_name": "phase61-extract-json-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nim-llama31-8b-phase62",
+      "model": "meta/llama-3.1-8b-instruct",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase61-extract-json-v1",
+        "model": "meta/llama-3.1-8b-instruct",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "actual_input_tokens": 171,
+            "output_tokens": 192,
+            "duration_millis": 7430,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "To solve this task, we can use a simple Python script that parses the given facts and extracts the required information.\n\n```python\nimport json\n\n# Define the facts\nfacts = {\n    \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n    \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n}\n\n# Extract the required information\npublication_date = facts[\"F1\"][\"date\"]\nsource_identifier = facts[\"F1\"][\"source\"]\n\n# Create the output JSON object\noutput = {\n    \"date\": publication_date,\n    \"source\": source_identifier\n}\n\n# Print the output\nprint(json.dumps(output, indent=4))\n```\n\nWhen you run this script, it will output the following JSON object:\n\n```json\n{\n    \"date\": \"2025-11-03\",\n    \"source\": \"S-17\"\n"
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 171,
+          "output_tokens": 192,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 1,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "EXTRACT",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_format": [
+            {
+              "label": "JSON",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "strict syntax validity was below 50%"
+      }
+    }
+  ]
+}

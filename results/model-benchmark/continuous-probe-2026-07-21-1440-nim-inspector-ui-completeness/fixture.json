@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase61-extract-json-v1",
+  "cases": [
+    {
+      "id": "extract-date",
+      "operation": "EXTRACT",
+      "task": "Extract the publication date and source identifier.",
+      "required_facts": [
+        {
+          "id": "fragment-1",
+          "text": "Source S-17 was published on 2025-11-03. The later review did not change the original publication date.",
+          "priority": 10
+        }
+      ],
+      "optional_facts": [
+        {
+          "id": "noise-1",
+          "text": "A separate source S-18 was published on 2025-11-04.",
+          "priority": 1
+        }
+      ],
+      "constraints": [
+        "Return the original publication date."
+      ],
+      "formats": [
+        "JSON"
+      ],
+      "expected": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    }
+  ]
+}
