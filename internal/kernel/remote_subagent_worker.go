@@ -83,6 +83,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		}
 
 		var leased domain.SubagentSpawnReceipt
+		fenced := false
 		if err := w.Store.Update(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentSpawnReceipt(candidate.CallerPeerID, candidate.RequestID)
 			if err != nil {
@@ -92,7 +93,23 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 				return port.ErrConflict
 			}
 			expectedStatus, expectedUpdatedAt := receiptVersion(current)
-			leased, err = domain.LeaseSubagentSpawnReceipt(current, w.Owner, w.Clock.Now().UTC(), w.Clock.Now().UTC().Add(lease))
+			record, err := tx.SubagentRecord(current.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
+			now := w.Clock.Now().UTC()
+			active := record.Attempt == current.ReceiverAttempt &&
+				(record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) &&
+				(record.Deadline.IsZero() || now.Before(record.Deadline))
+			if !active {
+				failed, err := domain.FailPendingSubagentSpawnReceipt(current, "receiver_generation_inactive", now)
+				if err != nil {
+					return err
+				}
+				fenced = true
+				return tx.SaveSubagentSpawnReceipt(failed, expectedStatus, expectedUpdatedAt)
+			}
+			leased, err = domain.LeaseSubagentSpawnReceipt(current, w.Owner, now, now.Add(lease))
 			if err != nil {
 				return err
 			}
@@ -102,6 +119,10 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 				continue
 			}
 			return processed, err
+		}
+		if fenced {
+			processed++
+			continue
 		}
 
 		if err := w.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(leased.ReceiverSessionID), Attempt: leased.ReceiverAttempt, State: SessionStateRunning}); err != nil {

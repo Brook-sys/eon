@@ -213,6 +213,22 @@ func FailSubagentSpawnReceipt(current SubagentSpawnReceipt, owner, failure strin
 	return next, next.Validate()
 }
 
+// FailPendingSubagentSpawnReceipt terminalizes work that is no longer safe to
+// start. Receiver workers use it while fencing a receipt against its canonical
+// session generation, before acquiring an execution lease.
+func FailPendingSubagentSpawnReceipt(current SubagentSpawnReceipt, failure string, now time.Time) (SubagentSpawnReceipt, error) {
+	if err := current.Validate(); err != nil {
+		return SubagentSpawnReceipt{}, err
+	}
+	current = current.normalizedQueueState()
+	if current.Status != SubagentSpawnReceiptPending || now.IsZero() || now.Before(current.UpdatedAt) || strings.TrimSpace(failure) == "" || len(failure) > MaxSubagentSpawnFailureBytes {
+		return SubagentSpawnReceipt{}, ErrInvalidSubagentSpawnRPC
+	}
+	next := current
+	next.Status, next.UpdatedAt, next.Failure, next.StatusDelivery = SubagentSpawnReceiptFailed, now, failure, SubagentStatusDeliveryPending
+	return next, next.Validate()
+}
+
 func RecoverExpiredSubagentSpawnReceipt(current SubagentSpawnReceipt, now time.Time) (SubagentSpawnReceipt, error) {
 	if err := current.Validate(); err != nil {
 		return SubagentSpawnReceipt{}, err

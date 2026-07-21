@@ -20,7 +20,7 @@ func seedRemoteReceipt(t *testing.T, store port.Store, manager kernel.SessionMan
 		t.Fatal(err)
 	}
 	record := domain.SubagentRecord{SchemaVersion: 1, ID: string(id), TaskID: "receiver-task", MissionID: "mission-1", State: domain.SubagentStatePending, StartedAt: now, UpdatedAt: now, Task: "summarize", ContextMode: "isolated", MaxAttempts: 3}
-	receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: "request-1", SourceSessionID: "source-1", Attempt: 2, Task: "summarize", ContextMode: "isolated", ReceiverSessionID: string(id), RecordedAt: now, Status: domain.SubagentSpawnReceiptPending, UpdatedAt: now}
+	receipt := domain.SubagentSpawnReceipt{SchemaVersion: 1, CallerPeerID: "peer-origin", RequestID: "request-1", SourceSessionID: "source-1", Attempt: 2, Task: "summarize", ContextMode: "isolated", ReceiverSessionID: string(id), ReceiverAttempt: record.Attempt, RecordedAt: now, Status: domain.SubagentSpawnReceiptPending, UpdatedAt: now}
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		if err := tx.CreateSubagentRecord(record); err != nil {
 			return err
@@ -30,6 +30,64 @@ func seedRemoteReceipt(t *testing.T, store port.Store, manager kernel.SessionMan
 		t.Fatal(err)
 	}
 	return receipt
+}
+
+func TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*domain.SubagentRecord, time.Time)
+	}{
+		{name: "terminal", mutate: func(record *domain.SubagentRecord, now time.Time) {
+			record.State, record.UpdatedAt, record.Result = domain.SubagentStateComplete, now.Add(time.Second), "already done"
+		}},
+		{name: "replaced attempt", mutate: func(record *domain.SubagentRecord, now time.Time) {
+			record.Attempt, record.UpdatedAt = 1, now.Add(time.Second)
+		}},
+		{name: "deadline reached", mutate: func(record *domain.SubagentRecord, now time.Time) {
+			record.Deadline = now
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := memory.New()
+			clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+			manager := kernel.NewLocalSessionManager(clock)
+			receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+			if err := store.Update(context.Background(), func(tx port.Transaction) error {
+				record, err := tx.SubagentRecord(receipt.ReceiverSessionID)
+				if err != nil {
+					return err
+				}
+				tt.mutate(&record, clock.Now())
+				return tx.SaveSubagentRecord(record)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			var calls atomic.Int32
+			worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+				calls.Add(1)
+				return "must not execute", nil
+			})}
+			if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+				t.Fatalf("execute=(%d,%v)", n, err)
+			}
+			if calls.Load() != 0 {
+				t.Fatalf("executor calls=%d", calls.Load())
+			}
+			if err := store.View(context.Background(), func(r port.Reader) error {
+				got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+				if err != nil {
+					return err
+				}
+				if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "receiver_generation_inactive" || got.StatusDelivery != domain.SubagentStatusDeliveryPending {
+					t.Fatalf("receipt=%+v", got)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }
 
 func TestRemoteSubagentWorkerExecutesAndCommitsTerminalReceipt(t *testing.T) {
