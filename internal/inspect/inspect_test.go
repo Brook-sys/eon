@@ -438,6 +438,175 @@ func TestCommandInspectorAndHTTPReadOnlySurface(t *testing.T) {
 	}
 }
 
+func TestCommandInspectorFindsAuditEventsBeyondFirstGlobalPage(t *testing.T) {
+	store, mission, _, now := seedRuntime(t)
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < inspect.MaxEventPageLimit+25; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_noise_" + itoa(uint64(i+1))),
+				Kind:          "test.unrelated",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Second),
+				PayloadRef:    "unrelated",
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	revision := mission.Revision
+	command := domain.OperatorCommand{
+		SchemaVersion:    domain.SchemaVersionV1,
+		ID:               "cmd_late_audit",
+		IdempotencyKey:   "idem_late_audit",
+		ActorType:        domain.ActorOperator,
+		ActorID:          "operator_1",
+		Kind:             domain.CommandPauseMission,
+		Target:           domain.CommandTarget{MissionID: mission.MissionID},
+		ExpectedRevision: &revision,
+		Reason:           "verify correlation after a long event prefix",
+		SubmittedAt:      now.Add(10 * time.Minute),
+	}
+	inbox, err := control.NewCommandInbox(store, control.FixedReceiptFactory("receipt_late_audit", command.SubmittedAt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inbox.SubmitCommand(command); err != nil {
+		t.Fatal(err)
+	}
+	processor, err := kernel.NewCommandProcessor(store, source.NewManualClock(command.SubmittedAt), source.NewSequenceIDGenerator(500))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := processor.ProcessNext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.CommandInspector(context.Background(), command.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.EventsTruncated {
+		t.Fatal("bounded scan unexpectedly truncated a short event log")
+	}
+	if len(detail.Events) < 2 {
+		t.Fatalf("late command events = %#v", detail.Events)
+	}
+	for _, event := range detail.Events {
+		if event.Sequence <= inspect.MaxEventPageLimit {
+			t.Fatalf("command event unexpectedly came from first page: %#v", event)
+		}
+	}
+}
+
+func TestCommandInspectorReportsMatchedEventProjectionTruncation(t *testing.T) {
+	store, mission, _, now := seedRuntime(t)
+	command, receipt := seedPendingCommand(t, store, mission, now, "cmd_many_events", "receipt_many_events")
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < inspect.MaxEventPageLimit+1; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_many_" + itoa(uint64(i+1))),
+				Kind:          "operator.command.received",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Second),
+				PayloadRef:    string(command.ID),
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.CommandInspector(context.Background(), command.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !detail.EventsTruncated {
+		t.Fatal("events_truncated = false, want true after correlated-event projection limit")
+	}
+	if len(detail.Events) != inspect.MaxEventPageLimit {
+		t.Fatalf("events = %d, want %d", len(detail.Events), inspect.MaxEventPageLimit)
+	}
+	if detail.Receipt.ID != receipt.ID {
+		t.Fatalf("receipt = %#v", detail.Receipt)
+	}
+}
+
+func TestCommandInspectorReportsGlobalScanTruncation(t *testing.T) {
+	store, mission, _, now := seedRuntime(t)
+	command, _ := seedPendingCommand(t, store, mission, now, "cmd_scan_limit", "receipt_scan_limit")
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for i := 0; i < 5001; i++ {
+			if _, err := tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1,
+				ID:            domain.EventID("event_scan_noise_" + itoa(uint64(i+1))),
+				Kind:          "test.unrelated",
+				OccurredAt:    now.Add(time.Duration(i+1) * time.Millisecond),
+				PayloadRef:    "unrelated",
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail, err := projector.CommandInspector(context.Background(), command.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !detail.EventsTruncated {
+		t.Fatal("events_truncated = false, want true after global scan limit")
+	}
+	if len(detail.Events) != 0 {
+		t.Fatalf("events = %#v, want no matches among bounded noise scan", detail.Events)
+	}
+}
+
+func seedPendingCommand(t *testing.T, store port.Store, mission domain.MissionRevision, now time.Time, commandID domain.CommandID, receiptID domain.ReceiptID) (domain.OperatorCommand, domain.CommandReceipt) {
+	t.Helper()
+	revision := mission.Revision
+	command := domain.OperatorCommand{
+		SchemaVersion:    domain.SchemaVersionV1,
+		ID:               commandID,
+		IdempotencyKey:   domain.IdempotencyKey("idem_" + commandID),
+		ActorType:        domain.ActorOperator,
+		ActorID:          "operator_1",
+		Kind:             domain.CommandPauseMission,
+		Target:           domain.CommandTarget{MissionID: mission.MissionID},
+		ExpectedRevision: &revision,
+		Reason:           "inspect bounded command correlation",
+		SubmittedAt:      now,
+	}
+	inbox, err := control.NewCommandInbox(store, control.FixedReceiptFactory(receiptID, now))
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := inbox.SubmitCommand(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return command, receipt
+}
+
 func seedRuntime(t *testing.T) (*memory.Store, domain.MissionRevision, domain.Operation, time.Time) {
 	t.Helper()
 	store := memory.New()

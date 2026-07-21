@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-07-21T13:00:00-03:00",
+  "provider": "nvidia_nim",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "fixture": "cognitive-tool-v1",
+  "objective": "Verify strict tool-call framing while rotating away from the preceding Groq campaigns; campaign accompanies the inspector correlation hardening batch.",
+  "calls": 1,
+  "max_calls": 1,
+  "context_tokens": 2048,
+  "max_output_tokens": 192,
+  "timeout_seconds": 30,
+  "retries": 0,
+  "results": [
+    {
+      "http_code": 401,
+      "latency_ms": 394,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "syntax_valid": false,
+      "semantic_correct": false,
+      "provider_error": true,
+      "rate_limit": false,
+      "timeout": false,
+      "error_kind": "PROVIDER"
+    }
+  ],
+  "analysis": "The endpoint was reachable and rejected the request before inference because NVIDIA_NIM_API_KEY was absent from the runner environment. This is operational credential evidence, not a cognitive evaluation of the model. No retry or fallback call was made. The code batch remains uncommitted and incomplete until a credentialed live call succeeds or yields provider/model evidence beyond authentication.",
+  "next_experiment": "Re-run the preserved one-call manifest with NVIDIA_NIM_API_KEY exported only to the runner process; do not change the prompt, limits, fixture, or model so results remain comparable."
+}

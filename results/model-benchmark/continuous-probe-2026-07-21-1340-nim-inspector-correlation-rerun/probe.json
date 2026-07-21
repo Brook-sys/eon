@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-07-21T13:40:00-03:00",
+  "provider": "nvidia_nim",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "fixture": "cognitive-tool-v1",
+  "objective": "Repeat the preserved bounded tool-framing campaign with the authorized NVIDIA NIM credential while completing the inspector command-correlation hardening batch.",
+  "calls": 1,
+  "max_calls": 1,
+  "context_tokens": 2048,
+  "max_output_tokens": 192,
+  "timeout_seconds": 30,
+  "retries": 0,
+  "results": [
+    {
+      "http_code": 200,
+      "latency_ms": 870,
+      "input_tokens": 298,
+      "output_tokens": 34,
+      "syntax_valid": false,
+      "semantic_correct": false,
+      "provider_error": false,
+      "rate_limit": false,
+      "timeout": false,
+      "error_kind": "VALIDATION"
+    }
+  ],
+  "analysis": "The credentialed endpoint completed inference with no provider, rate-limit, or timeout error. The response failed the fixture's strict JSON/tool framing, matching recent variability from this deployment rather than the prior authentication failure. This is current live evidence for the parser and routing contract only; it does not authorize a provider preference change.",
+  "comparison": "The same preserved campaign returned HTTP 401 at 13:00 when the key was absent from the runner process. With the key exported only to the subprocess at 13:40 it returned HTTP 200 in 870 ms with 298 input and 34 output tokens, converting an operational authentication observation into a cognitive framing observation.",
+  "next_experiment": "Rotate to a different provider/model/task in the next heartbeat. If this deployment is revisited, compare strict JSON against a simpler response format under the same one-call bound before changing compatibility policy."
+}

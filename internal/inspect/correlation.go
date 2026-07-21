@@ -116,11 +116,14 @@ type CommitDetail struct {
 
 // CommandDetail shows an operator command and its receipt without write access.
 type CommandDetail struct {
-	SchemaVersion int                    `json:"schema_version"`
-	Command       domain.OperatorCommand `json:"command"`
-	Receipt       domain.CommandReceipt  `json:"receipt"`
-	Events        []domain.Event         `json:"events"`
+	SchemaVersion   int                    `json:"schema_version"`
+	Command         domain.OperatorCommand `json:"command"`
+	Receipt         domain.CommandReceipt  `json:"receipt"`
+	Events          []domain.Event         `json:"events"`
+	EventsTruncated bool                   `json:"events_truncated"`
 }
+
+const maxCommandEventScan = 5000
 
 // OperationInspector loads one operation and related official records.
 func (p *Projector) OperationInspector(ctx context.Context, operationID domain.OperationID) (OperationDetail, error) {
@@ -508,39 +511,77 @@ func (p *Projector) CommandInspector(ctx context.Context, commandID domain.Comma
 		if err != nil {
 			return err
 		}
-		// Correlate control events whose payload references the command.
-		events, err := collectMatchingEvents(r, EventFilter{Limit: MaxEventPageLimit})
+		// Correlate while scanning instead of first truncating the global log to
+		// one page. Otherwise a command created after 200 unrelated events appears
+		// to have no audit trail. The scan remains bounded and reports truncation.
+		filtered, truncated, err := collectCommandEvents(r, commandID, receipt)
 		if err != nil {
 			return err
 		}
-		filtered := make([]domain.Event, 0)
-		for _, event := range events {
-			if event.PayloadRef == string(commandID) ||
-				event.PayloadRef == string(commandID)+":"+receipt.ResultRef ||
-				(receipt.FailureCode != "" && event.PayloadRef == string(commandID)+":"+receipt.FailureCode) ||
-				event.PayloadRef == receipt.ResultRef {
-				// Narrow to command-related kinds when payload is only resultRef.
-				switch event.Kind {
-				case "operator.command.received", "operator.command.rejected", "operator.command.applied",
-					"process.stopping", "mission.paused", "mission.resumed", "mission.cancelled":
-					filtered = append(filtered, event)
-				default:
-					if event.PayloadRef == string(commandID) ||
-						(len(event.PayloadRef) >= len(commandID) && event.PayloadRef[:len(commandID)] == string(commandID)) {
-						filtered = append(filtered, event)
-					}
-				}
-			}
-		}
 		detail = CommandDetail{
-			SchemaVersion: domain.SchemaVersionV1,
-			Command:       command,
-			Receipt:       receipt,
-			Events:        filtered,
+			SchemaVersion:   domain.SchemaVersionV1,
+			Command:         command,
+			Receipt:         receipt,
+			Events:          filtered,
+			EventsTruncated: truncated,
 		}
 		return nil
 	})
 	return detail, err
+}
+
+func collectCommandEvents(r port.Reader, commandID domain.CommandID, receipt domain.CommandReceipt) ([]domain.Event, bool, error) {
+	matched := make([]domain.Event, 0)
+	var after uint64
+	for scanned := 0; scanned < maxCommandEventScan; {
+		limit := MaxEventPageLimit
+		if remaining := maxCommandEventScan - scanned; remaining < limit {
+			limit = remaining
+		}
+		batch, err := r.Events(after, limit)
+		if err != nil {
+			return nil, false, err
+		}
+		if len(batch) == 0 {
+			return matched, false, nil
+		}
+		for _, event := range batch {
+			if commandEventMatches(event, commandID, receipt) {
+				if len(matched) == MaxEventPageLimit {
+					return matched, true, nil
+				}
+				matched = append(matched, event)
+			}
+		}
+		scanned += len(batch)
+		after = batch[len(batch)-1].Sequence
+		if len(batch) < limit {
+			return matched, false, nil
+		}
+	}
+	rest, err := r.Events(after, 1)
+	if err != nil {
+		return nil, false, err
+	}
+	return matched, len(rest) > 0, nil
+}
+
+func commandEventMatches(event domain.Event, commandID domain.CommandID, receipt domain.CommandReceipt) bool {
+	commandRef := string(commandID)
+	payloadMatches := event.PayloadRef == commandRef ||
+		event.PayloadRef == commandRef+":"+receipt.ResultRef ||
+		(receipt.FailureCode != "" && event.PayloadRef == commandRef+":"+receipt.FailureCode) ||
+		event.PayloadRef == receipt.ResultRef
+	if !payloadMatches {
+		return false
+	}
+	switch event.Kind {
+	case "operator.command.received", "operator.command.rejected", "operator.command.applied",
+		"process.stopping", "mission.paused", "mission.resumed", "mission.cancelled":
+		return true
+	default:
+		return event.PayloadRef == commandRef || strings.HasPrefix(event.PayloadRef, commandRef+":")
+	}
 }
 
 func appendUniqueProposed(items []domain.ProposedChangeSet, item domain.ProposedChangeSet) []domain.ProposedChangeSet {
