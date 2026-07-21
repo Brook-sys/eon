@@ -852,7 +852,38 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       box.textContent = "";
       box.dataset.empty = "0";
     }
-    box.textContent += line + "\n";
+    const omissionMarker = "# older timeline entries omitted";
+    const maxLines = 400;
+    const maxBytes = 65536;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const byteLength = (value) => encoder.encode(value).length;
+    let lines = box.textContent.replace(/\n$/, "").split("\n");
+    if (lines.length === 1 && lines[0] === "") lines = [];
+    if (lines[0] === omissionMarker) lines.shift();
+    lines.push(String(line));
+
+    let omitted = false;
+    while (lines.length > maxLines - 1) {
+      lines.shift();
+      omitted = true;
+    }
+    let body = lines.join("\n");
+    const framingBytes = byteLength(omissionMarker) + 2;
+    while (lines.length > 1 && framingBytes + byteLength(body) > maxBytes) {
+      lines.shift();
+      omitted = true;
+      body = lines.join("\n");
+    }
+    const bodyBudget = maxBytes - framingBytes;
+    let encodedBody = encoder.encode(body);
+    if (encodedBody.length > bodyBudget) {
+      let start = encodedBody.length - bodyBudget;
+      while (start < encodedBody.length && (encodedBody[start] & 0xc0) === 0x80) start++;
+      body = decoder.decode(encodedBody.subarray(start));
+      omitted = true;
+    }
+    box.textContent = (omitted ? omissionMarker + "\n" : "") + body + "\n";
     box.scrollTop = box.scrollHeight;
   }
 

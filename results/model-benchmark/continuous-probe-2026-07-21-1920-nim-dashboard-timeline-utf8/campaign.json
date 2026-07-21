@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "name": "phase73-dashboard-timeline-retention-nim",
+  "fixture_name": "phase73-dashboard-timeline-retention-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "nvidia-nim",
+      "binding_id": "nim-llama31-70b-phase73",
+      "model": "meta/llama-3.1-70b-instruct",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase73-dashboard-timeline-retention-v1",
+        "model": "meta/llama-3.1-70b-instruct",
+        "runs": [
+          {
+            "case_id": "bounded-visible-timeline-retention",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 287,
+            "actual_input_tokens": 208,
+            "output_tokens": 18,
+            "duration_millis": 1446,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "rule=bound_lines_and_bytes_keep_newest_show_omission_marker_preserve_cursor",
+            "values": {
+              "rule": "bound_lines_and_bytes_keep_newest_show_omission_marker_preserve_cursor"
+            }
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 208,
+          "output_tokens": 18,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
+      }
+    }
+  ]
+}

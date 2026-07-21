@@ -517,6 +517,38 @@ if (JSON.stringify(elements) !== baseline) throw new Error("queued native onerro
 	}
 }
 
+func TestDashboardTimelineRetentionIsBoundedAndVisible(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	script := `
+const timeline = {textContent: "aguardando eventos…", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0};
+const el = (id) => { if (id !== "timeline") throw new Error("unexpected element " + id); return timeline; };
+const bytes = (value) => Buffer.byteLength(value, "utf8");
+` + appendLine + `
+for (let i = 0; i < 2000; i++) appendTimeline("event-" + String(i).padStart(4, "0") + " " + "😀".repeat(80));
+const retained = timeline.textContent.trimEnd().split("\n");
+if (retained.length > 400) throw new Error("timeline retained too many lines: " + retained.length);
+if (bytes(timeline.textContent) > 65536) throw new Error("timeline retained too many UTF-8 bytes: " + bytes(timeline.textContent));
+if (retained[0] !== "# older timeline entries omitted") throw new Error("timeline omission is not visible");
+if (!timeline.textContent.includes("event-1999")) throw new Error("newest timeline entry was not retained");
+if (timeline.textContent.includes("event-0000")) throw new Error("oldest timeline entry was not evicted");
+if (timeline.textContent.includes("�")) throw new Error("UTF-8 retention split a code point");
+const boundedBytes = bytes(timeline.textContent);
+for (let i = 2000; i < 4000; i++) appendTimeline("event-" + String(i).padStart(4, "0") + " " + "界".repeat(80));
+if (bytes(timeline.textContent) > 65536) throw new Error("continued appends exceeded UTF-8 byte bound");
+if (timeline.textContent.trimEnd().split("\n").length > 400) throw new Error("continued appends exceeded line bound");
+if (!timeline.textContent.includes("event-3999")) throw new Error("continued appends lost newest entry");
+if (bytes(timeline.textContent) > boundedBytes + 400) throw new Error("retention kept growing after reaching its bound");
+if (timeline.textContent.includes("�")) throw new Error("continued UTF-8 retention split a code point");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard bounded timeline behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")

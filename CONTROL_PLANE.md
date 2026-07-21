@@ -464,7 +464,7 @@ Ao perder o stream, o cliente retoma por `last_event_sequence` e reconcilia via 
 Implementado o mínimo experimental em `internal/dashboard` (HTML/JS embutido, sem build step):
 
 - overview via `GET /api/inspect/overview`;
-- timeline ao vivo por SSE (`GET /api/inspect/events/stream`); o cursor editável do dashboard avança monotonicamente tanto por eventos correlacionados quanto pelos frames `ready`/`page`, inclusive quando uma janela filtrada contém apenas não-matches, para que uma reconexão manual não repita o prefixo já examinado; a UI usa `MessageEvent.lastEventId` como decimal textual, preservando integralmente sequências `uint64` além do limite inteiro seguro do JavaScript;
+- timeline ao vivo por SSE (`GET /api/inspect/events/stream`); o cursor editável do dashboard avança monotonicamente tanto por eventos correlacionados quanto pelos frames `ready`/`page`, inclusive quando uma janela filtrada contém apenas não-matches, para que uma reconexão manual não repita o prefixo já examinado; a UI usa `MessageEvent.lastEventId` como decimal textual, preservando integralmente sequências `uint64` além do limite inteiro seguro do JavaScript; a apresentação retém no máximo 400 linhas/64 KiB e marca explicitamente a omissão do prefixo, evitando crescimento de memória e cópia quadrática sob streams longos sem fingir completude visual;
 - missão/agenda e contagens no overview;
 - caixa de perguntas pendentes (`GET /api/control/questions`) e formulário correlacionado (`POST .../answers`);
 - montagem de inspect/control sob `/api/*` sem escrita canônica direta da UI.

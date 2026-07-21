@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase73-dashboard-timeline-retention-v1",
+  "cases": [
+    {
+      "id": "bounded-visible-timeline-retention",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe dashboard presentation rule for a long-lived SSE timeline that currently retains and rewrites every historical line on each event.",
+      "required_facts": [
+        {"id":"f1","text":"Unbounded text retention consumes growing browser memory and repeated full-text concatenation becomes increasingly expensive during sustained traffic.","priority":10},
+        {"id":"f2","text":"The newest operational evidence must remain visible while old presentation-only entries may be evicted without changing the durable SSE cursor.","priority":10},
+        {"id":"f3","text":"Eviction must be explicit so the visible timeline is not mistaken for a complete audit log.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"bound_lines_and_bytes_keep_newest_show_omission_marker_preserve_cursor"}
+    }
+  ]
+}

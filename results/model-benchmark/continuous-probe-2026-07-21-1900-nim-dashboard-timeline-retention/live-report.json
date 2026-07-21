@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "provider": "nvidia-nim",
+  "model": "meta/llama-3.1-70b-instruct",
+  "fixture": "phase73-dashboard-timeline-retention-v1",
+  "planned_calls": 1,
+  "actual_calls": 1,
+  "limits": {
+    "context_tokens": 2048,
+    "max_output_tokens": 128,
+    "timeout_seconds": 30,
+    "retries": 0
+  },
+  "http_status": 200,
+  "duration_millis": 1924,
+  "usage": {
+    "prompt_tokens": 168,
+    "total_tokens": 186,
+    "completion_tokens": 18,
+    "prompt_tokens_details": null
+  },
+  "output": "rule=bound_lines_and_bytes_keep_newest_show_omission_marker_preserve_cursor",
+  "syntax_valid": true,
+  "semantically_correct": true,
+  "provider_error": "",
+  "analysis": "The output is evidence for the bounded presentation rule only; it does not authorize state changes or alter provider preference."
+}
