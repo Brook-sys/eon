@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -15,6 +16,39 @@ import (
 	"motor-autonomo/internal/inspect"
 	"motor-autonomo/internal/port"
 )
+
+type failingReadStore struct{ err error }
+
+func (s failingReadStore) View(context.Context, func(port.Reader) error) error { return s.err }
+
+func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
+	projector, err := inspect.NewProjector(failingReadStore{err: errors.New("projection unavailable")}, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return time.Date(2026, 7, 21, 18, 40, 0, 0, time.UTC) }
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/events/stream?poll_ms=50&limit=10", nil)
+	api.Handler().ServeHTTP(recorder, req)
+
+	body := recorder.Body.String()
+	if got := strings.Count(body, "event: ready\n"); got != 1 {
+		t.Fatalf("ready frames = %d, body=%q", got, body)
+	}
+	if got := strings.Count(body, "event: error\n"); got != 1 {
+		t.Fatalf("terminal error frames = %d, body=%q", got, body)
+	}
+	if !strings.Contains(body, `"code":"stream_list_failed"`) {
+		t.Fatalf("terminal error code missing: %q", body)
+	}
+	if strings.Contains(body, "projection unavailable") {
+		t.Fatalf("internal projection error leaked: %q", body)
+	}
+}
 
 func TestEventStreamSSEEmitsReadyAndExistingEvents(t *testing.T) {
 	store, mission, _, now := seedRuntime(t)

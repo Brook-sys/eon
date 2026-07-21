@@ -893,6 +893,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     appendTimeline("# protocol error " + message);
   }
 
+  function failStreamServer(connectionGeneration, connection, message) {
+    if (!streamIsCurrent(connectionGeneration)) return;
+    ++streamGeneration;
+    connection.close();
+    if (es === connection) es = null;
+    el("streamBadge").textContent = "SSE server error";
+    el("streamBadge").className = "badge err";
+    appendTimeline("# server error " + message);
+  }
+
   function connectStream() {
     const after = validStreamCursor(el("afterSeq").value.trim() || "0");
     if (after === null) {
@@ -953,7 +963,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("error", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      if (ev && ev.data) appendTimeline("# error " + ev.data);
+      // The inspect server emits this named event only for a terminal
+      // application failure and closes the response immediately afterwards.
+      // Close explicitly so EventSource cannot reinterpret EOF as a transient
+      // transport failure and reconnect forever.
+      failStreamServer(connectionGeneration, candidate, ev && ev.data ? ev.data : "erro terminal sem payload");
     });
     es.onerror = function () {
       if (!streamIsCurrent(connectionGeneration)) return;

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase72-dashboard-terminal-server-error-v1",
+  "cases": [
+    {
+      "id": "terminal-server-error-frame",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe dashboard behavior when the SSE server explicitly emits a named error event for a terminal projection failure and then closes the response.",
+      "required_facts": [
+        {"id":"f1","text":"Leaving EventSource open turns the following EOF into automatic reconnect and can create an unbounded retry loop while the backend failure persists.","priority":10},
+        {"id":"f2","text":"The last accepted resume cursor remains valid and must not be changed by this operational failure.","priority":10},
+        {"id":"f3","text":"A queued native onerror callback must not overwrite the terminal server-error state.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"close_source_preserve_cursor_fence_onerror_require_manual_reconnect"}
+    }
+  ]
+}
