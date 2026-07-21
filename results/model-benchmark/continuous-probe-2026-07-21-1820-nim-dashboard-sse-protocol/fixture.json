@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase71-dashboard-sse-protocol-v1",
+  "cases": [
+    {
+      "id": "invalid-or-regressive-sse-frame-id",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe dashboard behavior when an active SSE stream emits an event or page whose lastEventId is missing, non-canonical, overflowing uint64, or regresses behind the accepted cursor.",
+      "required_facts": [
+        {"id":"f1","text":"Continuing after an invalid or regressive frame ID makes the durable manual-resume cursor ambiguous.","priority":10},
+        {"id":"f2","text":"The last accepted cursor must remain unchanged.","priority":10},
+        {"id":"f3","text":"Callbacks already queued for the failed stream must not mutate the UI after the protocol failure.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"close_stream_preserve_cursor_and_fence_callbacks"}
+    }
+  ]
+}

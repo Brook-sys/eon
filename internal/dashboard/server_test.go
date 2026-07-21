@@ -342,6 +342,7 @@ func TestDashboardMalformedEventStillAdvancesAcceptedCursor(t *testing.T) {
 	advance := extractJSFunction(t, html, "advanceStreamCursor")
 	appendLine := extractJSFunction(t, html, "appendTimeline")
 	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -364,7 +365,7 @@ class EventSource {
   close() {}
   emit(kind, event) { this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
 connectStream();
 es.emit("ready", {lastEventId: "10", data: "ready"});
 es.emit("event", {lastEventId: "11", data: "{malformed"});
@@ -373,6 +374,95 @@ if (!elements.timeline.textContent.includes("# malformed event")) throw new Erro
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard malformed stream event behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardStreamConstructionFailurePreservesHealthyConnection(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"},
+  eventKind: {value: ""},
+  timeline: {textContent: "healthy timeline", dataset: {empty: "0"}},
+  streamBadge: {textContent: "SSE live", className: "badge live"},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let streamGeneration = 4;
+let closeCount = 0;
+const healthy = {close() { closeCount++; }};
+let es = healthy;
+class EventSource { constructor() { throw new Error("constructor failed"); } }
+` + valid + "\n" + connect + `
+connectStream();
+if (es !== healthy || closeCount !== 0) throw new Error("failed candidate replaced healthy connection");
+if (streamGeneration !== 4) throw new Error("failed candidate advanced stream generation");
+if (elements.timeline.textContent !== "healthy timeline") throw new Error("failed candidate replaced timeline");
+if (elements.streamBadge.textContent !== "SSE live") throw new Error("failed candidate replaced badge");
+if (!elements.globalError.textContent.includes("constructor failed")) throw new Error("construction failure was not explained");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard stream construction failure behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardInvalidFrameCursorFailsClosed(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "10", data: "ready"});
+stream.emit("page", {lastEventId: "9", data: "regressive page"});
+if (!stream.closed || es !== null) throw new Error("invalid frame did not close the stream");
+if (streamGeneration !== 2) throw new Error("invalid frame did not invalidate callbacks");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("invalid frame mutated durable cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("protocol failure was not visible");
+if (!elements.timeline.textContent.includes("# protocol error")) throw new Error("protocol failure was not recorded");
+const baseline = elements.timeline.textContent;
+stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11})});
+if (elements.timeline.textContent !== baseline || lastSeq !== "10") throw new Error("callback after protocol failure was not fenced");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard invalid frame cursor behavior failed: %v\n%s", err, output)
 	}
 }
 
@@ -386,6 +476,7 @@ func TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection(t *testi
 	advance := extractJSFunction(t, html, "advanceStreamCursor")
 	appendLine := extractJSFunction(t, html, "appendTimeline")
 	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -410,7 +501,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
 connectStream();
 const first = streams[0];
 elements.afterSeq.value = "10";

@@ -865,21 +865,32 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   function resetStreamCursor(sequence) {
     const next = validStreamCursor(sequence);
-    if (next === null) return;
+    if (next === null) return false;
     lastSeq = next;
     el("afterSeq").value = next;
+    return true;
   }
 
   function advanceStreamCursor(sequence) {
     const next = validStreamCursor(sequence);
-    if (next === null) return;
-    if (next.length < lastSeq.length || (next.length === lastSeq.length && next < lastSeq)) return;
+    if (next === null) return false;
+    if (next.length < lastSeq.length || (next.length === lastSeq.length && next < lastSeq)) return false;
     lastSeq = next;
     el("afterSeq").value = next;
+    return true;
   }
 
   function streamIsCurrent(connectionGeneration) {
     return connectionGeneration === streamGeneration;
+  }
+
+  function failStreamProtocol(connectionGeneration, message) {
+    if (!streamIsCurrent(connectionGeneration)) return;
+    ++streamGeneration;
+    if (es) { es.close(); es = null; }
+    el("streamBadge").textContent = "SSE protocol error";
+    el("streamBadge").className = "badge err";
+    appendTimeline("# protocol error " + message);
   }
 
   function connectStream() {
@@ -888,30 +899,43 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       setError("after_sequence deve ser um uint64 decimal canônico");
       return;
     }
-    if (es) { es.close(); es = null; }
-    const connectionGeneration = ++streamGeneration;
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";
     if (kind) url += "&kind=" + encodeURIComponent(kind);
+    let candidate;
+    try {
+      candidate = new EventSource(url);
+    } catch (err) {
+      setError("não foi possível criar o stream SSE: " + String(err && err.message || err));
+      return;
+    }
+    if (es) es.close();
+    es = candidate;
+    const connectionGeneration = ++streamGeneration;
     el("timeline").textContent = "conectando " + url + "…\n";
     el("timeline").dataset.empty = "0";
-    es = new EventSource(url);
     el("streamBadge").textContent = "SSE connecting";
     el("streamBadge").className = "badge";
     es.addEventListener("ready", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      el("streamBadge").textContent = "SSE live";
-      el("streamBadge").className = "badge live";
       // A ready frame belongs to a newly created stream and carries the
       // server-accepted baseline. It may intentionally rewind an older stream.
-      resetStreamCursor(ev.lastEventId);
+      if (!resetStreamCursor(ev.lastEventId)) {
+        failStreamProtocol(connectionGeneration, "ready sem cursor uint64 canônico");
+        return;
+      }
+      el("streamBadge").textContent = "SSE live";
+      el("streamBadge").className = "badge live";
       appendTimeline("# ready " + ev.data);
     });
     es.addEventListener("event", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
       // EventSource accepts the frame ID independently from application JSON.
       // Preserve that durable cursor even if a malformed payload cannot render.
-      advanceStreamCursor(ev.lastEventId);
+      if (!advanceStreamCursor(ev.lastEventId)) {
+        failStreamProtocol(connectionGeneration, "event com cursor inválido ou regressivo");
+        return;
+      }
       try {
         const data = JSON.parse(ev.data);
         appendTimeline(String(data.sequence||"?") + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
@@ -921,7 +945,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("page", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      advanceStreamCursor(ev.lastEventId);
+      if (!advanceStreamCursor(ev.lastEventId)) {
+        failStreamProtocol(connectionGeneration, "page com cursor inválido ou regressivo");
+        return;
+      }
       appendTimeline("# page " + ev.data);
     });
     es.addEventListener("error", function (ev) {

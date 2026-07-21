@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase71-dashboard-sse-protocol-v1",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "runs": [
+    {
+      "case_id": "invalid-or-regressive-sse-frame-id",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 248,
+      "actual_input_tokens": 191,
+      "output_tokens": 32,
+      "duration_millis": 1004,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "FENCE_CALLBACKS=preserve\nCURSOR=unchanged\nRULE=close_stream_preserve_cursor_and_fence_callbacks"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 191,
+    "output_tokens": 32,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 1,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}
