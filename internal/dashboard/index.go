@@ -992,10 +992,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       }
       appendTimeline("# page " + ev.data);
     });
-    es.addEventListener("error", function (ev) {
+    es.addEventListener("terminal_error", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      // The inspect server emits this named event only for a terminal
-      // application failure and closes the response immediately afterwards.
+      // The inspect server emits this non-reserved named event only for a
+      // terminal application failure and closes the response immediately.
+      // Native EventSource "error" remains reconnectable via onerror below.
       // Close explicitly so EventSource cannot reinterpret EOF as a transient
       // transport failure and reconnect forever.
       failStreamServer(connectionGeneration, candidate, ev && ev.data ? ev.data : "erro terminal sem payload");

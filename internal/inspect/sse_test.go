@@ -39,8 +39,11 @@ func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
 	if got := strings.Count(body, "event: ready\n"); got != 1 {
 		t.Fatalf("ready frames = %d, body=%q", got, body)
 	}
-	if got := strings.Count(body, "event: error\n"); got != 1 {
+	if got := strings.Count(body, "event: terminal_error\n"); got != 1 {
 		t.Fatalf("terminal error frames = %d, body=%q", got, body)
+	}
+	if strings.Contains(body, "event: error\n") {
+		t.Fatalf("terminal application failure used reserved EventSource error type: %q", body)
 	}
 	if !strings.Contains(body, `"code":"stream_list_failed"`) {
 		t.Fatalf("terminal error code missing: %q", body)

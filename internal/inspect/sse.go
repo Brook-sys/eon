@@ -123,7 +123,10 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		}
 		page, listErr := a.Projector.ListEvents(ctx, filter)
 		if listErr != nil {
-			_ = writeSSE(w, flusher, "error", "", map[string]any{
+			// "error" is reserved by EventSource for reconnectable transport
+			// failures. Keep terminal application failure on a distinct channel so
+			// browsers do not confuse a network retry with a command to stop.
+			_ = writeSSE(w, flusher, "terminal_error", "", map[string]any{
 				"code":    "stream_list_failed",
 				"message": "event projection failed",
 			})

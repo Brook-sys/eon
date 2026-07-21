@@ -502,7 +502,7 @@ class EventSource {
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "10", data: "ready"});
-stream.emit("error", {data: JSON.stringify({code: "stream_list_failed"})});
+stream.emit("terminal_error", {data: JSON.stringify({code: "stream_list_failed"})});
 if (!stream.closed || es !== null) throw new Error("terminal server error did not close and clear stream");
 if (streamGeneration !== 2) throw new Error("terminal server error did not fence queued callbacks");
 if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("terminal server error mutated cursor");
@@ -514,6 +514,65 @@ if (JSON.stringify(elements) !== baseline) throw new Error("queued native onerro
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard terminal server error behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardNativeStreamErrorKeepsAutomaticReconnect(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) {
+    if (this.listeners[kind]) this.listeners[kind](event);
+    if (kind === "error" && this.onerror) this.onerror(event);
+  }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "10", data: "ready"});
+const generationBeforeError = streamGeneration;
+stream.emit("error", {});
+if (stream.closed) throw new Error("native transport error closed reconnectable stream");
+if (es !== stream) throw new Error("native transport error cleared current stream");
+if (streamGeneration !== generationBeforeError) throw new Error("native transport error fenced its own reconnect callbacks");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("native transport error mutated cursor");
+if (elements.streamBadge.textContent !== "SSE error/retry") throw new Error("native transport retry was not visible");
+stream.emit("ready", {lastEventId: "10", data: "reconnected"});
+stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11, kind: "continued"})});
+if (stream.closed || es !== stream) throw new Error("reconnected stream was not retained");
+if (streamGeneration !== generationBeforeError) throw new Error("accepted reconnect changed connection generation");
+if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("callbacks after reconnect were fenced");
+if (elements.streamBadge.textContent !== "SSE live") throw new Error("ready after native retry did not restore live badge");
+if (!elements.timeline.textContent.includes("continued")) throw new Error("event after native retry was not rendered");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard native stream retry behavior failed: %v\n%s", err, output)
 	}
 }
 

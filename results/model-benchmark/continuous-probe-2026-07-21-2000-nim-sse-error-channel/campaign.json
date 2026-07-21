@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "name": "phase75-sse-error-channel-nim",
+  "fixture_name": "phase75-sse-error-channel-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "nvidia_nim",
+      "binding_id": "nim-mistral-small-phase75",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase75-sse-error-channel-v1",
+        "model": "mistralai/mistral-small-4-119b-2603",
+        "runs": [
+          {
+            "case_id": "native-versus-terminal-sse-error",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 296,
+            "actual_input_tokens": 197,
+            "output_tokens": 22,
+            "duration_millis": 850,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "terminal_error_event_channel_rule=use_distinct_terminal_error_event_keep_native_error_reconnectable"
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 197,
+          "output_tokens": 22,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 1,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "strict syntax validity was below 50%"
+      }
+    }
+  ]
+}

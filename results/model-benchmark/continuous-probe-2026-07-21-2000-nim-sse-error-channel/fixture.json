@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase75-sse-error-channel-v1",
+  "cases": [
+    {
+      "id": "native-versus-terminal-sse-error",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe EventSource error-channel rule when the server needs to signal a terminal application failure but browsers also emit native error events for reconnectable transport failures.",
+      "required_facts": [
+        {"id":"f1","text":"The native EventSource error event represents reconnectable transport failures and must not close the stream or invalidate its connection generation.","priority":10},
+        {"id":"f2","text":"A terminal application failure must stop automatic reconnection and fence queued callbacks.","priority":10},
+        {"id":"f3","text":"Using the reserved error event name for both meanings makes transient failures indistinguishable from terminal application failures.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"use_distinct_terminal_error_event_keep_native_error_reconnectable"}
+    }
+  ]
+}
