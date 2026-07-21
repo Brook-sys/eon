@@ -128,6 +128,41 @@ func TestLocalSessionManager_RestoreAndPublishTerminalStatus(t *testing.T) {
 	}
 }
 
+func TestLocalSessionManagerSpawnDoesNotOverwriteRestoredGeneratedID(t *testing.T) {
+	ctx := context.Background()
+	clock := &mockClock{now: time.Date(2026, 7, 21, 8, 40, 0, 0, time.UTC)}
+	manager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := kernel.SubagentStatus{
+		ID:        "subagent-1",
+		State:     kernel.SessionStateRunning,
+		Spec:      kernel.SubagentSpec{Task: "restored work", ContextMode: "isolated", Labels: map[string]string{"task_id": "restored-task"}},
+		StartedAt: clock.Now().Add(-time.Minute),
+	}
+	if err := manager.Restore(ctx, restored); err != nil {
+		t.Fatal(err)
+	}
+	spawnedID, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "new work", ContextMode: "isolated", Labels: map[string]string{"task_id": "new-task"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spawnedID == restored.ID {
+		t.Fatalf("spawn reused restored id %q", restored.ID)
+	}
+	gotRestored, err := manager.Status(ctx, restored.ID)
+	if err != nil {
+		t.Fatalf("restored session disappeared: %v", err)
+	}
+	if gotRestored.Spec.Task != restored.Spec.Task || gotRestored.State != restored.State {
+		t.Fatalf("restored session was overwritten: %+v", gotRestored)
+	}
+	if _, err := manager.Status(ctx, spawnedID); err != nil {
+		t.Fatalf("new session missing: %v", err)
+	}
+}
+
 func TestLocalSessionManager_RollbackSpawnCompensatesPendingOnly(t *testing.T) {
 	ctx := context.Background()
 	clock := &mockClock{now: time.Date(2026, 7, 21, 8, 0, 0, 0, time.UTC)}

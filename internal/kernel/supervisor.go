@@ -9,6 +9,8 @@ import (
 	"motor-autonomo/internal/port"
 )
 
+const subagentDeadlineExceeded = "deadline_exceeded"
+
 // Supervisor manages persistent subagent lifecycles across crashes, matching domain states
 // to SessionManager instances.
 type Supervisor struct {
@@ -43,13 +45,24 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 			now := s.Clock.Now()
 			status, statusErr := s.Manager.Status(ctx, SessionID(rec.ID))
 			terminalForCurrentAttempt := statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStateComplete || status.State == SessionStateFailed)
+			deadlineFailureForCurrentAttempt := terminalForCurrentAttempt && status.State == SessionStateFailed && status.Error != nil && status.Error.Error() == subagentDeadlineExceeded
 			// Positive terminal evidence for the active generation wins over the
 			// local deadline. This matters when authenticated remote completion was
 			// already durable before the deadline but only became process-visible in
 			// the current control cycle.
-			if !terminalForCurrentAttempt && !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
+			if (!terminalForCurrentAttempt || deadlineFailureForCurrentAttempt) && !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
+				// Fence a process-visible active generation before publishing the
+				// durable timeout. Otherwise the record leaves the active scan while the
+				// manager keeps consuming a concurrency slot forever. Publishing first
+				// is crash-safe: if the store commit fails, the next cycle recognizes
+				// this exact failure as a deadline terminal rather than retrying it.
+				if statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStatePending || status.State == SessionStateRunning) {
+					if err := s.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(rec.ID), Attempt: rec.Attempt, State: SessionStateFailed, Failure: subagentDeadlineExceeded}); err != nil {
+						return err
+					}
+				}
 				rec.State = domain.SubagentStateError
-				rec.ErrorCode = "deadline_exceeded"
+				rec.ErrorCode = subagentDeadlineExceeded
 				rec.UpdatedAt = now
 				if err := tx.SaveSubagentRecord(rec); err != nil {
 					return err

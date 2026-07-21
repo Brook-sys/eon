@@ -184,8 +184,17 @@ func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (Ses
 		return "", ErrSessionLimit
 	}
 
-	id := SessionID(fmt.Sprintf("subagent-%d", m.nextID))
-	m.nextID++
+	// Restored durable sessions can carry IDs allocated by an earlier process,
+	// while a fresh manager starts its local counter at one. Never overwrite a
+	// restored session: probe until an unused process-local ID is found.
+	var id SessionID
+	for {
+		id = SessionID(fmt.Sprintf("subagent-%d", m.nextID))
+		m.nextID++
+		if _, exists := m.sessions[id]; !exists {
+			break
+		}
+	}
 	status := &SubagentStatus{ID: id, Attempt: 0, State: SessionStatePending, Spec: cloneSubagentSpec(spec), StartedAt: m.clock.Now()}
 	m.sessions[id] = status
 	if taskID := spec.Labels["task_id"]; taskID != "" {

@@ -251,6 +251,45 @@ func TestSupervisor_ExpiresOrphanedSession(t *testing.T) {
 	}
 }
 
+func TestSupervisorDeadlineReleasesManagerConcurrency(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 8, 40, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "expired-active", TaskID: "task-expired-active", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Hour), UpdatedAt: clock.Now().Add(-time.Hour), Task: "stuck but still tracked", ContextMode: "isolated", Attempt: 1, MaxAttempts: 3, Deadline: clock.Now()}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{
+		"expired-active": {ID: "expired-active", Attempt: 1, State: kernel.SessionStateRunning},
+	}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	status, err := manager.Status(ctx, "expired-active")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.State != kernel.SessionStateFailed || status.Error == nil || status.Error.Error() != "deadline_exceeded" {
+		t.Fatalf("manager session was not terminalized at deadline: %+v", status)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord(rec.ID)
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateError || got.ErrorCode != "deadline_exceeded" {
+			t.Fatalf("durable deadline state=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 0 {
+		t.Fatalf("terminal replay=(%d,%v)", n, err)
+	}
+}
+
 func TestSupervisorTerminalObservationWinsAtDeadline(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
