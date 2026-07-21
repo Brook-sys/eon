@@ -125,7 +125,7 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 		if dispatch.RequestID == "" {
 			requestID, idErr := m.ids.NewID("subagent-dispatch")
 			if idErr != nil {
-				return "", fmt.Errorf("allocate subagent dispatch id: %w", idErr)
+				return "", m.rollbackSpawn(ctx, id, fmt.Errorf("allocate subagent dispatch id: %w", idErr))
 			}
 			dispatch = domain.SubagentDispatch{SchemaVersion: domain.SchemaVersionV1, RequestID: domain.SubagentDispatchRequestID(requestID), SessionID: record.ID, Attempt: record.Attempt, PeerID: record.TransportPeerID, Status: domain.SubagentDispatchPending, MaxSendAttempts: m.policy.DispatchMaxAttempts, AvailableAt: now, CreatedAt: now, UpdatedAt: now}
 		}
@@ -175,9 +175,32 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 		return nil
 	})
 	if err != nil {
-		return "", fmt.Errorf("persist spawned subagent %s: %w", id, err)
+		return "", m.rollbackSpawn(ctx, id, fmt.Errorf("persist spawned subagent %s: %w", id, err))
 	}
 	return id, nil
+}
+
+func (m *PersistentSessionManager) rollbackSpawn(ctx context.Context, id SessionID, cause error) error {
+	// Only compensate process-local admissions that never became durable. If a
+	// record already exists under the same identity, rolling it back would
+	// destroy a live session that merely failed an idempotent write/check.
+	var durableExists bool
+	_ = m.store.View(context.WithoutCancel(ctx), func(reader port.Reader) error {
+		_, err := reader.SubagentRecord(string(id))
+		durableExists = err == nil
+		return nil
+	})
+	if durableExists {
+		return cause
+	}
+	if rollbackErr := m.manager.RollbackSpawn(context.WithoutCancel(ctx), id); rollbackErr != nil {
+		return errors.Join(cause, fmt.Errorf("rollback process-local subagent %s: %w", id, rollbackErr))
+	}
+	return cause
+}
+
+func (m *PersistentSessionManager) RollbackSpawn(ctx context.Context, id SessionID) error {
+	return m.manager.RollbackSpawn(ctx, id)
 }
 
 func (m *PersistentSessionManager) Status(ctx context.Context, id SessionID) (SubagentStatus, error) {

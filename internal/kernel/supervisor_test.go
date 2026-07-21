@@ -92,6 +92,8 @@ func (m *mockSessionManager) Spawn(ctx context.Context, spec kernel.SubagentSpec
 	return "", errors.New("unimplemented")
 }
 
+func (m *mockSessionManager) RollbackSpawn(context.Context, kernel.SessionID) error { return nil }
+
 func (m *mockSessionManager) Restore(ctx context.Context, status kernel.SubagentStatus) error {
 	m.sessions[status.ID] = status
 	return nil

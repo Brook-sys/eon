@@ -128,6 +128,93 @@ func TestLocalSessionManager_RestoreAndPublishTerminalStatus(t *testing.T) {
 	}
 }
 
+func TestLocalSessionManager_RollbackSpawnCompensatesPendingOnly(t *testing.T) {
+	ctx := context.Background()
+	clock := &mockClock{now: time.Date(2026, 7, 21, 8, 0, 0, 0, time.UTC)}
+	manager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Rollback of unknown session returns ErrSessionNotFound.
+	if err := manager.RollbackSpawn(ctx, "nonexistent"); !errors.Is(err, kernel.ErrSessionNotFound) {
+		t.Fatalf("rollback unknown = %v, want ErrSessionNotFound", err)
+	}
+
+	// Spawn a session, verify it exists, then rollback.
+	id, err := manager.Spawn(ctx, kernel.SubagentSpec{
+		Task: "rollback-me", ContextMode: "isolated",
+		Labels: map[string]string{"task_id": "rb-1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := manager.Status(ctx, id); err != nil {
+		t.Fatalf("pending session should exist: %v", err)
+	}
+
+	// Rollback succeeds and removes the session.
+	if err := manager.RollbackSpawn(ctx, id); err != nil {
+		t.Fatalf("rollback pending: %v", err)
+	}
+	if _, err := manager.Status(ctx, id); !errors.Is(err, kernel.ErrSessionNotFound) {
+		t.Fatal("session should be removed after rollback")
+	}
+
+	// task_id index should also be cleaned — reuse the same task_id.
+	idReuse, err := manager.Spawn(ctx, kernel.SubagentSpec{
+		Task: "rollback-me-reuse", ContextMode: "isolated",
+		Labels: map[string]string{"task_id": "rb-1"},
+	})
+	if err != nil {
+		t.Fatalf("spawn reusing rolled-back task_id should succeed: %v", err)
+	}
+
+	// Concurrency slot should be freed: spawn fills second slot.
+	idSecond, err := manager.Spawn(ctx, kernel.SubagentSpec{
+		Task: "after-rollback-2", ContextMode: "isolated",
+		Labels: map[string]string{"task_id": "after-rb-2"},
+	})
+	if err != nil {
+		t.Fatalf("spawn second slot: %v", err)
+	}
+
+	// At capacity (2). Complete one to make room for the running test.
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{
+		ID: idSecond, State: kernel.SessionStateComplete, Result: "done",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Spawn a third session and move it to RUNNING.
+	id3, err := manager.Spawn(ctx, kernel.SubagentSpec{
+		Task: "running-session", ContextMode: "isolated",
+		Labels: map[string]string{"task_id": "running-1"},
+	})
+	if err != nil {
+		t.Fatalf("spawn for running test: %v", err)
+	}
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{
+		ID: id3, State: kernel.SessionStateRunning,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Rollback of a non-pending session must fail closed.
+	if err := manager.RollbackSpawn(ctx, id3); !errors.Is(err, kernel.ErrSessionTerminal) {
+		t.Fatalf("rollback running = %v, want ErrSessionTerminal", err)
+	}
+
+	// Rollback with cancelled context must fail.
+	cancelledCtx, cancel := context.WithCancel(ctx)
+	cancel()
+	if err := manager.RollbackSpawn(cancelledCtx, "any"); err == nil {
+		t.Fatal("expected error on cancelled context")
+	}
+
+	_ = idReuse // used to verify task_id cleanup
+}
+
 func TestLocalSessionManager_RetryFailedSessionIsReplaySafe(t *testing.T) {
 	ctx := context.Background()
 	clock := &mockClock{now: time.Date(2026, 7, 20, 14, 0, 0, 0, time.UTC)}

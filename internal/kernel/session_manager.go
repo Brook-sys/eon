@@ -69,11 +69,38 @@ func (p SessionPolicy) validate() error {
 // SessionManager defines the contract for coordinating child subagents.
 type SessionManager interface {
 	Spawn(ctx context.Context, spec SubagentSpec) (SessionID, error)
+	// RollbackSpawn removes a newly admitted session when its durable envelope
+	// could not be committed. Implementations must fail closed once execution or
+	// a terminal observation has begun.
+	RollbackSpawn(ctx context.Context, id SessionID) error
 	Restore(ctx context.Context, status SubagentStatus) error
 	PublishStatus(ctx context.Context, observation SubagentObservation) error
 	Retry(ctx context.Context, id SessionID) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
+}
+
+// RollbackSpawn compensates only a process-local admission that is still
+// pending. It prevents a failed durable write from leaving an untracked child
+// consuming concurrency or becoming executable later.
+func (m *localSessionManager) RollbackSpawn(ctx context.Context, id SessionID) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	status, ok := m.sessions[id]
+	if !ok {
+		return ErrSessionNotFound
+	}
+	if status.State != SessionStatePending {
+		return ErrSessionTerminal
+	}
+	delete(m.sessions, id)
+	if taskID := status.Spec.Labels["task_id"]; taskID != "" && m.byTaskID[taskID] == id {
+		delete(m.byTaskID, taskID)
+	}
+	return nil
 }
 
 var (
