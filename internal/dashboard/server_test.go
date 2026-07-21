@@ -297,6 +297,85 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 	}
 }
 
+func TestDashboardStreamRejectsInvalidManualCursorBeforeReplacingConnection(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10x"},
+  eventKind: {value: ""},
+  timeline: {textContent: "existing stream", dataset: {empty: "0"}},
+  streamBadge: {textContent: "SSE live", className: "badge live"},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let streamGeneration = 7;
+let closeCount = 0;
+let es = {close() { closeCount++; }};
+class EventSource { constructor() { throw new Error("invalid cursor created EventSource"); } }
+` + valid + "\n" + connect + `
+connectStream();
+if (closeCount !== 0) throw new Error("invalid cursor closed the healthy connection");
+if (streamGeneration !== 7) throw new Error("invalid cursor advanced stream generation");
+if (!elements.globalError.textContent.includes("uint64")) throw new Error("invalid cursor was not explained");
+if (elements.timeline.textContent !== "existing stream") throw new Error("invalid cursor replaced timeline");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard invalid stream cursor behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardMalformedEventStillAdvancesAcceptedCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  constructor(url) { this.url = url; this.listeners = {}; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() {}
+  emit(kind, event) { this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + connect + `
+connectStream();
+es.emit("ready", {lastEventId: "10", data: "ready"});
+es.emit("event", {lastEventId: "11", data: "{malformed"});
+if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("malformed payload lost accepted SSE cursor");
+if (!elements.timeline.textContent.includes("# malformed event")) throw new Error("malformed payload was not labeled");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard malformed stream event behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")

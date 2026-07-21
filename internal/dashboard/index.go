@@ -883,9 +883,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
   function connectStream() {
+    const after = validStreamCursor(el("afterSeq").value.trim() || "0");
+    if (after === null) {
+      setError("after_sequence deve ser um uint64 decimal canônico");
+      return;
+    }
     if (es) { es.close(); es = null; }
     const connectionGeneration = ++streamGeneration;
-    const after = el("afterSeq").value.trim() || "0";
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";
     if (kind) url += "&kind=" + encodeURIComponent(kind);
@@ -905,12 +909,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("event", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
+      // EventSource accepts the frame ID independently from application JSON.
+      // Preserve that durable cursor even if a malformed payload cannot render.
+      advanceStreamCursor(ev.lastEventId);
       try {
         const data = JSON.parse(ev.data);
-        advanceStreamCursor(ev.lastEventId);
         appendTimeline(String(data.sequence||"?") + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
       } catch {
-        appendTimeline(ev.data);
+        appendTimeline("# malformed event " + ev.data);
       }
     });
     es.addEventListener("page", function (ev) {

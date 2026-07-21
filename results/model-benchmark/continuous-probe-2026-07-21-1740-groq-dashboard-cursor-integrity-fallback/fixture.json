@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase70-dashboard-cursor-integrity-v1",
+  "cases": [
+    {
+      "id": "malformed-sse-payload-with-valid-id",
+      "operation": "SYNTHESIZE",
+      "task": "Choose how a dashboard should update its durable resume cursor when an SSE event has a valid accepted lastEventId but its JSON payload is malformed and cannot be rendered.",
+      "required_facts": [
+        {"id":"f1","text":"EventSource accepts and stores the SSE id independently from application JSON parsing.","priority":10},
+        {"id":"f2","text":"Leaving the dashboard cursor behind after an accepted frame makes a later manual reconnect replay that frame.","priority":10},
+        {"id":"f3","text":"The malformed payload should be visibly labeled without discarding the accepted durable cursor.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"advance_cursor_before_parsing_and_label_malformed_payload"}
+    }
+  ]
+}
