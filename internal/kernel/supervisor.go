@@ -44,7 +44,14 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 		for _, rec := range active {
 			now := s.Clock.Now()
 			status, statusErr := s.Manager.Status(ctx, SessionID(rec.ID))
-			terminalForCurrentAttempt := statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStateComplete || status.State == SessionStateFailed)
+			// Retry is deliberately issued before its durable generation is
+			// published. If that transaction rolls back, the transport can already
+			// be anywhere in attempt+1 (not only PENDING). Treat the immediately
+			// advanced generation as current so restart/reconcile cannot lose a fast
+			// RUNNING/COMPLETE/FAILED observation or leak it at the deadline.
+			recoveredRetry := statusErr == nil && rec.State == domain.SubagentStateRunning && status.Attempt == rec.Attempt+1 && rec.Attempt < rec.MaxAttempts-1
+			statusForCurrentAttempt := statusErr == nil && (status.Attempt == rec.Attempt || recoveredRetry)
+			terminalForCurrentAttempt := statusForCurrentAttempt && (status.State == SessionStateComplete || status.State == SessionStateFailed)
 			deadlineFailureForCurrentAttempt := terminalForCurrentAttempt && status.State == SessionStateFailed && status.Error != nil && status.Error.Error() == subagentDeadlineExceeded
 			// Positive terminal evidence for the active generation wins over the
 			// local deadline. This matters when authenticated remote completion was
@@ -56,10 +63,17 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				// manager keeps consuming a concurrency slot forever. Publishing first
 				// is crash-safe: if the store commit fails, the next cycle recognizes
 				// this exact failure as a deadline terminal rather than retrying it.
-				if statusErr == nil && status.Attempt == rec.Attempt && (status.State == SessionStatePending || status.State == SessionStateRunning) {
-					if err := s.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(rec.ID), Attempt: rec.Attempt, State: SessionStateFailed, Failure: subagentDeadlineExceeded}); err != nil {
+				if statusForCurrentAttempt && (status.State == SessionStatePending || status.State == SessionStateRunning) {
+					attempt := rec.Attempt
+					if recoveredRetry {
+						attempt = status.Attempt
+					}
+					if err := s.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(rec.ID), Attempt: attempt, State: SessionStateFailed, Failure: subagentDeadlineExceeded}); err != nil {
 						return err
 					}
+				}
+				if recoveredRetry {
+					rec.Attempt = status.Attempt
 				}
 				rec.State = domain.SubagentStateError
 				rec.ErrorCode = subagentDeadlineExceeded
@@ -82,17 +96,19 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 			}
 
 			changed := false
+			if recoveredRetry {
+				rec.Attempt = status.Attempt
+				changed = true
+			}
 			switch status.State {
 			case SessionStatePending:
 				// A previous retry may have re-armed the transport immediately before
 				// the durable transaction rolled back. Complete that split observation
 				// without issuing another transport retry.
-				if rec.State == domain.SubagentStateRunning && status.Attempt == rec.Attempt+1 && rec.Attempt < rec.MaxAttempts-1 {
+				if recoveredRetry {
 					rec.State = domain.SubagentStatePending
-					rec.Attempt++
 					rec.Result = ""
 					rec.ErrorCode = ""
-					changed = true
 				}
 			case SessionStateComplete:
 				if status.Attempt != rec.Attempt {

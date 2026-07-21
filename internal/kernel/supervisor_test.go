@@ -225,6 +225,74 @@ func TestSupervisorRecoversRetryRearmedBeforeDurableCommit(t *testing.T) {
 	}
 }
 
+func TestSupervisorRecoversRetryCompletedBeforeDurableCommit(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 9, 10, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-fast-complete", TaskID: "task-retry-fast-complete", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Minute), UpdatedAt: clock.Now().Add(-time.Minute), Task: "recover fast retry completion", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2, Deadline: clock.Now().Add(time.Minute)}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{
+		"retry-fast-complete": {ID: "retry-fast-complete", Attempt: 1, State: kernel.SessionStateComplete, Result: "attempt one result"},
+	}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord(rec.ID)
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateComplete || got.Attempt != 1 || got.Result != "attempt one result" {
+			t.Fatalf("fast retry completion was not recovered: %+v", got)
+		}
+		if _, err := tx.ExternalEventByDeduplicationKey("subagent-terminal:" + rec.ID); err != nil {
+			t.Fatalf("terminal event missing: %v", err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSupervisorExpiresRetryAdvancedBeforeDurableCommit(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 21, 9, 15, 0, 0, time.UTC)}
+	rec := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: "retry-split-deadline", TaskID: "task-retry-split-deadline", MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now().Add(-time.Hour), UpdatedAt: clock.Now().Add(-time.Hour), Task: "expire split retry", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2, Deadline: clock.Now()}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(rec) }); err != nil {
+		t.Fatal(err)
+	}
+	manager := &mockSessionManager{sessions: map[kernel.SessionID]kernel.SubagentStatus{
+		"retry-split-deadline": {ID: "retry-split-deadline", Attempt: 1, State: kernel.SessionStateRunning},
+	}}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile=(%d,%v)", n, err)
+	}
+	status, err := manager.Status(ctx, "retry-split-deadline")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.Attempt != 1 || status.State != kernel.SessionStateFailed || status.Error == nil || status.Error.Error() != "deadline_exceeded" {
+		t.Fatalf("advanced retry was not fenced at deadline: %+v", status)
+	}
+	if err := store.View(ctx, func(tx port.Reader) error {
+		got, err := tx.SubagentRecord(rec.ID)
+		if err != nil {
+			return err
+		}
+		if got.State != domain.SubagentStateError || got.Attempt != 1 || got.ErrorCode != "deadline_exceeded" {
+			t.Fatalf("durable split retry deadline state=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSupervisor_ExpiresOrphanedSession(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
