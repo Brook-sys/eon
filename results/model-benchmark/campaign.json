@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "name": "continuous-probe-2026-07-22-0830",
+  "name": "continuous-probe-2026-07-22-1000",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
   "max_calls": 1,
   "models": [
     {
-      "provider": "groq",
-      "binding_id": "groq-llama-3.1-8b-instant",
-      "model": "llama-3.1-8b-instant",
+      "provider": "nim",
+      "binding_id": "nim-llama-3.1-8b-instruct",
+      "model": "meta/llama-3.1-8b-instruct",
       "report": {
         "schema_version": 1,
         "fixture_name": "cognitive-tool-v1",
-        "model": "llama-3.1-8b-instant",
+        "model": "meta/llama-3.1-8b-instruct",
         "runs": [
           {
             "case_id": "tool-search-single",
@@ -21,7 +21,7 @@
             "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 95,
+            "duration_millis": 381,
             "syntax_valid": false,
             "semantically_correct": false,
             "error_kind": "PROVIDER",

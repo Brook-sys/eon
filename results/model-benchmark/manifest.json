@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "continuous-probe-2026-07-22-0830",
+  "name": "continuous-probe-2026-07-22-1000",
   "fixture_path": "internal/evaluation/testdata/cognitive-tool-v1.json",
   "context_tokens": [
     2048
@@ -11,11 +11,11 @@
   "timeout_seconds": 30,
   "models": [
     {
-      "provider": "groq",
-      "binding_id": "groq-llama-3.1-8b-instant",
-      "base_url": "https://api.groq.com/openai/v1",
-      "model": "llama-3.1-8b-instant",
-      "api_key_env": "GROQ_API_KEY",
+      "provider": "nim",
+      "binding_id": "nim-llama-3.1-8b-instruct",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_API_KEY",
       "max_output_field": "max_tokens"
     }
   ]

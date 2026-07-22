@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "fixture_name": "cognitive-tool-v1",
-  "model": "llama-3.1-8b-instant",
+  "model": "meta/llama-3.1-8b-instruct",
   "runs": [
     {
       "case_id": "tool-search-single",
@@ -10,7 +10,7 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 188,
-      "duration_millis": 257,
+      "duration_millis": 381,
       "syntax_valid": false,
       "semantically_correct": false,
       "error_kind": "PROVIDER",

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "fixture_name": "cognitive-tool-v1",
-  "model": "llama-3.1-8b-instant",
+  "model": "offline-oracle",
   "runs": [
     {
       "case_id": "tool-search-single",
@@ -10,23 +10,58 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 188,
-      "duration_millis": 95,
-      "syntax_valid": false,
-      "semantically_correct": false,
-      "error_kind": "PROVIDER",
-      "provider_status": 401
+      "actual_input_tokens": 32,
+      "output_tokens": 2,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\"tool_call_name\":\"sessions_spawn_remote\"}",
+      "values": {
+        "tool_call_name": "sessions_spawn_remote"
+      }
+    },
+    {
+      "case_id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 4096,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 32,
+      "output_tokens": 2,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\"tool_call_name\":\"sessions_spawn_remote\"}",
+      "values": {
+        "tool_call_name": "sessions_spawn_remote"
+      }
+    },
+    {
+      "case_id": "tool-search-single",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 8192,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "actual_input_tokens": 32,
+      "output_tokens": 2,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "{\"tool_call_name\":\"sessions_spawn_remote\"}",
+      "values": {
+        "tool_call_name": "sessions_spawn_remote"
+      }
     }
   ],
   "summary": {
-    "total": 1,
-    "compiled": 1,
-    "syntax_valid": 0,
-    "semantically_correct": 0,
-    "input_tokens": 0,
-    "output_tokens": 0,
+    "total": 3,
+    "compiled": 3,
+    "syntax_valid": 3,
+    "semantically_correct": 3,
+    "input_tokens": 96,
+    "output_tokens": 6,
     "omitted_facts": 0,
     "compile_errors": 0,
-    "provider_errors": 1,
+    "provider_errors": 0,
     "validation_errors": 0,
     "rate_limited": 0,
     "timeouts": 0
@@ -35,23 +70,23 @@
     "by_operation": [
       {
         "label": "SYNTHESIZE",
-        "total": 1,
-        "compiled": 1,
-        "syntax_valid": 0,
-        "semantically_correct": 0,
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
         "omitted_facts": 0,
-        "errors": 1
+        "errors": 0
       }
     ],
     "by_format": [
       {
         "label": "JSON",
-        "total": 1,
-        "compiled": 1,
-        "syntax_valid": 0,
-        "semantically_correct": 0,
+        "total": 3,
+        "compiled": 3,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
         "omitted_facts": 0,
-        "errors": 1
+        "errors": 0
       }
     ],
     "by_context": [
@@ -59,10 +94,28 @@
         "label": "2048",
         "total": 1,
         "compiled": 1,
-        "syntax_valid": 0,
-        "semantically_correct": 0,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
         "omitted_facts": 0,
-        "errors": 1
+        "errors": 0
+      },
+      {
+        "label": "4096",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      },
+      {
+        "label": "8192",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
       }
     ]
   }

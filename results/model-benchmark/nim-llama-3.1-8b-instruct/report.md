@@ -1,7 +1,7 @@
 # Cognitive benchmark
 
 - Fixture: `cognitive-tool-v1`
-- Model: `llama-3.1-8b-instant`
+- Model: `meta/llama-3.1-8b-instruct`
 - Runs: 1
 - Compiled: 1
 - Syntax valid: 0
@@ -16,7 +16,7 @@
 
 - Kind: `live`
 - Verdict: `FAIL`
-- Headline: Cognitive baseline FAIL for model "llama-3.1-8b-instant" on "cognitive-tool-v1": correct=0/1 syntax_valid=0 (provider_errors=1 validation_errors=0).
+- Headline: Cognitive baseline FAIL for model "meta/llama-3.1-8b-instruct" on "cognitive-tool-v1": correct=0/1 syntax_valid=0 (provider_errors=1 validation_errors=0).
 
 ### Notes
 
@@ -27,7 +27,7 @@
 - `interpret:fixture=cognitive-tool-v1`
 - `interpret:kind=live`
 - `interpret:live_provider_baseline`
-- `interpret:model=llama-3.1-8b-instant`
+- `interpret:model=meta/llama-3.1-8b-instruct`
 - `interpret:prefer_empirically_stronger_format_or_smaller_ops_first`
 - `interpret:semantically_correct=0`
 - `interpret:strongest_format=JSON rate=0/1`
@@ -60,4 +60,4 @@
 
 | Case | Operation | Format | Context | Result | HTTP | Retry-After | Input/output tokens | Latency |
 | --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: |
-| tool-search-single | SYNTHESIZE | JSON | 2048 | PROVIDER | 401 | 0 ms | 0/0 | 257 ms |
+| tool-search-single | SYNTHESIZE | JSON | 2048 | PROVIDER | 401 | 0 ms | 0/0 | 381 ms |
