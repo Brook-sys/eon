@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/port"
 )
 
 const (
@@ -103,12 +104,34 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		CommitID:        domain.CommitID(r.URL.Query().Get("commit_id")),
 	}
 
+	var highWater uint64
+	if err := a.Projector.Store.View(r.Context(), func(reader port.Reader) error {
+		highWater = reader.LatestEventSequence()
+		return nil
+	}); err != nil {
+		writeStoreError(w, err)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
+	if after > highWater {
+		// Never certify a resume point beyond the durable log tail. Such a cursor
+		// can otherwise leave a syntactically healthy stream permanently blind,
+		// especially at max uint64. Keep the mismatch visible and require the
+		// operator to choose whether to reset after a store restore/replacement.
+		cursor := strconv.FormatUint(highWater, 10)
+		_ = writeSSE(w, flusher, "cursor_ahead", cursor, map[string]any{
+			"schema_version":          domain.SchemaVersionV1,
+			"requested_after_decimal": strconv.FormatUint(after, 10),
+			"high_water_decimal":      cursor,
+		})
+		return
+	}
 
 	// Hello event helps the client confirm the stream is live.
 	// Preserve the accepted resume cursor in the ready frame. Browsers update

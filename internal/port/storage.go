@@ -82,6 +82,7 @@ type OperatorQuestionWriter interface {
 type EventReader interface {
 	Events(afterSequence uint64, limit int) ([]domain.Event, error)
 	EventByID(domain.EventID) (domain.Event, error)
+	LatestEventSequence() uint64
 }
 
 type EventWriter interface {

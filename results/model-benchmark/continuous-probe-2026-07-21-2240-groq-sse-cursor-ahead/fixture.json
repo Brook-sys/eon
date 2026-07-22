@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "phase83-sse-cursor-ahead-v1",
+  "cases": [{
+    "id": "sse-cursor-ahead-gate",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe SSE rule when a resume cursor is greater than the durable event log high-water sequence.",
+    "required_facts": [
+      {"id":"f1","text":"A resume cursor ahead of the durable tail can leave a healthy-looking stream blind to all later events below that cursor.","priority":10},
+      {"id":"f2","text":"The server must not certify the ahead cursor with a ready frame or silently clamp it.","priority":10},
+      {"id":"f3","text":"Return a versioned terminal cursor-ahead outcome with the exact requested and high-water decimal cursors, close reconnect, and require explicit operator reset.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"reject_ahead_cursor_with_exact_high_water_and_explicit_reset"}
+  }]
+}

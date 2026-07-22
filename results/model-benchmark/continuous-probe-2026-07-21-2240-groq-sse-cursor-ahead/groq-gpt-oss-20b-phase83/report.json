@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase83-sse-cursor-ahead-v1",
+  "model": "openai/gpt-oss-20b",
+  "runs": [
+    {
+      "case_id": "sse-cursor-ahead-gate",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 264,
+      "actual_input_tokens": 251,
+      "output_tokens": 83,
+      "duration_millis": 690,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "rule=reject_ahead_cursor_with_exact_high_water_and_explicit_reset",
+      "values": {
+        "rule": "reject_ahead_cursor_with_exact_high_water_and_explicit_reset"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 1,
+    "input_tokens": 251,
+    "output_tokens": 83,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}

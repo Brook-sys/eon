@@ -392,6 +392,7 @@ func (t transaction) Events(afterSequence uint64, limit int) ([]domain.Event, er
 func (t transaction) EventByID(id domain.EventID) (domain.Event, error) {
 	return reader(t).EventByID(id)
 }
+func (t transaction) LatestEventSequence() uint64 { return reader(t).LatestEventSequence() }
 func (t transaction) PeerSyncInboxRecord(peerID, originID, messageID string) (domain.PeerSyncInboxRecord, error) {
 	return reader(t).PeerSyncInboxRecord(peerID, originID, messageID)
 }
@@ -959,6 +960,10 @@ func (r reader) EventByID(id domain.EventID) (domain.Event, error) {
 		return domain.Event{}, notFound("event", id)
 	}
 	return r.state.events[sequence-1], nil
+}
+
+func (r reader) LatestEventSequence() uint64 {
+	return uint64(len(r.state.events))
 }
 
 func peerSyncInboxKey(peerID, originID, messageID string) string {

@@ -17,12 +17,23 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-type failingReadStore struct{ err error }
+type failingReadStore struct {
+	backing port.ReadStore
+	err     error
+	views   int
+}
 
-func (s failingReadStore) View(context.Context, func(port.Reader) error) error { return s.err }
+func (s *failingReadStore) View(ctx context.Context, fn func(port.Reader) error) error {
+	s.views++
+	if s.views > 1 {
+		return s.err
+	}
+	return s.backing.View(ctx, fn)
+}
 
 func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
-	projector, err := inspect.NewProjector(failingReadStore{err: errors.New("projection unavailable")}, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	store, _, _, _ := seedRuntime(t)
+	projector, err := inspect.NewProjector(&failingReadStore{backing: store, err: errors.New("projection unavailable")}, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +70,44 @@ func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
 	}
 	if strings.Contains(body, "projection unavailable") {
 		t.Fatalf("internal projection error leaked: %q", body)
+	}
+}
+
+func TestEventStreamRejectsResumeCursorAheadOfDurableTail(t *testing.T) {
+	store, _, _, now := seedRuntime(t)
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, requested := range []string{"100", strconv.FormatUint(^uint64(0), 10)} {
+		t.Run(requested, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/events/stream?after_sequence="+requested+"&poll_ms=50&limit=10", nil)
+			api.Handler().ServeHTTP(recorder, req)
+
+			body := recorder.Body.String()
+			if strings.Contains(body, "event: ready\n") {
+				t.Fatalf("ahead cursor was certified by ready frame: %q", body)
+			}
+			if got := strings.Count(body, "event: cursor_ahead\n"); got != 1 {
+				t.Fatalf("cursor_ahead frames = %d, body=%q", got, body)
+			}
+			if !strings.Contains(body, `"requested_after_decimal":"`+requested+`"`) {
+				t.Fatalf("requested cursor missing: %q", body)
+			}
+			if !strings.Contains(body, `"high_water_decimal":"2"`) || !strings.Contains(body, "id: 2\n") {
+				t.Fatalf("exact durable high-water missing: %q", body)
+			}
+			if !strings.Contains(body, `"schema_version":1`) {
+				t.Fatalf("cursor_ahead schema version missing: %q", body)
+			}
+		})
 	}
 }
 

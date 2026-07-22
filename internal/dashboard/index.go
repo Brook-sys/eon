@@ -934,6 +934,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     appendTimeline("# server error " + message);
   }
 
+  function failStreamCursorAhead(connectionGeneration, connection, highWater) {
+    if (!streamIsCurrent(connectionGeneration)) return;
+    ++streamGeneration;
+    connection.close();
+    if (es === connection) es = null;
+    el("streamBadge").textContent = "SSE cursor ahead";
+    el("streamBadge").className = "badge err";
+    appendTimeline("# cursor ahead; redefina after_sequence explicitamente para " + highWater);
+  }
+
   function connectStream() {
     const after = validStreamCursor(el("afterSeq").value.trim() || "0");
     if (after === null) {
@@ -1083,6 +1093,30 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // Close explicitly so EventSource cannot reinterpret EOF as a transient
       // transport failure and reconnect forever.
       failStreamServer(connectionGeneration, candidate, ev.data);
+    });
+    es.addEventListener("cursor_ahead", function (ev) {
+      if (!streamIsCurrent(connectionGeneration)) return;
+      let cursorData;
+      try {
+        cursorData = JSON.parse(ev.data);
+      } catch {
+        failStreamProtocol(connectionGeneration, "cursor_ahead com payload JSON malformado");
+        return;
+      }
+      if (cursorData.schema_version !== 1) {
+        failStreamProtocol(connectionGeneration, "cursor_ahead com schema_version ausente ou incompatível");
+        return;
+      }
+      const highWater = validStreamCursor(ev.lastEventId);
+      if (highWater === null || validStreamCursor(cursorData.high_water_decimal) !== highWater || validStreamCursor(cursorData.requested_after_decimal) !== after) {
+        failStreamProtocol(connectionGeneration, "cursor_ahead com cursores ausentes ou divergentes");
+        return;
+      }
+      if (highWater.length > after.length || (highWater.length === after.length && highWater >= after)) {
+        failStreamProtocol(connectionGeneration, "cursor_ahead sem avanço além do high-water");
+        return;
+      }
+      failStreamCursorAhead(connectionGeneration, candidate, highWater);
     });
     es.onerror = function () {
       if (!streamIsCurrent(connectionGeneration)) return;
