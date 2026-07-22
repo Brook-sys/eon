@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "phase90-sse-default-message-v1",
+  "cases": [{
+    "id": "sse-default-message",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser policy for an unexpected unnamed/default SSE message frame when the application protocol permits only named ready, event, page, terminal_error, and cursor_ahead frames.",
+    "required_facts": [
+      {"id":"f1","text":"An unnamed/default SSE message is observable through EventSource's message listener and is outside the allowed application protocol.","priority":10},
+      {"id":"f2","text":"Its browser-managed Last-Event-ID may advance even though no supported application handler accepted the frame.","priority":10},
+      {"id":"f3","text":"The client must close and generation-fence the source without advancing its application cursor, both before and after ready.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"reject_default_message_fail_closed_without_advancing_application_cursor"}
+  }]
+}

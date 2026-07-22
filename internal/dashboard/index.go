@@ -1026,6 +1026,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     el("timeline").dataset.empty = "0";
     el("streamBadge").textContent = "SSE connecting";
     el("streamBadge").className = "badge";
+    // The wire protocol uses named events exclusively. A default/unnamed
+    // message is observable, but its id may already have changed the browser's
+    // private Last-Event-ID. Reject it without adopting that opaque cursor,
+    // regardless of whether the ready handshake has completed.
+    es.addEventListener("message", function () {
+      if (!streamIsCurrent(connectionGeneration)) return;
+      failStreamProtocol(connectionGeneration, "frame SSE default não permitido");
+    });
     es.addEventListener("ready", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
       // Only the first ready of a newly created EventSource may intentionally

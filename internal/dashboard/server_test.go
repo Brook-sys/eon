@@ -1367,6 +1367,62 @@ if (timeline.textContent.includes("�")) throw new Error("continued UTF-8 reten
 	}
 }
 
+func TestDashboardDefaultSSEMessageFailsClosedWithoutCursorAdvance(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "40"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
+let lastSeq = "40";
+class EventSource {
+  static instances = [];
+  constructor(url) { this.url = url; this.listeners = {}; this.closed = false; this.onerror = null; EventSource.instances.push(this); }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
+connectStream();
+const beforeReady = es;
+beforeReady.emit("message", {lastEventId: "41", data: "opaque"});
+if (!beforeReady.closed || es !== null) throw new Error("default frame before ready did not close source");
+if (lastSeq !== "40" || elements.afterSeq.value !== "40") throw new Error("default frame before ready advanced application cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("default frame before ready was not visible as protocol error");
+
+elements.afterSeq.value = "50";
+connectStream();
+const afterReady = es;
+afterReady.emit("ready", {lastEventId: "50", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "50"})});
+afterReady.emit("message", {lastEventId: "51", data: "opaque"});
+if (!afterReady.closed || es !== null) throw new Error("default frame after ready did not close source");
+if (lastSeq !== "50" || elements.afterSeq.value !== "50") throw new Error("default frame after ready advanced application cursor");
+if (streamRetryTimer !== null || streamRetryAttempt !== 0) throw new Error("protocol violation entered transport recovery");
+if (!elements.timeline.textContent.includes("frame SSE default não permitido")) throw new Error("default frame lacked protocol evidence");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard default SSE message behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
