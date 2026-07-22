@@ -976,19 +976,31 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     ++streamRetryAttempt;
     el("streamBadge").textContent = "SSE retry in " + delay + "ms";
     el("streamBadge").className = "badge err";
+    const retryCursor = validStreamCursor(lastSeq);
     streamRetryTimer = setTimeout(function () {
       if (retryGeneration !== streamGeneration || es !== null) return;
       streamRetryTimer = null;
-      connectStream(true);
+      connectStream(true, retryCursor);
     }, delay);
   }
 
-  function connectStream(isRetry) {
+  function connectStream(isRetry, retryCursor) {
     const retrying = isRetry === true;
-    const after = validStreamCursor(el("afterSeq").value.trim() || "0");
-    if (after === null) {
-      setError("after_sequence deve ser um uint64 decimal canônico");
-      return;
+    let after;
+    if (retrying) {
+      after = retryCursor;
+      if (after === null) {
+        el("streamBadge").textContent = "SSE retry failed";
+        el("streamBadge").className = "badge err";
+        appendTimeline("# retry failed; invalid application cursor");
+        return;
+      }
+    } else {
+      after = validStreamCursor(el("afterSeq").value.trim() || "0");
+      if (after === null) {
+        setError("after_sequence deve ser um uint64 decimal canônico");
+        return;
+      }
     }
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";

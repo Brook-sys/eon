@@ -490,7 +490,7 @@ let streamRetryTimer = null;
 let streamRetryAttempt = 1;
 class EventSource { constructor() { throw new Error("retry candidate failed"); } }
 ` + valid + "\n" + clearRetry + "\n" + appendLine + "\n" + connect + `
-connectStream(true);
+connectStream(true, "10");
 if (es !== null || streamGeneration !== 8) throw new Error("retry construction failure changed connection state");
 if (elements.streamBadge.textContent !== "SSE retry failed") throw new Error("retry construction failure remained visually pending");
 if (!elements.timeline.textContent.includes("retry construction failed")) throw new Error("retry construction failure lacked manual recovery guidance");
@@ -710,13 +710,16 @@ original.emit("error", {});
 if (!original.closed || es !== null) throw new Error("erro nativo não fechou/fenceou a fonte opaca");
 if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("erro nativo alterou cursor da aplicação");
 if (timers.length !== 1 || timers[0].delay !== 250) throw new Error("retry inicial não foi bounded em 250ms");
+elements.afterSeq.value = "99";
 timers[0].fn();
 const retry = es;
 if (!retry || retry === original) throw new Error("retry não criou EventSource novo");
 if (!retry.url.includes("after_sequence=11")) throw new Error("retry não derivou URL do cursor aceito pela aplicação: " + retry.url);
+if (retry.url.includes("after_sequence=99")) throw new Error("retry usou mutação pendente do campo editável");
 retry.emit("ready", {lastEventId: "11", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "11"})});
 retry.emit("event", {lastEventId: "12", data: JSON.stringify({schema_version: 1, sequence_decimal: "12", kind: "continued"})});
 if (lastSeq !== "12" || elements.streamBadge.textContent !== "SSE live") throw new Error("stream fresco não retomou normalmente");
+if (elements.afterSeq.value !== "12") throw new Error("stream fresco não restaurou campo ao cursor aceito");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard controlled stream retry behavior failed: %v\n%s", err, output)
