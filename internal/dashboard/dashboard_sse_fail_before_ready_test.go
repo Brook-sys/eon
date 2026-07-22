@@ -25,6 +25,7 @@ const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
   eventNamespace: {value: ""},
+  eventRequestId: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };

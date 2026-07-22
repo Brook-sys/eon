@@ -382,6 +382,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <label>filtro namespace
           <input id="eventNamespace" placeholder="opcional" spellcheck="false"/>
         </label>
+        <label>filtro request_id
+          <input id="eventRequestId" placeholder="opcional" spellcheck="false"/>
+        </label>
       </div>
       <div id="timeline" class="timeline">aguardando conexão…</div>
     </section>
@@ -1010,6 +1013,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     if (kind) url += "&kind=" + encodeURIComponent(kind);
     const ns = el("eventNamespace") ? el("eventNamespace").value.trim() : "";
     if (ns) url += "&namespace=" + encodeURIComponent(ns);
+    const reqId = el("eventRequestId") ? el("eventRequestId").value.trim() : "";
+    if (reqId) url += "&request_id=" + encodeURIComponent(reqId);
     let candidate;
     try {
       candidate = new EventSource(url);

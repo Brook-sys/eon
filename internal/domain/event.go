@@ -14,11 +14,12 @@ type Event struct {
 	Sequence        uint64            `json:"sequence"`
 	Kind            string            `json:"kind"`
 	OccurredAt      time.Time         `json:"occurred_at"`
+	Namespace       string            `json:"namespace,omitempty"`
+	RequestID       string            `json:"request_id,omitempty"`
 	MissionRevision MissionRevisionID `json:"mission_revision_id,omitempty"`
 	InquiryID       InquiryID         `json:"inquiry_id,omitempty"`
 	OperationID     OperationID       `json:"operation_id,omitempty"`
 	CommitID        CommitID          `json:"commit_id,omitempty"`
-	Namespace       string            `json:"namespace,omitempty"`
 	PayloadRef      string            `json:"payload_ref,omitempty"`
 }
 
