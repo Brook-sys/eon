@@ -92,6 +92,7 @@ func TestEventStreamSSEEmitsReadyAndExistingEvents(t *testing.T) {
 	var (
 		sawReady bool
 		events   []domain.Event
+		decimals []string
 		deadline = time.Now().Add(3 * time.Second)
 	)
 	for time.Now().Before(deadline) && (!sawReady || len(events) < 2) {
@@ -122,11 +123,15 @@ func TestEventStreamSSEEmitsReadyAndExistingEvents(t *testing.T) {
 		case "ready":
 			sawReady = true
 		case "event":
-			var ev domain.Event
-			if err := json.Unmarshal([]byte(data), &ev); err != nil {
+			var payload struct {
+				domain.Event
+				SequenceDecimal string `json:"sequence_decimal"`
+			}
+			if err := json.Unmarshal([]byte(data), &payload); err != nil {
 				t.Fatalf("decode event: %v data=%s", err, data)
 			}
-			events = append(events, ev)
+			events = append(events, payload.Event)
+			decimals = append(decimals, payload.SequenceDecimal)
 		}
 	}
 	cancel()
@@ -138,6 +143,9 @@ func TestEventStreamSSEEmitsReadyAndExistingEvents(t *testing.T) {
 	}
 	if events[0].Sequence == 0 || events[0].MissionRevision != mission.ID {
 		t.Fatalf("first event = %#v", events[0])
+	}
+	if decimals[0] != strconv.FormatUint(events[0].Sequence, 10) {
+		t.Fatalf("first event decimal sequence = %q, numeric sequence = %d", decimals[0], events[0].Sequence)
 	}
 }
 

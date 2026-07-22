@@ -21,6 +21,15 @@ type sseDrainPacer struct {
 	immediatePages int
 }
 
+// sseEventPayload carries the event sequence twice on purpose: Sequence keeps
+// the stable inspect JSON shape, while SequenceDecimal gives browser clients an
+// exact representation beyond JavaScript's safe integer range. The SSE id and
+// SequenceDecimal must describe the same durable log position.
+type sseEventPayload struct {
+	domain.Event
+	SequenceDecimal string `json:"sequence_decimal"`
+}
+
 // continueImmediately permits short bursts while a finite backlog remains,
 // but forces a timer yield after a bounded number of pages. Without this
 // pacing, continuous ingestion can keep HasMore true forever and monopolize a
@@ -137,7 +146,10 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			idleTicks = 0
 			for _, event := range page.Events {
 				id := strconv.FormatUint(event.Sequence, 10)
-				if err := writeSSE(w, flusher, "event", id, event); err != nil {
+				if err := writeSSE(w, flusher, "event", id, sseEventPayload{
+					Event:           event,
+					SequenceDecimal: id,
+				}); err != nil {
 					return
 				}
 			}

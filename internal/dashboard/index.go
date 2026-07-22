@@ -990,7 +990,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       }
       try {
         const data = JSON.parse(ev.data);
-        appendTimeline(String(data.sequence||"?") + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
+        // JSON numbers cannot preserve every uint64 sequence in JavaScript.
+        // Require the server's exact decimal mirror to match the accepted SSE
+        // id before presenting the payload as evidence.
+        if (validStreamCursor(data.sequence_decimal) !== lastSeq) {
+          failStreamProtocol(connectionGeneration, "event com sequence_decimal ausente ou divergente do cursor");
+          return;
+        }
+        appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
       } catch {
         appendTimeline("# malformed event " + ev.data);
       }

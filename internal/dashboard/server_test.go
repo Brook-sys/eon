@@ -458,7 +458,7 @@ if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("inval
 if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("protocol failure was not visible");
 if (!elements.timeline.textContent.includes("# protocol error")) throw new Error("protocol failure was not recorded");
 const baseline = elements.timeline.textContent;
-stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11})});
+stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11, sequence_decimal: "11"})});
 if (elements.timeline.textContent !== baseline || lastSeq !== "10") throw new Error("callback after protocol failure was not fenced");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
@@ -564,7 +564,7 @@ if (streamGeneration !== generationBeforeError) throw new Error("native transpor
 if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("native transport error mutated cursor");
 if (elements.streamBadge.textContent !== "SSE error/retry") throw new Error("native transport retry was not visible");
 stream.emit("ready", {lastEventId: "10", data: "reconnected"});
-stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11, kind: "continued"})});
+stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11, sequence_decimal: "11", kind: "continued"})});
 if (stream.closed || es !== stream) throw new Error("reconnected stream was not retained");
 if (streamGeneration !== generationBeforeError) throw new Error("accepted reconnect changed connection generation");
 if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("callbacks after reconnect were fenced");
@@ -612,7 +612,7 @@ class EventSource {
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "900", data: "initial"});
-stream.emit("event", {lastEventId: "950", data: JSON.stringify({sequence: 950, kind: "accepted"})});
+stream.emit("event", {lastEventId: "950", data: JSON.stringify({sequence: 950, sequence_decimal: "950", kind: "accepted"})});
 stream.onerror();
 stream.emit("ready", {lastEventId: "900", data: "reconnect stale baseline"});
 if (!stream.closed || es !== null) throw new Error("regressive reconnect ready did not close the stream");
@@ -620,7 +620,7 @@ if (streamGeneration !== 2) throw new Error("regressive reconnect ready did not 
 if (lastSeq !== "950" || elements.afterSeq.value !== "950") throw new Error("regressive reconnect ready rewound cursor");
 if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("regressive reconnect ready was not visible");
 const baseline = elements.timeline.textContent;
-stream.emit("event", {lastEventId: "951", data: JSON.stringify({sequence: 951, kind: "stale"})});
+stream.emit("event", {lastEventId: "951", data: JSON.stringify({sequence: 951, sequence_decimal: "951", kind: "stale"})});
 if (elements.timeline.textContent !== baseline || lastSeq !== "950") throw new Error("callback after reconnect protocol failure was not fenced");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
@@ -664,9 +664,9 @@ class EventSource {
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "40", data: "initial"});
-stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, kind: "accepted"})});
+stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, sequence_decimal: "41", kind: "accepted"})});
 const acceptedTimeline = elements.timeline.textContent;
-stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, kind: "replayed-conflict"})});
+stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, sequence_decimal: "41", kind: "replayed-conflict"})});
 if (!stream.closed || es !== null) throw new Error("repeated event cursor did not close the stream");
 if (streamGeneration !== 2) throw new Error("repeated event cursor did not fence callbacks");
 if (lastSeq !== "41" || elements.afterSeq.value !== "41") throw new Error("repeated event cursor changed accepted cursor");
@@ -674,11 +674,58 @@ if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("
 if (elements.timeline.textContent.includes("replayed-conflict")) throw new Error("replayed payload was rendered as fresh evidence");
 if (!elements.timeline.textContent.startsWith(acceptedTimeline)) throw new Error("accepted timeline was not preserved");
 const baseline = elements.timeline.textContent;
-stream.emit("event", {lastEventId: "42", data: JSON.stringify({sequence: 42, kind: "stale"})});
+stream.emit("event", {lastEventId: "42", data: JSON.stringify({sequence: 42, sequence_decimal: "42", kind: "stale"})});
 if (elements.timeline.textContent !== baseline || lastSeq !== "41") throw new Error("callback after repeated event failure was not fenced");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard repeated event cursor behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardEventPayloadSequenceMustMatchAcceptedCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "9007199254740992"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "9007199254740992";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "9007199254740992", data: "ready"});
+stream.emit("event", {lastEventId: "9007199254740993", data: JSON.stringify({sequence: 9007199254740993, sequence_decimal: "9007199254740992", kind: "mismatch"})});
+if (!stream.closed || es !== null) throw new Error("mismatched payload sequence did not close stream");
+if (lastSeq !== "9007199254740993") throw new Error("accepted SSE cursor was not preserved exactly");
+if (elements.timeline.textContent.includes("mismatch")) throw new Error("mismatched payload was rendered as evidence");
+if (!elements.timeline.textContent.includes("sequence_decimal")) throw new Error("protocol mismatch was not explained");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard event payload sequence behavior failed: %v\n%s", err, output)
 	}
 }
 
@@ -766,7 +813,7 @@ const baseline = JSON.stringify({
   badgeClass: elements.streamBadge.className
 });
 first.emit("ready", {lastEventId: "900", data: "stale ready"});
-first.emit("event", {lastEventId: "901", data: JSON.stringify({sequence: 901, kind: "stale"})});
+first.emit("event", {lastEventId: "901", data: JSON.stringify({sequence: 901, sequence_decimal: "901", kind: "stale"})});
 first.emit("page", {lastEventId: "902", data: "stale page"});
 first.emit("error", {data: "stale error"});
 first.onerror();

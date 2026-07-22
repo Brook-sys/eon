@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "name": "phase78-sse-sequence-decimal-v1",
+  "cases": [
+    {
+      "id": "javascript-uint64-sse-sequence",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe browser rule when an SSE event ID is an exact uint64 decimal above JavaScript's safe integer range but the JSON numeric sequence rounds to another value.",
+      "required_facts": [
+        {"id":"f1","text":"MessageEvent.lastEventId preserves the exact decimal SSE cursor as text across the full uint64 range.","priority":10},
+        {"id":"f2","text":"A JSON number parsed by JavaScript cannot exactly represent every uint64 sequence above 9007199254740991.","priority":10},
+        {"id":"f3","text":"The server can include an exact sequence_decimal string and the client must require it to equal the accepted SSE ID before rendering the payload.","priority":10},
+        {"id":"f4","text":"Missing, invalid, or divergent sequence_decimal must close fail-closed while preserving the accepted SSE cursor and rejecting the payload as evidence.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"require_exact_sequence_decimal_equal_sse_id_or_fail_closed"}
+    }
+  ]
+}

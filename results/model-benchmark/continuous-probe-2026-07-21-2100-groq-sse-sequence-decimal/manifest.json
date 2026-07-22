@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "phase78-sse-sequence-decimal-groq",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/results/model-benchmark/continuous-probe-2026-07-21-2100-groq-sse-sequence-decimal/fixture.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "max_total_output_tokens": 128,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama31-8b-phase78",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}
