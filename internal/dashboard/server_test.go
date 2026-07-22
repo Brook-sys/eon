@@ -768,6 +768,8 @@ const expectedDelays = [250, 500, 1000, 2000, 4000, 5000];
 for (let attempt = 0; attempt < expectedDelays.length; attempt++) {
   const stream = es;
   stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+  stream.emit("page", {lastEventId: "10", data: JSON.stringify({schema_version: 1, next_sequence_decimal: "10", has_more: false})});
+  if (streamRetryAttempt !== attempt) throw new Error("equal page reset retry budget at attempt " + attempt);
   stream.emit("error", {});
   if (!stream.closed || es !== null) throw new Error("attempt " + attempt + " did not close source");
   const timer = timers[timers.length - 1];
@@ -777,6 +779,8 @@ for (let attempt = 0; attempt < expectedDelays.length; attempt++) {
 }
 const exhausted = es;
 exhausted.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+exhausted.emit("page", {lastEventId: "10", data: JSON.stringify({schema_version: 1, next_sequence_decimal: "10", has_more: false})});
+if (streamRetryAttempt !== 6) throw new Error("equal page reopened exhausted retry budget");
 const timerCount = timers.length;
 exhausted.emit("error", {});
 if (!exhausted.closed || es !== null) throw new Error("exhausted source was not closed");

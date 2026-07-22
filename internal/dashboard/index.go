@@ -1148,11 +1148,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "page com next_sequence_decimal ausente ou divergente do cursor");
         return;
       }
+      const previousCursor = lastSeq;
       if (!advanceStreamCursor(pageCursor)) {
         failStreamProtocol(connectionGeneration, "page com cursor inválido ou regressivo");
         return;
       }
-      streamRetryAttempt = 0;
+      // Equality is valid for a page boundary, but it is not useful progress.
+      // Resetting the transport-recovery budget on an equal page would let a
+      // faulty endpoint sustain ready(N) -> page(N) -> error reconnects forever.
+      if (lastSeq !== previousCursor) streamRetryAttempt = 0;
       appendTimeline("# page " + ev.data);
     });
     es.addEventListener("terminal_error", function (ev) {

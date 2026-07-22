@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "name": "phase92-sse-equal-page-budget-groq-fallback",
+  "fixture_name": "phase92-sse-equal-page-budget-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama-3-1-8b-phase92-fallback",
+      "model": "llama-3.1-8b-instant",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase92-sse-equal-page-budget-v1",
+        "model": "llama-3.1-8b-instant",
+        "runs": [
+          {
+            "case_id": "sse-equal-page-budget",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 262,
+            "actual_input_tokens": 215,
+            "output_tokens": 11,
+            "duration_millis": 315,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "rule=accept_equal_page_without_resetting_retry_budget",
+            "values": {
+              "rule": "accept_equal_page_without_resetting_retry_budget"
+            }
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 215,
+          "output_tokens": 11,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
+      }
+    }
+  ]
+}

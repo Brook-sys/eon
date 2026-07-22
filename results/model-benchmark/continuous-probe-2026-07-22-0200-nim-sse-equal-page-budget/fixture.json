@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase92-sse-equal-page-budget-v1",
+  "cases": [{
+    "id": "sse-equal-page-budget",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe retry-budget policy when an SSE page boundary is valid but its cursor equals the dashboard's current cursor.",
+    "required_facts": [
+      {"id":"f1","text":"Equality is valid for a page boundary because it may confirm that no further cursor was examined.","priority":10},
+      {"id":"f2","text":"An equal page makes no useful cursor progress.","priority":10},
+      {"id":"f3","text":"Resetting retry attempts on ready(N), page(N), transport-error cycles permits unbounded reconnects.","priority":10},
+      {"id":"f4","text":"Only a strictly advancing accepted event or page should reset the bounded transport-recovery budget.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"accept_equal_page_without_resetting_retry_budget"}
+  }]
+}
