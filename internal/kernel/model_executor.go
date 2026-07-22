@@ -1170,22 +1170,6 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			AnswerFormat:   "single exact JSON object only",
 		}, nil
 	}
-	if spec.OutputSchema == "exact_json" {
-		return prompt.Input{
-			Task:           task,
-			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
-			AllowedOutputs: []string{"exact requested JSON object"},
-			AnswerFormat:   "single exact JSON object only",
-		}, nil
-	}
-	if spec.OutputSchema == "exact_json" {
-		return prompt.Input{
-			Task:           task,
-			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
-			AllowedOutputs: []string{"exact requested JSON object"},
-			AnswerFormat:   "single exact JSON object only",
-		}, nil
-	}
 	facts := []prompt.Fact{
 		{ID: "operation_id", Text: string(operation.ID), Required: true, Priority: 100},
 		{ID: "mission_revision_id", Text: string(operation.MissionRevision), Required: true, Priority: 100},
@@ -1201,6 +1185,10 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 		Facts: facts,
 		Constraints: []string{
 			"Respond with exactly one JSON object and no markdown fences.",
+			"The top-level object may contain only: schema_version, id, mission_revision_id, operation_id, base_commit_id, read_set, preconditions, changes, expected_delta, validator_ids, provenance, idempotency_key.",
+			"Each changes item may contain only: kind, entity_type, entity_id, payload_ref.",
+			"schema_version is an integer; read_set, preconditions, changes, and validator_ids are arrays; every other top-level field is a JSON string.",
+			"Do not wrap the object and do not add input_refs, spec_id, task, facts, or commentary as JSON fields.",
 			"Do not invent authority: only propose ADD/REPLACE/DEPRECATE changes.",
 			"validator_ids must match the operation spec validators exactly.",
 			"mission_revision_id, operation_id, base_commit_id, read_set, and idempotency_key must match the facts.",

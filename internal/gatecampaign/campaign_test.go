@@ -65,10 +65,13 @@ func TestManifestStrictAndBounded(t *testing.T) {
 	}
 }
 
-func TestRuntimeGateSeedUsesDeclaredMinimalProbeContract(t *testing.T) {
-	for _, outputSchema := range []string{"", "exact_json"} {
+func TestRuntimeGateSeedUsesDeclaredProbeContract(t *testing.T) {
+	for _, outputSchema := range []string{"", "exact_json", "proposed_changeset"} {
 		manifest := runtimeGateTestManifest()
 		manifest.OutputSchema = outputSchema
+		if outputSchema == "proposed_changeset" {
+			manifest.MaxOutputTokens = 256
+		}
 		_, spec, operation, err := runtimeGateSeed(memory.New(), manifest, time.Date(2026, 7, 22, 16, 0, 0, 0, time.UTC))
 		if err != nil {
 			t.Fatal(err)
@@ -77,7 +80,11 @@ func TestRuntimeGateSeedUsesDeclaredMinimalProbeContract(t *testing.T) {
 		if want == "" {
 			want = "exact_text"
 		}
-		if spec.OutputSchema != want || len(spec.Validators) != 1 || spec.Validators[0] != want {
+		wantValidator := want
+		if want == "proposed_changeset" {
+			wantValidator = "schema"
+		}
+		if spec.OutputSchema != want || len(spec.Validators) != 1 || spec.Validators[0] != wantValidator {
 			t.Fatalf("runtime gate output contract=%+v want %q", spec, want)
 		}
 		if operation.ExpectedOutput != manifest.ProbePrompt {
@@ -86,11 +93,60 @@ func TestRuntimeGateSeedUsesDeclaredMinimalProbeContract(t *testing.T) {
 	}
 }
 
+func TestRunProposedChangeSetCommitsCanonicalEvidence(t *testing.T) {
+	now := time.Date(2026, 7, 22, 18, 40, 0, 0, time.UTC)
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "proposed_changeset"
+	manifest.MaxOutputTokens = 256
+	manifest.ExpectedResponse = ""
+	manifest.ProbePrompt = "Propose one observation named observation_runtime_gate with payload artifact_runtime_gate."
+	proposal, err := json.Marshal(domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_runtime_gate", MissionRevision: "revision_runtime_gate",
+		OperationID: "operation_runtime_gate", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"manifest"}, Preconditions: []string{}, Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "observation_runtime_gate", PayloadRef: "artifact_runtime_gate",
+		}}, ExpectedDelta: "one canonical observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "runtime-gate-campaign",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	primary := &recordingProvider{}
+	fallback := &recordingProvider{result: port.CompletionResult{Text: string(proposal), InputTokens: 20, OutputTokens: 40, Model: "fallback"}}
+	store := memory.New()
+	report, err := (RuntimeGateCampaignRunner{
+		Store: store, Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{"groq-primary": primary, "nim-fallback": fallback},
+	}).Run(context.Background(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.CommitID == "" || !report.CanonicalEntityStored || report.OperationState != domain.StateWaitingTime {
+		t.Fatalf("epistemic report=%+v", report)
+	}
+	if err := VerifyRuntimeGateDurability(context.Background(), store, report); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestManifestRejectsUnknownOutputSchema(t *testing.T) {
 	manifest := runtimeGateTestManifest()
 	manifest.OutputSchema = "freeform"
 	if err := manifest.Validate(); err == nil {
 		t.Fatal("unknown output schema must fail closed")
+	}
+}
+
+func TestManifestRequiresEnoughOutputBudgetForProposedChangeSet(t *testing.T) {
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "proposed_changeset"
+	manifest.MaxOutputTokens = 128
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "at least 192") {
+		t.Fatalf("undersized changeset budget error=%v", err)
+	}
+	manifest.MaxOutputTokens = 256
+	if err := manifest.Validate(); err != nil {
+		t.Fatal(err)
 	}
 }
 

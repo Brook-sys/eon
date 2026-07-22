@@ -77,6 +77,31 @@ func TestBuildPromptInputUsesMinimalExactJSONContract(t *testing.T) {
 	}
 }
 
+func TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys(t *testing.T) {
+	executor := ModelExecutor{}
+	spec := modelTestSpec()
+	operation := domain.Operation{
+		ID: "operation_probe", MissionRevision: "revision_probe", SpecID: spec.ID,
+		ExpectedOutput: "Propose one observation.", IdempotencyKey: "probe",
+		ReadSet: []string{"manifest"}, InputRefs: []string{"source_1"},
+	}
+	input, err := executor.buildPromptInput(operation, spec, domain.GenesisCommitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiled, err := (prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 4096}).Compile(spec, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{
+		"top-level object may contain only", "idempotency_key", "Each changes item may contain only", "every other top-level field is a JSON string", "Do not wrap the object", "do not add input_refs",
+	} {
+		if !strings.Contains(compiled.Request.Prompt, required) {
+			t.Fatalf("changeset prompt lacks %q:\n%s", required, compiled.Request.Prompt)
+		}
+	}
+}
+
 func TestModelEligible(t *testing.T) {
 	t.Parallel()
 	local := ContinuityOperationSpec("continuity.gap_scan@1", domain.AuthorityProposeOnly)

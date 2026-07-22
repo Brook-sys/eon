@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
+	"motor-autonomo/internal/modeltext"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/bootstrap"
 	"motor-autonomo/internal/runtime/source"
@@ -88,11 +89,14 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	if m.MaxCalls != 1 {
 		return errors.New("runtime gate campaign requires max_calls exactly 1")
 	}
-	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 128 {
-		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 128")
+	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 512 {
+		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 512")
 	}
-	if m.OutputSchema != "" && m.OutputSchema != "exact_text" && m.OutputSchema != "exact_json" {
-		return errors.New("runtime gate campaign output_schema must be exact_text or exact_json")
+	if m.OutputSchema == "proposed_changeset" && m.MaxOutputTokens < 192 {
+		return errors.New("proposed_changeset campaign requires at least 192 max_output_tokens")
+	}
+	if m.OutputSchema != "" && m.OutputSchema != "exact_text" && m.OutputSchema != "exact_json" && m.OutputSchema != "proposed_changeset" {
+		return errors.New("runtime gate campaign output_schema must be exact_text, exact_json, or proposed_changeset")
 	}
 	if prompt := strings.TrimSpace(m.ProbePrompt); prompt == "" || len(prompt) > 1024 {
 		return errors.New("runtime gate campaign probe_prompt is required and bounded to 1024 bytes")
@@ -189,6 +193,8 @@ type RuntimeGateCampaignReport struct {
 	SecondAcquireReason   string                      `json:"second_acquire_reason"`
 	SecondAcquireWait     *time.Time                  `json:"second_acquire_wait_until,omitempty"`
 	OperationState        domain.OperationalState     `json:"operation_state"`
+	CommitID              domain.CommitID             `json:"commit_id,omitempty"`
+	CanonicalEntityStored bool                        `json:"canonical_entity_stored,omitempty"`
 	Usages                []RuntimeGateUsage          `json:"usages"`
 	DurableReopen         bool                        `json:"durable_reopen"`
 }
@@ -262,9 +268,17 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	for bindingID, provider := range r.Providers {
 		executor.Providers[bindingID] = recordedProvider{bindingID: bindingID, provider: provider, recorder: recorder}
 	}
-	_, _ = executor.Execute(ctx, "operation_runtime_gate")
+	execution, executionErr := executor.Execute(ctx, "operation_runtime_gate")
 	if recorder.calls != manifest.MaxCalls {
 		return RuntimeGateCampaignReport{}, fmt.Errorf("runtime gate executor made %d external calls, want %d", recorder.calls, manifest.MaxCalls)
+	}
+	if manifest.OutputSchema == "proposed_changeset" {
+		if executionErr != nil {
+			return RuntimeGateCampaignReport{}, fmt.Errorf("execute epistemic changeset probe: %w", executionErr)
+		}
+		if !execution.Completed || execution.CommitID == "" {
+			return RuntimeGateCampaignReport{}, fmt.Errorf("epistemic changeset probe did not commit: %+v", execution)
+		}
 	}
 	secondResult, err := executor.Execute(ctx, "operation_runtime_gate_quota")
 	if err != nil {
@@ -294,6 +308,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		RouteRejected:       map[string]string{primary.BindingID: "circuit_open"},
 		ProviderLatency:     recorder.latency,
 		SecondAcquireReason: secondResult.SkipReason,
+		CommitID:            execution.CommitID,
 	}
 	if recorder.err == nil {
 		report.ProviderSucceeded = true
@@ -307,9 +322,13 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			report.ExpectedResponseSet = true
 			report.ExpectedResponseMatch = recorder.result.Text == manifest.ExpectedResponse
 		}
-		if manifest.OutputSchema == "exact_json" {
+		if manifest.OutputSchema == "exact_json" || manifest.OutputSchema == "proposed_changeset" {
 			var object map[string]json.RawMessage
-			report.ResponseJSONValid = json.Unmarshal([]byte(recorder.result.Text), &object) == nil && object != nil
+			candidate := recorder.result.Text
+			if manifest.OutputSchema == "proposed_changeset" {
+				candidate = modeltext.BestJSONCandidate(candidate)
+			}
+			report.ResponseJSONValid = json.Unmarshal([]byte(candidate), &object) == nil && object != nil
 			report.ResponseFramingClass = classifyJSONFraming(recorder.result.Text, manifest.ExpectedResponse)
 		}
 	} else {
@@ -325,7 +344,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
 	}
-	if err := runtimeGateSnapshot(ctx, r.Store, config, &report); err != nil {
+	if err := runtimeGateSnapshot(ctx, r.Store, config, manifest.OutputSchema, &report); err != nil {
 		return RuntimeGateCampaignReport{}, err
 	}
 	report.CompletedAt = r.Clock.Now().UTC()
@@ -429,7 +448,11 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 	if outputSchema == "" {
 		outputSchema = "exact_text"
 	}
-	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: outputSchema, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{outputSchema}, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
+	validators := []string{outputSchema}
+	if outputSchema == "proposed_changeset" {
+		validators = []string{"schema"}
+	}
+	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: outputSchema, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: validators, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
 	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_runtime_gate", MissionID: "mission_runtime_gate", Revision: 1, OriginalText: "bounded provider gate probe", Purpose: "validate quota and routing", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}}
 	question := domain.Question{SchemaVersion: 1, ID: "question_runtime_gate", MissionRevision: revision.ID, Text: "is the provider gate operational?", Origin: "campaign", Relevance: "diagnostic", AnswerCondition: "one bounded call"}
 	candidate := domain.InquiryCandidate{SchemaVersion: 1, ID: "candidate_runtime_gate", MissionRevision: revision.ID, QuestionID: question.ID, DerivedFrom: []string{"manifest"}, ExpectedProgress: "runtime evidence", Novelty: "dated probe", Risk: domain.RiskLow, SourcePlan: []string{"provider"}, AnswerCondition: "report", StopCondition: "one call", ReviewAfter: now.Add(time.Hour)}
@@ -492,7 +515,7 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 	return config, spec, operation, err
 }
 
-func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.ModelsConfig, report *RuntimeGateCampaignReport) error {
+func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.ModelsConfig, outputSchema string, report *RuntimeGateCampaignReport) error {
 	return store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation("operation_runtime_gate_quota")
 		if err != nil {
@@ -500,6 +523,16 @@ func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.Mo
 		}
 		report.OperationState = op.State
 		report.SecondAcquireWait = op.Reevaluation.NotBefore
+		if outputSchema == "proposed_changeset" {
+			entity, err := r.CanonicalEntity("observation", "observation_runtime_gate")
+			if err != nil {
+				return fmt.Errorf("read epistemic probe entity: %w", err)
+			}
+			report.CanonicalEntityStored = entity.CommitID == report.CommitID && entity.PayloadRef == "artifact_runtime_gate"
+			if !report.CanonicalEntityStored {
+				return errors.New("epistemic probe canonical entity does not match durable commit")
+			}
+		}
 		for _, provider := range config.Providers {
 			usage, err := r.ResourceUsage(provider.GlobalLimit.Resource)
 			if err != nil && !errors.Is(err, port.ErrNotFound) {
@@ -549,6 +582,26 @@ func VerifyRuntimeGateDurability(ctx context.Context, store port.ReadStore, repo
 		ctx = context.Background()
 	}
 	return store.View(ctx, func(reader port.Reader) error {
+		if report.CommitID != "" {
+			operation, err := reader.Operation("operation_runtime_gate")
+			if err != nil {
+				return fmt.Errorf("read durable epistemic operation: %w", err)
+			}
+			if operation.State != domain.StateSucceeded {
+				return fmt.Errorf("durable epistemic operation state=%s, want %s", operation.State, domain.StateSucceeded)
+			}
+			commit, err := reader.Commit(report.CommitID)
+			if err != nil {
+				return fmt.Errorf("read durable epistemic commit: %w", err)
+			}
+			entity, err := reader.CanonicalEntity("observation", "observation_runtime_gate")
+			if err != nil {
+				return fmt.Errorf("read durable epistemic entity: %w", err)
+			}
+			if commit.MissionRevision != "revision_runtime_gate" || entity.CommitID != commit.ID || entity.PayloadRef != "artifact_runtime_gate" {
+				return errors.New("durable epistemic commit/entity lineage mismatch")
+			}
+		}
 		for _, expected := range report.Usages {
 			persisted, err := reader.ResourceUsage(expected.Resource)
 			if errors.Is(err, port.ErrNotFound) && runtimeGateUsageIsZero(expected) {
