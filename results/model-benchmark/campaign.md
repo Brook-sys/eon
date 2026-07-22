@@ -1,6 +1,6 @@
 # Cognitive campaign
 
-- Name: `continuous-probe-2026-07-22-0810`
+- Name: `continuous-probe-2026-07-22-0830`
 - Fixture: `cognitive-tool-v1`
 - Planned/max calls: 1/1
 - Models: 1

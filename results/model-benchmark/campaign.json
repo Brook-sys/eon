@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "continuous-probe-2026-07-22-0810",
+  "name": "continuous-probe-2026-07-22-0830",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
   "max_calls": 1,
@@ -21,7 +21,7 @@
             "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 93,
+            "duration_millis": 95,
             "syntax_valid": false,
             "semantically_correct": false,
             "error_kind": "PROVIDER",

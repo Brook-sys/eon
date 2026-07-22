@@ -10,7 +10,7 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 188,
-      "duration_millis": 93,
+      "duration_millis": 95,
       "syntax_valid": false,
       "semantically_correct": false,
       "error_kind": "PROVIDER",

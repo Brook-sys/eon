@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "continuous-probe-2026-07-22-0810",
+  "name": "continuous-probe-2026-07-22-0830",
   "fixture_path": "internal/evaluation/testdata/cognitive-tool-v1.json",
   "context_tokens": [
     2048
