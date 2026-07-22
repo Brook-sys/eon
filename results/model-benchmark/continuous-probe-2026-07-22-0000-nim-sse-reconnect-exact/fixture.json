@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase86-sse-reconnect-exact-v1",
+  "cases": [{
+    "id": "sse-reconnect-exact",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser rule for a repeated ready handshake after native EventSource reconnect. The application last accepted cursor 950, but an unknown named SSE frame may have changed the browser internal Last-Event-ID to 975 without invoking an application listener.",
+    "required_facts": [
+      {"id":"f1","text":"The application has certified and retained cursor 950.","priority":10},
+      {"id":"f2","text":"An unknown named SSE frame can change EventSource internal Last-Event-ID without application code observing or validating that frame.","priority":10},
+      {"id":"f3","text":"A reconnect ready at 975 would skip evidence not accepted by the application if treated as monotonic progress.","priority":10},
+      {"id":"f4","text":"The repeated ready must equal the application last accepted cursor; either advance or rewind is a protocol failure requiring explicit reconnect or reset.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"require_reconnect_ready_equal_last_application_cursor_or_fail_closed"}
+  }]
+}

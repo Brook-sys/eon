@@ -730,6 +730,61 @@ if (elements.timeline.textContent !== baseline || lastSeq !== "950") throw new E
 	}
 }
 
+func TestDashboardReconnectReadyCannotAdvanceFromOpaqueNativeCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "900"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "900";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "900", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "900"})});
+stream.emit("event", {lastEventId: "950", data: JSON.stringify({schema_version: 1, sequence: 950, sequence_decimal: "950", kind: "accepted"})});
+// Simulate an unknown named frame with id 975: EventSource may consume its id,
+// but application code has no listener and therefore keeps lastSeq at 950.
+stream.onerror();
+stream.emit("ready", {lastEventId: "975", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "975"})});
+if (!stream.closed || es !== null) throw new Error("advanced reconnect ready did not close the stream");
+if (streamGeneration !== 2) throw new Error("advanced reconnect ready did not fence callbacks");
+if (lastSeq !== "950" || elements.afterSeq.value !== "950") throw new Error("opaque native cursor advanced application cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("advanced reconnect ready was not visible");
+if (!elements.timeline.textContent.includes("cursor divergente")) throw new Error("advanced reconnect violation was not explained");
+const baseline = elements.timeline.textContent;
+stream.emit("event", {lastEventId: "976", data: JSON.stringify({schema_version: 1, sequence: 976, sequence_decimal: "976", kind: "stale"})});
+if (elements.timeline.textContent !== baseline || lastSeq !== "950") throw new Error("callback after advanced reconnect failure was not fenced");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard advanced reconnect ready behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardRepeatedEventCursorFailsClosedWithoutRenderingReplay(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")

@@ -990,9 +990,19 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "ready com after_sequence_decimal ausente ou divergente do cursor");
         return;
       }
+      // A native reconnect must resume from exactly the last frame accepted by
+      // application code. Allowing a later cursor here would let an unknown
+      // named SSE frame advance EventSource's internal Last-Event-ID without a
+      // listener, then silently skip evidence when the reconnect ready echoes
+      // that opaque cursor. Manual connections still establish their first
+      // baseline explicitly and may intentionally rewind.
+      if (readySeen && readyCursor !== lastSeq) {
+        failStreamProtocol(connectionGeneration, "ready de reconnect com cursor divergente do último cursor aceito");
+        return;
+      }
       const accepted = readySeen ? advanceStreamCursor(readyCursor) : resetStreamCursor(readyCursor);
       if (!accepted) {
-        failStreamProtocol(connectionGeneration, readySeen ? "ready de reconnect com cursor inválido ou regressivo" : "ready sem cursor uint64 canônico");
+        failStreamProtocol(connectionGeneration, readySeen ? "ready de reconnect com cursor inválido" : "ready sem cursor uint64 canônico");
         return;
       }
       readySeen = true;
