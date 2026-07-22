@@ -4088,3 +4088,5 @@ A suite `go test -v ./internal/inspect -run TestEventStreamSSEFiltersByNamespace
 - [ ] `READY` Atualizar estado documentado e métricas da bateria de benchmarks P2P.
 
 2026-07-22 16:05 - HEARTBEAT - Tentativa de executar a Fase 120 (Runtime HTTP Gate). O artefato do gatecampaign falhou com 'environment variable GROQ_API_KEY is required' pois as credenciais live não estão acessíveis no ambiente do executor nesta iteração, bloqueando a execução dos testes de fogo nas APIs externas. Irei atualizar o CONTINUOUS_DEVELOPMENT.md registrando essa tentativa.
+
+2026-07-22 16:20 - HEARTBEAT - Nova tentativa de prosseguir. A bateria de testes unitários local continua passando com sucesso (`go test -v ./internal/runtime/...`), código formatado e build estável. Entretanto, `GROQ_API_KEY` e `NVIDIA_API_KEY` continuam inacessíveis no ambiente do heartbeat. Segundo a regra absoluta (Item 5 e 6 de CONTINUOUS_DEVELOPMENT.md), é obrigatória a execução live de modelo e seu bloqueio exige suspender o avanço oficial do estado até que credenciais estejam disponíveis e os modelos possam ser testados de fato no código que as consome. Permaneço em bloqueio defensivo e repouso.
