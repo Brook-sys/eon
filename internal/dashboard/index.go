@@ -993,34 +993,44 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     es.addEventListener("event", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
       // EventSource accepts the frame ID independently from application JSON.
-      // Preserve that durable cursor even if a malformed payload cannot render.
+      // Preserve that durable cursor if the payload is not JSON at all, because
+      // the browser has already accepted the frame ID and would resume from it.
+      // A parseable application frame is different: validate its protocol
+      // version and exact decimal mirror before mutating the dashboard cursor.
+      let data;
+      try {
+        data = JSON.parse(ev.data);
+      } catch {
+        const previousCursor = lastSeq;
+        if (!advanceStreamCursor(ev.lastEventId) || (lastSeq.length === previousCursor.length && lastSeq <= previousCursor)) {
+          failStreamProtocol(connectionGeneration, "event malformado com cursor inválido, repetido ou regressivo");
+          return;
+        }
+        appendTimeline("# malformed event " + ev.data);
+        return;
+      }
+      if (data.schema_version !== 1) {
+        failStreamProtocol(connectionGeneration, "event com schema_version ausente ou incompatível");
+        return;
+      }
+      const eventCursor = validStreamCursor(ev.lastEventId);
       // Every application event represents a new log sequence and must advance
-      // strictly. Equality remains valid for ready/page frames because a
-      // reconnect handshake or page boundary can repeat the accepted cursor,
-      // but accepting an equal event ID would render replayed or conflicting
-      // payload as fresh evidence.
+      // strictly. Equality remains valid for ready/page boundaries only. Once a
+      // supported v1 frame is recognized, preserve the ID already accepted by
+      // EventSource even if its application mirror later proves inconsistent.
       const previousCursor = lastSeq;
-      if (!advanceStreamCursor(ev.lastEventId) || (lastSeq.length === previousCursor.length && lastSeq <= previousCursor)) {
+      if (!advanceStreamCursor(eventCursor) || (lastSeq.length === previousCursor.length && lastSeq <= previousCursor)) {
         failStreamProtocol(connectionGeneration, "event com cursor inválido, repetido ou regressivo");
         return;
       }
-      try {
-        const data = JSON.parse(ev.data);
-        if (data.schema_version !== 1) {
-          failStreamProtocol(connectionGeneration, "event com schema_version ausente ou incompatível");
-          return;
-        }
-        // JSON numbers cannot preserve every uint64 sequence in JavaScript.
-        // Require the server's exact decimal mirror to match the accepted SSE
-        // id before presenting the payload as evidence.
-        if (validStreamCursor(data.sequence_decimal) !== lastSeq) {
-          failStreamProtocol(connectionGeneration, "event com sequence_decimal ausente ou divergente do cursor");
-          return;
-        }
-        appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
-      } catch {
-        appendTimeline("# malformed event " + ev.data);
+      // JSON numbers cannot preserve every uint64 sequence in JavaScript.
+      // Require the server's exact decimal mirror to match the accepted SSE id
+      // before presenting the payload as evidence.
+      if (validStreamCursor(data.sequence_decimal) !== lastSeq) {
+        failStreamProtocol(connectionGeneration, "event com sequence_decimal ausente ou divergente do cursor");
+        return;
       }
+      appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
     });
     es.addEventListener("page", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase82-sse-validation-order-v1",
+  "cases": [{
+    "id": "sse-validation-order",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser order for a named SSE event whose JSON payload is parseable but declares an unsupported application schema version.",
+    "required_facts": [
+      {"id":"f1","text":"EventSource may accept lastEventId independently from application JSON.","priority":10},
+      {"id":"f2","text":"A parseable named application frame with missing or unsupported schema_version is not trustworthy under the current protocol.","priority":10},
+      {"id":"f3","text":"The dashboard must reject that parseable incompatible frame before changing its accepted application cursor or rendering evidence.","priority":10},
+      {"id":"f4","text":"A payload that is not JSON at all remains separately labeled malformed after preserving the browser-accepted ID to avoid replay loops.","priority":8}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"validate_parseable_schema_before_cursor_mutation_or_evidence"}
+  }]
+}

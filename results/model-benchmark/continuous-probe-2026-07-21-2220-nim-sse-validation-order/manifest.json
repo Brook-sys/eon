@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "phase82-sse-validation-order-nim",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/results/model-benchmark/continuous-probe-2026-07-21-2220-nim-sse-validation-order/fixture.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "max_total_output_tokens": 128,
+  "timeout_seconds": 30,
+  "models": [
+    {
+      "provider": "nvidia-nim",
+      "binding_id": "nim-llama31-70b-phase82",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

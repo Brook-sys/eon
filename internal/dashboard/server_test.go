@@ -732,6 +732,51 @@ if (elements.timeline.textContent !== baseline || lastSeq !== "41") throw new Er
 	}
 }
 
+func TestDashboardParseableInvalidEventPreservesAcceptedCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+stream.emit("event", {lastEventId: "11", data: JSON.stringify({schema_version: 2, sequence_decimal: "11", kind: "untrusted"})});
+if (!stream.closed || es !== null) throw new Error("unsupported event schema did not close stream");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("unsupported event schema advanced accepted cursor");
+if (elements.timeline.textContent.includes("untrusted")) throw new Error("unsupported event payload was rendered");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard parseable invalid event behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardSSEFramesRequireSupportedSchemaVersion(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
