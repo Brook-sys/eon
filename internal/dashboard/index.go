@@ -1057,6 +1057,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // reset the baseline for a manual rewind. Later ready frames belong to
       // native automatic reconnects of the same source and must remain
       // monotonic; otherwise a stale or faulty server could rewind the cursor.
+      const MAX_PAYLOAD_SIZE = 512 * 1024;
+      if (ev.data && ev.data.length > MAX_PAYLOAD_SIZE) {
+        failStreamProtocol(connectionGeneration, "ready com payload JSON que excede limite (512KB)");
+        return;
+      }
       let readyData;
       try {
         readyData = JSON.parse(ev.data);
@@ -1107,6 +1112,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // application evidence. A parseable application frame is different:
       // validate its protocol version and exact decimal mirror before mutating
       // the dashboard cursor.
+      const MAX_PAYLOAD_SIZE = 512 * 1024;
+      if (ev.data && ev.data.length > MAX_PAYLOAD_SIZE) {
+        const previousCursor = lastSeq;
+        if (!advanceStreamCursor(ev.lastEventId) || (lastSeq.length === previousCursor.length && lastSeq <= previousCursor)) {
+          failStreamProtocol(connectionGeneration, "event (oversized) malformado com cursor invalido");
+          return;
+        }
+        failStreamProtocol(connectionGeneration, "event com payload JSON malformado e que excede limite (512KB); cursor de transporte preservado em " + lastSeq);
+        return;
+      }
       let data;
       try {
         data = JSON.parse(ev.data);
@@ -1149,6 +1164,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "page recebido antes do handshake ready");
         return;
       }
+      const MAX_PAYLOAD_SIZE = 512 * 1024;
+      if (ev.data && ev.data.length > MAX_PAYLOAD_SIZE) {
+        failStreamProtocol(connectionGeneration, "page com payload JSON que excede limite (512KB)");
+        return;
+      }
       let pageData;
       try {
         pageData = JSON.parse(ev.data);
@@ -1188,6 +1208,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // Validate that the terminal frame describes exactly the last accepted
       // cursor before stopping; a divergent id/payload is a protocol failure,
       // not trustworthy terminal evidence.
+      const MAX_PAYLOAD_SIZE = 512 * 1024;
+      if (ev.data && ev.data.length > MAX_PAYLOAD_SIZE) {
+        failStreamProtocol(connectionGeneration, "terminal_error com payload JSON que excede limite (512KB)");
+        return;
+      }
       let terminalData;
       try {
         terminalData = JSON.parse(ev.data);
