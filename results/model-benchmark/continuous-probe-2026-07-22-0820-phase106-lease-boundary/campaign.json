@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "name": "phase108",
+  "name": "continuous-probe-2026-07-22-0820-phase106-lease-boundary",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
   "max_calls": 1,
   "models": [
     {
-      "provider": "openai",
-      "binding_id": "nim-llama3",
-      "model": "meta/llama-3.1-8b-instruct",
+      "provider": "groq",
+      "binding_id": "groq-llama31-8b-phase106",
+      "model": "llama-3.1-8b-instant",
       "report": {
         "schema_version": 1,
         "fixture_name": "cognitive-tool-v1",
-        "model": "meta/llama-3.1-8b-instruct",
+        "model": "llama-3.1-8b-instant",
         "runs": [
           {
             "case_id": "tool-search-single",
@@ -21,23 +21,26 @@
             "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 390,
-            "syntax_valid": false,
-            "semantically_correct": false,
-            "error_kind": "PROVIDER",
-            "provider_status": 401
+            "actual_input_tokens": 409,
+            "output_tokens": 34,
+            "duration_millis": 396,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "values": {
+              "tool_call_name": "sessions_spawn_remote"
+            }
           }
         ],
         "summary": {
           "total": 1,
           "compiled": 1,
-          "syntax_valid": 0,
-          "semantically_correct": 0,
-          "input_tokens": 0,
-          "output_tokens": 0,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 409,
+          "output_tokens": 34,
           "omitted_facts": 0,
           "compile_errors": 0,
-          "provider_errors": 1,
+          "provider_errors": 0,
           "validation_errors": 0,
           "rate_limited": 0,
           "timeouts": 0
@@ -48,10 +51,10 @@
               "label": "SYNTHESIZE",
               "total": 1,
               "compiled": 1,
-              "syntax_valid": 0,
-              "semantically_correct": 0,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
               "omitted_facts": 0,
-              "errors": 1
+              "errors": 0
             }
           ],
           "by_format": [
@@ -59,10 +62,10 @@
               "label": "JSON",
               "total": 1,
               "compiled": 1,
-              "syntax_valid": 0,
-              "semantically_correct": 0,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
               "omitted_facts": 0,
-              "errors": 1
+              "errors": 0
             }
           ],
           "by_context": [
@@ -70,17 +73,17 @@
               "label": "2048",
               "total": 1,
               "compiled": 1,
-              "syntax_valid": 0,
-              "semantically_correct": 0,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
               "omitted_facts": 0,
-              "errors": 1
+              "errors": 0
             }
           ]
         }
       },
       "qualification": {
-        "verdict": "INCOMPATIBLE",
-        "reason": "provider failures or timeouts affected at least half of runs"
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
       }
     }
   ]

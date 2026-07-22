@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "name": "phase108",
+  "name": "continuous-probe-2026-07-22-1200",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
   "max_calls": 1,
   "models": [
     {
-      "provider": "openai",
-      "binding_id": "nim-llama3",
+      "provider": "nim",
+      "binding_id": "nim-llama-3.1-8b-instruct",
       "model": "meta/llama-3.1-8b-instruct",
       "report": {
         "schema_version": 1,
@@ -21,7 +21,7 @@
             "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 390,
+            "duration_millis": 407,
             "syntax_valid": false,
             "semantically_correct": false,
             "error_kind": "PROVIDER",
