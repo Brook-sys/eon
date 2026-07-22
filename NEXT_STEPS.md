@@ -1,8 +1,9 @@
--e ## Planejamento de Nova Etapa (Pós-Fase 122)
+## Planejamento de Nova Etapa (pós-Fase 124)
 
-Com as barreiras do `Runtime HTTP Gate`, circuit breakers e isolamento P2P superadas, provadas e com execução *live* de chamadas (revisões Fase 117-122), a dependência bloqueante de credenciais em subprocessos foi resolvida utilizando injeção controlada (`.provider-secrets.env`).
+O `RuntimeGateCampaign` agora executa baterias bounded de 2 a 5 trials isolados. Cada trial mantém exatamente uma chamada externa, store SQLite novo, quota local, circuit breaking controlado, auditoria e verificação após reopen. A Fase 124 confirmou 3/3 respostas JSON exatas e 3/3 reopens em cada provider, sem 429 ou retry.
 
 Próximo foco sugerido:
-1. Integrar Dispatcher e Circuit Breaker diretamente nas Operações Epistemológicas (caso ainda restem fluxos isolados no modelo).
-2. Expansão dos testes de fogo no pipeline inteiro (desde submissão de missão até persistência atômica com multi-provider failover).
-3. Validar retomadas (crashes provocados) no store SQLite cruzando com retries nos roteadores Groq/NVIDIA.
+1. Estender o teste de fogo do probe diagnóstico para um fluxo epistemológico completo: admissão de missão, operação, proposta validada e commit atômico.
+2. Introduzir crash points reproduzíveis antes/depois da completion e antes/depois do commit, sem repetir chamada após efeito durável conhecido.
+3. Executar stress bounded de concorrência e filas no fluxo completo, medindo backpressure, memória, CPU, SQLite e crescimento do event log.
+4. Repetir as campanhas cross-provider com casos semânticos não triviais; não inferir preferência geral do resultado estrutural curto.

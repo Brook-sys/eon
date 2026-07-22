@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "phase-124-nim-json-batch",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "durable_reopens": 3,
+  "expected_matches": 3,
+  "json_valid": 3,
+  "input_tokens": 288,
+  "output_tokens": 33,
+  "latency_p50": 430574872,
+  "latency_p95": 931472960,
+  "latency_max": 931472960,
+  "selected_bindings": {
+    "nvidia-mistral-small-4": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "exact": 3
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 3
+  }
+}

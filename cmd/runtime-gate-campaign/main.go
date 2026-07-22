@@ -29,6 +29,7 @@ func main() {
 func run() error {
 	manifestPath := flag.String("manifest", "", "runtime gate campaign manifest")
 	outputDirectory := flag.String("out", "", "artifact directory")
+	trials := flag.Int("trials", 1, "isolated one-call trials (1..5)")
 	flag.Parse()
 	if *manifestPath == "" || *outputDirectory == "" {
 		return errors.New("-manifest and -out are required")
@@ -55,6 +56,9 @@ func run() error {
 		}
 		providers[binding.BindingID] = provider
 	}
+	if *trials <= 0 || *trials > gatecampaign.MaxRuntimeGateBatchTrials {
+		return fmt.Errorf("-trials must be between 1 and %d", gatecampaign.MaxRuntimeGateBatchTrials)
+	}
 	if err := os.MkdirAll(*outputDirectory, 0o755); err != nil {
 		return err
 	}
@@ -62,10 +66,47 @@ func run() error {
 	if err := gatecampaign.WriteRuntimeGateCampaignManifest(manifestArtifact, manifest); err != nil {
 		return err
 	}
-	databasePath := filepath.Join(*outputDirectory, "runtime-gate.sqlite")
+	reports := make([]gatecampaign.RuntimeGateCampaignReport, 0, *trials)
+	for trial := 1; trial <= *trials; trial++ {
+		trialDirectory := *outputDirectory
+		if *trials > 1 {
+			trialDirectory = filepath.Join(*outputDirectory, "trials", fmt.Sprintf("%03d", trial))
+			if err := os.MkdirAll(trialDirectory, 0o755); err != nil {
+				return err
+			}
+			if err := gatecampaign.WriteRuntimeGateCampaignManifest(filepath.Join(trialDirectory, "manifest.json"), manifest); err != nil {
+				return err
+			}
+		}
+		report, err := runTrial(manifest, providers, trialDirectory)
+		if err != nil {
+			return fmt.Errorf("trial %d: %w", trial, err)
+		}
+		reports = append(reports, report)
+	}
+	if *trials > 1 {
+		batch, err := gatecampaign.BuildRuntimeGateBatchReport(manifest.Name, reports)
+		if err != nil {
+			return err
+		}
+		if err := gatecampaign.WriteRuntimeGateBatchArtifacts(*outputDirectory, batch); err != nil {
+			return err
+		}
+		body, _ := json.Marshal(map[string]any{"trials": batch.Trials, "calls": batch.ExternalCalls, "successes": batch.ProviderSuccesses, "exact_matches": batch.ExpectedMatches, "durable_reopens": batch.DurableReopens, "latency_p95": batch.LatencyP95})
+		fmt.Println(string(body))
+		return nil
+	}
+	report := reports[0]
+	body, _ := json.Marshal(map[string]any{"calls": report.ExternalCalls, "binding": report.SelectedBindingID, "provider_success": report.ProviderSucceeded, "http_status": report.ProviderHTTPStatus, "second_acquire": report.SecondAcquireReason, "durable_reopen": report.DurableReopen})
+	fmt.Println(string(body))
+	return nil
+}
+
+func runTrial(manifest gatecampaign.RuntimeGateCampaignManifest, providers map[string]port.ModelProvider, outputDirectory string) (gatecampaign.RuntimeGateCampaignReport, error) {
+	databasePath := filepath.Join(outputDirectory, "runtime-gate.sqlite")
 	store, err := sqlite.Open(databasePath)
 	if err != nil {
-		return err
+		return gatecampaign.RuntimeGateCampaignReport{}, err
 	}
 	clock := source.SystemClock{}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(manifest.TimeoutSeconds)*time.Second)
@@ -73,27 +114,25 @@ func run() error {
 	report, runErr := (gatecampaign.RuntimeGateCampaignRunner{Store: store, Clock: clock, Providers: providers}).Run(ctx, manifest)
 	closeErr := store.Close()
 	if runErr != nil {
-		return runErr
+		return gatecampaign.RuntimeGateCampaignReport{}, runErr
 	}
 	if closeErr != nil {
-		return closeErr
+		return gatecampaign.RuntimeGateCampaignReport{}, closeErr
 	}
 	reopened, err := sqlite.Open(databasePath)
 	if err != nil {
-		return fmt.Errorf("reopen runtime gate store: %w", err)
+		return gatecampaign.RuntimeGateCampaignReport{}, fmt.Errorf("reopen runtime gate store: %w", err)
 	}
 	if err := gatecampaign.VerifyRuntimeGateDurability(context.Background(), reopened, report); err != nil {
 		reopened.Close()
-		return err
+		return gatecampaign.RuntimeGateCampaignReport{}, err
 	}
 	if err := reopened.Close(); err != nil {
-		return err
+		return gatecampaign.RuntimeGateCampaignReport{}, err
 	}
 	report.DurableReopen = true
-	if err := gatecampaign.WriteRuntimeGateCampaignArtifacts(*outputDirectory, report); err != nil {
-		return err
+	if err := gatecampaign.WriteRuntimeGateCampaignArtifacts(outputDirectory, report); err != nil {
+		return gatecampaign.RuntimeGateCampaignReport{}, err
 	}
-	body, _ := json.Marshal(map[string]any{"calls": report.ExternalCalls, "binding": report.SelectedBindingID, "provider_success": report.ProviderSucceeded, "http_status": report.ProviderHTTPStatus, "second_acquire": report.SecondAcquireReason, "durable_reopen": report.DurableReopen})
-	fmt.Println(string(body))
-	return nil
+	return report, nil
 }

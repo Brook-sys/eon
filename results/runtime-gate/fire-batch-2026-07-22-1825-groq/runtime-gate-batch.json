@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "name": "phase-124-groq-json-trial",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "durable_reopens": 3,
+  "expected_matches": 3,
+  "json_valid": 3,
+  "input_tokens": 345,
+  "output_tokens": 30,
+  "latency_p50": 279646531,
+  "latency_p95": 301901075,
+  "latency_max": 301901075,
+  "selected_bindings": {
+    "groq-llama-3.1-8b": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "exact": 3
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 3
+  }
+}
