@@ -135,10 +135,14 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		if listErr != nil {
 			// "error" is reserved by EventSource for reconnectable transport
 			// failures. Keep terminal application failure on a distinct channel so
-			// browsers do not confuse a network retry with a command to stop.
-			_ = writeSSE(w, flusher, "terminal_error", "", map[string]any{
-				"code":    "stream_list_failed",
-				"message": "event projection failed",
+			// browsers do not confuse a network retry with a command to stop. Carry
+			// the last accepted cursor as both SSE id and exact decimal payload so a
+			// terminal frame cannot ambiguously advance or rewind browser state.
+			cursor := strconv.FormatUint(filter.AfterSequence, 10)
+			_ = writeSSE(w, flusher, "terminal_error", cursor, map[string]any{
+				"code":                   "stream_list_failed",
+				"message":                "event projection failed",
+				"after_sequence_decimal": cursor,
 			})
 			return
 		}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase80-sse-terminal-cursor-v1",
+  "model": "llama-3.3-70b-versatile",
+  "runs": [
+    {
+      "case_id": "sse-terminal-cursor-integrity",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 322,
+      "actual_input_tokens": 234,
+      "output_tokens": 70,
+      "duration_millis": 582,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "TASK=Choose the safe browser rule for a terminal_error SSE frame emitted after the server can no longer project events.\nFACTS=F1, F2, F3\nCONSTRAINTS=Use only supplied facts; do not invent missing evidence.\nALLOWED OUTPUTS=A\nANSWER=A=rule=require_terminal_cursor_equal_last_accepted_or_fail_protocol"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 234,
+    "output_tokens": 70,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 1,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}

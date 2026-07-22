@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "name": "phase80-sse-terminal-cursor-v1",
+  "cases": [
+    {
+      "id": "sse-terminal-cursor-integrity",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe browser rule for a terminal_error SSE frame emitted after the server can no longer project events. The browser already accepted an exact decimal cursor, and terminal failure evidence must not silently advance or rewind it.",
+      "required_facts": [
+        {
+          "id": "f1",
+          "text": "The terminal_error frame should carry the last accepted durable cursor in its SSE id and an exact canonical decimal payload mirror.",
+          "priority": 10
+        },
+        {
+          "id": "f2",
+          "text": "The client must require both cursor representations to equal its current accepted cursor before presenting the terminal payload as trusted server evidence.",
+          "priority": 10
+        },
+        {
+          "id": "f3",
+          "text": "A missing, malformed, or divergent cursor must close fail-closed as a protocol error while preserving the prior cursor.",
+          "priority": 10
+        }
+      ],
+      "optional_facts": [],
+      "constraints": [
+        "Choose only one rule."
+      ],
+      "formats": [
+        "CHOICE"
+      ],
+      "expected": {
+        "rule": "require_terminal_cursor_equal_last_accepted_or_fail_protocol"
+      }
+    }
+  ]
+}

@@ -504,7 +504,7 @@ class EventSource {
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
-stream.emit("terminal_error", {data: JSON.stringify({code: "stream_list_failed"})});
+stream.emit("terminal_error", {lastEventId: "10", data: JSON.stringify({code: "stream_list_failed", after_sequence_decimal: "10"})});
 if (!stream.closed || es !== null) throw new Error("terminal server error did not close and clear stream");
 if (streamGeneration !== 2) throw new Error("terminal server error did not fence queued callbacks");
 if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("terminal server error mutated cursor");
@@ -516,6 +516,54 @@ if (JSON.stringify(elements) !== baseline) throw new Error("queued native onerro
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard terminal server error behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardTerminalErrorRejectsDivergentCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "9007199254740993"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "9007199254740993";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+stream.emit("ready", {lastEventId: "9007199254740993", data: JSON.stringify({after_sequence_decimal: "9007199254740993"})});
+stream.emit("terminal_error", {lastEventId: "9007199254740992", data: JSON.stringify({code: "stream_list_failed", after_sequence_decimal: "9007199254740992"})});
+if (!stream.closed || es !== null) throw new Error("divergent terminal cursor did not close stream");
+if (lastSeq !== "9007199254740993" || elements.afterSeq.value !== "9007199254740993") throw new Error("divergent terminal cursor changed accepted cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("divergent terminal cursor was trusted as server error");
+if (!elements.timeline.textContent.includes("terminal_error")) throw new Error("terminal cursor violation was not explained");
+if (elements.timeline.textContent.includes("stream_list_failed")) throw new Error("untrusted terminal payload was rendered as server evidence");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard terminal cursor integrity failed: %v\n%s", err, output)
 	}
 }
 

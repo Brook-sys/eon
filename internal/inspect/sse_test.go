@@ -48,6 +48,12 @@ func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
 	if !strings.Contains(body, `"code":"stream_list_failed"`) {
 		t.Fatalf("terminal error code missing: %q", body)
 	}
+	if !strings.Contains(body, "event: terminal_error\nid: 0\n") {
+		t.Fatalf("terminal error did not preserve accepted cursor as SSE id: %q", body)
+	}
+	if !strings.Contains(body, `"after_sequence_decimal":"0"`) {
+		t.Fatalf("terminal error exact cursor mirror missing: %q", body)
+	}
 	if strings.Contains(body, "projection unavailable") {
 		t.Fatalf("internal projection error leaked: %q", body)
 	}

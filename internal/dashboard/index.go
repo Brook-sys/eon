@@ -1039,9 +1039,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // The inspect server emits this non-reserved named event only for a
       // terminal application failure and closes the response immediately.
       // Native EventSource "error" remains reconnectable via onerror below.
+      // Validate that the terminal frame describes exactly the last accepted
+      // cursor before stopping; a divergent id/payload is a protocol failure,
+      // not trustworthy terminal evidence.
+      let terminalData;
+      try {
+        terminalData = JSON.parse(ev.data);
+      } catch {
+        failStreamProtocol(connectionGeneration, "terminal_error com payload JSON malformado");
+        return;
+      }
+      const terminalCursor = validStreamCursor(ev.lastEventId);
+      if (terminalCursor === null || terminalCursor !== lastSeq || validStreamCursor(terminalData.after_sequence_decimal) !== terminalCursor) {
+        failStreamProtocol(connectionGeneration, "terminal_error com cursor ausente ou divergente do último cursor aceito");
+        return;
+      }
       // Close explicitly so EventSource cannot reinterpret EOF as a transient
       // transport failure and reconnect forever.
-      failStreamServer(connectionGeneration, candidate, ev && ev.data ? ev.data : "erro terminal sem payload");
+      failStreamServer(connectionGeneration, candidate, ev.data);
     });
     es.onerror = function () {
       if (!streamIsCurrent(connectionGeneration)) return;
