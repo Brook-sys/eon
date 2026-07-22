@@ -30,6 +30,7 @@ import (
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/storage/sqlite"
+	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/tool"
 )
 
@@ -538,6 +539,12 @@ func openStore(opts Options) (port.Store, io.Closer, error) {
 		store, err := sqlite.Open(opts.SQLitePath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("open sqlite store: %w", err)
+		}
+		return store, store, nil
+	case StorageDolt:
+		store, err := dolt.OpenServer(os.Getenv("DOLT_BIN"), opts.DoltPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("open dolt store: %w", err)
 		}
 		return store, store, nil
 	default:

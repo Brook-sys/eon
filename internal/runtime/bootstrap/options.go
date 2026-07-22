@@ -21,6 +21,7 @@ type StorageBackend string
 const (
 	StorageMemory StorageBackend = "memory"
 	StorageSQLite StorageBackend = "sqlite"
+	StorageDolt   StorageBackend = "dolt"
 )
 
 // Options is the process-level assembly contract. Zero values are filled by
@@ -32,6 +33,8 @@ type Options struct {
 	StoreBackend StorageBackend
 	// SQLitePath is required when StoreBackend is sqlite.
 	SQLitePath string
+	// DoltPath is required when StoreBackend is dolt.
+	DoltPath string
 	// MissionID is the single mission the control loop schedules against.
 	// Empty disables scheduler steps (inbox processors and HTTP still run).
 	MissionID domain.MissionID
@@ -262,8 +265,12 @@ func (o *Options) Validate() error {
 		if strings.TrimSpace(o.SQLitePath) == "" {
 			return errors.New("sqlite store requires -sqlite-path")
 		}
+	case StorageDolt:
+		if strings.TrimSpace(o.DoltPath) == "" {
+			return errors.New("dolt store requires -dolt-path")
+		}
 	default:
-		return fmt.Errorf("unknown store backend %q (want memory or sqlite)", o.StoreBackend)
+		return fmt.Errorf("unknown store backend %q (want memory, sqlite, or dolt)", o.StoreBackend)
 	}
 	if strings.TrimSpace(o.RuntimeName) == "" {
 		o.RuntimeName = "motor-autonomo"

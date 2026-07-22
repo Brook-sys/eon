@@ -23,8 +23,9 @@ import (
 func main() {
 	var (
 		listen             = flag.String("listen", "127.0.0.1:8080", "HTTP bind address for inspect/control/dashboard")
-		storeBackend       = flag.String("store", "memory", "store backend: memory or sqlite")
+		storeBackend       = flag.String("store", "memory", "store backend: memory, sqlite, or dolt")
 		sqlitePath         = flag.String("sqlite-path", "", "SQLite checkpoint path (required for -store=sqlite)")
+		doltPath           = flag.String("dolt-path", "", "Dolt database path (required for -store=dolt)")
 		missionID          = flag.String("mission-id", "", "mission ID for the continuity control loop (optional)")
 		runtimeName        = flag.String("runtime-name", "motor-autonomo", "runtime identity name")
 		runtimeVersion     = flag.String("runtime-version", "dev", "runtime identity version")
@@ -94,6 +95,7 @@ func main() {
 		ListenAddr:             *listen,
 		StoreBackend:           bootstrap.StorageBackend(*storeBackend),
 		SQLitePath:             *sqlitePath,
+		DoltPath:               *doltPath,
 		MissionID:              domain.MissionID(*missionID),
 		RuntimeName:            *runtimeName,
 		RuntimeVersion:         *runtimeVersion,
