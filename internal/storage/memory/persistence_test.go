@@ -6,9 +6,47 @@ import (
 	"encoding/gob"
 	"errors"
 	"testing"
+	"time"
 
 	"motor-autonomo/internal/domain"
 )
+
+func TestCheckpointPreservesModelCompletionReceiptAndAcceptsOlderOmission(t *testing.T) {
+	result := domain.ModelCompletionResult{Text: "complete", ToolCalls: []domain.ModelCompletionToolCall{{ID: "c1", Name: "tool", Arguments: "{}"}}, InputTokens: 2, OutputTokens: 1, Model: "m", FinishReason: "tool_calls"}
+	hash, err := result.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: "op", Attempt: 1, ModelCall: 1, Result: result, PayloadHash: hash, RecordedAt: time.Date(2026, 7, 22, 19, 0, 0, 0, time.UTC)}
+	store := New()
+	store.state.modelCompletionReceipts[modelCompletionReceiptKey("op", 1, 1)] = receipt
+	payload, err := store.MarshalBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored, err := NewFromBinary(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := reader{state: &restored.state}.ModelCompletionReceipt("op", 1, 1)
+	if err != nil || got.PayloadHash != receipt.PayloadHash || len(got.Result.ToolCalls) != 1 {
+		t.Fatalf("restored receipt = %#v err=%v", got, err)
+	}
+
+	// A checkpoint encoded before this field existed decodes it as nil and must
+	// restore an initialized empty map rather than failing compatibility.
+	var legacy bytes.Buffer
+	if err := gob.NewEncoder(&legacy).Encode(persistedState{}); err != nil {
+		t.Fatal(err)
+	}
+	older, err := NewFromBinary(legacy.Bytes())
+	if err != nil {
+		t.Fatalf("restore older omission: %v", err)
+	}
+	if older.state.modelCompletionReceipts == nil {
+		t.Fatal("older checkpoint restored a nil model completion receipt map")
+	}
+}
 
 func TestCheckpointEnvelopeRoundTrip(t *testing.T) {
 	store := New()

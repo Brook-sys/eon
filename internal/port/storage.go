@@ -261,6 +261,18 @@ type ModelContextWriter interface {
 	SaveModelContextPressure(domain.ModelContextPressure) error
 }
 
+// ModelCompletionReceiptReader resolves the durable result of a single model
+// invocation by its natural execution key.
+type ModelCompletionReceiptReader interface {
+	ModelCompletionReceipt(domain.OperationID, uint32, uint32) (domain.ModelCompletionReceipt, error)
+}
+
+// ModelCompletionReceiptWriter is append-idempotent: replaying the same payload
+// succeeds, while a different payload at the same natural key is ErrConflict.
+type ModelCompletionReceiptWriter interface {
+	AppendModelCompletionReceipt(domain.ModelCompletionReceipt) error
+}
+
 // ConfigReader exposes versioned operator configuration drafts and revisions.
 // Active revision is the last applied pointer per scope.
 type ConfigReader interface {
@@ -293,6 +305,7 @@ type Reader interface {
 	ConfigReader
 	ResourceReader
 	ModelContextReader
+	ModelCompletionReceiptReader
 	EventReader
 	PeerSyncReader
 	IdempotencyReader
@@ -310,6 +323,7 @@ type Transaction interface {
 	ConfigWriter
 	ResourceWriter
 	ModelContextWriter
+	ModelCompletionReceiptWriter
 	EventWriter
 	PeerSyncWriter
 	IdempotencyWriter

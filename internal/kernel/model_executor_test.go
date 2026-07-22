@@ -187,6 +187,7 @@ func TestModelExecutorCompletesWithFakeProvider(t *testing.T) {
 
 	var op domain.Operation
 	var entity domain.CanonicalEntity
+	var receipt domain.ModelCompletionReceipt
 	var events []domain.Event
 	if err := store.View(ctx, func(r port.Reader) error {
 		var err error
@@ -195,6 +196,10 @@ func TestModelExecutorCompletesWithFakeProvider(t *testing.T) {
 			return err
 		}
 		entity, err = r.CanonicalEntity("observation", "obs_model_1")
+		if err != nil {
+			return err
+		}
+		receipt, err = r.ModelCompletionReceipt("operation_model", 1, 1)
 		if err != nil {
 			return err
 		}
@@ -208,6 +213,9 @@ func TestModelExecutorCompletesWithFakeProvider(t *testing.T) {
 	}
 	if entity.PayloadRef != "payload_model_1" || entity.CommitID != result.CommitID {
 		t.Fatalf("entity = %+v", entity)
+	}
+	if receipt.Result.Text != string(body) || receipt.Result.Model != "fixture-model" || receipt.Result.InputTokens != 40 || receipt.Result.OutputTokens != 80 {
+		t.Fatalf("completion receipt = %+v", receipt)
 	}
 	kinds := map[string]int{}
 	for _, event := range events {
@@ -234,6 +242,85 @@ func TestModelExecutorCompletesWithFakeProvider(t *testing.T) {
 	}
 	if !again.Skipped || again.SkipReason != "terminal" {
 		t.Fatalf("re-execute = %+v", again)
+	}
+}
+
+func TestModelExecutorReusesReceiptAfterExpiredAttemptWithoutProviderCall(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 22, 19, 20, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_replayed", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_replayed", PayloadRef: "payload_replayed"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	durable := port.DurableModelCompletionResult(port.CompletionResult{Text: string(body), Model: "fixture-model", InputTokens: 10, OutputTokens: 20, FinishReason: port.CompletionFinishStop})
+	hash, err := durable.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		op.Attempt = 1 // lease reaper has already returned the expired attempt to READY.
+		if err := tx.SaveOperation(op); err != nil {
+			return err
+		}
+		return tx.AppendModelCompletionReceipt(domain.ModelCompletionReceipt{
+			SchemaVersion: 1, OperationID: op.ID, Attempt: 1, ModelCall: 1,
+			Result: durable, PayloadHash: hash, RecordedAt: now.Add(-time.Minute),
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	server := fakeserver.New(fakeserver.Exchange{StatusCode: 500})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "must-not-run", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test", LeaseTTL: 5 * time.Minute,
+	}
+	result, err := executor.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute replay: %v", err)
+	}
+	if !result.Completed || result.ModelCalls != 0 || len(server.Requests()) != 0 {
+		t.Fatalf("replay result=%+v provider calls=%d", result, len(server.Requests()))
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		replayed, err := r.ModelCompletionReceipt("operation_model", 2, 1)
+		if err != nil {
+			return err
+		}
+		if replayed.PayloadHash != hash {
+			t.Fatalf("replayed receipt hash = %s, want %s", replayed.PayloadHash, hash)
+		}
+		_, err = r.CanonicalEntity("observation", "obs_replayed")
+		return err
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

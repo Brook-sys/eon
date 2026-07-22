@@ -95,6 +95,7 @@ type persistedState struct {
 	ChannelCursors            map[string]domain.ChannelCursor
 	ResourceUsages            map[domain.ResourceID]domain.ResourceUsage
 	ModelContextPressures     map[string]domain.ModelContextPressure
+	ModelCompletionReceipts   map[string]domain.ModelCompletionReceipt
 }
 
 // MarshalBinary returns an isolated, versioned checkpoint of the reference
@@ -132,9 +133,10 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		SubagentStatusIngress: cloned.subagentStatusIngress,
 		ConfigDrafts:          cloned.configDrafts, ConfigRevisions: cloned.configRevisions,
 		ActiveConfig: cloned.activeConfig, ConfigApplyReceipts: cloned.configApplyReceipts,
-		ChannelCursors:        cloned.channelCursors,
-		ResourceUsages:        cloned.resourceUsages,
-		ModelContextPressures: cloned.modelContextPressures,
+		ChannelCursors:          cloned.channelCursors,
+		ResourceUsages:          cloned.resourceUsages,
+		ModelContextPressures:   cloned.modelContextPressures,
+		ModelCompletionReceipts: cloned.modelCompletionReceipts,
 	}
 	var state bytes.Buffer
 	if err := gob.NewEncoder(&state).Encode(p); err != nil {
@@ -344,6 +346,15 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	base.channelCursors = nonNil(p.ChannelCursors, base.channelCursors)
 	base.resourceUsages = nonNil(p.ResourceUsages, base.resourceUsages)
 	base.modelContextPressures = nonNil(p.ModelContextPressures, base.modelContextPressures)
+	base.modelCompletionReceipts = nonNil(p.ModelCompletionReceipts, base.modelCompletionReceipts)
+	for key, receipt := range base.modelCompletionReceipts {
+		if err := receipt.Validate(); err != nil {
+			return nil, fmt.Errorf("decode checkpoint invalid model completion receipt %q: %w", key, err)
+		}
+		if expected := modelCompletionReceiptKey(receipt.OperationID, receipt.Attempt, receipt.ModelCall); key != expected {
+			return nil, fmt.Errorf("decode checkpoint model completion receipt key %q does not match %q", key, expected)
+		}
+	}
 	return &Store{state: base}, nil
 }
 

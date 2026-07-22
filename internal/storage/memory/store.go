@@ -153,6 +153,7 @@ type state struct {
 	channelCursors            map[string]domain.ChannelCursor
 	resourceUsages            map[domain.ResourceID]domain.ResourceUsage
 	modelContextPressures     map[string]domain.ModelContextPressure
+	modelCompletionReceipts   map[string]domain.ModelCompletionReceipt
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -218,6 +219,7 @@ func newState() state {
 		channelCursors:            make(map[string]domain.ChannelCursor),
 		resourceUsages:            make(map[domain.ResourceID]domain.ResourceUsage),
 		modelContextPressures:     make(map[string]domain.ModelContextPressure),
+		modelCompletionReceipts:   make(map[string]domain.ModelCompletionReceipt),
 	}
 }
 
@@ -256,6 +258,44 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 
 type reader struct{ state *state }
 type transaction struct{ state *state }
+
+func modelCompletionReceiptKey(operationID domain.OperationID, attempt, modelCall uint32) string {
+	return fmt.Sprintf("%s\x00%d\x00%d", operationID, attempt, modelCall)
+}
+
+func cloneModelCompletionReceipt(v domain.ModelCompletionReceipt) domain.ModelCompletionReceipt {
+	if v.Result.ToolCalls != nil {
+		v.Result.ToolCalls = append([]domain.ModelCompletionToolCall{}, v.Result.ToolCalls...)
+	}
+	return v
+}
+
+func (r reader) ModelCompletionReceipt(operationID domain.OperationID, attempt, modelCall uint32) (domain.ModelCompletionReceipt, error) {
+	v, ok := r.state.modelCompletionReceipts[modelCompletionReceiptKey(operationID, attempt, modelCall)]
+	if !ok {
+		return domain.ModelCompletionReceipt{}, notFound("model completion receipt", operationID)
+	}
+	return cloneModelCompletionReceipt(v), nil
+}
+
+func (t transaction) ModelCompletionReceipt(operationID domain.OperationID, attempt, modelCall uint32) (domain.ModelCompletionReceipt, error) {
+	return reader(t).ModelCompletionReceipt(operationID, attempt, modelCall)
+}
+
+func (t transaction) AppendModelCompletionReceipt(v domain.ModelCompletionReceipt) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate model completion receipt: %w", err)
+	}
+	key := modelCompletionReceiptKey(v.OperationID, v.Attempt, v.ModelCall)
+	if current, ok := t.state.modelCompletionReceipts[key]; ok {
+		if current.PayloadHash == v.PayloadHash {
+			return nil
+		}
+		return fmt.Errorf("%w: model completion receipt %s", port.ErrConflict, key)
+	}
+	t.state.modelCompletionReceipts[key] = cloneModelCompletionReceipt(v)
+	return nil
+}
 
 func (t transaction) MissionRevision(id domain.MissionRevisionID) (domain.MissionRevision, error) {
 	return reader(t).MissionRevision(id)
@@ -2608,6 +2648,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.modelContextPressures {
 		dst.modelContextPressures[k] = v
+	}
+	for k, v := range src.modelCompletionReceipts {
+		dst.modelCompletionReceipts[k] = cloneModelCompletionReceipt(v)
 	}
 	return dst
 }

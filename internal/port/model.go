@@ -50,6 +50,38 @@ type ToolCall struct {
 	Arguments string
 }
 
+// DurableModelCompletionResult converts the complete provider-neutral result
+// into domain-owned persistence data without making domain depend on port.
+func DurableModelCompletionResult(result CompletionResult) domain.ModelCompletionResult {
+	var toolCalls []domain.ModelCompletionToolCall
+	if result.ToolCalls != nil {
+		toolCalls = make([]domain.ModelCompletionToolCall, len(result.ToolCalls))
+	}
+	for i, call := range result.ToolCalls {
+		toolCalls[i] = domain.ModelCompletionToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments}
+	}
+	return domain.ModelCompletionResult{
+		Text: result.Text, ToolCalls: toolCalls, InputTokens: result.InputTokens,
+		OutputTokens: result.OutputTokens, Model: result.Model, FinishReason: string(result.FinishReason),
+	}
+}
+
+// CompletionResultFromDurable reconstructs the complete provider-neutral
+// result from a durable receipt payload.
+func CompletionResultFromDurable(result domain.ModelCompletionResult) CompletionResult {
+	var toolCalls []ToolCall
+	if result.ToolCalls != nil {
+		toolCalls = make([]ToolCall, len(result.ToolCalls))
+	}
+	for i, call := range result.ToolCalls {
+		toolCalls[i] = ToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments}
+	}
+	return CompletionResult{
+		Text: result.Text, ToolCalls: toolCalls, InputTokens: result.InputTokens,
+		OutputTokens: result.OutputTokens, Model: result.Model, FinishReason: CompletionFinishReason(result.FinishReason),
+	}
+}
+
 // ProviderError represents an active rejection from the provider.
 // It exposes retry availability without exposing raw error bodies.
 type ProviderError interface {

@@ -7,7 +7,9 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/contract"
 	"motor-autonomo/internal/storage/memory"
@@ -40,6 +42,43 @@ func TestDurableStoreContract(t *testing.T) {
 		}
 		return &harness{t: t, path: path, store: store}
 	})
+}
+
+func TestModelCompletionReceiptSurvivesSQLiteRestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := domain.ModelCompletionResult{Text: "answer", InputTokens: 3, OutputTokens: 2, Model: "m", FinishReason: "stop"}
+	hash, err := result.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: "op", Attempt: 4, ModelCall: 2, Result: result, PayloadHash: hash, RecordedAt: time.Date(2026, 7, 22, 19, 0, 0, 0, time.UTC)}
+	if err := store.Update(t.Context(), func(tx port.Transaction) error { return tx.AppendModelCompletionReceipt(receipt) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	store, err = storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.View(t.Context(), func(r port.Reader) error {
+		got, err := r.ModelCompletionReceipt("op", 4, 2)
+		if err != nil {
+			return err
+		}
+		if got.PayloadHash != hash || got.Result.Text != "answer" {
+			t.Fatalf("receipt after restart = %#v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestOpenRejectsUnsupportedCheckpointFormatBeforeDecodingPayload(t *testing.T) {

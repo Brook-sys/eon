@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -18,6 +19,54 @@ type Factory func() port.Store
 
 func TestStore(t *testing.T, factory Factory) {
 	t.Helper()
+	t.Run("model completion receipt is lossless and append-idempotent", func(t *testing.T) {
+		store := factory()
+		result := port.CompletionResult{
+			Text: "answer", ToolCalls: []port.ToolCall{{ID: "call-1", Name: "lookup", Arguments: `{"q":"x"}`}},
+			InputTokens: 11, OutputTokens: 7, Model: "model-v1", FinishReason: port.CompletionFinishToolCalls,
+		}
+		durable := port.DurableModelCompletionResult(result)
+		hash, err := durable.Hash()
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt := domain.ModelCompletionReceipt{
+			SchemaVersion: domain.SchemaVersionV1, OperationID: "operation-1", Attempt: 2, ModelCall: 3,
+			Result: durable, PayloadHash: hash, RecordedAt: time.Date(2026, 7, 22, 19, 0, 0, 0, time.UTC),
+		}
+		appendReceipt := func(v domain.ModelCompletionReceipt) error {
+			return store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendModelCompletionReceipt(v) })
+		}
+		if err := appendReceipt(receipt); err != nil {
+			t.Fatalf("append receipt: %v", err)
+		}
+		replay := receipt
+		replay.RecordedAt = replay.RecordedAt.Add(time.Hour)
+		if err := appendReceipt(replay); err != nil {
+			t.Fatalf("idempotent replay: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ModelCompletionReceipt(receipt.OperationID, receipt.Attempt, receipt.ModelCall)
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(port.CompletionResultFromDurable(got.Result), result) {
+				t.Fatalf("completion result = %#v, want %#v", port.CompletionResultFromDurable(got.Result), result)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		divergent := receipt
+		divergent.Result.Text = "different"
+		divergent.PayloadHash, err = divergent.Result.Hash()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := appendReceipt(divergent); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("divergent replay error = %v, want ErrConflict", err)
+		}
+	})
 	t.Run("source ingestion is immutable, content addressed and atomic", func(t *testing.T) {
 		store := factory()
 		now := time.Date(2026, 7, 15, 16, 0, 0, 0, time.UTC)
