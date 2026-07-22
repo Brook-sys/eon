@@ -4063,3 +4063,12 @@ n### Fase 108 - Spike de Performance Local Dolt vs SQLite
 NVIDIA NIM fallback resultou num payload 100% igual e válido (exact class, `finish_reason=stop`, 29 bytes em 827 ms).
 Groq fallback superou a falha de framing anterior e entregou exatidão perfeita e sintaxe JSON aceita (`exact` framing class, `finish_reason=stop`, 29 bytes em 370 ms).
 As evidencias atestam a robustez do workaround estritamente via prompt num kernel fechado para parser tolerante a erros (fail-closed é o comportamento documentado da plataforma e se sustenta com o prompt explícito sem aumentar código ou criar dependências). Artefatos preservados externamente em `results/runtime-gate/fire-probe-2026-07-22-1540-groq` e `results/runtime-gate/fire-probe-2026-07-22-1540-nim`.
+
+### Fase 118 - Projecao segura de metricas de rede do SSE (Hygiene)
+
+- [x] `DONE` Extrair o roteamento de streams (`Projector`, namespaces, RequestID) para testes isolados e suítes focais.
+- [x] `DONE` Evidenciar isolamento sem cross-talk entre namespaces através de teste determinístico em API handler.
+- [x] `DONE` Validar as mudanças com testes e linters; limpar o repositório deixando-o seguro para o próximo lote (clean tree).
+
+2026-07-22 15:45 - HEARTBEAT - Fase 118 concluída. Além dos avanços robustos cruzados no prompt e gatecampaign documentados na Fase 117, o namespace isolation da Fase 97 foi plenamente evidenciado em `internal/inspect/sse_namespace_test.go`, mas requeria um commit formal e teste independente sem acoplar a dependência da subscrição live do test de benchmark offline.
+A suite `go test -v ./internal/inspect -run TestEventStreamSSEFiltersByNamespace` passou perfeitamente, comprovando a eficácia do ServerHandler de isolar os escopos P2P na visualização em dashboard. Repouso alcançado em working tree limpa e sem pendências no runtime.
