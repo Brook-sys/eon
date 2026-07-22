@@ -3979,3 +3979,10 @@ ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes fa
 2026-07-22 08:40 - HEARTBEAT - Fase 107 concluída. Durante o avanço autônomo e de instrumentação, re-verificamos a camada de WorkOpportunityTransition e FrontierHygiene. Como os `memory/store.go` impõem check de conflito estrito para `DedupSignature` (active opportunities limit), as transições DEFER/ABANDON e SUPERSEDE já estão protegidas no domínio puro (`TestPlanFrontierReservoirHygieneSupersedeAndReopen` executa sem percalços em `/internal/domain`). O preflight local via `go test ./...` e `-race` continua blindado (todos os testes verdes), e a base não contém artefatos espúrios ou falhas de importação. Repouso estabelecido após ciclo completo.
 
 Campanha live bounded efetuada: via model-benchmark-runner no modo `live` utilizando topmodel com base local. O teste capturou corretamente 66 provider errors (401 esperados sem vazamento) atestando que os callbacks e o runner em si estão saudáveis sob failure injection de networking.
+
+### Fase 108 - Dolt Spike & Engine Support
+
+- [ ] Levantar um Spike isolado para comparar as interfaces SQLite e Dolt.
+- [ ] Modificar cmd/runtime para suportar flag -storage-engine=dolt.
+- [ ] Implementar interface SQL nos models de kernel para suporte a insert.
+2026-07-22 09:20 - HEARTBEAT - Planejamento da Fase 108 iniciado após bloqueios de 401 do Groq/NVIDIA nas validações estritas em campanhas live. Registramos o esqueleto de comparação local de database SQLite vs Dolt, documentamos os itens pendentes na timeline. Como os testes live exigem chaves válidas configuradas no runner que não estão presentes no ambiente atual isolado e a instrumentação base está compilando sem erros, o ciclo estável é confirmado e finalizado antecipadamente de modo coerente.
