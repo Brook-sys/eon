@@ -9,7 +9,10 @@ import (
 	"motor-autonomo/internal/port"
 )
 
-const subagentDeadlineExceeded = "deadline_exceeded"
+const (
+	subagentDeadlineExceeded  = "deadline_exceeded"
+	EventSubagentLeaseEvicted = "subagent.lease_evicted"
+)
 
 // Supervisor manages persistent subagent lifecycles across crashes, matching domain states
 // to SessionManager instances.
@@ -260,5 +263,19 @@ func (s *Supervisor) appendTerminalEvent(tx port.Transaction, rec domain.Subagen
 	if err := tx.CreateExternalEvent(event, disposition); err != nil && err != port.ErrConflict {
 		return err
 	}
-	return nil
+	if rec.ErrorCode != "lease_expired" {
+		return nil
+	}
+	auditID, err := s.IDs.NewID("event")
+	if err != nil {
+		return err
+	}
+	_, err = tx.AppendEvent(domain.Event{
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            domain.EventID(auditID),
+		Kind:          EventSubagentLeaseEvicted,
+		OccurredAt:    now,
+		PayloadRef:    "subagent=" + rec.ID + ";reason=lease_expired",
+	})
+	return err
 }

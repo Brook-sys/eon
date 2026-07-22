@@ -102,6 +102,36 @@ func TestProjectorOverviewAndEventPagination(t *testing.T) {
 	}
 }
 
+func TestProjectorOverviewCountsLeaseEvictions(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 22, 13, 0, 0, 0, time.UTC)
+	records := []domain.SubagentRecord{
+		{SchemaVersion: domain.SchemaVersionV1, ID: "evicted-1", TaskID: "task-1", MissionID: "mission-1", State: domain.SubagentStateError, StartedAt: now, UpdatedAt: now, Task: "expired", ContextMode: "isolated", ErrorCode: "lease_expired", MaxAttempts: 1},
+		{SchemaVersion: domain.SchemaVersionV1, ID: "failed-1", TaskID: "task-2", MissionID: "mission-1", State: domain.SubagentStateError, StartedAt: now, UpdatedAt: now, Task: "failed", ContextMode: "isolated", ErrorCode: "provider_failed", MaxAttempts: 1},
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		for _, record := range records {
+			if err := tx.CreateSubagentRecord(record); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	overview, err := projector.BuildOverview(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.EvictedSubagents != 1 {
+		t.Fatalf("evicted_subagents = %d, want 1", overview.EvictedSubagents)
+	}
+}
+
 func TestProjectorFilteredEventPaginationFindsLaterSparseMatch(t *testing.T) {
 	store := memory.New()
 	now := time.Date(2026, 7, 21, 18, 0, 0, 0, time.UTC)

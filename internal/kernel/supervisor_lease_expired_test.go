@@ -47,6 +47,13 @@ func TestSupervisorFencesActiveGenerationOnLeaseExpired(t *testing.T) {
 		if got.State != domain.SubagentStateError || got.ErrorCode != "lease_expired" {
 			t.Fatalf("durable lease expired state=%+v", got)
 		}
+		events, err := tx.Events(0, 10)
+		if err != nil {
+			return err
+		}
+		if len(events) != 1 || events[0].Kind != kernel.EventSubagentLeaseEvicted || events[0].PayloadRef != "subagent=lease-expired-1;reason=lease_expired" {
+			t.Fatalf("lease eviction audit events=%+v", events)
+		}
 		return nil
 	}); err != nil {
 		t.Fatal(err)

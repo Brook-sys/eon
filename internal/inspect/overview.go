@@ -116,6 +116,7 @@ type Overview struct {
 	EventHeadSequence uint64             `json:"event_head_sequence"`
 	PendingCommands   int                `json:"pending_commands"`
 	PendingQuestions  int                `json:"pending_operator_questions"`
+	EvictedSubagents  int                `json:"evicted_subagents"`
 	// ContinuityCatalog is process-local portfolio metadata (not mission store state).
 	ContinuityCatalog *ContinuityStrategyCatalog `json:"continuity_catalog,omitempty"`
 	// Telemetry is process-local OTel export posture (disposable, non-canonical).
@@ -194,6 +195,14 @@ func (p *Projector) BuildOverview(ctx context.Context, missionID domain.MissionI
 			return err
 		}
 		out.PendingCommands = len(pending)
+
+		if subagents, err := r.SubagentRecordsByState(domain.SubagentStateError, 1000); err == nil {
+			for _, rec := range subagents {
+				if rec.ErrorCode == "lease_expired" {
+					out.EvictedSubagents++
+				}
+			}
+		}
 
 		if missionID == "" {
 			// Best-effort selection is only for local single-mission runs.

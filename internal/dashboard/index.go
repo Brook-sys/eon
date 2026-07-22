@@ -578,6 +578,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     html += '<dt>event_head</dt><dd>' + esc(String(o.event_head_sequence ?? "—")) + "</dd>";
     html += '<dt>pending_commands</dt><dd>' + esc(String(o.pending_commands ?? 0)) + "</dd>";
     html += '<dt>pending_questions</dt><dd>' + esc(String(o.pending_operator_questions ?? 0)) + "</dd>";
+    html += '<dt>evicted_subagents</dt><dd>' + esc(String(o.evicted_subagents ?? 0)) + "</dd>";
     html += '<dt>generated_at</dt><dd>' + esc(fmtTime(o.generated_at)) + "</dd>";
     if (o.continuity_catalog) {
       const cc = o.continuity_catalog;
@@ -1161,7 +1162,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         return;
       }
       streamRetryAttempt = 0;
-      appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
+      const extraInfo = data.kind === "subagent.lease_evicted" ? " (EVICTED)" : "";
+      appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||"") + extraInfo);
     });
     es.addEventListener("page", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
