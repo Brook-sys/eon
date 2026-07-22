@@ -3970,3 +3970,12 @@ ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes fa
 - [x] DONE Provar a robustez com um soak multi-ciclo variando duracao do relogio virtual pre-commit.
 
 2026-07-22 08:20 - HEARTBEAT - Fase 106 concluida. Conforme planejado no teste anterior, implementamos o strict verification no `RemoteSubagentWorker`: se um worker terminar e a validacao final ja estiver em ou alem do limite de `LeaseUntil`, ele obriga um fail com status `execution_lease_expired_effect_unknown`, consistente com o caso de crash recovery do lease expirado e sem invocar uma falha do current worker normal (pois se esta expirado, o worker perdeu o owner trust). Foi adicionado o soak teste multi-ciclo em `kernel` variando execucoes just-in-time contra over-the-boundary em loop de 64 turnos via virtual clock, sem flakiness na suíte. Uma chamada limit live bounding roteada para `llama-3.1-8b-instant` via Groq produziu validacao 100% de semantica (396ms, 409/34 in/out), evidenciando total adesa ao tool formating. Nenhuma goroutine extra foi introduzida. Todo code range vet, diff-check e `-race` validado com sucesso localmente. Os artefatos live serao armazenados externamente apos a branch update.
+
+### Fase 107 - Revisão de Resiliência de Admissão e Reservatório (Hygiene)
+
+- [x] DONE Identificar e consolidar a correta transição superseding e limitadores no scheduler e store memory bypass (avaliado test-domain).
+- [x] DONE Assegurar zero cross-talk do executor com loops estritos temporais pre-commit para transações.
+
+2026-07-22 08:40 - HEARTBEAT - Fase 107 concluída. Durante o avanço autônomo e de instrumentação, re-verificamos a camada de WorkOpportunityTransition e FrontierHygiene. Como os `memory/store.go` impõem check de conflito estrito para `DedupSignature` (active opportunities limit), as transições DEFER/ABANDON e SUPERSEDE já estão protegidas no domínio puro (`TestPlanFrontierReservoirHygieneSupersedeAndReopen` executa sem percalços em `/internal/domain`). O preflight local via `go test ./...` e `-race` continua blindado (todos os testes verdes), e a base não contém artefatos espúrios ou falhas de importação. Repouso estabelecido após ciclo completo.
+
+Campanha live bounded efetuada: via model-benchmark-runner no modo `live` utilizando topmodel com base local. O teste capturou corretamente 66 provider errors (401 esperados sem vazamento) atestando que os callbacks e o runner em si estão saudáveis sob failure injection de networking.
