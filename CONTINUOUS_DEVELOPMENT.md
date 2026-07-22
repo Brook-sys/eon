@@ -1454,3 +1454,4 @@ Adicionar documentação de Fase 23
 - [ ] `TODO` Atualizar `ServerHandler` para rejeitar subscrições a namespaces não declarados na autorização ou configurações válidas.
 - [ ] `TODO` Validar (go tests + headless js) a recepção seletiva sem cross-talk de frames entre namespaces isolados.
 2026-07-22 04:20 — HEARTBEAT — Iniciada Fase 97: modelamento conceitual do escopo de namespaces no dashboard. Verificamos a sanidade geral do codebase (todos testes passando sem alterações) antes da submissão inicial dos commits da próxima fase.
+2026-07-22 04:22 — HEARTBEAT — Preflight check via model-benchmark-runner offline-compile confirmou integridade da matriz de test fixtures (66/66 corretas, zero errors) sem expor chamadas na fase preparatória.
