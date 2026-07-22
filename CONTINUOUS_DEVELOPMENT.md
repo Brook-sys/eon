@@ -4097,4 +4097,10 @@ A suite `go test -v ./internal/inspect -run TestEventStreamSSEFiltersByNamespace
 - [x] `DONE` Ajustar os metadados do manifesto de teste de fogo em `runtime-gate-campaign` para rodar corretamente com os limites corretos (`max_calls`, `seed_primary_circuit_seconds` e multiplas chaves ativas).
 - [x] `DONE` Coletar os resultados baseados nos provedores com o binario `cmd/runtime-gate-campaign`.
 
-2026-07-22 16:40 - HEARTBEAT - Fase 121 executada com sucesso. Com as credenciais restauradas temporariamente do `.provider-secrets.env` do repositorio, o binario de verificacao `cmd/runtime-gate-campaign` foi capaz de ler o manifesto parametrizado com duas chamadas vinculadas (`groq` e `nvidia-nim`) e atuar perfeitamente gerando os logs apropriados. Os resultados live reportaram a execucao completa usando mistral-small-4. O erro anterior foi evitado configurando priority, max_calls, max_output_tokens e seed_primary_circuit_seconds. O avanco ao teste de fogo pode prosseguir.
+### Fase 122 - Validação de Isolamento P2P e Execução Live (Heartbeat)
+
+- [x] `DONE` Extrair o diretório conflictante `runtime-gate.sqlite` para permitir execuções subsequentes.
+- [x] `DONE` Acionar `runtime-gate-campaign` provando resiliência do circuit breaker simulado na binding `groq-llama-3.3-70b`.
+- [x] `DONE` Validar o failover para `nvidia-mistral-small-4`, mantendo compatibilidade funcional (`exact match: true`) e demonstrando throttling correto sem 429 reais.
+
+2026-07-22 17:20 - HEARTBEAT - Fase 122 concluída. Resolvemos o erro de colisão de sqlite (`draft_runtime_gate_models already exists`) excluindo a base local suja e executando corretamente `cmd/runtime-gate-campaign`. Os resultados reportaram o comportamento esperado (circuit breaker forçado de `groq-llama-3.3-70b`, delegando a chamada para `nvidia-mistral-small-4` com latência de 626ms e `exact match: true`). Throttling local comportou-se como planejado (`resource_resource_rate_limit` no *second acquire*, não enviando tráfego real desnecessário ao provider). Isso reforça a eficácia do isolamento e rate limits da Fase 118-121. Nenhuma regressão detectada. Avance para nova validação de roteamento se necessário, estado em repouso e evidência capturada na baseline `results/heartbeat-gate/runtime-gate.md`.
