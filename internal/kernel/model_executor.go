@@ -219,7 +219,6 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		activeBindingID  = e.PrimaryBindingID
 		activeKind       = e.PrimaryProviderKind
 		activeProvider   = e.Provider
-		replayReceipt    *domain.ModelCompletionReceipt
 	)
 	err := e.Store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation(operationID)
@@ -251,19 +250,6 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 		operation = op
 		spec = loadedSpec
-		// A READY operation with a receipt from its latest expired attempt has a
-		// known provider result. Reuse it after claiming the next lease rather
-		// than repeating the external side effect.
-		if op.Attempt > 0 {
-			receipt, receiptErr := r.ModelCompletionReceipt(op.ID, op.Attempt, 1)
-			switch {
-			case receiptErr == nil:
-				replayReceipt = &receipt
-			case errors.Is(receiptErr, port.ErrNotFound):
-			default:
-				return fmt.Errorf("load model completion receipt: %w", receiptErr)
-			}
-		}
 		return nil
 	})
 	if err != nil {
@@ -302,7 +288,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 	}
 
-	if e.Authorizer != nil && replayReceipt == nil {
+	if e.Authorizer != nil {
 		auth, authErr := e.Authorizer.ReserveModelComplete(ctx, operation, spec, 0, activeProviderID, activeBindingID)
 		if authErr != nil {
 			return result, authErr
@@ -535,7 +521,25 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			budget.ContextPressure = domain.ContextPressureState{}
 		}
 		var permits []*domain.ResourcePermit
-		if e.Authorizer != nil && replayReceipt == nil {
+		var replayed bool
+		var receipt domain.ModelCompletionReceipt
+		
+		// Attempt to load durable receipt inside the loop for the specific attempt + model call.
+		if operation.Attempt > 0 {
+			err := e.Store.View(ctx, func(r port.Reader) error {
+				var rErr error
+				receipt, rErr = r.ModelCompletionReceipt(operation.ID, operation.Attempt, uint32(budget.ModelCallsUsed+1))
+				return rErr
+			})
+			if err == nil {
+				replayed = true
+			} else if !errors.Is(err, port.ErrNotFound) {
+				lastErr = fmt.Errorf("load model completion receipt: %w", err)
+				break
+			}
+		}
+
+		if e.Authorizer != nil && !replayed {
 			if budget.ModelCallsUsed == 0 && !usingFallback && len(preflightPermits) > 0 {
 				permits = preflightPermits
 				preflightPermits = nil
@@ -591,10 +595,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		var completion port.CompletionResult
 		var callErr error
 		var activeToolProvider port.ModelToolProvider
-		replayed := replayReceipt != nil
 		if replayed {
-			completion = port.CompletionResultFromDurable(replayReceipt.Result)
-			replayReceipt = nil
+			completion = port.CompletionResultFromDurable(receipt.Result)
 		} else {
 			if activeProvider == nil {
 				lastErr = fmt.Errorf("active provider is nil")
@@ -759,7 +761,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			lastErr = fmt.Errorf("hash model completion receipt: %w", hashErr)
 			break
 		}
-		receipt := domain.ModelCompletionReceipt{
+		receiptToSave := domain.ModelCompletionReceipt{
 			SchemaVersion: domain.SchemaVersionV1,
 			OperationID:   operation.ID,
 			Attempt:       operation.Attempt,
@@ -779,7 +781,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			if op.Reevaluation.Reference != leaseRef {
 				return fmt.Errorf("%w: operation lease changed before completion receipt", port.ErrConflict)
 			}
-			return tx.AppendModelCompletionReceipt(receipt)
+			return tx.AppendModelCompletionReceipt(receiptToSave)
 		}); receiptErr != nil {
 			lastErr = fmt.Errorf("persist model completion receipt: %w", receiptErr)
 			break

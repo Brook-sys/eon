@@ -275,16 +275,27 @@ func TestModelExecutorReusesReceiptAfterExpiredAttemptWithoutProviderCall(t *tes
 		if err != nil {
 			return err
 		}
-		op.Attempt = 1 // lease reaper has already returned the expired attempt to READY.
+		op.State = domain.StateRunning
+		op.Attempt = 1 // Already in READY state, mock a retry.
+		op.Reevaluation = domain.ReevaluationCondition{Kind: domain.ReevaluateLease, Reference: FormatLeaseRef("l1", "operation_model", 1, now.Add(time.Hour))}
 		if err := tx.SaveOperation(op); err != nil {
 			return err
 		}
 		return tx.AppendModelCompletionReceipt(domain.ModelCompletionReceipt{
-			SchemaVersion: 1, OperationID: op.ID, Attempt: 1, ModelCall: 1,
+			SchemaVersion: 1, OperationID: op.ID, Attempt: 2, ModelCall: 1,
 			Result: durable, PayloadHash: hash, RecordedAt: now.Add(-time.Minute),
 		})
 	}); err != nil {
 		t.Fatal(err)
+	}
+
+	clock.Advance(2 * time.Hour)
+	rec, err := LeaseReaper{Store: store, Clock: clock, IDs: ids}.Reconcile(ctx, "revision_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.Reconciled != 1 {
+		t.Fatalf("expected 1 reconciled lease, got %d", rec.Reconciled)
 	}
 
 	server := fakeserver.New(fakeserver.Exchange{StatusCode: 500})
