@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase85-sse-pre-ready-transport-v1",
+  "cases": [{
+    "id": "sse-pre-ready-transport",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser rule when EventSource reports a native transport error before the first ready handshake; an unknown named frame may already have changed the browser's internal Last-Event-ID without reaching application listeners.",
+    "required_facts": [
+      {"id":"f1","text":"Before ready, the requested baseline has not been certified by the application protocol.","priority":10},
+      {"id":"f2","text":"EventSource can consume an SSE id from an unknown named frame even when application code has no listener for that event name.","priority":10},
+      {"id":"f3","text":"Automatic retry can send that opaque internal Last-Event-ID and a later ready could otherwise be mistaken for the first clean handshake.","priority":10},
+      {"id":"f4","text":"After a valid ready, native transport errors may remain reconnectable if repeated ready cursors are monotonic.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"close_fail_closed_on_transport_error_before_ready_and_allow_retry_only_after_ready"}
+  }]
+}

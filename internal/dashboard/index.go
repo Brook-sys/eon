@@ -1138,6 +1138,15 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.onerror = function () {
       if (!streamIsCurrent(connectionGeneration)) return;
+      // Automatic reconnect is safe only after this EventSource has certified
+      // its baseline. Before ready, the browser may already have consumed an
+      // unobserved SSE id (for example on an unknown named event) and would send
+      // that opaque Last-Event-ID on retry. Close instead of accepting a future
+      // ready as the first handshake for a potentially poisoned native cursor.
+      if (!readySeen) {
+        failStreamProtocol(connectionGeneration, "falha de transporte antes do handshake ready");
+        return;
+      }
       el("streamBadge").textContent = "SSE error/retry";
       el("streamBadge").className = "badge err";
     };

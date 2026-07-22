@@ -626,6 +626,58 @@ if (!elements.timeline.textContent.includes("continued")) throw new Error("event
 	}
 }
 
+func TestDashboardTransportErrorBeforeReadyClosesFailClosed(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) {
+    if (this.listeners[kind]) this.listeners[kind](event);
+    if (kind === "error" && this.onerror) this.onerror(event);
+  }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const stream = es;
+const generationBeforeError = streamGeneration;
+stream.emit("mystery", {lastEventId: "99", data: "opaque"});
+stream.emit("error", {});
+if (!stream.closed || es !== null) throw new Error("pre-ready transport error remained reconnectable");
+if (streamGeneration !== generationBeforeError + 1) throw new Error("pre-ready transport error did not fence callbacks");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("pre-ready transport error mutated accepted cursor");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("pre-ready transport error was not classified fail-closed");
+stream.emit("ready", {lastEventId: "99", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "99"})});
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("late ready escaped pre-ready error fence");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard pre-ready transport behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardReconnectReadyCannotRewindAcceptedCursor(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
