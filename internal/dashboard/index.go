@@ -964,7 +964,19 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // reset the baseline for a manual rewind. Later ready frames belong to
       // native automatic reconnects of the same source and must remain
       // monotonic; otherwise a stale or faulty server could rewind the cursor.
-      const accepted = readySeen ? advanceStreamCursor(ev.lastEventId) : resetStreamCursor(ev.lastEventId);
+      let readyData;
+      try {
+        readyData = JSON.parse(ev.data);
+      } catch {
+        failStreamProtocol(connectionGeneration, "ready com payload JSON malformado");
+        return;
+      }
+      const readyCursor = validStreamCursor(ev.lastEventId);
+      if (readyCursor === null || validStreamCursor(readyData.after_sequence_decimal) !== readyCursor) {
+        failStreamProtocol(connectionGeneration, "ready com after_sequence_decimal ausente ou divergente do cursor");
+        return;
+      }
+      const accepted = readySeen ? advanceStreamCursor(readyCursor) : resetStreamCursor(readyCursor);
       if (!accepted) {
         failStreamProtocol(connectionGeneration, readySeen ? "ready de reconnect com cursor inválido ou regressivo" : "ready sem cursor uint64 canônico");
         return;
@@ -1004,7 +1016,19 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("page", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
-      if (!advanceStreamCursor(ev.lastEventId)) {
+      let pageData;
+      try {
+        pageData = JSON.parse(ev.data);
+      } catch {
+        failStreamProtocol(connectionGeneration, "page com payload JSON malformado");
+        return;
+      }
+      const pageCursor = validStreamCursor(ev.lastEventId);
+      if (pageCursor === null || validStreamCursor(pageData.next_sequence_decimal) !== pageCursor) {
+        failStreamProtocol(connectionGeneration, "page com next_sequence_decimal ausente ou divergente do cursor");
+        return;
+      }
+      if (!advanceStreamCursor(pageCursor)) {
         failStreamProtocol(connectionGeneration, "page com cursor inválido ou regressivo");
         return;
       }

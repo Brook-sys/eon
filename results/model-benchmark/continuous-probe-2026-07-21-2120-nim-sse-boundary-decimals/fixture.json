@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "phase79-sse-boundary-decimals-v1",
+  "cases": [
+    {
+      "id": "sse-boundary-cursor-mirror",
+      "operation": "SYNTHESIZE",
+      "task": "Choose the safe browser rule for SSE ready and page frames whose JSON numeric cursor may exceed JavaScript's exact integer range while the SSE id remains exact text.",
+      "required_facts": [
+        {"id":"f1","text":"JSON numbers above 2^53-1 may be rounded by JavaScript even though MessageEvent.lastEventId remains exact decimal text.","priority":10},
+        {"id":"f2","text":"Every cursor-bearing ready and page payload should include an exact canonical decimal string mirror of its SSE id.","priority":10},
+        {"id":"f3","text":"The client must validate the decimal mirror equals lastEventId before changing the accepted cursor, otherwise close fail-closed and preserve the prior cursor.","priority":10}
+      ],
+      "optional_facts": [],
+      "constraints": ["Choose only one rule."],
+      "formats": ["CHOICE"],
+      "expected": {"rule":"require_exact_decimal_mirror_on_ready_and_page_before_cursor_update"}
+    }
+  ]
+}

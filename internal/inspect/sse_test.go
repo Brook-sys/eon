@@ -264,7 +264,7 @@ func TestEventStreamReadyPreservesAcceptedResumeCursor(t *testing.T) {
 			defer resp.Body.Close()
 
 			scanner := bufio.NewScanner(resp.Body)
-			var eventName, eventID string
+			var eventName, eventID, eventData string
 			for scanner.Scan() {
 				line := scanner.Text()
 				switch {
@@ -272,12 +272,23 @@ func TestEventStreamReadyPreservesAcceptedResumeCursor(t *testing.T) {
 					eventName = strings.TrimPrefix(line, "event: ")
 				case strings.HasPrefix(line, "id: "):
 					eventID = strings.TrimPrefix(line, "id: ")
+				case strings.HasPrefix(line, "data: "):
+					eventData = strings.TrimPrefix(line, "data: ")
 				case line == "":
 					if eventName != "ready" {
 						t.Fatalf("first frame = %q, want ready", eventName)
 					}
 					if eventID != tc.wantID {
 						t.Fatalf("ready id = %q, want accepted cursor %q", eventID, tc.wantID)
+					}
+					var payload struct {
+						AfterSequenceDecimal string `json:"after_sequence_decimal"`
+					}
+					if err := json.Unmarshal([]byte(eventData), &payload); err != nil {
+						t.Fatalf("decode ready payload: %v data=%s", err, eventData)
+					}
+					if payload.AfterSequenceDecimal != tc.wantID {
+						t.Fatalf("ready decimal = %q, want accepted cursor %q", payload.AfterSequenceDecimal, tc.wantID)
 					}
 					return
 				}

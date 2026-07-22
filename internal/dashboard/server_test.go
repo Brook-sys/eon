@@ -137,7 +137,9 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		"function streamIsCurrent(connectionGeneration)",
 		"const connectionGeneration = ++streamGeneration",
 		"if (!streamIsCurrent(connectionGeneration)) return",
-		"resetStreamCursor(ev.lastEventId)",
+		"resetStreamCursor(readyCursor)",
+		"after_sequence_decimal",
+		"next_sequence_decimal",
 		"maxUint64Decimal = \"18446744073709551615\"",
 		"/^(0|[1-9][0-9]*)$/.test(next)",
 		"next.length > maxUint64Decimal.length",
@@ -367,7 +369,7 @@ class EventSource {
 }
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
 connectStream();
-es.emit("ready", {lastEventId: "10", data: "ready"});
+es.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
 es.emit("event", {lastEventId: "11", data: "{malformed"});
 if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("malformed payload lost accepted SSE cursor");
 if (!elements.timeline.textContent.includes("# malformed event")) throw new Error("malformed payload was not labeled");
@@ -450,8 +452,8 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "10", data: "ready"});
-stream.emit("page", {lastEventId: "9", data: "regressive page"});
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
+stream.emit("page", {lastEventId: "9", data: JSON.stringify({next_sequence_decimal: "9"})});
 if (!stream.closed || es !== null) throw new Error("invalid frame did not close the stream");
 if (streamGeneration !== 2) throw new Error("invalid frame did not invalidate callbacks");
 if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("invalid frame mutated durable cursor");
@@ -501,7 +503,7 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "10", data: "ready"});
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
 stream.emit("terminal_error", {data: JSON.stringify({code: "stream_list_failed"})});
 if (!stream.closed || es !== null) throw new Error("terminal server error did not close and clear stream");
 if (streamGeneration !== 2) throw new Error("terminal server error did not fence queued callbacks");
@@ -555,7 +557,7 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "10", data: "ready"});
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
 const generationBeforeError = streamGeneration;
 stream.emit("error", {});
 if (stream.closed) throw new Error("native transport error closed reconnectable stream");
@@ -563,7 +565,7 @@ if (es !== stream) throw new Error("native transport error cleared current strea
 if (streamGeneration !== generationBeforeError) throw new Error("native transport error fenced its own reconnect callbacks");
 if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("native transport error mutated cursor");
 if (elements.streamBadge.textContent !== "SSE error/retry") throw new Error("native transport retry was not visible");
-stream.emit("ready", {lastEventId: "10", data: "reconnected"});
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
 stream.emit("event", {lastEventId: "11", data: JSON.stringify({sequence: 11, sequence_decimal: "11", kind: "continued"})});
 if (stream.closed || es !== stream) throw new Error("reconnected stream was not retained");
 if (streamGeneration !== generationBeforeError) throw new Error("accepted reconnect changed connection generation");
@@ -611,10 +613,10 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "900", data: "initial"});
+stream.emit("ready", {lastEventId: "900", data: JSON.stringify({after_sequence_decimal: "900"})});
 stream.emit("event", {lastEventId: "950", data: JSON.stringify({sequence: 950, sequence_decimal: "950", kind: "accepted"})});
 stream.onerror();
-stream.emit("ready", {lastEventId: "900", data: "reconnect stale baseline"});
+stream.emit("ready", {lastEventId: "900", data: JSON.stringify({after_sequence_decimal: "900"})});
 if (!stream.closed || es !== null) throw new Error("regressive reconnect ready did not close the stream");
 if (streamGeneration !== 2) throw new Error("regressive reconnect ready did not fence callbacks");
 if (lastSeq !== "950" || elements.afterSeq.value !== "950") throw new Error("regressive reconnect ready rewound cursor");
@@ -663,7 +665,7 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "40", data: "initial"});
+stream.emit("ready", {lastEventId: "40", data: JSON.stringify({after_sequence_decimal: "40"})});
 stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, sequence_decimal: "41", kind: "accepted"})});
 const acceptedTimeline = elements.timeline.textContent;
 stream.emit("event", {lastEventId: "41", data: JSON.stringify({sequence: 41, sequence_decimal: "41", kind: "replayed-conflict"})});
@@ -717,7 +719,7 @@ class EventSource {
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
 connectStream();
 const stream = es;
-stream.emit("ready", {lastEventId: "9007199254740992", data: "ready"});
+stream.emit("ready", {lastEventId: "9007199254740992", data: JSON.stringify({after_sequence_decimal: "9007199254740992"})});
 stream.emit("event", {lastEventId: "9007199254740993", data: JSON.stringify({sequence: 9007199254740993, sequence_decimal: "9007199254740992", kind: "mismatch"})});
 if (!stream.closed || es !== null) throw new Error("mismatched payload sequence did not close stream");
 if (lastSeq !== "9007199254740993") throw new Error("accepted SSE cursor was not preserved exactly");
@@ -726,6 +728,59 @@ if (!elements.timeline.textContent.includes("sequence_decimal")) throw new Error
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard event payload sequence behavior failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardBoundaryPayloadSequenceMustMatchAcceptedCursor(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "9007199254740992"},
+  eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "9007199254740992";
+class EventSource {
+  constructor() { this.listeners = {}; this.closed = false; }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+connectStream();
+const badReady = es;
+badReady.emit("ready", {lastEventId: "9007199254740993", data: JSON.stringify({after_sequence: 9007199254740993, after_sequence_decimal: "9007199254740992"})});
+if (!badReady.closed || es !== null) throw new Error("mismatched ready decimal did not close stream");
+if (lastSeq !== "9007199254740992") throw new Error("bad ready changed accepted cursor");
+
+elements.afterSeq.value = "9007199254740992";
+connectStream();
+const badPage = es;
+badPage.emit("ready", {lastEventId: "9007199254740992", data: JSON.stringify({after_sequence_decimal: "9007199254740992"})});
+badPage.emit("page", {lastEventId: "9007199254740993", data: JSON.stringify({next_sequence: 9007199254740993, next_sequence_decimal: "9007199254740992"})});
+if (!badPage.closed || es !== null) throw new Error("mismatched page decimal did not close stream");
+if (lastSeq !== "9007199254740992") throw new Error("bad page changed accepted cursor");
+if (!elements.timeline.textContent.includes("next_sequence_decimal")) throw new Error("page mismatch was not explained");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard boundary payload sequence behavior failed: %v\n%s", err, output)
 	}
 }
 
@@ -803,8 +858,8 @@ elements.afterSeq.value = "10";
 connectStream();
 const second = streams[1];
 if (!first.closed) throw new Error("first EventSource was not closed");
-second.emit("ready", {lastEventId: "10", data: "second ready"});
-second.emit("page", {lastEventId: "20", data: "second page"});
+second.emit("ready", {lastEventId: "10", data: JSON.stringify({after_sequence_decimal: "10"})});
+second.emit("page", {lastEventId: "20", data: JSON.stringify({next_sequence_decimal: "20"})});
 const baseline = JSON.stringify({
   lastSeq,
   afterSeq: elements.afterSeq.value,

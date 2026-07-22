@@ -115,10 +115,11 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 	// Last-Event-ID for every SSE frame carrying an id; resetting it to zero here
 	// would make a disconnect before the next event/page replay the log prefix.
 	if err := writeSSE(w, flusher, "ready", strconv.FormatUint(after, 10), map[string]any{
-		"schema_version": domain.SchemaVersionV1,
-		"after_sequence": after,
-		"generated_at":   a.Projector.Clock().UTC().Format(time.RFC3339Nano),
-		"runtime":        a.Projector.Runtime,
+		"schema_version":         domain.SchemaVersionV1,
+		"after_sequence":         after,
+		"after_sequence_decimal": strconv.FormatUint(after, 10),
+		"generated_at":           a.Projector.Clock().UTC().Format(time.RFC3339Nano),
+		"runtime":                a.Projector.Runtime,
 	}); err != nil {
 		return
 	}
@@ -161,10 +162,11 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		filter.AfterSequence = page.NextSequence
 		if len(page.Events) > 0 || page.NextSequence > previousAfter {
 			if err := writeSSE(w, flusher, "page", strconv.FormatUint(page.NextSequence, 10), map[string]any{
-				"after_sequence": page.AfterSequence,
-				"next_sequence":  page.NextSequence,
-				"has_more":       page.HasMore,
-				"count":          len(page.Events),
+				"after_sequence":        page.AfterSequence,
+				"next_sequence":         page.NextSequence,
+				"next_sequence_decimal": strconv.FormatUint(page.NextSequence, 10),
+				"has_more":              page.HasMore,
+				"count":                 len(page.Events),
 			}); err != nil {
 				return
 			}
