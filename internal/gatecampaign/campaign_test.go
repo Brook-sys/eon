@@ -45,7 +45,7 @@ func TestBoundedCallRecorderIsSharedAndFailClosed(t *testing.T) {
 func runtimeGateTestManifest() RuntimeGateCampaignManifest {
 	return RuntimeGateCampaignManifest{
 		SchemaVersion: 1, Name: "bounded-gate", TimeoutSeconds: 10, MaxCalls: 1,
-		MaxOutputTokens: 16, ProbePrompt: "Reply with OK only.", SeedPrimaryCircuitSeconds: 60,
+		MaxOutputTokens: 16, ProbePrompt: "Reply with OK only.", ExpectedResponse: "OK", SeedPrimaryCircuitSeconds: 60,
 		Bindings: []RuntimeGateBinding{
 			{Provider: "groq", ProviderKind: domain.ProviderKindGroq, BindingID: "groq-primary", BaseURL: "https://example.invalid/v1", Model: "primary", APIKeyEnvironment: "GROQ_API_KEY", MaxOutputField: "max_tokens", ContextTokens: 2048, Priority: 0},
 			{Provider: "nim", ProviderKind: domain.ProviderKindNVIDIANIM, BindingID: "nim-fallback", BaseURL: "https://example.invalid/v1", Model: "fallback", APIKeyEnvironment: "NVIDIA_NIM_API_KEY", MaxOutputField: "max_tokens", ContextTokens: 2048, Priority: 1},
@@ -95,6 +95,9 @@ func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T
 	}
 	if report.SelectedBindingID != "nim-fallback" || !report.ProviderSucceeded {
 		t.Fatalf("route/success=%+v", report)
+	}
+	if !report.ExpectedResponseSet || report.ExpectedResponseMatch || report.ResponseBytes != len(proposal) || len(report.ResponseSHA256) != 64 {
+		t.Fatalf("safe response evidence=%+v", report)
 	}
 	if report.SecondAcquireReason != "resource_resource_rate_limit" || report.SecondAcquireWait == nil || report.OperationState != domain.StateWaitingTime {
 		t.Fatalf("second acquire=%+v", report)
@@ -199,6 +202,31 @@ func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
 	}
 	if report.ProviderLatency < 0 {
 		t.Fatalf("provider latency=%s", report.ProviderLatency)
+	}
+}
+
+func TestRunRecordsExactExpectedResponseWithoutPersistingRawText(t *testing.T) {
+	now := time.Date(2026, 7, 22, 12, 20, 0, 0, time.UTC)
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: "OK", InputTokens: 3, OutputTokens: 1}},
+		},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch || report.ResponseBytes != 2 || len(report.ResponseSHA256) != 64 {
+		t.Fatalf("exact response evidence=%+v", report)
+	}
+	body, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), `"text":"OK"`) || strings.Contains(string(body), `"response":"OK"`) {
+		t.Fatalf("raw provider text leaked into report: %s", body)
 	}
 }
 
