@@ -30,6 +30,7 @@ type Exchange struct {
 	StatusCode            int
 	RawBody               string
 	Headers               map[string]string
+	FinishReason          string
 	ToolCalls             []struct {
 		Name      string
 		Arguments string
@@ -190,7 +191,14 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message := map[string]any{"role": "assistant", "content": exchange.ResponseText}
+	finishReason := exchange.FinishReason
+	if finishReason == "" {
+		finishReason = "stop"
+	}
 	if len(exchange.ToolCalls) > 0 {
+		if exchange.FinishReason == "" {
+			finishReason = "tool_calls"
+		}
 		var tcList []any
 		for i, tc := range exchange.ToolCalls {
 			tcList = append(tcList, map[string]any{
@@ -207,7 +215,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"model":   model,
-		"choices": []any{map[string]any{"message": message}},
+		"choices": []any{map[string]any{"message": message, "finish_reason": finishReason}},
 		"usage":   map[string]any{"prompt_tokens": exchange.InputTokens, "completion_tokens": exchange.OutputTokens},
 	})
 }

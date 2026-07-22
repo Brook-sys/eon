@@ -211,14 +211,14 @@ func TestRunRecordsExactExpectedResponseWithoutPersistingRawText(t *testing.T) {
 		Store: memory.New(), Clock: source.NewManualClock(now),
 		Providers: map[string]port.ModelProvider{
 			"groq-primary": &recordingProvider{},
-			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: "OK", InputTokens: 3, OutputTokens: 1}},
+			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: "OK", InputTokens: 3, OutputTokens: 1, FinishReason: port.CompletionFinishStop}},
 		},
 	}
 	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch || report.ResponseBytes != 2 || len(report.ResponseSHA256) != 64 {
+	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch || report.FinishReason != port.CompletionFinishStop || report.ResponseBytes != 2 || len(report.ResponseSHA256) != 64 {
 		t.Fatalf("exact response evidence=%+v", report)
 	}
 	body, err := json.Marshal(report)

@@ -27,7 +27,21 @@ type CompletionResult struct {
 	InputTokens  int
 	OutputTokens int
 	Model        string
+	// FinishReason is a bounded provider-neutral classification. Adapters must
+	// map unknown or absent wire values instead of retaining arbitrary text.
+	FinishReason CompletionFinishReason
 }
+
+type CompletionFinishReason string
+
+const (
+	CompletionFinishUnknown       CompletionFinishReason = "unknown"
+	CompletionFinishStop          CompletionFinishReason = "stop"
+	CompletionFinishLength        CompletionFinishReason = "length"
+	CompletionFinishToolCalls     CompletionFinishReason = "tool_calls"
+	CompletionFinishContentFilter CompletionFinishReason = "content_filter"
+	CompletionFinishOther         CompletionFinishReason = "other"
+)
 
 // ToolCall represents a model's request to execute a tool.
 type ToolCall struct {

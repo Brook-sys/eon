@@ -158,32 +158,33 @@ type RuntimeGateUsage struct {
 }
 
 type RuntimeGateCampaignReport struct {
-	SchemaVersion         int                     `json:"schema_version"`
-	Name                  string                  `json:"name"`
-	StartedAt             time.Time               `json:"started_at"`
-	CompletedAt           time.Time               `json:"completed_at"`
-	MaxCalls              int                     `json:"max_calls"`
-	ExternalCalls         int                     `json:"external_calls"`
-	SeededCircuit         domain.ResourceID       `json:"seeded_circuit"`
-	SelectedProviderID    string                  `json:"selected_provider_id"`
-	SelectedBindingID     string                  `json:"selected_binding_id"`
-	RouteRejected         map[string]string       `json:"route_rejected,omitempty"`
-	ProviderSucceeded     bool                    `json:"provider_succeeded"`
-	ProviderLatency       time.Duration           `json:"provider_latency"`
-	ProviderErrorClass    string                  `json:"provider_error_class,omitempty"`
-	ProviderHTTPStatus    int                     `json:"provider_http_status,omitempty"`
-	ProviderRetryAfter    time.Duration           `json:"provider_retry_after,omitempty"`
-	ObservedInputTokens   int                     `json:"observed_input_tokens,omitempty"`
-	ObservedOutputTokens  int                     `json:"observed_output_tokens,omitempty"`
-	ResponseBytes         int                     `json:"response_bytes,omitempty"`
-	ResponseSHA256        string                  `json:"response_sha256,omitempty"`
-	ExpectedResponseSet   bool                    `json:"expected_response_set"`
-	ExpectedResponseMatch bool                    `json:"expected_response_match"`
-	SecondAcquireReason   string                  `json:"second_acquire_reason"`
-	SecondAcquireWait     *time.Time              `json:"second_acquire_wait_until,omitempty"`
-	OperationState        domain.OperationalState `json:"operation_state"`
-	Usages                []RuntimeGateUsage      `json:"usages"`
-	DurableReopen         bool                    `json:"durable_reopen"`
+	SchemaVersion         int                         `json:"schema_version"`
+	Name                  string                      `json:"name"`
+	StartedAt             time.Time                   `json:"started_at"`
+	CompletedAt           time.Time                   `json:"completed_at"`
+	MaxCalls              int                         `json:"max_calls"`
+	ExternalCalls         int                         `json:"external_calls"`
+	SeededCircuit         domain.ResourceID           `json:"seeded_circuit"`
+	SelectedProviderID    string                      `json:"selected_provider_id"`
+	SelectedBindingID     string                      `json:"selected_binding_id"`
+	RouteRejected         map[string]string           `json:"route_rejected,omitempty"`
+	ProviderSucceeded     bool                        `json:"provider_succeeded"`
+	ProviderLatency       time.Duration               `json:"provider_latency"`
+	ProviderErrorClass    string                      `json:"provider_error_class,omitempty"`
+	ProviderHTTPStatus    int                         `json:"provider_http_status,omitempty"`
+	ProviderRetryAfter    time.Duration               `json:"provider_retry_after,omitempty"`
+	ObservedInputTokens   int                         `json:"observed_input_tokens,omitempty"`
+	ObservedOutputTokens  int                         `json:"observed_output_tokens,omitempty"`
+	FinishReason          port.CompletionFinishReason `json:"finish_reason,omitempty"`
+	ResponseBytes         int                         `json:"response_bytes,omitempty"`
+	ResponseSHA256        string                      `json:"response_sha256,omitempty"`
+	ExpectedResponseSet   bool                        `json:"expected_response_set"`
+	ExpectedResponseMatch bool                        `json:"expected_response_match"`
+	SecondAcquireReason   string                      `json:"second_acquire_reason"`
+	SecondAcquireWait     *time.Time                  `json:"second_acquire_wait_until,omitempty"`
+	OperationState        domain.OperationalState     `json:"operation_state"`
+	Usages                []RuntimeGateUsage          `json:"usages"`
+	DurableReopen         bool                        `json:"durable_reopen"`
 }
 
 // RuntimeGateCampaignRunner executes the bounded probe against an already-open
@@ -292,6 +293,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		report.ProviderSucceeded = true
 		report.ObservedInputTokens = recorder.result.InputTokens
 		report.ObservedOutputTokens = recorder.result.OutputTokens
+		report.FinishReason = recorder.result.FinishReason
 		report.ResponseBytes = len(recorder.result.Text)
 		digest := sha256.Sum256([]byte(recorder.result.Text))
 		report.ResponseSHA256 = fmt.Sprintf("%x", digest[:])
@@ -555,7 +557,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}

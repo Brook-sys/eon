@@ -24,7 +24,7 @@ func TestProviderCompletesPlainTextAgainstFakeServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Text != "B" || result.InputTokens != 5 || result.OutputTokens != 1 || result.Model != "fixture-model-v1" {
+	if result.Text != "B" || result.InputTokens != 5 || result.OutputTokens != 1 || result.Model != "fixture-model-v1" || result.FinishReason != port.CompletionFinishStop {
 		t.Fatalf("unexpected result: %+v", result)
 	}
 	requests := server.Requests()
@@ -33,6 +33,29 @@ func TestProviderCompletesPlainTextAgainstFakeServer(t *testing.T) {
 	}
 	if failures := server.Failures(); len(failures) != 0 {
 		t.Fatalf("fake server failures: %v", failures)
+	}
+}
+
+func TestProviderClassifiesFinishReasonWithoutRetainingUnknownWireValue(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "partial", FinishReason: "length"},
+		fakeserver.Exchange{ResponseText: "future", FinishReason: "vendor_future_reason"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	length, err := provider.Complete(context.Background(), port.CompletionRequest{Prompt: "first", MaxOutputTokens: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown, err := provider.Complete(context.Background(), port.CompletionRequest{Prompt: "second", MaxOutputTokens: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if length.FinishReason != port.CompletionFinishLength || unknown.FinishReason != port.CompletionFinishOther {
+		t.Fatalf("finish reasons length=%q unknown=%q", length.FinishReason, unknown.FinishReason)
 	}
 }
 

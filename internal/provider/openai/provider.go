@@ -271,7 +271,8 @@ type chatToolCall struct {
 type chatResponse struct {
 	Model   string `json:"model"`
 	Choices []struct {
-		Message chatMessage `json:"message"`
+		Message      chatMessage `json:"message"`
+		FinishReason string      `json:"finish_reason"`
 	} `json:"choices"`
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
@@ -371,7 +372,24 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		}
 	}
 
-	return port.CompletionResult{Text: decoded.Choices[0].Message.Content, ToolCalls: toolCalls, InputTokens: decoded.Usage.PromptTokens, OutputTokens: decoded.Usage.CompletionTokens, Model: decoded.Model}, nil
+	return port.CompletionResult{Text: decoded.Choices[0].Message.Content, ToolCalls: toolCalls, InputTokens: decoded.Usage.PromptTokens, OutputTokens: decoded.Usage.CompletionTokens, Model: decoded.Model, FinishReason: classifyFinishReason(decoded.Choices[0].FinishReason)}, nil
+}
+
+func classifyFinishReason(value string) port.CompletionFinishReason {
+	switch strings.TrimSpace(value) {
+	case "stop":
+		return port.CompletionFinishStop
+	case "length":
+		return port.CompletionFinishLength
+	case "tool_calls", "function_call":
+		return port.CompletionFinishToolCalls
+	case "content_filter":
+		return port.CompletionFinishContentFilter
+	case "":
+		return port.CompletionFinishUnknown
+	default:
+		return port.CompletionFinishOther
+	}
 }
 
 // parseRetryAfter accepts both forms from RFC 9110: delay-seconds and an HTTP
