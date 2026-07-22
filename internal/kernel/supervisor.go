@@ -82,7 +82,8 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 			// local deadline. This matters when authenticated remote completion was
 			// already durable before the deadline but only became process-visible in
 			// the current control cycle.
-			if (!terminalForCurrentAttempt || deadlineFailureForCurrentAttempt) && !rec.Deadline.IsZero() && !now.Before(rec.Deadline) {
+			leaseExpired := !rec.LeaseExpiresAt.IsZero() && !now.Before(rec.LeaseExpiresAt)
+			if (!terminalForCurrentAttempt || deadlineFailureForCurrentAttempt) && (!rec.Deadline.IsZero() && !now.Before(rec.Deadline) || leaseExpired) {
 				// Fence a process-visible active generation before publishing the
 				// durable timeout. Otherwise the record leaves the active scan while the
 				// manager keeps consuming a concurrency slot forever. Publishing first
@@ -93,7 +94,11 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 					if recoveredRetry {
 						attempt = status.Attempt
 					}
-					if err := s.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(rec.ID), Attempt: attempt, State: SessionStateFailed, Failure: subagentDeadlineExceeded}); err != nil {
+					failureCode := subagentDeadlineExceeded
+					if leaseExpired && (rec.Deadline.IsZero() || now.Before(rec.Deadline)) {
+						failureCode = "lease_expired"
+					}
+					if err := s.Manager.PublishStatus(ctx, SubagentObservation{ID: SessionID(rec.ID), Attempt: attempt, State: SessionStateFailed, Failure: failureCode}); err != nil {
 						return err
 					}
 				}
@@ -102,6 +107,9 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				}
 				rec.State = domain.SubagentStateError
 				rec.ErrorCode = subagentDeadlineExceeded
+				if leaseExpired && (rec.Deadline.IsZero() || now.Before(rec.Deadline)) {
+					rec.ErrorCode = "lease_expired"
+				}
 				rec.UpdatedAt = now
 				if err := tx.SaveSubagentRecord(rec); err != nil {
 					return err

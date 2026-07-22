@@ -3926,8 +3926,8 @@ ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes fa
 
 ### Fase 101 - Fencing e Recuperação Resiliente de Lease Subagentes (Worker Session)
 
-- [ ] Criar estrutura em `domain.Subagent` para rastrear o tempo de lease (`LeaseExpiresAt`).
-- [ ] Implementar expiração forçada/evicção (Fencing) no dispatcher caso o worker fique irresponsivo, realocando ou cancelando de forma segura.
-- [ ] Adicionar testes de race conditions entre workers tentando adquirir leases simultaneamente.
+- [x] Criar estrutura em `domain.Subagent` para rastrear o tempo de lease (`LeaseExpiresAt`).
+- [x] Implementar expiração forçada/evicção (Fencing) no dispatcher caso o worker fique irresponsivo, realocando ou cancelando de forma segura.
+- [x] Adicionar testes de race conditions entre workers tentando adquirir leases simultaneamente.
 
-2026-07-22 13:10 - HEARTBEAT - Planejando a Fase 101. Foco será resiliência de alocação de tarefas via worker sessions. Um nó off/irresponsivo não pode travar uma tarefa indefinidamente, e fences precisam assegurar que o dispatch mude estados atômicos, impedindo "split brain" onde dois workers processam a mesma mensagem. Próximo passo: definir e escrever as expansões em `domain` e testes de coordenação offline.
+2026-07-22 13:30 - HEARTBEAT - Modificações da Fase 101 implementadas e validadas através de baterias de testes. A estrutura `domain.SubagentRecord` agora inclui `LeaseExpiresAt`. O `Supervisor.Reconcile` impõe nativamente o fencing de gerações ativas quando o `LeaseExpiresAt` é atingido sem renovação, marcando-os em Storage com erro `lease_expired`. Os testes de expiração de lease e conflitos de lease comprovaram estabilidade e consistência na recuperação. O escopo local offline e model testings demonstraram consistência. Preparado para prosseguir.

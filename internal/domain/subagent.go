@@ -28,6 +28,7 @@ type SubagentRecord struct {
 	// TransportPeerID is the authenticated peer authorized to execute and
 	// report this session. Empty keeps the session process-local.
 	TransportPeerID string    `json:"transport_peer_id,omitempty"`
+	LeaseExpiresAt  time.Time `json:"lease_expires_at,omitempty"`
 	Result          string    `json:"result,omitempty"`
 	ErrorCode       string    `json:"error_code,omitempty"`
 	Attempt         int       `json:"attempt"`
@@ -68,6 +69,9 @@ func (r SubagentRecord) Validate() error {
 	}
 	if !r.Deadline.IsZero() && r.Deadline.Before(r.StartedAt) {
 		return errors.New("subagent deadline cannot precede started_at")
+	}
+	if !r.LeaseExpiresAt.IsZero() && r.LeaseExpiresAt.Before(r.StartedAt) {
+		return errors.New("subagent lease_expires_at cannot precede started_at")
 	}
 	return nil
 }
