@@ -200,7 +200,14 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			}
 			var next domain.SubagentSpawnReceipt
 			active := receiverGenerationActive(record, current.ReceiverAttempt, finished)
-			if !active {
+			// The receipt lease is also an exclusive commit boundary. At or after
+			// LeaseUntil the executor may have produced an effect, but this owner no
+			// longer has authority to commit its result. Park that ambiguity with the
+			// same fail-closed outcome used by crash recovery instead of attempting a
+			// normal owner failure, which is intentionally invalid after expiry.
+			if current.Status == domain.SubagentSpawnReceiptLeased && !finished.Before(current.LeaseUntil) {
+				next, err = domain.FailExpiredSubagentSpawnReceipt(current, finished, "execution_lease_expired_effect_unknown")
+			} else if !active {
 				next, err = domain.FailSubagentSpawnReceipt(current, w.Owner, "receiver_generation_inactive_after_execution", finished)
 			} else if execErr == nil {
 				next, err = domain.CompleteSubagentSpawnReceipt(current, w.Owner, result, finished)
@@ -213,7 +220,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			if err := tx.SaveSubagentSpawnReceipt(next, current.Status, current.UpdatedAt); err != nil {
 				return err
 			}
-			terminalAccepted = active
+			terminalAccepted = active && finished.Before(current.LeaseUntil)
 			return nil
 		}); err != nil {
 			return processed, err

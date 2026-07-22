@@ -318,6 +318,55 @@ func TestRemoteSubagentWorkerRejectsResultWhenCanonicalLeaseExpiresDuringExecuti
 	}
 }
 
+func TestRemoteSubagentWorkerVirtualClockSoakNearCanonicalLeaseBoundary(t *testing.T) {
+	const cycles = 64
+	for cycle := 0; cycle < cycles; cycle++ {
+		store := memory.New()
+		clock := &supervisorMockClock{currentTime: time.Unix(int64(100+cycle*10), 0).UTC()}
+		manager := kernel.NewLocalSessionManager(clock)
+		receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+		lease := time.Minute
+		finishAtExpiry := cycle%2 == 1
+		worker := kernel.RemoteSubagentWorker{
+			Store:   store,
+			Manager: manager,
+			Clock:   clock,
+			Owner:   "receiver-worker",
+			Lease:   lease,
+			Timeout: lease - time.Second,
+			Executor: kernel.RemoteSubagentExecutorFunc(func(context.Context, string, string) (string, error) {
+				advance := lease - time.Nanosecond
+				if finishAtExpiry {
+					advance = lease
+				}
+				clock.currentTime = clock.Now().Add(advance)
+				return "boundary result", nil
+			}),
+		}
+		if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+			t.Fatalf("cycle %d execute=(%d,%v)", cycle, n, err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+			if err != nil {
+				return err
+			}
+			if finishAtExpiry {
+				if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "execution_lease_expired_effect_unknown" || got.Result != "" {
+					t.Fatalf("cycle %d accepted result at exclusive lease boundary: %+v", cycle, got)
+				}
+				return nil
+			}
+			if got.Status != domain.SubagentSpawnReceiptComplete || got.Result != "boundary result" {
+				t.Fatalf("cycle %d rejected result before lease boundary: %+v", cycle, got)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestRemoteSubagentWorkersDoNotDoubleClaim(t *testing.T) {
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
