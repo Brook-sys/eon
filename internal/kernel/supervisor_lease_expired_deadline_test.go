@@ -15,8 +15,8 @@ func TestSupervisorLeaseExpiredWithDeadline(t *testing.T) {
 	ctx := context.Background()
 	store := memory.New()
 	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 22, 12, 0, 0, 0, time.UTC)}
-	
-	// Test when deadline is reached (it should prioritize deadline_exceeded over lease_expired if both occur, 
+
+	// Test when deadline is reached (it should prioritize deadline_exceeded over lease_expired if both occur,
 	// or deadline_exceeded when deadline is before)
 	rec := domain.SubagentRecord{
 		SchemaVersion:  domain.SchemaVersionV1,

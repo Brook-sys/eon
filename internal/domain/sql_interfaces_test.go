@@ -10,7 +10,7 @@ func TestSQLInterfaces(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	
+
 	bytes, ok := val.([]byte)
 	if !ok {
 		t.Fatalf("expected []byte from Budget.Value()")
@@ -24,7 +24,7 @@ func TestSQLInterfaces(t *testing.T) {
 	if scanned.Tokens != 100 {
 		t.Errorf("expected Tokens 100, got %d", scanned.Tokens)
 	}
-	
+
 	// Test string scanning
 	var scannedString Budget
 	if err := scannedString.Scan(string(bytes)); err != nil {

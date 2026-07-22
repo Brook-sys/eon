@@ -83,4 +83,3 @@ func (s SubagentRecord) Value() (driver.Value, error) {
 func (s *SubagentRecord) Scan(src interface{}) error {
 	return scanJSON(src, s)
 }
-

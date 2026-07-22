@@ -28,9 +28,9 @@ import (
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/storage/sqlite"
-	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/tool"
 )
 
