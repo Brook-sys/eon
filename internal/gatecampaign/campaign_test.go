@@ -65,17 +65,32 @@ func TestManifestStrictAndBounded(t *testing.T) {
 	}
 }
 
-func TestRuntimeGateSeedUsesExactTextProbeContract(t *testing.T) {
+func TestRuntimeGateSeedUsesDeclaredMinimalProbeContract(t *testing.T) {
+	for _, outputSchema := range []string{"", "exact_json"} {
+		manifest := runtimeGateTestManifest()
+		manifest.OutputSchema = outputSchema
+		_, spec, operation, err := runtimeGateSeed(memory.New(), manifest, time.Date(2026, 7, 22, 16, 0, 0, 0, time.UTC))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := outputSchema
+		if want == "" {
+			want = "exact_text"
+		}
+		if spec.OutputSchema != want || len(spec.Validators) != 1 || spec.Validators[0] != want {
+			t.Fatalf("runtime gate output contract=%+v want %q", spec, want)
+		}
+		if operation.ExpectedOutput != manifest.ProbePrompt {
+			t.Fatalf("probe task=%q want %q", operation.ExpectedOutput, manifest.ProbePrompt)
+		}
+	}
+}
+
+func TestManifestRejectsUnknownOutputSchema(t *testing.T) {
 	manifest := runtimeGateTestManifest()
-	_, spec, operation, err := runtimeGateSeed(memory.New(), manifest, time.Date(2026, 7, 22, 16, 0, 0, 0, time.UTC))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if spec.OutputSchema != "exact_text" || len(spec.Validators) != 1 || spec.Validators[0] != "exact_text" {
-		t.Fatalf("runtime gate retained changeset contract: %+v", spec)
-	}
-	if operation.ExpectedOutput != manifest.ProbePrompt {
-		t.Fatalf("probe task=%q want %q", operation.ExpectedOutput, manifest.ProbePrompt)
+	manifest.OutputSchema = "freeform"
+	if err := manifest.Validate(); err == nil {
+		t.Fatal("unknown output schema must fail closed")
 	}
 }
 

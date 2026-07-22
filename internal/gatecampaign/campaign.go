@@ -33,6 +33,7 @@ type RuntimeGateCampaignManifest struct {
 	TimeoutSeconds            int                  `json:"timeout_seconds"`
 	MaxCalls                  int                  `json:"max_calls"`
 	MaxOutputTokens           int                  `json:"max_output_tokens"`
+	OutputSchema              string               `json:"output_schema,omitempty"`
 	ProbePrompt               string               `json:"probe_prompt"`
 	ExpectedResponse          string               `json:"expected_response,omitempty"`
 	SeedPrimaryCircuitSeconds int                  `json:"seed_primary_circuit_seconds"`
@@ -89,6 +90,9 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	}
 	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 128 {
 		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 128")
+	}
+	if m.OutputSchema != "" && m.OutputSchema != "exact_text" && m.OutputSchema != "exact_json" {
+		return errors.New("runtime gate campaign output_schema must be exact_text or exact_json")
 	}
 	if prompt := strings.TrimSpace(m.ProbePrompt); prompt == "" || len(prompt) > 1024 {
 		return errors.New("runtime gate campaign probe_prompt is required and bounded to 1024 bytes")
@@ -180,6 +184,7 @@ type RuntimeGateCampaignReport struct {
 	ResponseSHA256        string                      `json:"response_sha256,omitempty"`
 	ExpectedResponseSet   bool                        `json:"expected_response_set"`
 	ExpectedResponseMatch bool                        `json:"expected_response_match"`
+	ResponseJSONValid     bool                        `json:"response_json_valid,omitempty"`
 	SecondAcquireReason   string                      `json:"second_acquire_reason"`
 	SecondAcquireWait     *time.Time                  `json:"second_acquire_wait_until,omitempty"`
 	OperationState        domain.OperationalState     `json:"operation_state"`
@@ -301,6 +306,10 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			report.ExpectedResponseSet = true
 			report.ExpectedResponseMatch = recorder.result.Text == manifest.ExpectedResponse
 		}
+		if manifest.OutputSchema == "exact_json" {
+			var object map[string]json.RawMessage
+			report.ResponseJSONValid = json.Unmarshal([]byte(recorder.result.Text), &object) == nil && object != nil
+		}
 	} else {
 		report.ProviderErrorClass = "transport"
 		var providerErr port.ProviderError
@@ -339,7 +348,11 @@ func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now
 	if err := config.Validate(); err != nil {
 		return config, domain.OperationSpec{}, domain.Operation{}, err
 	}
-	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: "exact_text", Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{"exact_text"}, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
+	outputSchema := manifest.OutputSchema
+	if outputSchema == "" {
+		outputSchema = "exact_text"
+	}
+	spec := domain.OperationSpec{SchemaVersion: 1, ID: "runtime-gate-probe@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: outputSchema, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{outputSchema}, RetryPolicy: "none", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
 	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_runtime_gate", MissionID: "mission_runtime_gate", Revision: 1, OriginalText: "bounded provider gate probe", Purpose: "validate quota and routing", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: 1, Tokens: 4000, Attempts: 1}}
 	question := domain.Question{SchemaVersion: 1, ID: "question_runtime_gate", MissionRevision: revision.ID, Text: "is the provider gate operational?", Origin: "campaign", Relevance: "diagnostic", AnswerCondition: "one bounded call"}
 	candidate := domain.InquiryCandidate{SchemaVersion: 1, ID: "candidate_runtime_gate", MissionRevision: revision.ID, QuestionID: question.ID, DerivedFrom: []string{"manifest"}, ExpectedProgress: "runtime evidence", Novelty: "dated probe", Risk: domain.RiskLow, SourcePlan: []string{"provider"}, AnswerCondition: "report", StopCondition: "one call", ReviewAfter: now.Add(time.Hour)}
@@ -557,7 +570,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}

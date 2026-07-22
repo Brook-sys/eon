@@ -1162,6 +1162,30 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			AnswerFormat:   "exact requested text only",
 		}, nil
 	}
+	if spec.OutputSchema == "exact_json" {
+		return prompt.Input{
+			Task:           task,
+			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
+			AllowedOutputs: []string{"exact requested JSON object"},
+			AnswerFormat:   "single exact JSON object only",
+		}, nil
+	}
+	if spec.OutputSchema == "exact_json" {
+		return prompt.Input{
+			Task:           task,
+			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
+			AllowedOutputs: []string{"exact requested JSON object"},
+			AnswerFormat:   "single exact JSON object only",
+		}, nil
+	}
+	if spec.OutputSchema == "exact_json" {
+		return prompt.Input{
+			Task:           task,
+			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
+			AllowedOutputs: []string{"exact requested JSON object"},
+			AnswerFormat:   "single exact JSON object only",
+		}, nil
+	}
 	facts := []prompt.Fact{
 		{ID: "operation_id", Text: string(operation.ID), Required: true, Priority: 100},
 		{ID: "mission_revision_id", Text: string(operation.MissionRevision), Required: true, Priority: 100},

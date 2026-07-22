@@ -48,6 +48,35 @@ func TestBuildPromptInputUsesMinimalExactTextContract(t *testing.T) {
 	}
 }
 
+func TestBuildPromptInputUsesMinimalExactJSONContract(t *testing.T) {
+	executor := ModelExecutor{}
+	spec := modelTestSpec()
+	spec.OutputSchema = "exact_json"
+	operation := domain.Operation{
+		ID: "operation_probe", MissionRevision: "revision_probe", SpecID: spec.ID,
+		ExpectedOutput: `Return exactly {"status":"OK","retry":false}.`, IdempotencyKey: "probe",
+	}
+	input, err := executor.buildPromptInput(operation, spec, domain.GenesisCommitID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(input.Facts) != 0 || len(input.Constraints) != 1 || len(input.AllowedOutputs) != 1 {
+		t.Fatalf("exact-JSON prompt retained generic changeset envelope: %+v", input)
+	}
+	if input.Task != operation.ExpectedOutput || input.AnswerFormat != "single exact JSON object only" {
+		t.Fatalf("unexpected exact-JSON prompt: %+v", input)
+	}
+	compiled, err := (prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 2048}).Compile(spec, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"operation_id", "mission_revision_id", "ProposedChangeSet", "canonical snake_case"} {
+		if strings.Contains(compiled.Request.Prompt, forbidden) {
+			t.Fatalf("minimal prompt contains %q:\n%s", forbidden, compiled.Request.Prompt)
+		}
+	}
+}
+
 func TestModelEligible(t *testing.T) {
 	t.Parallel()
 	local := ContinuityOperationSpec("continuity.gap_scan@1", domain.AuthorityProposeOnly)
