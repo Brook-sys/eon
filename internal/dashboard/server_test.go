@@ -334,7 +334,7 @@ if (elements.timeline.textContent !== "existing stream") throw new Error("invali
 	}
 }
 
-func TestDashboardMalformedEventStillAdvancesAcceptedCursor(t *testing.T) {
+func TestDashboardMalformedEventPreservesTransportCursorAndFailsClosed(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
 	}
@@ -364,17 +364,24 @@ let streamRetryTimer = null;
 let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
-  constructor(url) { this.url = url; this.listeners = {}; }
+  constructor(url) { this.url = url; this.listeners = {}; this.closed = false; }
   addEventListener(kind, callback) { this.listeners[kind] = callback; }
-  close() {}
+  close() { this.closed = true; }
   emit(kind, event) { this.listeners[kind](event); }
 }
 ` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + connect + `
 connectStream();
-es.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
-es.emit("event", {lastEventId: "11", data: "{malformed"});
-if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("malformed payload lost accepted SSE cursor");
-if (!elements.timeline.textContent.includes("# malformed event")) throw new Error("malformed payload was not labeled");
+const stream = es;
+stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+streamRetryAttempt = 4;
+stream.emit("event", {lastEventId: "11", data: "{malformed"});
+if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("malformed payload lost browser-accepted SSE cursor");
+if (!stream.closed || es !== null) throw new Error("malformed payload did not close and fence the source");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("malformed payload was not classified as protocol error");
+if (!elements.timeline.textContent.includes("cursor de transporte preservado em 11")) throw new Error("malformed payload lacked exact cursor evidence");
+if (streamRetryAttempt !== 4 || streamRetryTimer !== null) throw new Error("malformed payload counted as progress or entered transport recovery");
+stream.emit("event", {lastEventId: "12", data: JSON.stringify({schema_version: 1, sequence_decimal: "12"})});
+if (lastSeq !== "11") throw new Error("late callback escaped malformed-event generation fence");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
 		t.Fatalf("dashboard malformed stream event behavior failed: %v\n%s", err, output)

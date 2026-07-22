@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase91-sse-malformed-event-v1",
+  "cases": [{
+    "id": "sse-malformed-event",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser policy when a named SSE event frame has a valid strictly advancing Last-Event-ID but malformed application JSON.",
+    "required_facts": [
+      {"id":"f1","text":"EventSource may accept the frame ID independently before application JSON parsing fails.","priority":10},
+      {"id":"f2","text":"Ignoring the accepted transport cursor can cause replay on a later manual reconnect.","priority":10},
+      {"id":"f3","text":"Continuing after malformed unversioned application data treats invalid protocol bytes as normal progress and can expose later evidence on an untrusted stream.","priority":10},
+      {"id":"f4","text":"The client can preserve only the exact accepted transport cursor, then close and generation-fence without resetting retry budget or scheduling transport recovery.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"preserve_accepted_transport_cursor_then_fail_protocol_closed"}
+  }]
+}

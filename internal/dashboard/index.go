@@ -1084,9 +1084,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       }
       // EventSource accepts the frame ID independently from application JSON.
       // Preserve that durable cursor if the payload is not JSON at all, because
-      // the browser has already accepted the frame ID and would resume from it.
-      // A parseable application frame is different: validate its protocol
-      // version and exact decimal mirror before mutating the dashboard cursor.
+      // the browser has already accepted the frame ID. The payload is still an
+      // unversioned protocol violation: stop after adopting only the transport
+      // cursor, so it cannot count as useful progress or remain visible as
+      // application evidence. A parseable application frame is different:
+      // validate its protocol version and exact decimal mirror before mutating
+      // the dashboard cursor.
       let data;
       try {
         data = JSON.parse(ev.data);
@@ -1096,8 +1099,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           failStreamProtocol(connectionGeneration, "event malformado com cursor inválido, repetido ou regressivo");
           return;
         }
-        streamRetryAttempt = 0;
-        appendTimeline("# malformed event " + ev.data);
+        failStreamProtocol(connectionGeneration, "event com payload JSON malformado; cursor de transporte preservado em " + lastSeq);
         return;
       }
       if (data.schema_version !== 1) {

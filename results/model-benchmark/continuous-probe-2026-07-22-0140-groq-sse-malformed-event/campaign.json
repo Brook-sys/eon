@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "name": "phase91-sse-malformed-event-groq",
+  "fixture_name": "phase91-sse-malformed-event-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-gpt-oss-20b-phase91",
+      "model": "openai/gpt-oss-20b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase91-sse-malformed-event-v1",
+        "model": "openai/gpt-oss-20b",
+        "runs": [
+          {
+            "case_id": "sse-malformed-event",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 320,
+            "actual_input_tokens": 272,
+            "output_tokens": 89,
+            "duration_millis": 377,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "rule=preserve_accepted_transport_cursor_then_fail_protocol_closed",
+            "values": {
+              "rule": "preserve_accepted_transport_cursor_then_fail_protocol_closed"
+            }
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 272,
+          "output_tokens": 89,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
+      }
+    }
+  ]
+}
