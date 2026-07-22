@@ -14,12 +14,20 @@ import (
 
 const (
 	defaultSSEPollInterval = 250 * time.Millisecond
-	maxSSEIdleTicks        = 40 // ~10s with default poll; send keep-alive comment
-	maxSSEImmediatePages   = 8  // bound projection work before yielding to the poll timer
+	sseKeepAliveInterval   = 10 * time.Second
+	maxSSEImmediatePages   = 8 // bound projection work before yielding to the poll timer
 )
 
 type sseDrainPacer struct {
 	immediatePages int
+}
+
+func sseIdleTicksBeforeKeepAlive(poll time.Duration) int {
+	// Round up so the configured interval is a lower bound even when poll does
+	// not divide it exactly. Tying keepalive cadence to a fixed tick count made
+	// poll_ms=5000 wait 200 seconds, long enough for ordinary proxies to reap an
+	// otherwise healthy stream.
+	return int((sseKeepAliveInterval + poll - 1) / poll)
 }
 
 // sseEventPayload carries the event sequence twice on purpose: Sequence keeps
@@ -149,6 +157,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	idleTicks := 0
+	idleTicksBeforeKeepAlive := sseIdleTicksBeforeKeepAlive(poll)
 	drainPacer := sseDrainPacer{}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -209,7 +218,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(page.Events) == 0 {
 			idleTicks++
-			if idleTicks >= maxSSEIdleTicks {
+			if idleTicks >= idleTicksBeforeKeepAlive {
 				idleTicks = 0
 				if _, err := fmt.Fprintf(w, ": keepalive %s\n\n", a.Projector.Clock().UTC().Format(time.RFC3339Nano)); err != nil {
 					return

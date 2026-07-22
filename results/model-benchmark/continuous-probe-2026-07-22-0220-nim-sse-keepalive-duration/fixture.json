@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase93-sse-keepalive-duration-v1",
+  "cases": [{
+    "id": "sse-keepalive-duration",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe keepalive policy for an SSE endpoint whose configurable poll interval ranges from 50 milliseconds to 5 seconds.",
+    "required_facts": [
+      {"id":"f1","text":"A fixed count of idle poll iterations makes wall-clock keepalive latency scale with poll_ms.","priority":10},
+      {"id":"f2","text":"At 40 ticks and poll_ms=5000, the first keepalive can be delayed for 200 seconds.","priority":10},
+      {"id":"f3","text":"Common proxies may close an otherwise healthy idle stream before 200 seconds.","priority":10},
+      {"id":"f4","text":"The keepalive cadence should be bounded by elapsed duration across every accepted poll interval.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"derive_idle_ticks_from_fixed_keepalive_duration"}
+  }]
+}

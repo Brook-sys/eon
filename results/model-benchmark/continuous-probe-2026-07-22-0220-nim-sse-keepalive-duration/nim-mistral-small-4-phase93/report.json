@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase93-sse-keepalive-duration-v1",
+  "model": "mistralai/mistral-small-4-119b-2603",
+  "runs": [
+    {
+      "case_id": "sse-keepalive-duration",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 264,
+      "actual_input_tokens": 222,
+      "output_tokens": 18,
+      "duration_millis": 753,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "A=rule=derive_idle_ticks_from_fixed_keepalive_duration"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 0,
+    "semantically_correct": 0,
+    "input_tokens": 222,
+    "output_tokens": 18,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 1,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 1
+      }
+    ]
+  }
+}
