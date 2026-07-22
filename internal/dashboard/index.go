@@ -1012,8 +1012,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";
     if (kind) url += "&kind=" + encodeURIComponent(kind);
-    const ns = el("eventNamespace") ? el("eventNamespace").value.trim() : "";
-    if (ns) url += "&namespace=" + encodeURIComponent(ns);
+      const ns = el("eventNamespace") ? el("eventNamespace").value.trim() : "";
+      if (ns) url += "&namespace=" + encodeURIComponent(ns);
     const reqId = el("eventRequestId") ? el("eventRequestId").value.trim() : "";
     if (reqId) url += "&request_id=" + encodeURIComponent(reqId);
     let candidate;
