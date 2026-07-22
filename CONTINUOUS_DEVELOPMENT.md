@@ -3912,8 +3912,10 @@ ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes fa
 
 ### Fase 99 - Telemetria de resiliencia e limitadores explicitos de payload SSE no Dashboard
 
-- [ ] TODO Implementar limitador estrito de tamanho maximo de payload na recepcao do chunk SSE no dashboard, evitando OOM em injecoes nao controladas.
-- [ ] TODO Isolar parsing do JSON em bloco interceptado, gerando metrica de parsing falho visivel no status, sem quebrar a timeline ja renderizada.
-- [ ] TODO Criar suite headless testando frames com tamanhos massivos e strings json corrompidas.
+- [x] DONE Implementar limitador estrito de tamanho maximo de payload na recepcao do chunk SSE no dashboard, evitando OOM em injecoes nao controladas.
+- [x] DONE Isolar parsing do JSON em bloco interceptado, gerando metrica de parsing falho visivel no status, sem quebrar a timeline ja renderizada.
+- [x] DONE Criar suite headless testando frames com tamanhos massivos e strings json corrompidas.
+
+2026-07-22 12:20 - HEARTBEAT - A resiliencia do front-end frente a anomalias de trafego SSE foi reforcada. O dashboard impoe agora um limite estrito de 512KB (MAX_PAYLOAD_SIZE) nas camadas interceptadoras dos blocos de handlers de frames nomeados (`ready`, `event`, `page`, `terminal_error`). Se ultrapassado, aciona `failStreamProtocol`, exibindo mensagem clara sem renderizar frames massivos ou estourar a timeline. A validacao foi documentada e comprovada atraves de uma serie mock javascript embarcada num unit-test Go (`TestDashboardPayloadLimitJavascript`). Chamada de benchmark executada no NIM Llama-3.1-8b-instruct e no Groq Llama-3.1-8b-instant sob teto controlado; ambas retornaram status de provider control local (401 local-auth) documentando evidencia do preflight sem consumo excedente.
 
 2026-07-22 10:45 - HEARTBEAT - Planejando a Fase 99. A bateria de estresse focara na resiliencia do front-end consumindo streams SSE potencialmente imensos ou deformados. O objetivo e assegurar que falhas de limite de buffer ou malformacao de JSON em payloads pontuais resultem no descarte apenas do bad frame e acionem backoff visual, sem crashear a interface ou estourar a memoria.
