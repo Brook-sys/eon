@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "name": "phase94-sse-keepalive-off-by-one-groq",
+  "fixture_name": "phase94-sse-keepalive-off-by-one-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-gpt-oss-20b-phase94",
+      "model": "openai/gpt-oss-20b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase94-sse-keepalive-off-by-one-v1",
+        "model": "openai/gpt-oss-20b",
+        "runs": [
+          {
+            "case_id": "sse-keepalive-off-by-one",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 279,
+            "duration_millis": 515,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER"
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 1,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "provider failures or timeouts affected at least half of runs"
+      }
+    }
+  ]
+}

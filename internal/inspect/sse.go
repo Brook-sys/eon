@@ -22,12 +22,37 @@ type sseDrainPacer struct {
 	immediatePages int
 }
 
+type sseKeepAlivePacer struct {
+	idlePolls int
+	threshold int
+}
+
 func sseIdleTicksBeforeKeepAlive(poll time.Duration) int {
 	// Round up so the configured interval is a lower bound even when poll does
 	// not divide it exactly. Tying keepalive cadence to a fixed tick count made
 	// poll_ms=5000 wait 200 seconds, long enough for ordinary proxies to reap an
 	// otherwise healthy stream.
 	return int((sseKeepAliveInterval + poll - 1) / poll)
+}
+
+func newSSEKeepAlivePacer(poll time.Duration) sseKeepAlivePacer {
+	return sseKeepAlivePacer{threshold: sseIdleTicksBeforeKeepAlive(poll)}
+}
+
+func (p *sseKeepAlivePacer) observeFrame() {
+	p.idlePolls = 0
+}
+
+func (p *sseKeepAlivePacer) observePoll() {
+	p.idlePolls++
+}
+
+func (p *sseKeepAlivePacer) keepAliveDue() bool {
+	if p.idlePolls < p.threshold {
+		return false
+	}
+	p.idlePolls = 0
+	return true
 }
 
 // sseEventPayload carries the event sequence twice on purpose: Sequence keeps
@@ -156,8 +181,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	idleTicks := 0
-	idleTicksBeforeKeepAlive := sseIdleTicksBeforeKeepAlive(poll)
+	keepAlivePacer := newSSEKeepAlivePacer(poll)
 	drainPacer := sseDrainPacer{}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -181,7 +205,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		}
 		previousAfter := filter.AfterSequence
 		if len(page.Events) > 0 {
-			idleTicks = 0
+			keepAlivePacer.observeFrame()
 			for _, event := range page.Events {
 				id := strconv.FormatUint(event.Sequence, 10)
 				if err := writeSSE(w, flusher, "event", id, sseEventPayload{
@@ -208,6 +232,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			}); err != nil {
 				return
 			}
+			keepAlivePacer.observeFrame()
 			if drainPacer.continueImmediately(page.HasMore) {
 				// Drain finite backlog in bounded bursts. The pacer forces a
 				// poll-timer yield if ingestion keeps HasMore true continuously.
@@ -216,15 +241,11 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		} else {
 			drainPacer.continueImmediately(false)
 		}
-		if len(page.Events) == 0 {
-			idleTicks++
-			if idleTicks >= idleTicksBeforeKeepAlive {
-				idleTicks = 0
-				if _, err := fmt.Fprintf(w, ": keepalive %s\n\n", a.Projector.Clock().UTC().Format(time.RFC3339Nano)); err != nil {
-					return
-				}
-				flusher.Flush()
+		if keepAlivePacer.keepAliveDue() {
+			if _, err := fmt.Fprintf(w, ": keepalive %s\n\n", a.Projector.Clock().UTC().Format(time.RFC3339Nano)); err != nil {
+				return
 			}
+			flusher.Flush()
 		}
 
 		timer := time.NewTimer(poll)
@@ -233,6 +254,10 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			timer.Stop()
 			return
 		case <-timer.C:
+			// Count only poll intervals that actually elapsed. The first
+			// projection pass after ready and immediate backlog pages consume no
+			// interval and therefore cannot advance the keepalive clock.
+			keepAlivePacer.observePoll()
 		}
 	}
 }

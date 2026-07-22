@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase94-sse-keepalive-off-by-one-v1",
+  "cases": [{
+    "id": "sse-keepalive-off-by-one",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe keepalive accounting rule for an SSE loop that writes ready, immediately inspects an empty projection, then waits for configurable poll intervals. A page or event frame is also wire activity.",
+    "required_facts": [
+      {"id":"f1","text":"The immediate projection pass after ready consumes no elapsed poll interval.","priority":10},
+      {"id":"f2","text":"Counting that immediate pass makes poll_ms=5000 emit a nominal 10-second keepalive after only 5 seconds.","priority":10},
+      {"id":"f3","text":"Only completed poll timers represent elapsed idle duration.","priority":10},
+      {"id":"f4","text":"Any event or page frame resets the wire-idle keepalive cadence.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"count_only_elapsed_poll_intervals_and_reset_on_sse_frames"}
+  }]
+}

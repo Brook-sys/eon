@@ -52,3 +52,36 @@ func TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals(t *testing.T) {
 		})
 	}
 }
+
+func TestSSEKeepAlivePacerCountsOnlyElapsedPollsAndResetsOnFrames(t *testing.T) {
+	t.Parallel()
+
+	poll := 5 * time.Second
+	pacer := newSSEKeepAlivePacer(poll)
+
+	if pacer.keepAliveDue() {
+		t.Fatal("immediate projection pass after ready emitted keepalive before any poll elapsed")
+	}
+	pacer.observePoll()
+	if pacer.keepAliveDue() {
+		t.Fatal("keepalive emitted after one 5s poll, before the 10s lower bound")
+	}
+	pacer.observePoll()
+	if !pacer.keepAliveDue() {
+		t.Fatal("keepalive not emitted after two 5s polls")
+	}
+	if pacer.keepAliveDue() {
+		t.Fatal("keepalive repeated without another elapsed poll interval")
+	}
+
+	pacer.observePoll()
+	pacer.observeFrame()
+	pacer.observePoll()
+	if pacer.keepAliveDue() {
+		t.Fatal("page or event frame did not restart the keepalive cadence")
+	}
+	pacer.observePoll()
+	if !pacer.keepAliveDue() {
+		t.Fatal("keepalive not emitted 10s after the last frame")
+	}
+}
