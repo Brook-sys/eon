@@ -4072,3 +4072,12 @@ As evidencias atestam a robustez do workaround estritamente via prompt num kerne
 
 2026-07-22 15:45 - HEARTBEAT - Fase 118 concluída. Além dos avanços robustos cruzados no prompt e gatecampaign documentados na Fase 117, o namespace isolation da Fase 97 foi plenamente evidenciado em `internal/inspect/sse_namespace_test.go`, mas requeria um commit formal e teste independente sem acoplar a dependência da subscrição live do test de benchmark offline.
 A suite `go test -v ./internal/inspect -run TestEventStreamSSEFiltersByNamespace` passou perfeitamente, comprovando a eficácia do ServerHandler de isolar os escopos P2P na visualização em dashboard. Repouso alcançado em working tree limpa e sem pendências no runtime.
+
+### Fase 119 - Isolamento de SSE no ServerHandler P2P
+
+- [x] `DONE` Adaptar o `peerhttp.ServerHandler` ou `dashboard.Server` para consumir escopos definidos e limitar tráfego cruzado via SSE.
+- [x] `DONE` Elaborar mock test no dashboard provando que conexões de painéis distintos recebem apenas `namespace` alvo se configurado.
+- [x] `DONE` Executar teste com backend live simulado comprovando ausência de crosstalk sem credenciais expostas.
+
+
+2026-07-22 16:00 - HEARTBEAT - Fase 119 concluída. Em `internal/network/http/server.go`, a rota GET para SSE foi estendida para forçar a query `namespace=peerID` utilizando o peer ID extraído da cadeia TLS do chamador autorizado. Qualquer requisição P2P de streaming é estritamente confinada às métricas associadas ao seu respectivo namespace. Validação por `TestServerHandler_RoutesSSEToHandlerMethod` confirmou injeção transparente e status de repouso alcançado sem expor regras P2P à API HTTP local (que continua consumindo qualquer namespace configurado via UI).
