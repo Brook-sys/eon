@@ -595,6 +595,32 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		budget.ModelCallsUsed++
 		result.ModelCalls = budget.ModelCallsUsed
 		if callErr != nil {
+			// A provider attempt is audit-relevant even when transport or HTTP
+			// validation fails before a completion can enter VERIFYING. Persist the
+			// invocation while the operation still owns its RUNNING lease so live
+			// failure campaigns and crash/reopen inspection do not undercount calls.
+			if auditErr := e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if op.State != domain.StateRunning || op.Reevaluation.Reference != leaseRef {
+					return fmt.Errorf("%w: operation lease changed during failed model call", port.ErrConflict)
+				}
+				_, err = tx.AppendEvent(domain.Event{
+					SchemaVersion:   domain.SchemaVersionV1,
+					ID:              domain.EventID(fmt.Sprintf("%s:model_invoked:%d:%d", op.ID, op.Attempt, budget.ModelCallsUsed)),
+					Kind:            EventOperationModelInvoked,
+					OccurredAt:      e.Clock.Now().UTC(),
+					MissionRevision: op.MissionRevision,
+					InquiryID:       op.InquiryID,
+					OperationID:     op.ID,
+					PayloadRef:      leaseRef + ";binding=" + activeBindingID + ";call=" + fmt.Sprintf("%d", budget.ModelCallsUsed) + ";outcome=provider_error" + fallbackTag(usingFallback),
+				})
+				return err
+			}); auditErr != nil {
+				return result, auditErr
+			}
 			var providerErr port.ProviderError
 			if errors.As(callErr, &providerErr) {
 				if ra := providerErr.RetryAfterDelay(); ra > 0 {

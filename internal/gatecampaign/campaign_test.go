@@ -185,13 +185,16 @@ func TestRunRecordsNaturalProviderThrottleAndReleasesPermits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.ProviderSucceeded || report.ProviderHTTPStatus != 429 || report.ProviderRetryAfter != 20*time.Second {
+	if report.ProviderSucceeded || report.ProviderErrorClass != "http" || report.ProviderHTTPStatus != 429 || report.ProviderRetryAfter != 20*time.Second {
 		t.Fatalf("provider evidence=%+v", report)
 	}
 	for _, usage := range report.Usages {
 		if usage.InFlight != 0 {
 			t.Fatalf("leaked permit: %+v", usage)
 		}
+	}
+	if err := VerifyRuntimeGateDurability(context.Background(), runner.Store, report); err != nil {
+		t.Fatalf("provider failure audit must survive durability verification: %v", err)
 	}
 }
 

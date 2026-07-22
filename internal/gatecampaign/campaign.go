@@ -164,6 +164,7 @@ type RuntimeGateCampaignReport struct {
 	SelectedBindingID    string                  `json:"selected_binding_id"`
 	RouteRejected        map[string]string       `json:"route_rejected,omitempty"`
 	ProviderSucceeded    bool                    `json:"provider_succeeded"`
+	ProviderErrorClass   string                  `json:"provider_error_class,omitempty"`
 	ProviderHTTPStatus   int                     `json:"provider_http_status,omitempty"`
 	ProviderRetryAfter   time.Duration           `json:"provider_retry_after,omitempty"`
 	ObservedInputTokens  int                     `json:"observed_input_tokens,omitempty"`
@@ -278,11 +279,14 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		report.ObservedInputTokens = recorder.result.InputTokens
 		report.ObservedOutputTokens = recorder.result.OutputTokens
 	} else {
+		report.ProviderErrorClass = "transport"
 		if providerErr, ok := recorder.err.(port.ProviderError); ok {
+			report.ProviderErrorClass = "provider"
 			delay := providerErr.RetryAfterDelay()
 			report.ProviderRetryAfter = delay
 		}
 		if httpErr, ok := recorder.err.(port.ProviderHTTPError); ok {
+			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
 	}
@@ -460,7 +464,13 @@ func VerifyRuntimeGateDurability(ctx context.Context, store port.ReadStore, repo
 		required := map[string]bool{
 			"operation.model_routed":  false,
 			"operation.model_invoked": false,
-			"resource.throttled":      false,
+		}
+		// A successful first call consumes the one-call quota and the second
+		// operation must persist resource.throttled. A failed first call may open
+		// the selected circuit instead, leaving the second operation parked by
+		// routing unavailability without acquiring a resource permit.
+		if strings.HasPrefix(report.SecondAcquireReason, "resource_") {
+			required["resource.throttled"] = false
 		}
 		for _, event := range events {
 			if event.OperationID == "operation_runtime_gate" && (event.Kind == "operation.model_routed" || event.Kind == "operation.model_invoked") {
@@ -523,7 +533,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
