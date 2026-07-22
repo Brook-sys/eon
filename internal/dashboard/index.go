@@ -958,12 +958,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     ++streamGeneration;
     connection.close();
     if (es === connection) es = null;
+    clearStreamRetry();
+    // A bounded delay alone is not a bounded recovery policy: a stream that
+    // repeatedly completes ready and then drops before delivering evidence can
+    // otherwise reconnect forever. Stop after six consecutive transport
+    // recoveries without an accepted event/page; a manual connect explicitly
+    // resets the budget, while useful progress already resets it in handlers.
+    const retryLimit = 6;
+    if (streamRetryAttempt >= retryLimit) {
+      el("streamBadge").textContent = "SSE retry exhausted";
+      el("streamBadge").className = "badge err";
+      appendTimeline("# retry exhausted after " + retryLimit + " transport failures; reconecte manualmente");
+      return;
+    }
     const retryGeneration = streamGeneration;
-    const delay = Math.min(5000, 250 * Math.pow(2, Math.min(streamRetryAttempt, 4)));
+    const delay = Math.min(5000, 250 * Math.pow(2, streamRetryAttempt));
     ++streamRetryAttempt;
     el("streamBadge").textContent = "SSE retry in " + delay + "ms";
     el("streamBadge").className = "badge err";
-    clearStreamRetry();
     streamRetryTimer = setTimeout(function () {
       if (retryGeneration !== streamGeneration || es !== null) return;
       streamRetryTimer = null;

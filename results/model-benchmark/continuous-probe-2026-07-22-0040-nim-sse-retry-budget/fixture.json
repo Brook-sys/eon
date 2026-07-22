@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase88-sse-retry-budget-v1",
+  "cases": [{
+    "id": "sse-retry-budget",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe policy when an operator dashboard SSE connection repeatedly completes its ready handshake but then fails before any accepted event or page. Delays already use exponential backoff capped at five seconds.",
+    "required_facts": [
+      {"id":"f1","text":"A capped delay does not bound the total number of retries or total recovery lifetime.","priority":10},
+      {"id":"f2","text":"Repeated ready-then-error cycles without accepted event or page provide no useful stream progress.","priority":10},
+      {"id":"f3","text":"Retry state may reset after accepted event/page progress or an explicit manual reconnect.","priority":10},
+      {"id":"f4","text":"Exhaustion must close the source, schedule no further timer, preserve the application cursor, and remain visible to the operator.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"cap_consecutive_no_progress_transport_retries_and_require_manual_reconnect_after_exhaustion"}
+  }]
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase88-sse-retry-budget-v1",
+  "model": "nvidia/nemotron-3-nano-30b-a3b",
+  "runs": [
+    {
+      "case_id": "sse-retry-budget",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 327,
+      "actual_input_tokens": 243,
+      "output_tokens": 128,
+      "duration_millis": 1521,
+      "syntax_valid": true,
+      "semantically_correct": false,
+      "output": "rule=cap_con",
+      "values": {
+        "rule": "cap_con"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 0,
+    "input_tokens": 243,
+    "output_tokens": 128,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}

@@ -641,6 +641,75 @@ if (lastSeq !== "12" || elements.streamBadge.textContent !== "SSE live") throw n
 	}
 }
 
+func TestDashboardStreamRetryBudgetStopsPersistentTransportLoop(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
+let lastSeq = "10";
+let timers = [];
+function setTimeout(fn, delay) { timers.push({fn, delay, cleared: false}); return timers.length; }
+function clearTimeout(id) { if (timers[id - 1]) timers[id - 1].cleared = true; }
+class EventSource {
+  static instances = [];
+  constructor(url) { this.url = url; this.listeners = {}; this.closed = false; this.onerror = null; EventSource.instances.push(this); }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); if (kind === "error" && this.onerror) this.onerror(event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
+connectStream();
+const expectedDelays = [250, 500, 1000, 2000, 4000, 5000];
+for (let attempt = 0; attempt < expectedDelays.length; attempt++) {
+  const stream = es;
+  stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+  stream.emit("error", {});
+  if (!stream.closed || es !== null) throw new Error("attempt " + attempt + " did not close source");
+  const timer = timers[timers.length - 1];
+  if (!timer || timer.delay !== expectedDelays[attempt]) throw new Error("unexpected retry delay at attempt " + attempt);
+  timer.fn();
+  if (!es) throw new Error("attempt " + attempt + " did not create retry source");
+}
+const exhausted = es;
+exhausted.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+const timerCount = timers.length;
+exhausted.emit("error", {});
+if (!exhausted.closed || es !== null) throw new Error("exhausted source was not closed");
+if (timers.length !== timerCount || streamRetryTimer !== null) throw new Error("retry exhaustion scheduled another timer");
+if (elements.streamBadge.textContent !== "SSE retry exhausted") throw new Error("retry exhaustion was not visible");
+if (!elements.timeline.textContent.includes("retry exhausted after 6")) throw new Error("retry exhaustion lacked operator guidance");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("retry exhaustion changed application cursor");
+connectStream();
+if (!es || streamRetryAttempt !== 0) throw new Error("manual connect did not reset retry budget");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard bounded stream retry behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardTransportErrorBeforeReadyClosesFailClosed(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
