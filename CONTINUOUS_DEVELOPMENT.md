@@ -36,7 +36,22 @@ Um lote é concluído somente quando possui:
 
 Se nenhuma chamada live puder ser tentada por ausência de credencial, endpoint ou quota, o ciclo deve registrar evidência objetiva e alertar o operador, mas **não pode concluir nem fazer commit de novas modificações**. Uma tentativa que alcança o provider e retorna erro autenticado/rate-limitado conta como observação live, desde que seja registrada e analisada; ausência de tentativa não conta.
 
-Esta política foi reforçada pelo operador em 2026-07-20 e é requisito permanente do programa, não uma preferência opcional.
+Esta política foi reforçada pelo operador em 2026-07-20 e ampliada em 2026-07-22: execução live deve ser o instrumento principal para descobrir falhas e orientar melhorias, não uma chamada cerimonial para liberar commits.
+
+## Desenvolvimento orientado por testes de fogo
+
+Além dos testes determinísticos, contract tests, fuzzing e análise estática, o programa deve exercitar periodicamente o runtime como sistema real. As campanhas de fogo devem cobrir, de forma bounded e reproduzível:
+
+- solicitações completas e realistas de usuário, da admissão da missão até artefato, auditoria e retomada;
+- stress de concorrência, filas, budgets, quotas, fallback, backpressure e crescimento do event log;
+- soak tests prolongados com SQLite, restart/crash, reconciliação, backup e continuidade;
+- variação deliberada entre Groq e NVIDIA NIM, modelos, portes, formatos, contextos e classes de tarefa;
+- comportamento de 429/`Retry-After`, 5xx, timeout, truncamento, framing inválido, baixa qualidade semântica e instruções mal seguidas;
+- observação passo a passo de estados, eventos, chamadas, latência, tokens, retries, recovery, memória, CPU, disco e filas aplicáveis.
+
+Cada campanha deve declarar antes da execução: hipótese, cenário, modelo/provider, carga ou duração, limites de chamadas/tokens/tempo/concorrência, sinais observados e critérios de interrupção. O relatório deve separar fatos, interpretação e decisão; localizar onde o fluxo ou modelo falhou; propor mudanças concretas de código, prompt, roteamento, parsing, recovery ou observabilidade; e definir um rerun comparável que confirme ou rejeite a melhoria. Uma campanha sem interpretação ou sem próximo experimento não fecha trabalho cognitivo ou operacional.
+
+Testes de fogo complementam, mas não substituem, testes offline determinísticos. Carga não bounded, busy loop, tentativa de forçar rate limit sem hipótese e consumo repetitivo sem ganho epistemológico continuam proibidos.
 
 Exemplos de lotes adequados:
 
