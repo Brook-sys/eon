@@ -135,9 +135,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 				return err
 			}
 			now := w.Clock.Now().UTC()
-			active := record.Attempt == current.ReceiverAttempt &&
-				(record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) &&
-				(record.Deadline.IsZero() || now.Before(record.Deadline))
+			active := receiverGenerationActive(record, current.ReceiverAttempt, now)
 			if !active {
 				failed, err := domain.FailPendingSubagentSpawnReceipt(current, "receiver_generation_inactive", now)
 				if err != nil {
@@ -149,6 +147,17 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 			leased, err = domain.LeaseSubagentSpawnReceipt(current, w.Owner, now, now.Add(lease))
 			if err != nil {
 				return err
+			}
+			// When canonical leasing is enabled, the execution receipt and receiver
+			// generation must not have contradictory liveness windows. Renew in the
+			// same transaction as the claim, but never arm leasing when the operator
+			// selected deadline-only mode or shorten a longer canonical lease.
+			if !record.LeaseExpiresAt.IsZero() && record.LeaseExpiresAt.Before(leased.LeaseUntil) {
+				record.LeaseExpiresAt = leased.LeaseUntil
+				record.UpdatedAt = now
+				if err := tx.SaveSubagentRecord(record); err != nil {
+					return err
+				}
 			}
 			return tx.SaveSubagentSpawnReceipt(leased, expectedStatus, expectedUpdatedAt)
 		}); err != nil {
@@ -190,9 +199,7 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 				return err
 			}
 			var next domain.SubagentSpawnReceipt
-			active := record.Attempt == current.ReceiverAttempt &&
-				(record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) &&
-				(record.Deadline.IsZero() || finished.Before(record.Deadline))
+			active := receiverGenerationActive(record, current.ReceiverAttempt, finished)
 			if !active {
 				next, err = domain.FailSubagentSpawnReceipt(current, w.Owner, "receiver_generation_inactive_after_execution", finished)
 			} else if execErr == nil {
@@ -225,6 +232,13 @@ func (w *RemoteSubagentWorker) ExecuteDue(ctx context.Context) (int, error) {
 		processed++
 	}
 	return processed, nil
+}
+
+func receiverGenerationActive(record domain.SubagentRecord, attempt int, now time.Time) bool {
+	return record.Attempt == attempt &&
+		(record.State == domain.SubagentStatePending || record.State == domain.SubagentStateRunning) &&
+		(record.Deadline.IsZero() || now.Before(record.Deadline)) &&
+		(record.LeaseExpiresAt.IsZero() || now.Before(record.LeaseExpiresAt))
 }
 
 func (w *RemoteSubagentWorker) failLeased(ctx context.Context, leased domain.SubagentSpawnReceipt, failure string) error {

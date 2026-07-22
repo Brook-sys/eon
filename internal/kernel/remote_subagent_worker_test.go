@@ -46,6 +46,9 @@ func TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution(t *
 		{name: "deadline reached", mutate: func(record *domain.SubagentRecord, now time.Time) {
 			record.Deadline = now
 		}},
+		{name: "canonical lease expired", mutate: func(record *domain.SubagentRecord, now time.Time) {
+			record.LeaseExpiresAt = now
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,6 +90,72 @@ func TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution(t *
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestRemoteSubagentWorkerClaimRenewsCanonicalLeaseAtomically(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	manager := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		record, err := tx.SubagentRecord(receipt.ReceiverSessionID)
+		if err != nil {
+			return err
+		}
+		record.LeaseExpiresAt = clock.Now().Add(10 * time.Second)
+		return tx.SaveSubagentRecord(record)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	lease := time.Minute
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Lease: lease, Timeout: 30 * time.Second, Executor: kernel.RemoteSubagentExecutorFunc(func(_ context.Context, _, _ string) (string, error) {
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			record, err := r.SubagentRecord(receipt.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
+			leased, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+			if err != nil {
+				return err
+			}
+			want := clock.Now().Add(lease)
+			if leased.Status != domain.SubagentSpawnReceiptLeased || !leased.LeaseUntil.Equal(want) || !record.LeaseExpiresAt.Equal(want) || !record.UpdatedAt.Equal(clock.Now()) {
+				t.Fatalf("record=%+v receipt=%+v want lease=%v", record, leased, want)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return "done", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+		t.Fatalf("execute=(%d,%v)", n, err)
+	}
+}
+
+func TestRemoteSubagentWorkerClaimPreservesDeadlineOnlyMode(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	manager := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Lease: time.Minute, Timeout: 30 * time.Second, Executor: kernel.RemoteSubagentExecutorFunc(func(_ context.Context, _, _ string) (string, error) {
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			record, err := r.SubagentRecord(receipt.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
+			if !record.LeaseExpiresAt.IsZero() {
+				t.Fatalf("deadline-only record unexpectedly armed: %+v", record)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return "done", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+		t.Fatalf("execute=(%d,%v)", n, err)
 	}
 }
 
@@ -209,6 +278,43 @@ func TestRemoteSubagentWorkerRejectsResultWhenGenerationEndsDuringExecution(t *t
 	status, err := manager.Status(context.Background(), kernel.SessionID(receipt.ReceiverSessionID))
 	if err != nil || status.State != kernel.SessionStateRunning {
 		t.Fatalf("status=(%+v,%v)", status, err)
+	}
+}
+
+func TestRemoteSubagentWorkerRejectsResultWhenCanonicalLeaseExpiresDuringExecution(t *testing.T) {
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Unix(100, 0).UTC()}
+	manager := kernel.NewLocalSessionManager(clock)
+	receipt := seedRemoteReceipt(t, store, manager, clock.Now())
+	lease := time.Minute
+	worker := kernel.RemoteSubagentWorker{Store: store, Manager: manager, Clock: clock, Owner: "receiver-worker", Lease: lease, Timeout: 30 * time.Second, Executor: kernel.RemoteSubagentExecutorFunc(func(ctx context.Context, _ string, _ string) (string, error) {
+		if err := store.Update(ctx, func(tx port.Transaction) error {
+			record, err := tx.SubagentRecord(receipt.ReceiverSessionID)
+			if err != nil {
+				return err
+			}
+			record.LeaseExpiresAt = clock.Now()
+			return tx.SaveSubagentRecord(record)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		clock.currentTime = clock.Now().Add(time.Second)
+		return "stale result", nil
+	})}
+	if n, err := worker.ExecuteDue(context.Background()); err != nil || n != 1 {
+		t.Fatalf("execute=(%d,%v)", n, err)
+	}
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		got, err := r.SubagentSpawnReceipt(receipt.CallerPeerID, receipt.RequestID)
+		if err != nil {
+			return err
+		}
+		if got.Status != domain.SubagentSpawnReceiptFailed || got.Failure != "receiver_generation_inactive_after_execution" || got.Result != "" {
+			t.Fatalf("receipt=%+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
