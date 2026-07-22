@@ -54,6 +54,9 @@ func TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds(t *testing.T) {
 	if !strings.Contains(body, `"after_sequence_decimal":"0"`) {
 		t.Fatalf("terminal error exact cursor mirror missing: %q", body)
 	}
+	if got := strings.Count(body, `"schema_version":1`); got != 2 {
+		t.Fatalf("ready and terminal frames must both declare schema version, got %d: %q", got, body)
+	}
 	if strings.Contains(body, "projection unavailable") {
 		t.Fatalf("internal projection error leaked: %q", body)
 	}

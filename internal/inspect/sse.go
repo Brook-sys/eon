@@ -140,6 +140,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 			// terminal frame cannot ambiguously advance or rewind browser state.
 			cursor := strconv.FormatUint(filter.AfterSequence, 10)
 			_ = writeSSE(w, flusher, "terminal_error", cursor, map[string]any{
+				"schema_version":         domain.SchemaVersionV1,
 				"code":                   "stream_list_failed",
 				"message":                "event projection failed",
 				"after_sequence_decimal": cursor,
@@ -166,6 +167,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		filter.AfterSequence = page.NextSequence
 		if len(page.Events) > 0 || page.NextSequence > previousAfter {
 			if err := writeSSE(w, flusher, "page", strconv.FormatUint(page.NextSequence, 10), map[string]any{
+				"schema_version":        domain.SchemaVersionV1,
 				"after_sequence":        page.AfterSequence,
 				"next_sequence":         page.NextSequence,
 				"next_sequence_decimal": strconv.FormatUint(page.NextSequence, 10),

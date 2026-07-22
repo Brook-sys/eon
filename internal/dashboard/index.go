@@ -971,6 +971,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "ready com payload JSON malformado");
         return;
       }
+      if (readyData.schema_version !== 1) {
+        failStreamProtocol(connectionGeneration, "ready com schema_version ausente ou incompatível");
+        return;
+      }
       const readyCursor = validStreamCursor(ev.lastEventId);
       if (readyCursor === null || validStreamCursor(readyData.after_sequence_decimal) !== readyCursor) {
         failStreamProtocol(connectionGeneration, "ready com after_sequence_decimal ausente ou divergente do cursor");
@@ -1002,6 +1006,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       }
       try {
         const data = JSON.parse(ev.data);
+        if (data.schema_version !== 1) {
+          failStreamProtocol(connectionGeneration, "event com schema_version ausente ou incompatível");
+          return;
+        }
         // JSON numbers cannot preserve every uint64 sequence in JavaScript.
         // Require the server's exact decimal mirror to match the accepted SSE
         // id before presenting the payload as evidence.
@@ -1021,6 +1029,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         pageData = JSON.parse(ev.data);
       } catch {
         failStreamProtocol(connectionGeneration, "page com payload JSON malformado");
+        return;
+      }
+      if (pageData.schema_version !== 1) {
+        failStreamProtocol(connectionGeneration, "page com schema_version ausente ou incompatível");
         return;
       }
       const pageCursor = validStreamCursor(ev.lastEventId);
@@ -1047,6 +1059,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         terminalData = JSON.parse(ev.data);
       } catch {
         failStreamProtocol(connectionGeneration, "terminal_error com payload JSON malformado");
+        return;
+      }
+      if (terminalData.schema_version !== 1) {
+        failStreamProtocol(connectionGeneration, "terminal_error com schema_version ausente ou incompatível");
         return;
       }
       const terminalCursor = validStreamCursor(ev.lastEventId);

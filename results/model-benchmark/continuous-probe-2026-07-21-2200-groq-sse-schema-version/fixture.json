@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "phase81-sse-schema-version-v1",
+  "cases": [{
+    "id": "sse-schema-version-gate",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe browser rule when named SSE application frames can evolve their JSON payload shape across protocol versions.",
+    "required_facts": [
+      {"id":"f1","text":"ready, event, page, and terminal_error are application protocol frames whose payload fields affect durable cursor acceptance or operator evidence.","priority":10},
+      {"id":"f2","text":"Every named frame must declare the supported schema version before the client changes cursor or renders evidence.","priority":10},
+      {"id":"f3","text":"A missing or unsupported schema version must close fail-closed while preserving the last accepted cursor.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"require_supported_schema_version_before_cursor_or_evidence"}
+  }]
+}

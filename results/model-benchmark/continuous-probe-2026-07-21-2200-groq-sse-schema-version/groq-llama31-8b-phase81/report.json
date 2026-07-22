@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "fixture_name": "phase81-sse-schema-version-v1",
+  "model": "llama-3.1-8b-instant",
+  "runs": [
+    {
+      "case_id": "sse-schema-version-gate",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 269,
+      "actual_input_tokens": 202,
+      "output_tokens": 11,
+      "duration_millis": 322,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "rule=require_supported_schema_version_before_cursor_or_evidence",
+      "values": {
+        "rule": "require_supported_schema_version_before_cursor_or_evidence"
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "compiled": 1,
+    "syntax_valid": 1,
+    "semantically_correct": 1,
+    "input_tokens": 202,
+    "output_tokens": 11,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 0,
+    "validation_errors": 0,
+    "rate_limited": 0,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "SYNTHESIZE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 1,
+        "compiled": 1,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 0
+      }
+    ]
+  }
+}
