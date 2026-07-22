@@ -42,6 +42,10 @@ func (r SubagentStatusIngressReceipt) Validate() error {
 		return ErrInvalidSubagentStatusIngress
 	}
 	switch r.State {
+	case "RUNNING":
+		if r.Result != "" || r.Failure != "" {
+			return ErrInvalidSubagentStatusIngress
+		}
 	case "COMPLETE":
 		if r.Failure != "" {
 			return ErrInvalidSubagentStatusIngress

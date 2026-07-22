@@ -59,3 +59,38 @@ func TestSupervisorFencesActiveGenerationOnLeaseExpired(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSupervisorRetryArmsFreshLeaseForNewGeneration(t *testing.T) {
+	ctx := context.Background()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 22, 11, 0, 0, 0, time.UTC)}
+	store := memory.New()
+	manager := kernel.NewLocalSessionManager(clock)
+	id, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "retry lease", ContextMode: "isolated"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: id, Attempt: 0, State: kernel.SessionStateFailed, Failure: "transient"}); err != nil {
+		t.Fatal(err)
+	}
+	record := domain.SubagentRecord{SchemaVersion: domain.SchemaVersionV1, ID: string(id), TaskID: string(id), MissionID: "mission-1", State: domain.SubagentStateRunning, StartedAt: clock.Now(), UpdatedAt: clock.Now(), Task: "retry lease", ContextMode: "isolated", Attempt: 0, MaxAttempts: 2, Deadline: clock.Now().Add(10 * time.Minute), LeaseExpiresAt: clock.Now().Add(30 * time.Second)}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.CreateSubagentRecord(record) }); err != nil {
+		t.Fatal(err)
+	}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, LeaseTTL: 2 * time.Minute}
+	if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+		t.Fatalf("reconcile n=%d err=%v", n, err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		got, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		want := clock.Now().Add(2 * time.Minute)
+		if got.State != domain.SubagentStatePending || got.Attempt != 1 || !got.LeaseExpiresAt.Equal(want) {
+			t.Fatalf("record=%+v want lease=%v", got, want)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

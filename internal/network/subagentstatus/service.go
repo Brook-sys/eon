@@ -66,7 +66,7 @@ func (s *Service) Handle(ctx context.Context, callerID string, payload []byte) (
 	if err := decoder.Decode(&observation); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
 		return nil, ErrInvalidObservation
 	}
-	if !validField(observation.DeliveryID) || !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
+	if !validObservation(observation) {
 		return nil, ErrInvalidObservation
 	}
 
@@ -79,7 +79,7 @@ func (s *Service) Handle(ctx context.Context, callerID string, payload []byte) (
 }
 
 func Encode(observation Observation) ([]byte, error) {
-	if !validField(observation.DeliveryID) || !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
+	if !validObservation(observation) {
 		return nil, ErrInvalidObservation
 	}
 	payload, err := json.Marshal(observation)
@@ -87,6 +87,22 @@ func Encode(observation Observation) ([]byte, error) {
 		return nil, ErrInvalidObservation
 	}
 	return payload, nil
+}
+
+func validObservation(observation Observation) bool {
+	if !validField(observation.DeliveryID) || !validField(observation.SessionID) || observation.Attempt < 0 || len(observation.Result) > maxResultBytes || len(observation.Failure) > maxFailureBytes {
+		return false
+	}
+	switch observation.State {
+	case kernel.SessionStateRunning:
+		return observation.Result == "" && observation.Failure == ""
+	case kernel.SessionStateComplete:
+		return observation.Failure == ""
+	case kernel.SessionStateFailed:
+		return observation.Result == "" && strings.TrimSpace(observation.Failure) != ""
+	default:
+		return false
+	}
 }
 
 func DecodeAcknowledgement(payload []byte) (Acknowledgement, error) {

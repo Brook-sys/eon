@@ -334,7 +334,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 	var supervisor *kernel.Supervisor
 	if sessionManager != nil {
-		supervisor = &kernel.Supervisor{Store: store, Manager: sessionManager, Clock: clock, IDs: ids}
+		supervisor = &kernel.Supervisor{Store: store, Manager: sessionManager, Clock: clock, IDs: ids, LeaseTTL: opts.Subagent.LeaseTTL}
 	}
 	if modelExec != nil && subagentTools != nil {
 		merged, mergeErr := tool.MergeProviders(modelExec.Tools, subagentTools)
@@ -390,7 +390,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
 		subagentEffectReconciler = &kernel.SubagentEffectReconciler{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
 		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
-		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: store, Manager: sessionManager, Clock: clock, Batch: 4}
+		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: store, Manager: sessionManager, Clock: clock, Batch: 4, LeaseTTL: opts.Subagent.LeaseTTL}
 		if modelExec != nil && modelExec.Provider != nil {
 			remoteSubagentWorker = &kernel.RemoteSubagentWorker{Store: store, Manager: sessionManager, Executor: kernel.ModelRemoteSubagentExecutor{Provider: modelExec.Provider, MaxOutputTokens: 512}, Clock: clock, Owner: opts.RuntimeName, Batch: 2, Lease: 2 * time.Minute, Timeout: 90 * time.Second}
 		}

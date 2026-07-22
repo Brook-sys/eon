@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "name": "continuous-probe-2026-07-22-0740-phase104-lease-renewal",
+  "fixture_name": "cognitive-tool-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "nim",
+      "binding_id": "nim-llama31-8b-phase104",
+      "model": "meta/llama-3.1-8b-instruct",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-tool-v1",
+        "model": "meta/llama-3.1-8b-instruct",
+        "runs": [
+          {
+            "case_id": "tool-search-single",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "actual_input_tokens": 468,
+            "output_tokens": 39,
+            "duration_millis": 841,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "{\"tool_call_name\": \"sessions_spawn_remote\", \"parameters\": {\"peer_id\": \"test\", \"capability\": \"search_memory\", \"payload\": \"{\\\"query\\\":\\\"version number\\\"}\"}}"
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 468,
+          "output_tokens": 39,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 1,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_format": [
+            {
+              "label": "JSON",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "strict syntax validity was below 50%"
+      }
+    }
+  ]
+}

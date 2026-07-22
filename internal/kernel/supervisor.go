@@ -21,6 +21,9 @@ type Supervisor struct {
 	Manager SessionManager
 	Clock   interface{ Now() time.Time }
 	IDs     interface{ NewID(string) (string, error) }
+	// LeaseTTL arms each retried generation with a fresh liveness fence. Zero
+	// preserves deadline-only behavior.
+	LeaseTTL time.Duration
 }
 
 // Reconcile scans pending and running subagent records in storage,
@@ -134,6 +137,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 			changed := false
 			if recoveredRetry {
 				rec.Attempt = status.Attempt
+				s.armLease(&rec, now)
 				changed = true
 			}
 			switch status.State {
@@ -165,6 +169,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 					}
 					rec.State = domain.SubagentStatePending
 					rec.Attempt++
+					s.armLease(&rec, s.Clock.Now())
 					// clear previous result/error
 					rec.Result = ""
 					rec.ErrorCode = ""
@@ -209,6 +214,14 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 	})
 
 	return reconciled, err
+}
+
+func (s *Supervisor) armLease(rec *domain.SubagentRecord, now time.Time) {
+	if s.LeaseTTL > 0 {
+		rec.LeaseExpiresAt = now.Add(s.LeaseTTL)
+		return
+	}
+	rec.LeaseExpiresAt = time.Time{}
 }
 
 func (s *Supervisor) createDispatchForGeneration(tx port.Transaction, rec domain.SubagentRecord, now time.Time) error {

@@ -26,6 +26,18 @@ func TestSubagentStatusIngressTransitions(t *testing.T) {
 	}
 }
 
+func TestSubagentStatusIngressAcceptsPayloadFreeRunningHeartbeat(t *testing.T) {
+	now := time.Unix(100, 0).UTC()
+	receipt := SubagentStatusIngressReceipt{SchemaVersion: SchemaVersionV1, CallerPeerID: "peer-a", DeliveryID: "heartbeat-1", SessionID: "session-1", Attempt: 0, State: "RUNNING", Status: SubagentStatusIngressPending, RecordedAt: now}
+	if err := receipt.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	receipt.Result = "not allowed"
+	if err := receipt.Validate(); !errors.Is(err, ErrInvalidSubagentStatusIngress) {
+		t.Fatalf("running heartbeat with payload error = %v", err)
+	}
+}
+
 func TestRejectSubagentStatusIngressAttemptMismatch(t *testing.T) {
 	now := time.Unix(100, 0).UTC()
 	receipt := SubagentStatusIngressReceipt{SchemaVersion: SchemaVersionV1, CallerPeerID: "peer-a", DeliveryID: "delivery-stale", SessionID: "session-1", Attempt: 0, State: "COMPLETE", Result: "late", Status: SubagentStatusIngressPending, RecordedAt: now}

@@ -76,6 +76,42 @@ func TestSubagentStatusIngressWorkerApplyRestartAndConflict(t *testing.T) {
 	}
 }
 
+func TestSubagentStatusIngressWorkerRenewsLeaseFromAuthenticatedRunningHeartbeat(t *testing.T) {
+	ctx := context.Background()
+	clock := &ingressWorkerClock{now: time.Unix(150, 0).UTC()}
+	store := memory.New()
+	local := NewLocalSessionManager(clock)
+	manager, err := NewPersistentSessionManager(local, store, clock, &ingressWorkerIDs{}, PersistentSessionPolicy{MissionID: "mission-lease", MaxAttempts: 2, Timeout: 10 * time.Minute, LeaseTTL: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, SubagentSpec{Task: "long work", ContextMode: "isolated", Labels: map[string]string{SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock.now = clock.now.Add(45 * time.Second)
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "heartbeat-1", SubagentObservation{ID: id, Attempt: 0, State: SessionStateRunning}); err != nil {
+		t.Fatal(err)
+	}
+	worker := SubagentStatusIngressWorker{Store: store, Manager: manager, Clock: clock, Batch: 1, LeaseTTL: time.Minute}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 1 {
+		t.Fatalf("apply n=%d err=%v", n, err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		want := clock.Now().Add(time.Minute)
+		if record.State != domain.SubagentStatePending || !record.LeaseExpiresAt.Equal(want) || !record.UpdatedAt.Equal(clock.Now()) {
+			t.Fatalf("record=%+v want lease=%v", record, want)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSubagentStatusIngressWorkerQuarantinesAttemptMismatchAndContinues(t *testing.T) {
 	ctx := context.Background()
 	clock := ingressWorkerClock{now: time.Unix(200, 0).UTC()}

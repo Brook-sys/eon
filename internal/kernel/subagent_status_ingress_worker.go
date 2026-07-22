@@ -16,6 +16,9 @@ type SubagentStatusIngressWorker struct {
 	Manager SessionManager
 	Clock   interface{ Now() time.Time }
 	Batch   int
+	// LeaseTTL renews the active generation only after an authenticated RUNNING
+	// receipt has been accepted by SessionManager. Zero keeps lease renewal off.
+	LeaseTTL time.Duration
 }
 
 func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, error) {
@@ -84,11 +87,37 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				}
 				return port.ErrConflict
 			}
-			next, err := domain.MarkSubagentStatusIngressApplied(current, w.Clock.Now().UTC())
+			now := w.Clock.Now().UTC()
+			var record domain.SubagentRecord
+			if receipt.State == string(SessionStateRunning) && w.LeaseTTL > 0 {
+				record, err = tx.SubagentRecord(receipt.SessionID)
+				if err != nil {
+					return err
+				}
+				if record.Attempt != receipt.Attempt || (record.State != domain.SubagentStatePending && record.State != domain.SubagentStateRunning) {
+					rejected, rejectErr := domain.RejectSubagentStatusIngressAttemptMismatch(current, now)
+					if rejectErr != nil {
+						return rejectErr
+					}
+					return tx.SaveSubagentStatusIngressReceipt(rejected, domain.SubagentStatusIngressPending)
+				}
+			}
+			next, err := domain.MarkSubagentStatusIngressApplied(current, now)
 			if err != nil {
 				return err
 			}
-			return tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending)
+			if err := tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending); err != nil {
+				return err
+			}
+			if receipt.State == string(SessionStateRunning) && w.LeaseTTL > 0 {
+				renewedUntil := now.Add(w.LeaseTTL)
+				if renewedUntil.After(record.LeaseExpiresAt) {
+					record.LeaseExpiresAt = renewedUntil
+					record.UpdatedAt = now
+					return tx.SaveSubagentRecord(record)
+				}
+			}
+			return nil
 		})
 		if err != nil {
 			if errors.Is(err, port.ErrConflict) {

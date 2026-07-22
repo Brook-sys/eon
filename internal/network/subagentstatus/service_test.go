@@ -90,3 +90,13 @@ func TestServiceRejectsWrongPeerMalformedAndOversize(t *testing.T) {
 		t.Fatal("oversize encoded")
 	}
 }
+
+func TestEncodeAllowsRunningHeartbeatWithoutPayload(t *testing.T) {
+	payload, err := Encode(Observation{DeliveryID: "heartbeat-1", SessionID: "session-1", Attempt: 2, State: kernel.SessionStateRunning})
+	if err != nil || len(payload) == 0 {
+		t.Fatalf("payload=%q err=%v", payload, err)
+	}
+	if _, err := Encode(Observation{DeliveryID: "heartbeat-2", SessionID: "session-1", Attempt: 2, State: kernel.SessionStateRunning, Result: "forbidden"}); !errors.Is(err, ErrInvalidObservation) {
+		t.Fatalf("running heartbeat with result error=%v", err)
+	}
+}
