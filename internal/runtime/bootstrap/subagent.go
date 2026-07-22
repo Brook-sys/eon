@@ -20,6 +20,9 @@ type SubagentOptions struct {
 	MaxConcurrent int
 	MaxAttempts   int
 	Timeout       time.Duration
+	// LeaseTTL enables a shorter liveness fence for active generations. Zero
+	// keeps the legacy deadline-only behavior.
+	LeaseTTL time.Duration
 	// TransportPeerID pins every admitted session to one deployment-authorized
 	// mTLS peer. It is not exposed as a model-controlled tool argument.
 	TransportPeerID string
@@ -43,7 +46,7 @@ func buildSubagent(opts *SubagentOptions, store port.Store, clock interface{ Now
 		return nil, nil, err
 	}
 	sm, err := kernel.NewPersistentSessionManager(local, store, clock, ids, kernel.PersistentSessionPolicy{
-		MissionID: missionID, MaxAttempts: opts.MaxAttempts, Timeout: opts.Timeout,
+		MissionID: missionID, MaxAttempts: opts.MaxAttempts, Timeout: opts.Timeout, LeaseTTL: opts.LeaseTTL,
 	})
 	if err != nil {
 		return nil, nil, err

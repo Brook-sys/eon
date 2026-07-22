@@ -21,7 +21,7 @@ func TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent(t *testing.T)
 		t.Fatal(err)
 	}
 	manager, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{
-		MissionID: "mission-1", MaxAttempts: 2, Timeout: 5 * time.Minute,
+		MissionID: "mission-1", MaxAttempts: 2, Timeout: 5 * time.Minute, LeaseTTL: 2 * time.Minute,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -48,6 +48,39 @@ func TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent(t *testing.T)
 		}
 		if want := clock.Now().Add(5 * time.Minute); !record.Deadline.Equal(want) {
 			t.Fatalf("deadline = %v, want %v", record.Deadline, want)
+		}
+		if want := clock.Now().Add(2 * time.Minute); !record.LeaseExpiresAt.Equal(want) {
+			t.Fatalf("lease expiry = %v, want %v", record.LeaseExpiresAt, want)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPersistentSessionManagerLeavesLeaseDisabledWhenTTLIsZero(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 22, 10, 20, 0, 0, time.UTC)}
+	local, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{MissionID: "mission-no-lease", MaxAttempts: 1, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "deadline only", ContextMode: "isolated", Labels: map[string]string{"task_id": "deadline-only"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		if !record.LeaseExpiresAt.IsZero() {
+			t.Fatalf("lease expiry = %v, want zero", record.LeaseExpiresAt)
 		}
 		return nil
 	}); err != nil {

@@ -17,6 +17,7 @@ type PersistentSessionPolicy struct {
 	MissionID           domain.MissionID
 	MaxAttempts         int
 	Timeout             time.Duration
+	LeaseTTL            time.Duration
 	DispatchMaxAttempts uint32
 }
 
@@ -112,6 +113,9 @@ func (m *PersistentSessionManager) spawnAndPersist(ctx context.Context, spec Sub
 		TransportPeerID: spec.Labels[SubagentTransportPeerLabel],
 		MaxAttempts:     m.policy.MaxAttempts,
 		Deadline:        now.Add(m.policy.Timeout),
+	}
+	if m.policy.LeaseTTL > 0 {
+		record.LeaseExpiresAt = now.Add(m.policy.LeaseTTL)
 	}
 	// A receiver spawn receipt currently represents exactly one execution
 	// generation. Until the inbound queue itself can create generation-scoped

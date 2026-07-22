@@ -58,15 +58,16 @@ func main() {
 		webIngestFetched = flag.Bool("web-ingest-fetched", true, "materialize Source lineage after fetch")
 		webSearchLimit   = flag.Int("web-search-limit", 0, "default search hit limit (0 = executor default)")
 		// Optional READ_ONLY file path under authorized absolute roots.
-		fileEnabled     = flag.Bool("file", false, "enable file.discover / file.read path")
-		fileRoots       = flag.String("file-roots", "", "comma-separated name=/abs/path authorized roots")
-		fileMaxRead     = flag.Int64("file-max-read-bytes", 0, "file.read cap (0 = 1 MiB default)")
-		allowExec       = flag.Bool("allow-exec", false, "enable execution of commands locally via tool execution")
-		enableSubagents = flag.Bool("subagents", false, "enable spawn/ orchestration tools")
-		subagentPeer    = flag.String("subagent-peer-id", "", "authorized mTLS peer for admitted subagent sessions (optional)")
-		p2pEnabled      = flag.Bool("p2p", false, "enable experimental peer-to-peer subsystem")
-		p2pBind         = flag.String("p2p-bind", "127.0.0.1:8443", "local bind address for P2P network")
-		p2pMDNS         = flag.Bool("p2p-mdns", false, "enable mDNS beacon on P2P network")
+		fileEnabled      = flag.Bool("file", false, "enable file.discover / file.read path")
+		fileRoots        = flag.String("file-roots", "", "comma-separated name=/abs/path authorized roots")
+		fileMaxRead      = flag.Int64("file-max-read-bytes", 0, "file.read cap (0 = 1 MiB default)")
+		allowExec        = flag.Bool("allow-exec", false, "enable execution of commands locally via tool execution")
+		enableSubagents  = flag.Bool("subagents", false, "enable spawn/ orchestration tools")
+		subagentPeer     = flag.String("subagent-peer-id", "", "authorized mTLS peer for admitted subagent sessions (optional)")
+		subagentLeaseTTL = flag.Duration("subagent-lease-ttl", 5*time.Minute, "active subagent generation lease TTL (0 disables lease fencing)")
+		p2pEnabled       = flag.Bool("p2p", false, "enable experimental peer-to-peer subsystem")
+		p2pBind          = flag.String("p2p-bind", "127.0.0.1:8443", "local bind address for P2P network")
+		p2pMDNS          = flag.Bool("p2p-mdns", false, "enable mDNS beacon on P2P network")
 		// Optional OpenAI-compatible provider for non-local PROPOSE_ONLY ops.
 		// Secrets never appear as flags: pass -model-api-key-env=NAME only.
 		modelEnabled   = flag.Bool("model", false, "enable OpenAI-compatible PROPOSE_ONLY model path")
@@ -154,6 +155,7 @@ func main() {
 		MaxConcurrent:   4,
 		MaxAttempts:     2,
 		Timeout:         15 * time.Minute,
+		LeaseTTL:        *subagentLeaseTTL,
 		TransportPeerID: *subagentPeer,
 	}
 	if *modelEnabled {
