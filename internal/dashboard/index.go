@@ -1002,6 +1002,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("event", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
+      if (!readySeen) {
+        failStreamProtocol(connectionGeneration, "event recebido antes do handshake ready");
+        return;
+      }
       // EventSource accepts the frame ID independently from application JSON.
       // Preserve that durable cursor if the payload is not JSON at all, because
       // the browser has already accepted the frame ID and would resume from it.
@@ -1044,6 +1048,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("page", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
+      if (!readySeen) {
+        failStreamProtocol(connectionGeneration, "page recebido antes do handshake ready");
+        return;
+      }
       let pageData;
       try {
         pageData = JSON.parse(ev.data);
@@ -1068,6 +1076,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("terminal_error", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
+      if (!readySeen) {
+        failStreamProtocol(connectionGeneration, "terminal_error recebido antes do handshake ready");
+        return;
+      }
       // The inspect server emits this non-reserved named event only for a
       // terminal application failure and closes the response immediately.
       // Native EventSource "error" remains reconnectable via onerror below.
@@ -1096,6 +1108,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.addEventListener("cursor_ahead", function (ev) {
       if (!streamIsCurrent(connectionGeneration)) return;
+      // cursor_ahead rejects the requested baseline instead of certifying it;
+      // it is valid only as the alternative to the first ready handshake.
+      if (readySeen) {
+        failStreamProtocol(connectionGeneration, "cursor_ahead recebido após handshake ready");
+        return;
+      }
       let cursorData;
       try {
         cursorData = JSON.parse(ev.data);

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase84-sse-handshake-order-v1",
+  "cases": [{
+    "id": "sse-handshake-order",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe ordering rule for a browser consuming a versioned SSE protocol where ready certifies the requested baseline and cursor_ahead rejects it.",
+    "required_facts": [
+      {"id":"f1","text":"A new connection has no certified application cursor until its first ready frame is accepted.","priority":10},
+      {"id":"f2","text":"event, page, and terminal_error are application evidence relative to a certified baseline.","priority":10},
+      {"id":"f3","text":"cursor_ahead is the mutually exclusive rejection alternative to the initial ready handshake.","priority":10},
+      {"id":"f4","text":"Out-of-order frames must close fail-closed without changing cursor or rendering evidence.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"require_ready_before_application_frames_and_cursor_ahead_only_before_ready"}
+  }]
+}

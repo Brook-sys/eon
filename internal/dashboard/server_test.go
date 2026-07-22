@@ -826,6 +826,70 @@ if (lastSeq !== "7") throw new Error("late ready escaped generation fence");
 	}
 }
 
+func TestDashboardSSERequiresReadyBeforeApplicationFrames(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	reset := extractJSFunction(t, html, "resetStreamCursor")
+	advance := extractJSFunction(t, html, "advanceStreamCursor")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	current := extractJSFunction(t, html, "streamIsCurrent")
+	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
+	failServer := extractJSFunction(t, html, "failStreamServer")
+	failAhead := extractJSFunction(t, html, "failStreamCursorAhead")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "", className: ""}
+};
+const el = (id) => elements[id];
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 0;
+let lastSeq = "10";
+class EventSource {
+  static instances = [];
+  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; EventSource.instances.push(this); }
+  addEventListener(kind, callback) { this.listeners[kind] = callback; }
+  close() { this.closed = true; }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
+}
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + failAhead + "\n" + connect + `
+const cases = [
+  ["event", {lastEventId: "11", data: JSON.stringify({schema_version: 1, sequence_decimal: "11", kind: "untrusted"})}],
+  ["page", {lastEventId: "11", data: JSON.stringify({schema_version: 1, next_sequence_decimal: "11"})}],
+  ["terminal_error", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10", code: "untrusted"})}]
+];
+for (const [kind, frame] of cases) {
+  elements.afterSeq.value = "10";
+  lastSeq = "10";
+  connectStream();
+  const stream = es;
+  stream.emit(kind, frame);
+  if (!stream.closed || es !== null) throw new Error(kind + " before ready did not close stream");
+  if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error(kind + " before ready changed cursor");
+  if (elements.timeline.textContent.includes("untrusted")) throw new Error(kind + " before ready rendered evidence");
+}
+elements.afterSeq.value = "10";
+lastSeq = "10";
+connectStream();
+const accepted = es;
+accepted.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+accepted.emit("cursor_ahead", {lastEventId: "2", data: JSON.stringify({schema_version: 1, requested_after_decimal: "10", high_water_decimal: "2"})});
+if (!accepted.closed || es !== null) throw new Error("cursor_ahead after ready did not close as protocol error");
+if (elements.streamBadge.textContent !== "SSE protocol error") throw new Error("late cursor_ahead was trusted as baseline rejection");
+if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("late cursor_ahead changed accepted cursor");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard SSE handshake ordering failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardSSEFramesRequireSupportedSchemaVersion(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
