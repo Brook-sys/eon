@@ -418,6 +418,81 @@ if (!elements.globalError.textContent.includes("constructor failed")) throw new 
 	}
 }
 
+func TestDashboardManualConstructionFailurePreservesPendingRetry(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "waiting for retry", dataset: {empty: "0"}},
+  streamBadge: {textContent: "SSE retry in 250ms", className: "badge err"},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 7;
+let streamRetryTimer = 41;
+let streamRetryAttempt = 3;
+let cleared = [];
+function clearTimeout(id) { cleared.push(id); }
+class EventSource { constructor() { throw new Error("manual candidate failed"); } }
+` + valid + "\n" + clearRetry + "\n" + connect + `
+connectStream();
+if (streamRetryTimer !== 41 || cleared.length !== 0) throw new Error("failed manual candidate canceled pending retry");
+if (streamRetryAttempt !== 3) throw new Error("failed manual candidate reset retry budget");
+if (streamGeneration !== 7) throw new Error("failed manual candidate advanced generation");
+if (elements.streamBadge.textContent !== "SSE retry in 250ms") throw new Error("failed manual candidate replaced recovery badge");
+if (!elements.globalError.textContent.includes("manual candidate failed")) throw new Error("manual construction failure was not explained");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard pending retry preservation failed: %v\n%s", err, output)
+	}
+}
+
+func TestDashboardRetryConstructionFailureIsTerminalAndVisible(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for dashboard JavaScript behavior test")
+	}
+	html := renderDashboardForTest(t)
+	valid := extractJSFunction(t, html, "validStreamCursor")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	appendLine := extractJSFunction(t, html, "appendTimeline")
+	connect := extractJSFunction(t, html, "connectStream")
+	script := `
+const maxUint64Decimal = "18446744073709551615";
+const elements = {
+  afterSeq: {value: "10"}, eventKind: {value: ""},
+  timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
+  streamBadge: {textContent: "SSE retry in 250ms", className: "badge err"},
+  globalError: {textContent: ""}
+};
+const el = (id) => elements[id];
+const setError = (msg) => { elements.globalError.textContent = msg; };
+const inspectBase = "/api/inspect";
+let es = null;
+let streamGeneration = 8;
+let streamRetryTimer = null;
+let streamRetryAttempt = 1;
+class EventSource { constructor() { throw new Error("retry candidate failed"); } }
+` + valid + "\n" + clearRetry + "\n" + appendLine + "\n" + connect + `
+connectStream(true);
+if (es !== null || streamGeneration !== 8) throw new Error("retry construction failure changed connection state");
+if (elements.streamBadge.textContent !== "SSE retry failed") throw new Error("retry construction failure remained visually pending");
+if (!elements.timeline.textContent.includes("retry construction failed")) throw new Error("retry construction failure lacked manual recovery guidance");
+`
+	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
+		t.Fatalf("dashboard retry construction failure behavior failed: %v\n%s", err, output)
+	}
+}
+
 func TestDashboardInvalidFrameCursorFailsClosed(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")

@@ -985,10 +985,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   function connectStream(isRetry) {
     const retrying = isRetry === true;
-    if (!retrying) {
-      if (typeof clearStreamRetry === "function") clearStreamRetry();
-      streamRetryAttempt = 0;
-    }
     const after = validStreamCursor(el("afterSeq").value.trim() || "0");
     if (after === null) {
       setError("after_sequence deve ser um uint64 decimal canônico");
@@ -1001,8 +997,25 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     try {
       candidate = new EventSource(url);
     } catch (err) {
-      setError("não foi possível criar o stream SSE: " + String(err && err.message || err));
+      if (retrying) {
+        // The retry timer has already fired, so no recovery remains pending.
+        // Make the synchronous construction failure terminal and visible
+        // instead of leaving the previous "retry in ..." badge stale.
+        el("streamBadge").textContent = "SSE retry failed";
+        el("streamBadge").className = "badge err";
+        appendTimeline("# retry construction failed; reconecte manualmente");
+      } else {
+        setError("não foi possível criar o stream SSE: " + String(err && err.message || err));
+      }
       return;
+    }
+    // A manual reconnect is transactional: invalid input or a synchronous
+    // EventSource construction failure must not cancel a recovery timer that
+    // is still capable of restoring the current application cursor. Commit
+    // the timer cancellation and budget reset only after a candidate exists.
+    if (!retrying) {
+      if (typeof clearStreamRetry === "function") clearStreamRetry();
+      streamRetryAttempt = 0;
     }
     if (es) es.close();
     es = candidate;

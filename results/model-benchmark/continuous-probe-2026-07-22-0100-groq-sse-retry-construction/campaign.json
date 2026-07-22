@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "name": "phase89-sse-retry-construction-groq",
+  "fixture_name": "phase89-sse-retry-construction-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama31-8b-phase89",
+      "model": "llama-3.1-8b-instant",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase89-sse-retry-construction-v1",
+        "model": "llama-3.1-8b-instant",
+        "runs": [
+          {
+            "case_id": "sse-retry-construction",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 322,
+            "actual_input_tokens": 236,
+            "output_tokens": 18,
+            "duration_millis": 402,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "rule=commit_manual_reconnect_only_after_candidate_construction_and_surface_retry_construction_failure",
+            "values": {
+              "rule": "commit_manual_reconnect_only_after_candidate_construction_and_surface_retry_construction_failure"
+            }
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 1,
+          "semantically_correct": 1,
+          "input_tokens": 236,
+          "output_tokens": 18,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 0,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "QUALIFIED",
+        "reason": "at least two-thirds correct with no provider failures"
+      }
+    }
+  ]
+}

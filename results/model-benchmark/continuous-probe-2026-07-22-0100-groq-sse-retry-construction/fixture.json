@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "phase89-sse-retry-construction-v1",
+  "cases": [{
+    "id": "sse-retry-construction",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe transactional policy when an operator manually reconnects while a bounded SSE recovery timer is pending, and when the timer later attempts to construct its fresh EventSource.",
+    "required_facts": [
+      {"id":"f1","text":"Invalid manual input or synchronous candidate construction failure must not cancel a still-viable pending recovery timer or reset its retry budget.","priority":10},
+      {"id":"f2","text":"A manual candidate may cancel the pending timer and reset the budget only after its EventSource construction succeeds.","priority":10},
+      {"id":"f3","text":"If the fired retry itself cannot construct a fresh EventSource, no timer remains and the failure must be terminal, visible, and require manual reconnect.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"commit_manual_reconnect_only_after_candidate_construction_and_surface_retry_construction_failure"}
+  }]
+}
