@@ -259,6 +259,60 @@ func TestRunRecordsExactExpectedResponseWithoutPersistingRawText(t *testing.T) {
 	}
 }
 
+func TestClassifyJSONFramingWithoutRetainingProviderText(t *testing.T) {
+	expected := `{"status":"OK","retry":false}`
+	tests := map[string]struct {
+		response string
+		want     string
+	}{
+		"exact":             {response: expected, want: "exact"},
+		"valid mismatch":    {response: `{"status":"NO","retry":false}`, want: "valid_json_mismatch"},
+		"whitespace":        {response: " \n" + expected + "\t", want: "surrounding_whitespace"},
+		"fence":             {response: "```json\n" + expected + "\n```", want: "markdown_fence"},
+		"prefix":            {response: "answer: " + expected, want: "expected_with_prefix"},
+		"suffix":            {response: expected + " done", want: "expected_with_suffix"},
+		"prefix and suffix": {response: "answer: " + expected + " done", want: "expected_with_prefix_and_suffix"},
+		"trailing JSON":     {response: `{"status":"NO"} extra`, want: "trailing_data"},
+		"leading JSON":      {response: `answer: {"status":"NO"}`, want: "leading_text"},
+		"invalid":           {response: "not json", want: "invalid_json"},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := classifyJSONFraming(test.response, expected); got != test.want {
+				t.Fatalf("class=%q want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestRunRecordsAllowlistedJSONFramingClassWithoutRawText(t *testing.T) {
+	now := time.Date(2026, 7, 22, 14, 0, 0, 0, time.UTC)
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "exact_json"
+	manifest.ExpectedResponse = `{"status":"OK","retry":false}`
+	providerText := "```json\n" + manifest.ExpectedResponse + "\n```"
+	report, err := (RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: providerText, FinishReason: port.CompletionFinishStop}},
+		},
+	}).Run(context.Background(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ResponseJSONValid || report.ExpectedResponseMatch || report.ResponseFramingClass != "markdown_fence" {
+		t.Fatalf("framing evidence=%+v", report)
+	}
+	body, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), providerText) || strings.Contains(string(body), manifest.ExpectedResponse) {
+		t.Fatalf("provider or expected text leaked into report: %s", body)
+	}
+}
+
 func TestRunRecordsNaturalProviderThrottleAndReleasesPermits(t *testing.T) {
 	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
 	provider := &recordingProvider{err: providerHTTPError{status: 429}}

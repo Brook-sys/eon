@@ -185,6 +185,7 @@ type RuntimeGateCampaignReport struct {
 	ExpectedResponseSet   bool                        `json:"expected_response_set"`
 	ExpectedResponseMatch bool                        `json:"expected_response_match"`
 	ResponseJSONValid     bool                        `json:"response_json_valid,omitempty"`
+	ResponseFramingClass  string                      `json:"response_framing_class,omitempty"`
 	SecondAcquireReason   string                      `json:"second_acquire_reason"`
 	SecondAcquireWait     *time.Time                  `json:"second_acquire_wait_until,omitempty"`
 	OperationState        domain.OperationalState     `json:"operation_state"`
@@ -309,6 +310,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		if manifest.OutputSchema == "exact_json" {
 			var object map[string]json.RawMessage
 			report.ResponseJSONValid = json.Unmarshal([]byte(recorder.result.Text), &object) == nil && object != nil
+			report.ResponseFramingClass = classifyJSONFraming(recorder.result.Text, manifest.ExpectedResponse)
 		}
 	} else {
 		report.ProviderErrorClass = "transport"
@@ -328,6 +330,81 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	}
 	report.CompletedAt = r.Clock.Now().UTC()
 	return report, nil
+}
+
+// classifyJSONFraming records only an allowlisted diagnosis. It deliberately
+// avoids retaining excerpts, delimiters, or arbitrary provider text.
+func classifyJSONFraming(response, expected string) string {
+	if expected != "" && response == expected {
+		return "exact"
+	}
+	trimmed := strings.TrimSpace(response)
+	if trimmed != response && expected != "" && trimmed == expected {
+		return "surrounding_whitespace"
+	}
+	if isJSONObject(response) {
+		return "valid_json_mismatch"
+	}
+	if fencedJSONPayload(trimmed) {
+		return "markdown_fence"
+	}
+	if expected != "" {
+		if index := strings.Index(response, expected); index >= 0 {
+			hasPrefix := index > 0
+			hasSuffix := index+len(expected) < len(response)
+			switch {
+			case hasPrefix && hasSuffix:
+				return "expected_with_prefix_and_suffix"
+			case hasPrefix:
+				return "expected_with_prefix"
+			case hasSuffix:
+				return "expected_with_suffix"
+			}
+		}
+	}
+	if hasJSONThenTrailingData(response) {
+		return "trailing_data"
+	}
+	if hasLeadingTextThenJSON(response) {
+		return "leading_text"
+	}
+	return "invalid_json"
+}
+
+func isJSONObject(text string) bool {
+	var object map[string]json.RawMessage
+	return json.Unmarshal([]byte(text), &object) == nil && object != nil
+}
+
+func fencedJSONPayload(text string) bool {
+	if !strings.HasPrefix(text, "```") || !strings.HasSuffix(text, "```") {
+		return false
+	}
+	inner := strings.TrimSuffix(strings.TrimPrefix(text, "```"), "```")
+	inner = strings.TrimSpace(inner)
+	if strings.HasPrefix(strings.ToLower(inner), "json") {
+		inner = strings.TrimSpace(inner[len("json"):])
+	}
+	return isJSONObject(inner)
+}
+
+func hasJSONThenTrailingData(text string) bool {
+	decoder := json.NewDecoder(strings.NewReader(text))
+	var object map[string]json.RawMessage
+	if decoder.Decode(&object) != nil || object == nil {
+		return false
+	}
+	var extra any
+	return decoder.Decode(&extra) != io.EOF
+}
+
+func hasLeadingTextThenJSON(text string) bool {
+	for index, character := range text {
+		if character == '{' && isJSONObject(strings.TrimSpace(text[index:])) {
+			return index > 0
+		}
+	}
+	return false
 }
 
 func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now time.Time) (domain.ModelsConfig, domain.OperationSpec, domain.Operation, error) {
@@ -570,7 +647,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
