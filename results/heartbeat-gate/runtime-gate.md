@@ -5,7 +5,7 @@
 - Seeded circuit: `model-binding:groq-llama-3.3-70b`
 - Selected route: `nvidia-nim` / `nvidia-mistral-small-4`
 - Provider success: `true`
-- Provider latency: `626.988586ms`
+- Provider latency: `645.837814ms`
 - Provider error class: ``
 - Provider HTTP status: 0
 - Provider Retry-After: `0s`
@@ -16,13 +16,13 @@
 - Expected response exact match: `true`
 - Response JSON valid: `false`
 - Response framing class: ``
-- Second acquire: `resource_resource_rate_limit` until `2026-07-22T20:22:00Z`
+- Second acquire: `resource_resource_rate_limit` until `2026-07-22T20:44:00Z`
 - Operation state after local throttle: `WAITING_TIME`
 - Durable reopen verified: `true`
 
 | Resource | In flight | Calls/min | Calls/day | Tokens/min | Failures | Circuit open until |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| model-binding:groq-llama-3.3-70b | 0 | 0 | 0 | 0 | 1 | 2026-07-22T20:22:53Z |
+| model-binding:groq-llama-3.3-70b | 0 | 0 | 0 | 0 | 1 | 2026-07-22T20:44:25Z |
 | model-binding:nvidia-mistral-small-4 | 0 | 1 | 1 | 63 | 0 |  |
 | model-provider:groq | 0 | 0 | 0 | 0 | 0 |  |
 | model-provider:nvidia-nim | 0 | 1 | 1 | 63 | 0 |  |
