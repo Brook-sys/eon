@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "name": "continuous-probe-2026-07-20-0740-groq",
+  "name": "continuous-probe-2026-07-22-0425",
   "fixture_name": "cognitive-tool-v1",
   "planned_calls": 1,
   "max_calls": 1,
   "models": [
     {
-      "provider": "openai",
-      "binding_id": "llama-3.3-70b-versatile",
-      "model": "llama-3.3-70b-versatile",
+      "provider": "nvidia",
+      "binding_id": "meta-llama-3-1-8b-instruct",
+      "model": "meta/llama-3.1-8b-instruct",
       "report": {
         "schema_version": 1,
         "fixture_name": "cognitive-tool-v1",
-        "model": "llama-3.3-70b-versatile",
+        "model": "meta/llama-3.1-8b-instruct",
         "runs": [
           {
             "case_id": "tool-search-single",
@@ -21,7 +21,7 @@
             "context_tokens": 2048,
             "compiled": true,
             "estimated_input_tokens": 188,
-            "duration_millis": 110,
+            "duration_millis": 395,
             "syntax_valid": false,
             "semantically_correct": false,
             "error_kind": "PROVIDER",
