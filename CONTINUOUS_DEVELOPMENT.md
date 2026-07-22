@@ -3924,4 +3924,10 @@ ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes fa
 - [x] Validar e injetar o `request_id` filtrado no pipeline SSE (`Projector`), complementando o isolamento iniciado por `namespace`.
 - [x] Provar ausência de contaminação cruzada enviando writes não correlatos no mesmo namespace mas em requisições paralelas mockadas.
 
-2026-07-22 13:00 - HEARTBEAT - Fechando a Fase 100 com sucesso. O front-end do Dashboard foi alterado para enviar o parâmetro `request_id` (via input na UI) no handshake inicial do `EventSource`. No backend, a projection engine e os handlers SSE agora injetam e validam `request_id`, garantindo isolamento total por requisição; clientes não processam eventos não correlatos num mesmo namespace. Os testes Go incluem bateria headless para provar o filtro na fonte (como `TestProjectorFilteredEventPaginationMatchesRequestID`) e as suítes full/focal validaram tudo OK. Campanha live via `cliproxyapi/topmodel` com `-mode=live` falhou os cognitivos (0/66 corretos, report salvo em `continuous-probe-2026-07-22-1300-topmodel-sse-live-fail`), reafirmando liveness das rotas e mantendo a restrição de que offline-oracle e unit tests de protocolo formam a base desta fase. Próximos passos disponíveis para a próxima milestone.
+### Fase 101 - Fencing e Recuperação Resiliente de Lease Subagentes (Worker Session)
+
+- [ ] Criar estrutura em `domain.Subagent` para rastrear o tempo de lease (`LeaseExpiresAt`).
+- [ ] Implementar expiração forçada/evicção (Fencing) no dispatcher caso o worker fique irresponsivo, realocando ou cancelando de forma segura.
+- [ ] Adicionar testes de race conditions entre workers tentando adquirir leases simultaneamente.
+
+2026-07-22 13:10 - HEARTBEAT - Planejando a Fase 101. Foco será resiliência de alocação de tarefas via worker sessions. Um nó off/irresponsivo não pode travar uma tarefa indefinidamente, e fences precisam assegurar que o dispatch mude estados atômicos, impedindo "split brain" onde dois workers processam a mesma mensagem. Próximo passo: definir e escrever as expansões em `domain` e testes de coordenação offline.
