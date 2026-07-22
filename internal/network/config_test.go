@@ -16,7 +16,7 @@ import (
 
 func generateTestPKI(t *testing.T, dir string) PeerConfig {
 	t.Helper()
-	
+
 	// Generate CA
 	caPub, caPriv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

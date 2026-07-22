@@ -9,10 +9,10 @@ import (
 )
 
 type dummyPeerCaller struct {
-	t        *testing.T
-	req      *domain.PeerRPCRequest
-	resp     domain.PeerRPCResponse
-	err      error
+	t    *testing.T
+	req  *domain.PeerRPCRequest
+	resp domain.PeerRPCResponse
+	err  error
 }
 
 func (d *dummyPeerCaller) Call(ctx context.Context, req domain.PeerRPCRequest) (domain.PeerRPCResponse, error) {

@@ -235,7 +235,10 @@ func TestProviderCompletesWithToolsAndReturnsToolCalls(t *testing.T) {
 	server := fakeserver.New(fakeserver.Exchange{
 		ExpectedPrompt: "call test tool", ExpectedModel: "fixture-model",
 		ResponseModel: "fixture-model-v1", InputTokens: 5, OutputTokens: 1,
-		ToolCalls: []struct{ Name string; Arguments string }{
+		ToolCalls: []struct {
+			Name      string
+			Arguments string
+		}{
 			{Name: "test_tool", Arguments: `{"arg":"val"}`},
 		},
 	})

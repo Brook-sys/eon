@@ -10,10 +10,10 @@ import (
 
 // AddPeerCommand registers a new peer in the local P2P registry.
 type AddPeerCommand struct {
-	ID         string
-	Host       string
-	Port       int
-	PublicKey  []byte
+	ID        string
+	Host      string
+	Port      int
+	PublicKey []byte
 }
 
 func (c AddPeerCommand) Validate() error {

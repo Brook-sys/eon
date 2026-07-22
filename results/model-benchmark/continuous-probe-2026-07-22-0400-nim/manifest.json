@@ -2,7 +2,9 @@
   "schema_version": 1,
   "name": "continuous-probe-2026-07-22-0400",
   "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-tool-v1.json",
-  "context_tokens": [2048],
+  "context_tokens": [
+    2048
+  ],
   "max_calls": 1,
   "max_output_tokens": 128,
   "max_total_output_tokens": 128,

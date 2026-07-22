@@ -9,10 +9,10 @@ import (
 
 // PeerEndpoint represents a node discovered on the mesh.
 type PeerEndpoint struct {
-	ID        string
-	Address   string
-	Port      int
-	LastSeen  time.Time
+	ID       string
+	Address  string
+	Port     int
+	LastSeen time.Time
 }
 
 // KBucket represents a bucket of K peers with a similar distance from the local node ID.
@@ -35,11 +35,11 @@ func NewKBucket(k int) *KBucket {
 func (b *KBucket) AddPeer(peer PeerEndpoint) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	
+
 	if peer.ID == "" {
 		return fmt.Errorf("peer ID cannot be empty")
 	}
-	
+
 	if _, exists := b.Peers[peer.ID]; exists {
 		// Update existing
 		p := b.Peers[peer.ID]
@@ -49,13 +49,13 @@ func (b *KBucket) AddPeer(peer PeerEndpoint) error {
 		b.Peers[peer.ID] = p
 		return nil
 	}
-	
+
 	if len(b.Peers) >= b.k {
 		// In a real DHT we would ping the oldest before evicting,
 		// but for this phase we reject to maintain the k-bound.
 		return fmt.Errorf("bucket is full")
 	}
-	
+
 	peer.LastSeen = time.Now()
 	b.Peers[peer.ID] = peer
 	return nil
@@ -70,7 +70,7 @@ func (b *KBucket) RemovePeer(id string) {
 func (b *KBucket) GetPeers() []PeerEndpoint {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	out := make([]PeerEndpoint, 0, len(b.Peers))
 	for _, p := range b.Peers {
 		out = append(out, p)
@@ -79,10 +79,10 @@ func (b *KBucket) GetPeers() []PeerEndpoint {
 }
 
 type LocalRoutingTable struct {
-	mu       sync.RWMutex
-	localID  string
+	mu      sync.RWMutex
+	localID string
 	// For MVP, we use a single global bucket instead of strict XOR-distance bucketing.
-	bucket   *KBucket
+	bucket *KBucket
 }
 
 func NewLocalRoutingTable(localID string, k int) *LocalRoutingTable {

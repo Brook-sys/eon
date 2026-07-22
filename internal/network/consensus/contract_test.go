@@ -1,9 +1,9 @@
 package consensus_test
 
 import (
-	"testing"
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/network/consensus"
+	"testing"
 )
 
 func TestClaimProposal_Skeleton(t *testing.T) {

@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"motor-autonomo/internal/evaluation"
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/prompt"
 	"motor-autonomo/internal/provider/openai"
-	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/tool/subagent"
 )
 

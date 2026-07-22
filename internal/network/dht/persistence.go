@@ -35,30 +35,30 @@ func NewFilePeerStore(path string) (*FilePeerStore, error) {
 func (s *FilePeerStore) Save(ctx context.Context, peers []PeerEndpoint) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	data, err := json.Marshal(peers)
 	if err != nil {
 		return fmt.Errorf("failed to encode peers: %w", err)
 	}
-	
+
 	// Write to temp file first for atomic replacement
 	tempPath := s.path + ".tmp"
 	if err := os.WriteFile(tempPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write temp peer file: %w", err)
 	}
-	
+
 	if err := os.Rename(tempPath, s.path); err != nil {
 		os.Remove(tempPath)
 		return fmt.Errorf("failed to commit peer file: %w", err)
 	}
-	
+
 	return nil
 }
 
 func (s *FilePeerStore) Load(ctx context.Context) ([]PeerEndpoint, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	data, err := os.ReadFile(s.path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,11 +66,11 @@ func (s *FilePeerStore) Load(ctx context.Context) ([]PeerEndpoint, error) {
 		}
 		return nil, fmt.Errorf("failed to read peer file: %w", err)
 	}
-	
+
 	var peers []PeerEndpoint
 	if err := json.Unmarshal(data, &peers); err != nil {
 		return nil, fmt.Errorf("failed to parse peer file: %w", err)
 	}
-	
+
 	return peers, nil
 }

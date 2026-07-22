@@ -298,7 +298,7 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 					model = result.Model
 				}
 				run.ActualInputTokens, run.OutputTokens, run.Output = result.InputTokens, result.OutputTokens, result.Text
-				
+
 				if len(result.ToolCalls) > 0 {
 					var names []string
 					for _, tc := range result.ToolCalls {
@@ -309,7 +309,7 @@ func (r Runner) Run(ctx context.Context, fixtures FixtureSet, matrix Matrix) (Re
 						result.Text = fmt.Sprintf(`{"tool_call_name":"%s"}`, strings.Join(names, ","))
 					}
 				}
-				
+
 				values, err := Parse(format, result.Text, sortedKeys(c.Expected))
 				if err != nil {
 					run.ErrorKind = "VALIDATION"
