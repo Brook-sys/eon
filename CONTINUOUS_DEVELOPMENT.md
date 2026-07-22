@@ -1456,3 +1456,2443 @@ Adicionar documentação de Fase 23
 2026-07-22 04:20 — HEARTBEAT — Iniciada Fase 97: modelamento conceitual do escopo de namespaces no dashboard. Verificamos a sanidade geral do codebase (todos testes passando sem alterações) antes da submissão inicial dos commits da próxima fase.
 2026-07-22 04:22 — HEARTBEAT — Preflight check via model-benchmark-runner offline-compile confirmou integridade da matriz de test fixtures (66/66 corretas, zero errors) sem expor chamadas na fase preparatória.
 2026-07-22 04:25 — HEARTBEAT — Campanha live bounding executada na Fase 97: falha de credencial (401) com NVIDIA NIM 'meta/llama-3.1-8b-instruct' não exportada neste subprocesso, mas a prova do pipeline experimental (1 chamada, sem regressões) mantém os invariantes do ciclo autônomo sem expor segredos. Finalizamos este ciclo deixando o código preparado para isolamento de namespace no handler SSE P2P.
+2026-07-22 04:28 — HEARTBEAT — Após inspecionar a saída === RUN   TestParseContexts
+--- PASS: TestParseContexts (0.00s)
+=== RUN   TestOfflineOracleMode
+--- PASS: TestOfflineOracleMode (1.10s)
+=== RUN   TestCampaignModeRunsMultipleBindingsAndWritesAggregate
+mode=campaign name=multi models=2 planned_calls=4 artifacts=/tmp/TestCampaignModeRunsMultipleBindingsAndWritesAggregate3567192822/001/out
+--- PASS: TestCampaignModeRunsMultipleBindingsAndWritesAggregate (0.12s)
+PASS
+ok  	motor-autonomo/cmd/model-benchmark-runner	(cached)
+?   	motor-autonomo/cmd/runtime	[no test files]
+?   	motor-autonomo/cmd/runtime-gate-campaign	[no test files]
+=== RUN   TestRunBackupAndVerify
+--- PASS: TestRunBackupAndVerify (0.44s)
+=== RUN   TestRunRejectsUnsafeOrIncompleteArguments
+--- PASS: TestRunRejectsUnsafeOrIncompleteArguments (0.00s)
+=== RUN   TestRunRollsBackDestinationWhenRequestedReportCannotPublish
+--- PASS: TestRunRollsBackDestinationWhenRequestedReportCannotPublish (0.09s)
+=== RUN   TestRunRollsBackDestinationWhenReportPublicationFailsAfterMutation
+--- PASS: TestRunRollsBackDestinationWhenReportPublicationFailsAfterMutation (0.27s)
+=== RUN   TestRunKeepsPublishedArtifactsWhenOnlyStdoutFails
+--- PASS: TestRunKeepsPublishedArtifactsWhenOnlyStdoutFails (0.23s)
+=== RUN   TestLoadInventoryRejectsUntrustedJSON
+--- PASS: TestLoadInventoryRejectsUntrustedJSON (0.00s)
+PASS
+ok  	motor-autonomo/cmd/sqlite-backup	(cached)
+?   	motor-autonomo/cmd/storage-spike-runner	[no test files]
+?   	motor-autonomo/cmd/storage-spike-worker	[no test files]
+=== RUN   TestBootstrapperPersistsRecoverableWorkAtomically
+--- PASS: TestBootstrapperPersistsRecoverableWorkAtomically (0.00s)
+=== RUN   TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites
+=== RUN   TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites/missing_mission
+=== RUN   TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites/missing_operation_spec
+--- PASS: TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites (0.00s)
+    --- PASS: TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites/missing_mission (0.00s)
+    --- PASS: TestBootstrapperRejectsMissingCatalogEntriesWithoutPartialWrites/missing_operation_spec (0.00s)
+PASS
+ok  	motor-autonomo/internal/agenda	(cached)
+=== RUN   TestNetworkAdaptersBoundReadAllBuffers
+=== PAUSE TestNetworkAdaptersBoundReadAllBuffers
+=== RUN   TestFindUnboundedReadAllResolvesAliasesAndLocalLimiters
+=== PAUSE TestFindUnboundedReadAllResolvesAliasesAndLocalLimiters
+=== RUN   TestConcreteStoresRunReusableContracts
+=== PAUSE TestConcreteStoresRunReusableContracts
+=== RUN   TestReusableContractCallsIgnoreUnrelatedSelectors
+=== PAUSE TestReusableContractCallsIgnoreUnrelatedSelectors
+=== RUN   TestCoreDoesNotImportConcreteAdapters
+=== PAUSE TestCoreDoesNotImportConcreteAdapters
+=== RUN   TestFindForbiddenImportsReportsProviderAndStorage
+=== PAUSE TestFindForbiddenImportsReportsProviderAndStorage
+=== RUN   TestInspectDependsOnlyOnReadStore
+=== PAUSE TestInspectDependsOnlyOnReadStore
+=== RUN   TestFindForbiddenPortSelectorsResolvesAliases
+=== PAUSE TestFindForbiddenPortSelectorsResolvesAliases
+=== RUN   TestOfficialCoreUsesInjectedTimeAndRandomness
+=== PAUSE TestOfficialCoreUsesInjectedTimeAndRandomness
+=== RUN   TestFindForbiddenOfficialSourcesResolvesAliasesAndIgnoresTests
+=== PAUSE TestFindForbiddenOfficialSourcesResolvesAliasesAndIgnoresTests
+=== RUN   TestVersionedDomainTypesHaveValidationEntrypoint
+=== PAUSE TestVersionedDomainTypesHaveValidationEntrypoint
+=== RUN   TestFindVersionedTypesWithoutValidationReportsMissingMethod
+=== PAUSE TestFindVersionedTypesWithoutValidationReportsMissingMethod
+=== RUN   TestNetworkAdaptersDoNotUseUnboundedDefaultHTTPClient
+=== PAUSE TestNetworkAdaptersDoNotUseUnboundedDefaultHTTPClient
+=== RUN   TestFindDefaultHTTPClientResolvesAliases
+=== PAUSE TestFindDefaultHTTPClientResolvesAliases
+=== RUN   TestCoreTestsAreOfflineAndDeterministic
+=== PAUSE TestCoreTestsAreOfflineAndDeterministic
+=== RUN   TestFindForbiddenTestSourcesResolvesAliasesAndDetectsViolations
+=== PAUSE TestFindForbiddenTestSourcesResolvesAliasesAndDetectsViolations
+=== RUN   TestProductionDoesNotRequireCgo
+=== PAUSE TestProductionDoesNotRequireCgo
+=== RUN   TestFindCgoImportsIgnoresTestsAndReportsProduction
+=== PAUSE TestFindCgoImportsIgnoresTestsAndReportsProduction
+=== CONT  TestNetworkAdaptersBoundReadAllBuffers
+=== CONT  TestFindForbiddenOfficialSourcesResolvesAliasesAndIgnoresTests
+--- PASS: TestFindForbiddenOfficialSourcesResolvesAliasesAndIgnoresTests (0.00s)
+=== CONT  TestFindCgoImportsIgnoresTestsAndReportsProduction
+=== CONT  TestProductionDoesNotRequireCgo
+=== CONT  TestNetworkAdaptersDoNotUseUnboundedDefaultHTTPClient
+--- PASS: TestNetworkAdaptersBoundReadAllBuffers (0.01s)
+=== CONT  TestOfficialCoreUsesInjectedTimeAndRandomness
+--- PASS: TestFindCgoImportsIgnoresTestsAndReportsProduction (0.00s)
+=== CONT  TestFindForbiddenPortSelectorsResolvesAliases
+=== CONT  TestInspectDependsOnlyOnReadStore
+=== CONT  TestFindForbiddenImportsReportsProviderAndStorage
+=== CONT  TestCoreDoesNotImportConcreteAdapters
+=== CONT  TestReusableContractCallsIgnoreUnrelatedSelectors
+=== CONT  TestConcreteStoresRunReusableContracts
+=== RUN   TestConcreteStoresRunReusableContracts/memory
+=== PAUSE TestConcreteStoresRunReusableContracts/memory
+=== RUN   TestConcreteStoresRunReusableContracts/sqlite
+=== PAUSE TestConcreteStoresRunReusableContracts/sqlite
+=== RUN   TestConcreteStoresRunReusableContracts/dolt
+=== PAUSE TestConcreteStoresRunReusableContracts/dolt
+--- PASS: TestReusableContractCallsIgnoreUnrelatedSelectors (0.00s)
+--- PASS: TestFindForbiddenPortSelectorsResolvesAliases (0.00s)
+=== CONT  TestFindVersionedTypesWithoutValidationReportsMissingMethod
+--- PASS: TestFindVersionedTypesWithoutValidationReportsMissingMethod (0.00s)
+=== CONT  TestFindForbiddenTestSourcesResolvesAliasesAndDetectsViolations
+--- PASS: TestFindForbiddenTestSourcesResolvesAliasesAndDetectsViolations (0.00s)
+=== CONT  TestCoreTestsAreOfflineAndDeterministic
+=== CONT  TestFindUnboundedReadAllResolvesAliasesAndLocalLimiters
+--- PASS: TestFindUnboundedReadAllResolvesAliasesAndLocalLimiters (0.00s)
+=== CONT  TestVersionedDomainTypesHaveValidationEntrypoint
+--- PASS: TestFindForbiddenImportsReportsProviderAndStorage (0.00s)
+=== CONT  TestFindDefaultHTTPClientResolvesAliases
+--- PASS: TestFindDefaultHTTPClientResolvesAliases (0.03s)
+=== CONT  TestConcreteStoresRunReusableContracts/memory
+--- PASS: TestProductionDoesNotRequireCgo (0.05s)
+--- PASS: TestCoreDoesNotImportConcreteAdapters (0.04s)
+=== CONT  TestConcreteStoresRunReusableContracts/dolt
+=== CONT  TestConcreteStoresRunReusableContracts/sqlite
+--- PASS: TestConcreteStoresRunReusableContracts (0.01s)
+    --- PASS: TestConcreteStoresRunReusableContracts/sqlite (0.00s)
+    --- PASS: TestConcreteStoresRunReusableContracts/memory (0.02s)
+    --- PASS: TestConcreteStoresRunReusableContracts/dolt (0.01s)
+--- PASS: TestInspectDependsOnlyOnReadStore (0.07s)
+--- PASS: TestNetworkAdaptersDoNotUseUnboundedDefaultHTTPClient (0.10s)
+--- PASS: TestVersionedDomainTypesHaveValidationEntrypoint (0.12s)
+--- PASS: TestCoreTestsAreOfflineAndDeterministic (0.16s)
+--- PASS: TestOfficialCoreUsesInjectedTimeAndRandomness (0.17s)
+PASS
+ok  	motor-autonomo/internal/architecture	(cached)
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/unknown_field
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/case_variant
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/duplicate_key
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/truncated_object
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/unsupported_link
+=== RUN   TestDecodeStrictRejectsNonCanonicalJSON/null_required_array
+--- PASS: TestDecodeStrictRejectsNonCanonicalJSON (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/unknown_field (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/case_variant (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/duplicate_key (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/truncated_object (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/unsupported_link (0.00s)
+    --- PASS: TestDecodeStrictRejectsNonCanonicalJSON/null_required_array (0.00s)
+=== RUN   TestDecodeStrictAcceptsDeterministicNormalization
+--- PASS: TestDecodeStrictAcceptsDeterministicNormalization (0.00s)
+=== RUN   TestDecodeStrictAcceptsVersionedDelimitedChangeSet
+--- PASS: TestDecodeStrictAcceptsVersionedDelimitedChangeSet (0.00s)
+=== RUN   TestProcessorPreservesFencedRawAndCommitsNormalized
+--- PASS: TestProcessorPreservesFencedRawAndCommitsNormalized (0.00s)
+=== RUN   TestProcessorPreservesValidatesAndCommitsAtomically
+--- PASS: TestProcessorPreservesValidatesAndCommitsAtomically (0.00s)
+=== RUN   TestProcessorPreservesInvalidRawOutputWithoutOfficialEffect
+--- PASS: TestProcessorPreservesInvalidRawOutputWithoutOfficialEffect (0.00s)
+=== RUN   TestProcessorRollsBackStaleCommitChain
+--- PASS: TestProcessorRollsBackStaleCommitChain (0.00s)
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/RAW_PERSISTED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/PROPOSAL_STAGED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/VALIDATION_STAGED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/ACCEPTANCE_STAGED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/COMMIT_STAGED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/EVENT_STAGED
+=== RUN   TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/COMMIT_DURABLE
+--- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/RAW_PERSISTED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/PROPOSAL_STAGED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/VALIDATION_STAGED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/ACCEPTANCE_STAGED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/COMMIT_STAGED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/EVENT_STAGED (0.00s)
+    --- PASS: TestProcessorResumesAfterCrashAtEveryDurabilityBoundary/COMMIT_DURABLE (0.00s)
+PASS
+ok  	motor-autonomo/internal/changeset	(cached)
+=== RUN   TestSendQuestionUsesOpaqueInlineCallbacksAndDoesNotLeakToken
+--- PASS: TestSendQuestionUsesOpaqueInlineCallbacksAndDoesNotLeakToken (0.00s)
+=== RUN   TestSendQuestionResolvesReminderDestinationMarker
+--- PASS: TestSendQuestionResolvesReminderDestinationMarker (0.00s)
+=== RUN   TestExternalAnswerRequiresAllowlistAndDurableMessageBinding
+--- PASS: TestExternalAnswerRequiresAllowlistAndDurableMessageBinding (0.00s)
+=== RUN   TestIngestUpdateResolvesDeliveryByTransport
+--- PASS: TestIngestUpdateResolvesDeliveryByTransport (0.00s)
+=== RUN   TestReplyAndCallbackDeduplicateThroughExistingExternalInbox
+--- PASS: TestReplyAndCallbackDeduplicateThroughExistingExternalInbox (0.00s)
+=== RUN   TestDeliveryWorkerLeasesAndCompletesTelegramOutbox
+--- PASS: TestDeliveryWorkerLeasesAndCompletesTelegramOutbox (0.00s)
+=== RUN   TestDeliveryWorkerParksExpiredLeaseAsEffectUnknownWithoutResend
+--- PASS: TestDeliveryWorkerParksExpiredLeaseAsEffectUnknownWithoutResend (0.00s)
+=== RUN   TestDeliveryWorkerParksAmbiguousTransportAsEffectUnknown
+--- PASS: TestDeliveryWorkerParksAmbiguousTransportAsEffectUnknown (0.00s)
+=== RUN   TestSetWebhookAndDeleteWebhookCallBotAPI
+--- PASS: TestSetWebhookAndDeleteWebhookCallBotAPI (0.00s)
+=== RUN   TestDecodeUpdateRejectsAmbiguousAndUnknownPayloads
+--- PASS: TestDecodeUpdateRejectsAmbiguousAndUnknownPayloads (0.00s)
+=== RUN   TestSmokeQuestionPathEndToEnd
+--- PASS: TestSmokeQuestionPathEndToEnd (0.00s)
+=== RUN   TestIngressConfigValidate
+=== PAUSE TestIngressConfigValidate
+=== RUN   TestIngressPollAcceptsCorrelatedCallbackAndAdvancesOffset
+--- PASS: TestIngressPollAcceptsCorrelatedCallbackAndAdvancesOffset (0.00s)
+=== RUN   TestIngressPollRejectsUncorrelatedAndNotifiesCallback
+--- PASS: TestIngressPollRejectsUncorrelatedAndNotifiesCallback (0.00s)
+=== RUN   TestIngressWebhookValidatesSecretAndAcceptsUpdate
+--- PASS: TestIngressWebhookValidatesSecretAndAcceptsUpdate (0.00s)
+=== RUN   TestIngressPollPersistsOffsetAcrossProcessRestart
+--- PASS: TestIngressPollPersistsOffsetAcrossProcessRestart (0.00s)
+=== RUN   TestIngressWebhookRejectsWithoutBindingQuietly
+--- PASS: TestIngressWebhookRejectsWithoutBindingQuietly (0.00s)
+=== CONT  TestIngressConfigValidate
+--- PASS: TestIngressConfigValidate (0.00s)
+PASS
+ok  	motor-autonomo/internal/channel/telegram	(cached)
+=== RUN   TestProposerPersistsAtomicClaimEvidenceAndEvent
+--- PASS: TestProposerPersistsAtomicClaimEvidenceAndEvent (0.00s)
+=== RUN   TestProposerRejectsMissingObservationAndRollsBack
+--- PASS: TestProposerRejectsMissingObservationAndRollsBack (0.00s)
+PASS
+ok  	motor-autonomo/internal/claim	(cached)
+=== RUN   TestExternalEventInboxReplaysIdenticalDelivery
+--- PASS: TestExternalEventInboxReplaysIdenticalDelivery (0.00s)
+=== RUN   TestExternalEventInboxRejectsDivergentReuse
+--- PASS: TestExternalEventInboxRejectsDivergentReuse (0.00s)
+=== RUN   TestExternalEventInboxRejectsInvalidAndMissingRecords
+--- PASS: TestExternalEventInboxRejectsInvalidAndMissingRecords (0.00s)
+=== RUN   TestSemanticMemoryPersistsViewAndAuditAtomically
+--- PASS: TestSemanticMemoryPersistsViewAndAuditAtomically (0.00s)
+=== RUN   TestSemanticMemoryDuplicateEventRollsBackView
+--- PASS: TestSemanticMemoryDuplicateEventRollsBackView (0.00s)
+=== RUN   TestSemanticMemoryDeleteUnknownDoesNotAppendEvent
+--- PASS: TestSemanticMemoryDeleteUnknownDoesNotAppendEvent (0.00s)
+=== RUN   TestSemanticMemoryRejectsIdentityCollisionAndRollsBackDeleteEventFailure
+--- PASS: TestSemanticMemoryRejectsIdentityCollisionAndRollsBackDeleteEventFailure (0.00s)
+=== RUN   TestSemanticMemoryHonorsCanceledContext
+--- PASS: TestSemanticMemoryHonorsCanceledContext (0.00s)
+=== RUN   TestSemanticMemoryCompactsExpiredInBoundedDeterministicBatches
+--- PASS: TestSemanticMemoryCompactsExpiredInBoundedDeterministicBatches (0.00s)
+=== RUN   TestSemanticMemoryCompactionRollsBackWholeBatchOnAuditFailure
+--- PASS: TestSemanticMemoryCompactionRollsBackWholeBatchOnAuditFailure (0.00s)
+=== RUN   TestCommandInboxIdempotentSubmit
+--- PASS: TestCommandInboxIdempotentSubmit (0.00s)
+=== RUN   TestSemanticMemoryEndpoints
+--- PASS: TestSemanticMemoryEndpoints (0.00s)
+=== RUN   TestControlAPISubmitCommandIdempotentAndLookup
+--- PASS: TestControlAPISubmitCommandIdempotentAndLookup (0.00s)
+=== RUN   TestControlAPISubmitExternalEventAndDisposition
+--- PASS: TestControlAPISubmitExternalEventAndDisposition (0.00s)
+=== RUN   TestControlAPIQuestionsListGetSubmitAndProcessAnswer
+--- PASS: TestControlAPIQuestionsListGetSubmitAndProcessAnswer (0.00s)
+=== RUN   TestControlAPIQuestionAnswerRejectsStaleRevisionAndDivergentReplay
+--- PASS: TestControlAPIQuestionAnswerRejectsStaleRevisionAndDivergentReplay (0.00s)
+=== RUN   TestControlAPIRejectsInvalidBodiesAndUnknownFields
+--- PASS: TestControlAPIRejectsInvalidBodiesAndUnknownFields (0.00s)
+=== RUN   TestControlAPIMissionAmendmentPreviewAndAccept
+--- PASS: TestControlAPIMissionAmendmentPreviewAndAccept (0.01s)
+=== RUN   TestControlAPIConfigDraftLifecycle
+--- PASS: TestControlAPIConfigDraftLifecycle (0.01s)
+=== RUN   TestControlAPIConfigValidateApplyRequireWiring
+--- PASS: TestControlAPIConfigValidateApplyRequireWiring (0.00s)
+=== RUN   TestControlAPIModelsDraftLifecycle
+--- PASS: TestControlAPIModelsDraftLifecycle (0.00s)
+=== RUN   TestControlAPIModelPresetCreatesDisabledModelsDraft
+--- PASS: TestControlAPIModelPresetCreatesDisabledModelsDraft (0.00s)
+=== RUN   TestControlAPIModelPresetDraftPreservesActiveCatalogAndRequiresFreshBase
+--- PASS: TestControlAPIModelPresetDraftPreservesActiveCatalogAndRequiresFreshBase (0.00s)
+=== RUN   TestControlAPIModelPresetEnablementPreviewAfterDisabledApply
+--- PASS: TestControlAPIModelPresetEnablementPreviewAfterDisabledApply (0.00s)
+=== RUN   TestControlAPIModelPresetFailsClosed
+--- PASS: TestControlAPIModelPresetFailsClosed (0.00s)
+=== RUN   TestControlAPISubmitMemory
+--- PASS: TestControlAPISubmitMemory (0.00s)
+PASS
+ok  	motor-autonomo/internal/control	(cached)
+=== RUN   TestDashboardSSEFailsDefinitivelyBeforeReadyWithoutLoops
+--- PASS: TestDashboardSSEFailsDefinitivelyBeforeReadyWithoutLoops (0.05s)
+=== RUN   TestDashboardServesIndexAndProxiesAPIs
+--- PASS: TestDashboardServesIndexAndProxiesAPIs (0.01s)
+=== RUN   TestDashboardStreamRejectsInvalidManualCursorBeforeReplacingConnection
+--- PASS: TestDashboardStreamRejectsInvalidManualCursorBeforeReplacingConnection (0.04s)
+=== RUN   TestDashboardMalformedEventPreservesTransportCursorAndFailsClosed
+--- PASS: TestDashboardMalformedEventPreservesTransportCursorAndFailsClosed (0.04s)
+=== RUN   TestDashboardStreamConstructionFailurePreservesHealthyConnection
+--- PASS: TestDashboardStreamConstructionFailurePreservesHealthyConnection (0.04s)
+=== RUN   TestDashboardManualConstructionFailurePreservesPendingRetry
+--- PASS: TestDashboardManualConstructionFailurePreservesPendingRetry (0.04s)
+=== RUN   TestDashboardRetryConstructionFailureIsTerminalAndVisible
+--- PASS: TestDashboardRetryConstructionFailureIsTerminalAndVisible (0.05s)
+=== RUN   TestDashboardInvalidFrameCursorFailsClosed
+--- PASS: TestDashboardInvalidFrameCursorFailsClosed (0.04s)
+=== RUN   TestDashboardServerErrorFrameStopsAutomaticReconnect
+--- PASS: TestDashboardServerErrorFrameStopsAutomaticReconnect (0.04s)
+=== RUN   TestDashboardTerminalErrorRejectsDivergentCursor
+--- PASS: TestDashboardTerminalErrorRejectsDivergentCursor (0.04s)
+=== RUN   TestDashboardNativeStreamErrorRetriesFreshFromApplicationCursor
+--- PASS: TestDashboardNativeStreamErrorRetriesFreshFromApplicationCursor (0.05s)
+=== RUN   TestDashboardStreamRetryBudgetStopsPersistentTransportLoop
+--- PASS: TestDashboardStreamRetryBudgetStopsPersistentTransportLoop (0.05s)
+=== RUN   TestDashboardTransportErrorBeforeReadyClosesFailClosed
+--- PASS: TestDashboardTransportErrorBeforeReadyClosesFailClosed (0.05s)
+=== RUN   TestDashboardReconnectReadyCannotRewindAcceptedCursor
+--- PASS: TestDashboardReconnectReadyCannotRewindAcceptedCursor (0.05s)
+=== RUN   TestDashboardReconnectReadyCannotAdvanceFromOpaqueNativeCursor
+--- PASS: TestDashboardReconnectReadyCannotAdvanceFromOpaqueNativeCursor (0.05s)
+=== RUN   TestDashboardRepeatedEventCursorFailsClosedWithoutRenderingReplay
+--- PASS: TestDashboardRepeatedEventCursorFailsClosedWithoutRenderingReplay (0.04s)
+=== RUN   TestDashboardParseableInvalidEventPreservesAcceptedCursor
+--- PASS: TestDashboardParseableInvalidEventPreservesAcceptedCursor (0.04s)
+=== RUN   TestDashboardCursorAheadRequiresExplicitReset
+--- PASS: TestDashboardCursorAheadRequiresExplicitReset (0.05s)
+=== RUN   TestDashboardSSERequiresReadyBeforeApplicationFrames
+--- PASS: TestDashboardSSERequiresReadyBeforeApplicationFrames (0.04s)
+=== RUN   TestDashboardSSEFramesRequireSupportedSchemaVersion
+--- PASS: TestDashboardSSEFramesRequireSupportedSchemaVersion (0.04s)
+=== RUN   TestDashboardEventPayloadSequenceMustMatchAcceptedCursor
+--- PASS: TestDashboardEventPayloadSequenceMustMatchAcceptedCursor (0.04s)
+=== RUN   TestDashboardBoundaryPayloadSequenceMustMatchAcceptedCursor
+--- PASS: TestDashboardBoundaryPayloadSequenceMustMatchAcceptedCursor (0.04s)
+=== RUN   TestDashboardTimelineRetentionIsBoundedAndVisible
+--- PASS: TestDashboardTimelineRetentionIsBoundedAndVisible (3.17s)
+=== RUN   TestDashboardDefaultSSEMessageFailsClosedWithoutCursorAdvance
+--- PASS: TestDashboardDefaultSSEMessageFailsClosedWithoutCursorAdvance (0.04s)
+=== RUN   TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection
+--- PASS: TestDashboardStreamGenerationRejectsLateFramesFromClosedConnection (0.04s)
+=== RUN   TestDashboardStreamCursorReadyResetsNewStreamBaseline
+--- PASS: TestDashboardStreamCursorReadyResetsNewStreamBaseline (0.05s)
+PASS
+ok  	motor-autonomo/internal/dashboard	(cached)
+=== RUN   TestFormatAndParseClaimDependency
+=== PAUSE TestFormatAndParseClaimDependency
+=== RUN   TestArtifactDependsOnMatchesVersionedClaim
+=== PAUSE TestArtifactDependsOnMatchesVersionedClaim
+=== RUN   TestPlanArtifactInvalidationDeterministicAndSkipsAudit
+=== PAUSE TestPlanArtifactInvalidationDeterministicAndSkipsAudit
+=== RUN   TestChangeAndEvidenceDependencyKeys
+=== PAUSE TestChangeAndEvidenceDependencyKeys
+=== RUN   TestBudgetCoversAndConsume
+--- PASS: TestBudgetCoversAndConsume (0.00s)
+=== RUN   TestBudgetRemainingSaturates
+--- PASS: TestBudgetRemainingSaturates (0.00s)
+=== RUN   TestBudgetMinAndAdd
+--- PASS: TestBudgetMinAndAdd (0.00s)
+=== RUN   TestBudgetZeroMeansNone
+--- PASS: TestBudgetZeroMeansNone (0.00s)
+=== RUN   TestMVPCapabilityCatalog
+--- PASS: TestMVPCapabilityCatalog (0.00s)
+=== RUN   TestEvaluateCapabilityAllowDenyApproval
+--- PASS: TestEvaluateCapabilityAllowDenyApproval (0.00s)
+=== RUN   TestCapabilityDescriptorValidation
+--- PASS: TestCapabilityDescriptorValidation (0.00s)
+=== RUN   TestEvaluateCapabilityLatestVersion
+--- PASS: TestEvaluateCapabilityLatestVersion (0.00s)
+=== RUN   TestChannelCursorValidateAndAdvance
+=== PAUSE TestChannelCursorValidateAndAdvance
+=== RUN   TestConfigDraftValidateAndHash
+--- PASS: TestConfigDraftValidateAndHash (0.00s)
+=== RUN   TestConfigDiffImpactAndApply
+--- PASS: TestConfigDiffImpactAndApply (0.00s)
+=== RUN   TestConfigApplyReceiptMonotonic
+--- PASS: TestConfigApplyReceiptMonotonic (0.00s)
+=== RUN   TestChannelsConfigDiffRedactsSecrets
+--- PASS: TestChannelsConfigDiffRedactsSecrets (0.00s)
+=== RUN   TestDraftFromConfigRevisionRollback
+--- PASS: TestDraftFromConfigRevisionRollback (0.00s)
+=== RUN   TestDefaultSchedulerCadenceConfigAndWithinCycleBudget
+--- PASS: TestDefaultSchedulerCadenceConfigAndWithinCycleBudget (0.00s)
+=== RUN   TestModelsConfigDraftDiffAndRollback
+--- PASS: TestModelsConfigDraftDiffAndRollback (0.00s)
+=== RUN   TestApplyOperatorCommandPauseResumeCancelAndShutdown
+--- PASS: TestApplyOperatorCommandPauseResumeCancelAndShutdown (0.00s)
+=== RUN   TestApplyOperatorCommandRejectsStaleRevisionAndIllegalResume
+--- PASS: TestApplyOperatorCommandRejectsStaleRevisionAndIllegalResume (0.00s)
+=== RUN   TestAdvanceCommandReceiptIsMonotonic
+--- PASS: TestAdvanceCommandReceiptIsMonotonic (0.00s)
+=== RUN   TestOperatorCommandValidation
+=== RUN   TestOperatorCommandValidation/valid_mission_command
+=== RUN   TestOperatorCommandValidation/unknown_kind
+=== RUN   TestOperatorCommandValidation/missing_optimistic_revision
+=== RUN   TestOperatorCommandValidation/process_command_rejects_mission_scope
+=== RUN   TestOperatorCommandValidation/valid_process_command
+--- PASS: TestOperatorCommandValidation (0.00s)
+    --- PASS: TestOperatorCommandValidation/valid_mission_command (0.00s)
+    --- PASS: TestOperatorCommandValidation/unknown_kind (0.00s)
+    --- PASS: TestOperatorCommandValidation/missing_optimistic_revision (0.00s)
+    --- PASS: TestOperatorCommandValidation/process_command_rejects_mission_scope (0.00s)
+    --- PASS: TestOperatorCommandValidation/valid_process_command (0.00s)
+=== RUN   TestCommandReceiptDistinguishesAcceptanceFromEffect
+--- PASS: TestCommandReceiptDistinguishesAcceptanceFromEffect (0.00s)
+=== RUN   TestExternalEventValidationKeepsContentBoundedAndCorrelated
+--- PASS: TestExternalEventValidationKeepsContentBoundedAndCorrelated (0.00s)
+=== RUN   TestExternalEventDispositionIsMonotonicAndFailClosed
+--- PASS: TestExternalEventDispositionIsMonotonicAndFailClosed (0.00s)
+=== RUN   TestMemoryStoredEventBuildsCanonicalEvent
+--- PASS: TestMemoryStoredEventBuildsCanonicalEvent (0.00s)
+=== RUN   TestMemoryCompactedEventBuildsCanonicalEvent
+--- PASS: TestMemoryCompactedEventBuildsCanonicalEvent (0.00s)
+=== RUN   TestMemoryEventsRejectIncompleteOrInvalidPayload
+=== RUN   TestMemoryEventsRejectIncompleteOrInvalidPayload/stored_missing_event_id
+=== RUN   TestMemoryEventsRejectIncompleteOrInvalidPayload/stored_invalid_scope
+=== RUN   TestMemoryEventsRejectIncompleteOrInvalidPayload/compacted_missing_reason
+--- PASS: TestMemoryEventsRejectIncompleteOrInvalidPayload (0.00s)
+    --- PASS: TestMemoryEventsRejectIncompleteOrInvalidPayload/stored_missing_event_id (0.00s)
+    --- PASS: TestMemoryEventsRejectIncompleteOrInvalidPayload/stored_invalid_scope (0.00s)
+    --- PASS: TestMemoryEventsRejectIncompleteOrInvalidPayload/compacted_missing_reason (0.00s)
+=== RUN   TestLongTermMemory_Basic
+--- PASS: TestLongTermMemory_Basic (0.00s)
+=== RUN   TestDiffAndImpactMissionAmendment
+--- PASS: TestDiffAndImpactMissionAmendment (0.00s)
+=== RUN   TestMissionAmendmentRejectsNoopAndBadLineage
+--- PASS: TestMissionAmendmentRejectsNoopAndBadLineage (0.00s)
+=== RUN   TestMissionDiffIsDeterministicAndSorted
+--- PASS: TestMissionDiffIsDeterministicAndSorted (0.00s)
+=== RUN   TestEffectiveContextTokensConservativeMargins
+=== PAUSE TestEffectiveContextTokensConservativeMargins
+=== RUN   TestContextBudgetPolicyReductionAndRecovery
+=== PAUSE TestContextBudgetPolicyReductionAndRecovery
+=== RUN   TestModelContextPressureValidation
+=== PAUSE TestModelContextPressureValidation
+=== RUN   TestSelectAdaptationPlanNeverPresumesCapabilities
+=== PAUSE TestSelectAdaptationPlanNeverPresumesCapabilities
+=== RUN   TestDemoteAdaptationAndShouldDemote
+=== PAUSE TestDemoteAdaptationAndShouldDemote
+=== RUN   TestModelProviderAndBindingConfigValidateWithoutSecretValues
+--- PASS: TestModelProviderAndBindingConfigValidateWithoutSecretValues (0.00s)
+=== RUN   TestModelProviderConfigRejectsSecretValueAndUnsafeBindingID
+--- PASS: TestModelProviderConfigRejectsSecretValueAndUnsafeBindingID (0.00s)
+=== RUN   TestModelsConfigValidate
+--- PASS: TestModelsConfigValidate (0.00s)
+=== RUN   TestClassifyModelBindingFailure
+--- PASS: TestClassifyModelBindingFailure (0.00s)
+=== RUN   TestShippedModelPresetCatalogMatchesEvidence
+--- PASS: TestShippedModelPresetCatalogMatchesEvidence (0.00s)
+=== RUN   TestDecodeModelPresetCatalogIsStrictAndBounded
+--- PASS: TestDecodeModelPresetCatalogIsStrictAndBounded (0.00s)
+=== RUN   TestModelPresetRequiresQualifiedEvidenceAndStaysDisabled
+--- PASS: TestModelPresetRequiresQualifiedEvidenceAndStaysDisabled (0.00s)
+=== RUN   TestModelPresetDraftMergesActiveCatalogWithoutChangingRoutes
+--- PASS: TestModelPresetDraftMergesActiveCatalogWithoutChangingRoutes (0.00s)
+=== RUN   TestModelPresetRejectsUnsafeEvidenceAndEnabledBinding
+--- PASS: TestModelPresetRejectsUnsafeEvidenceAndEnabledBinding (0.00s)
+=== RUN   TestModelPresetEnablementPreviewRequiresExactDisabledInstallation
+--- PASS: TestModelPresetEnablementPreviewRequiresExactDisabledInstallation (0.00s)
+=== RUN   TestDecideNextRecoveryLadderAndExhaustion
+=== PAUSE TestDecideNextRecoveryLadderAndExhaustion
+=== RUN   TestNewModelRecoveryBudgetFromSpec
+=== PAUSE TestNewModelRecoveryBudgetFromSpec
+=== RUN   TestFailureRecordValidateAndModelValidationFailure
+=== PAUSE TestFailureRecordValidateAndModelValidationFailure
+=== RUN   TestRetryDispositionForRecovery
+=== PAUSE TestRetryDispositionForRecovery
+=== RUN   TestSelectSkilledModelBinding
+=== RUN   TestSelectSkilledModelBinding/Simple_EXTRACT_prefers_fast_model_because_it_scored_higher_(90_vs_85)
+=== RUN   TestSelectSkilledModelBinding/Complex_CONFLICT_routes_to_strong_model_(95_vs_10)
+=== RUN   TestSelectSkilledModelBinding/Strict_JSON_requirement_shifts_weight_to_strong_model
+--- PASS: TestSelectSkilledModelBinding (0.00s)
+    --- PASS: TestSelectSkilledModelBinding/Simple_EXTRACT_prefers_fast_model_because_it_scored_higher_(90_vs_85) (0.00s)
+    --- PASS: TestSelectSkilledModelBinding/Complex_CONFLICT_routes_to_strong_model_(95_vs_10) (0.00s)
+    --- PASS: TestSelectSkilledModelBinding/Strict_JSON_requirement_shifts_weight_to_strong_model (0.00s)
+=== RUN   TestSelectSkilledModelBinding_CircuitBreaker
+--- PASS: TestSelectSkilledModelBinding_CircuitBreaker (0.00s)
+=== RUN   TestSelectModelBindingOrdersAndExplainsRejections
+--- PASS: TestSelectModelBindingOrdersAndExplainsRejections (0.00s)
+=== RUN   TestSelectModelBindingUsesStableIDTieBreakAndDoesNotMutateInput
+--- PASS: TestSelectModelBindingUsesStableIDTieBreakAndDoesNotMutateInput (0.00s)
+=== RUN   TestPeerSyncEventBatchValidation
+--- PASS: TestPeerSyncEventBatchValidation (0.00s)
+=== RUN   TestPeerSyncMessageRejectsCrossKindFieldsAndOversize
+--- PASS: TestPeerSyncMessageRejectsCrossKindFieldsAndOversize (0.00s)
+=== RUN   TestResolvePeerAgendaReplica
+--- PASS: TestResolvePeerAgendaReplica (0.00s)
+=== RUN   TestOperatorQuestionValidation
+=== RUN   TestOperatorQuestionValidation/missing_identity
+=== RUN   TestOperatorQuestionValidation/choice_requires_two_options
+=== RUN   TestOperatorQuestionValidation/duplicate_option
+=== RUN   TestOperatorQuestionValidation/duplicate_blocking_scope
+=== RUN   TestOperatorQuestionValidation/with_other_must_allow_other
+=== RUN   TestOperatorQuestionValidation/invalid_expiration
+=== RUN   TestOperatorQuestionValidation/default_requires_policy
+=== RUN   TestOperatorQuestionValidation/default_must_resolve
+=== RUN   TestOperatorQuestionValidation/pending_cannot_claim_answer
+=== RUN   TestOperatorQuestionValidation/oversized_prompt
+--- PASS: TestOperatorQuestionValidation (0.00s)
+    --- PASS: TestOperatorQuestionValidation/missing_identity (0.00s)
+    --- PASS: TestOperatorQuestionValidation/choice_requires_two_options (0.00s)
+    --- PASS: TestOperatorQuestionValidation/duplicate_option (0.00s)
+    --- PASS: TestOperatorQuestionValidation/duplicate_blocking_scope (0.00s)
+    --- PASS: TestOperatorQuestionValidation/with_other_must_allow_other (0.00s)
+    --- PASS: TestOperatorQuestionValidation/invalid_expiration (0.00s)
+    --- PASS: TestOperatorQuestionValidation/default_requires_policy (0.00s)
+    --- PASS: TestOperatorQuestionValidation/default_must_resolve (0.00s)
+    --- PASS: TestOperatorQuestionValidation/pending_cannot_claim_answer (0.00s)
+    --- PASS: TestOperatorQuestionValidation/oversized_prompt (0.00s)
+=== RUN   TestOperatorQuestionTerminalStateValidation
+--- PASS: TestOperatorQuestionTerminalStateValidation (0.00s)
+=== RUN   TestUserAnswerValidationForQuestion
+=== RUN   TestUserAnswerValidationForQuestion/stale_revision
+=== RUN   TestUserAnswerValidationForQuestion/unknown_option
+=== RUN   TestUserAnswerValidationForQuestion/multiple_options_on_single_choice
+=== RUN   TestUserAnswerValidationForQuestion/late_answer
+=== RUN   TestUserAnswerValidationForQuestion/closed_question
+=== RUN   TestUserAnswerValidationForQuestion/unallowed_skip
+=== RUN   TestUserAnswerValidationForQuestion/unallowed_context_request
+--- PASS: TestUserAnswerValidationForQuestion (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/stale_revision (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/unknown_option (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/multiple_options_on_single_choice (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/late_answer (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/closed_question (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/unallowed_skip (0.00s)
+    --- PASS: TestUserAnswerValidationForQuestion/unallowed_context_request (0.00s)
+=== RUN   TestAnswerKindsHaveUnambiguousPayloads
+--- PASS: TestAnswerKindsHaveUnambiguousPayloads (0.00s)
+=== RUN   TestTransitionOperatorQuestion
+=== RUN   TestTransitionOperatorQuestion/request_clarification
+=== RUN   TestTransitionOperatorQuestion/answer
+=== RUN   TestTransitionOperatorQuestion/expire
+=== RUN   TestTransitionOperatorQuestion/supersede
+=== RUN   TestTransitionOperatorQuestion/cancel
+=== RUN   TestTransitionOperatorQuestion/answer_missing_ID
+=== RUN   TestTransitionOperatorQuestion/premature_expiry
+=== RUN   TestTransitionOperatorQuestion/same_superseder
+=== RUN   TestTransitionOperatorQuestion/after_expiry
+--- PASS: TestTransitionOperatorQuestion (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/request_clarification (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/answer (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/expire (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/supersede (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/cancel (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/answer_missing_ID (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/premature_expiry (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/same_superseder (0.00s)
+    --- PASS: TestTransitionOperatorQuestion/after_expiry (0.00s)
+=== RUN   TestTransitionOperatorQuestionRejectsTerminalState
+--- PASS: TestTransitionOperatorQuestionRejectsTerminalState (0.00s)
+=== RUN   TestQuestionDeliveryLeaseComplete
+--- PASS: TestQuestionDeliveryLeaseComplete (0.00s)
+=== RUN   TestPermanentlyFailQuestionDeliveryPreservesAttemptPolicy
+--- PASS: TestPermanentlyFailQuestionDeliveryPreservesAttemptPolicy (0.00s)
+=== RUN   TestQuestionDeliveryRetryAndDeadLetter
+--- PASS: TestQuestionDeliveryRetryAndDeadLetter (0.00s)
+=== RUN   TestQuestionDeliveryRejectsLeaseMismatchAndEarlyRetry
+--- PASS: TestQuestionDeliveryRejectsLeaseMismatchAndEarlyRetry (0.00s)
+=== RUN   TestExpiredLeaseBecomesEffectUnknownAndIsNotAutoleased
+--- PASS: TestExpiredLeaseBecomesEffectUnknownAndIsNotAutoleased (0.00s)
+=== RUN   TestEffectUnknownCanCompleteAfterReconcile
+--- PASS: TestEffectUnknownCanCompleteAfterReconcile (0.00s)
+=== RUN   TestAmbiguousTransportAfterSendParksEffectUnknown
+--- PASS: TestAmbiguousTransportAfterSendParksEffectUnknown (0.00s)
+=== RUN   TestResolveEffectUnknownExhaustsToDead
+--- PASS: TestResolveEffectUnknownExhaustsToDead (0.00s)
+=== RUN   TestQuestionGateDecisionRecordValidate
+--- PASS: TestQuestionGateDecisionRecordValidate (0.00s)
+=== RUN   TestNormalizeDedupSignatureAndTopic
+--- PASS: TestNormalizeDedupSignatureAndTopic (0.00s)
+=== RUN   TestInterruptionBudgetAndDigestPolicyValidate
+--- PASS: TestInterruptionBudgetAndDigestPolicyValidate (0.00s)
+=== RUN   TestPlanQuestionReminderStopsAndSchedules
+--- PASS: TestPlanQuestionReminderStopsAndSchedules (0.00s)
+=== RUN   TestRecurringObligationValidateAndFamily
+--- PASS: TestRecurringObligationValidateAndFamily (0.00s)
+=== RUN   TestPlanRecurringSeedsCadenceAndAntiRepetition
+--- PASS: TestPlanRecurringSeedsCadenceAndAntiRepetition (0.00s)
+=== RUN   TestPlanRecurringSeedsDisabledAndSkipWithoutDelta
+--- PASS: TestPlanRecurringSeedsDisabledAndSkipWithoutDelta (0.00s)
+=== RUN   TestMissionRevisionValidatesRecurring
+--- PASS: TestMissionRevisionValidatesRecurring (0.00s)
+=== RUN   TestDiffIncludesRecurringObligations
+--- PASS: TestDiffIncludesRecurringObligations (0.00s)
+=== RUN   TestAcquireConcurrencyAndQuota
+--- PASS: TestAcquireConcurrencyAndQuota (0.00s)
+=== RUN   TestAcquireCircuitAndReport
+--- PASS: TestAcquireCircuitAndReport (0.00s)
+=== RUN   TestReconcileObservedTokens
+--- PASS: TestReconcileObservedTokens (0.00s)
+=== RUN   TestThrottleTransitionInput
+--- PASS: TestThrottleTransitionInput (0.00s)
+=== RUN   TestNewResourceBudgetFailure
+--- PASS: TestNewResourceBudgetFailure (0.00s)
+=== RUN   TestWindowRoll
+--- PASS: TestWindowRoll (0.00s)
+=== RUN   TestReevaluationConditionValidateFor
+=== RUN   TestReevaluationConditionValidateFor/ready
+=== RUN   TestReevaluationConditionValidateFor/temporal_wait
+=== RUN   TestReevaluationConditionValidateFor/event_wait
+=== RUN   TestReevaluationConditionValidateFor/terminal_has_no_wakeup
+=== RUN   TestReevaluationConditionValidateFor/terminal_rejects_wakeup
+=== RUN   TestReevaluationConditionValidateFor/time_missing
+=== RUN   TestReevaluationConditionValidateFor/wrong_kind
+=== RUN   TestReevaluationConditionValidateFor/lease_reference_required
+=== RUN   TestReevaluationConditionValidateFor/lease_reference_present
+=== RUN   TestReevaluationConditionValidateFor/dependency_reference_required
+=== RUN   TestReevaluationConditionValidateFor/unknown_state
+--- PASS: TestReevaluationConditionValidateFor (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/ready (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/temporal_wait (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/event_wait (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/terminal_has_no_wakeup (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/terminal_rejects_wakeup (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/time_missing (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/wrong_kind (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/lease_reference_required (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/lease_reference_present (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/dependency_reference_required (0.00s)
+    --- PASS: TestReevaluationConditionValidateFor/unknown_state (0.00s)
+=== RUN   TestInquiryValidationRejectsOrphanedNonTerminalState
+--- PASS: TestInquiryValidationRejectsOrphanedNonTerminalState (0.00s)
+=== RUN   TestObservationRequiresExactlyOneAnchor
+=== RUN   TestObservationRequiresExactlyOneAnchor/fragment
+=== RUN   TestObservationRequiresExactlyOneAnchor/receipt
+=== RUN   TestObservationRequiresExactlyOneAnchor/neither
+=== RUN   TestObservationRequiresExactlyOneAnchor/both
+--- PASS: TestObservationRequiresExactlyOneAnchor (0.00s)
+    --- PASS: TestObservationRequiresExactlyOneAnchor/fragment (0.00s)
+    --- PASS: TestObservationRequiresExactlyOneAnchor/receipt (0.00s)
+    --- PASS: TestObservationRequiresExactlyOneAnchor/neither (0.00s)
+    --- PASS: TestObservationRequiresExactlyOneAnchor/both (0.00s)
+=== RUN   TestEvidenceLinkRejectsUnknownRelation
+--- PASS: TestEvidenceLinkRejectsUnknownRelation (0.00s)
+=== RUN   TestClaimRequiresExplicitNonBlankQualifiers
+--- PASS: TestClaimRequiresExplicitNonBlankQualifiers (0.00s)
+=== RUN   TestStoreRetentionPolicyDisallowsEventLogPrune
+=== PAUSE TestStoreRetentionPolicyDisallowsEventLogPrune
+=== RUN   TestEventHeadAndStalePressureThresholds
+=== PAUSE TestEventHeadAndStalePressureThresholds
+=== RUN   TestPlanStaleArtifactRefreshSkipsAuditAndCaps
+=== PAUSE TestPlanStaleArtifactRefreshSkipsAuditAndCaps
+=== RUN   TestSubagentDispatchGenerationAndSendAttemptsAreIndependent
+--- PASS: TestSubagentDispatchGenerationAndSendAttemptsAreIndependent (0.00s)
+=== RUN   TestSubagentDispatchAmbiguousAndExpiredRequireReconciliation
+--- PASS: TestSubagentDispatchAmbiguousAndExpiredRequireReconciliation (0.00s)
+=== RUN   TestSubagentDispatchValidationIsStrictAndBounded
+--- PASS: TestSubagentDispatchValidationIsStrictAndBounded (0.00s)
+=== RUN   TestSubagentDispatchEffectUnknownCannotBeCancelled
+--- PASS: TestSubagentDispatchEffectUnknownCannotBeCancelled (0.00s)
+=== RUN   TestSubagentReconcileRPCStrictAndDigestSensitive
+--- PASS: TestSubagentReconcileRPCStrictAndDigestSensitive (0.00s)
+=== RUN   TestResolveSubagentStatusDeliveryAfterPositiveReconcile
+--- PASS: TestResolveSubagentStatusDeliveryAfterPositiveReconcile (0.00s)
+=== RUN   TestSubagentSpawnReceiptQueueTransitions
+--- PASS: TestSubagentSpawnReceiptQueueTransitions (0.00s)
+=== RUN   TestSubagentSpawnReceiptExpiredLeaseRecoveryAndBounds
+--- PASS: TestSubagentSpawnReceiptExpiredLeaseRecoveryAndBounds (0.00s)
+=== RUN   TestSubagentSpawnReceiptLegacyQueueDefaults
+--- PASS: TestSubagentSpawnReceiptLegacyQueueDefaults (0.00s)
+=== RUN   TestSubagentStatusIngressTransitions
+--- PASS: TestSubagentStatusIngressTransitions (0.00s)
+=== RUN   TestRejectSubagentStatusIngressAttemptMismatch
+--- PASS: TestRejectSubagentStatusIngressAttemptMismatch (0.00s)
+=== RUN   TestRejectSubagentStatusIngressTerminalConflict
+--- PASS: TestRejectSubagentStatusIngressTerminalConflict (0.00s)
+=== RUN   TestTransitionLegalPaths
+=== RUN   TestTransitionLegalPaths/new_normalizes_to_ready
+=== RUN   TestTransitionLegalPaths/ready_dispatches_under_lease
+=== RUN   TestTransitionLegalPaths/running_enters_verification
+=== RUN   TestTransitionLegalPaths/verified_succeeds
+=== RUN   TestTransitionLegalPaths/running_waits_until_explicit_instant
+=== RUN   TestTransitionLegalPaths/ready_waits_for_event
+=== RUN   TestTransitionLegalPaths/dependency_resolution_resumes_ready
+=== RUN   TestTransitionLegalPaths/known_non-effect_permits_retry
+=== RUN   TestTransitionLegalPaths/uncertain_effect_enters_reconciliation
+=== RUN   TestTransitionLegalPaths/cancel_is_accepted_from_any_nonterminal_state
+--- PASS: TestTransitionLegalPaths (0.00s)
+    --- PASS: TestTransitionLegalPaths/new_normalizes_to_ready (0.00s)
+    --- PASS: TestTransitionLegalPaths/ready_dispatches_under_lease (0.00s)
+    --- PASS: TestTransitionLegalPaths/running_enters_verification (0.00s)
+    --- PASS: TestTransitionLegalPaths/verified_succeeds (0.00s)
+    --- PASS: TestTransitionLegalPaths/running_waits_until_explicit_instant (0.00s)
+    --- PASS: TestTransitionLegalPaths/ready_waits_for_event (0.00s)
+    --- PASS: TestTransitionLegalPaths/dependency_resolution_resumes_ready (0.00s)
+    --- PASS: TestTransitionLegalPaths/known_non-effect_permits_retry (0.00s)
+    --- PASS: TestTransitionLegalPaths/uncertain_effect_enters_reconciliation (0.00s)
+    --- PASS: TestTransitionLegalPaths/cancel_is_accepted_from_any_nonterminal_state (0.00s)
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/cannot_dispatch_terminal
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/cannot_succeed_without_verification
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/cannot_resume_ready
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/wait_until_requires_instant
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/event_wait_requires_event_type
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/unknown_effect_cannot_retry
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/partial_effect_cannot_retry
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/applied_effect_cannot_retry
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/known_non-effect_cannot_reconcile
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/unrelated_event_rejects_effect_state
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/unrelated_event_rejects_instant
+=== RUN   TestTransitionRejectsIllegalOrUnsafeChanges/invalid_current_snapshot_fails_closed
+--- PASS: TestTransitionRejectsIllegalOrUnsafeChanges (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/cannot_dispatch_terminal (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/cannot_succeed_without_verification (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/cannot_resume_ready (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/wait_until_requires_instant (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/event_wait_requires_event_type (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/unknown_effect_cannot_retry (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/partial_effect_cannot_retry (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/applied_effect_cannot_retry (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/known_non-effect_cannot_reconcile (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/unrelated_event_rejects_effect_state (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/unrelated_event_rejects_instant (0.00s)
+    --- PASS: TestTransitionRejectsIllegalOrUnsafeChanges/invalid_current_snapshot_fails_closed (0.00s)
+=== RUN   TestTransitionIsPure
+--- PASS: TestTransitionIsPure (0.00s)
+=== RUN   TestHorizonPolicyMarksAndReplenishment
+--- PASS: TestHorizonPolicyMarksAndReplenishment (0.00s)
+=== RUN   TestWorkOpportunityParentChildDerivation
+--- PASS: TestWorkOpportunityParentChildDerivation (0.00s)
+=== RUN   TestContinuityDiagnosisRequiresRecoveryPath
+--- PASS: TestContinuityDiagnosisRequiresRecoveryPath (0.00s)
+=== RUN   TestExecutableHorizonObservation
+--- PASS: TestExecutableHorizonObservation (0.00s)
+=== RUN   TestTransitionWorkOpportunityLifecycle
+=== RUN   TestTransitionWorkOpportunityLifecycle/defer_open
+=== RUN   TestTransitionWorkOpportunityLifecycle/reopen_deferred
+=== RUN   TestTransitionWorkOpportunityLifecycle/abandon_open
+=== RUN   TestTransitionWorkOpportunityLifecycle/abandon_deferred
+=== RUN   TestTransitionWorkOpportunityLifecycle/supersede_open
+=== RUN   TestTransitionWorkOpportunityLifecycle/defer_non-open
+=== RUN   TestTransitionWorkOpportunityLifecycle/reopen_non-deferred
+=== RUN   TestTransitionWorkOpportunityLifecycle/abandon_without_reason
+=== RUN   TestTransitionWorkOpportunityLifecycle/supersede_without_successor
+=== RUN   TestTransitionWorkOpportunityLifecycle/supersede_self
+=== RUN   TestTransitionWorkOpportunityLifecycle/terminal_admitted
+=== RUN   TestTransitionWorkOpportunityLifecycle/terminal_abandoned
+=== RUN   TestTransitionWorkOpportunityLifecycle/zero_time
+=== RUN   TestTransitionWorkOpportunityLifecycle/before_creation
+--- PASS: TestTransitionWorkOpportunityLifecycle (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/defer_open (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/reopen_deferred (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/abandon_open (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/abandon_deferred (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/supersede_open (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/defer_non-open (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/reopen_non-deferred (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/abandon_without_reason (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/supersede_without_successor (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/supersede_self (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/terminal_admitted (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/terminal_abandoned (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/zero_time (0.00s)
+    --- PASS: TestTransitionWorkOpportunityLifecycle/before_creation (0.00s)
+=== RUN   TestPlanFrontierHygieneDefersExcessAndAbandonsDeep
+--- PASS: TestPlanFrontierHygieneDefersExcessAndAbandonsDeep (0.00s)
+=== RUN   TestPlanFrontierHygieneNoopWhenWithinLimits
+--- PASS: TestPlanFrontierHygieneNoopWhenWithinLimits (0.00s)
+=== RUN   TestPlanFrontierReservoirHygieneSupersedeAndReopen
+--- PASS: TestPlanFrontierReservoirHygieneSupersedeAndReopen (0.00s)
+=== RUN   TestPlanFrontierReservoirHygieneDoesNotReopenSameCycleDefer
+--- PASS: TestPlanFrontierReservoirHygieneDoesNotReopenSameCycleDefer (0.00s)
+=== RUN   TestBaselineDeclaredProfileIsConservative
+--- PASS: TestBaselineDeclaredProfileIsConservative (0.00s)
+=== RUN   TestProviderProfileRejectsUnknownSourceAndDialect
+--- PASS: TestProviderProfileRejectsUnknownSourceAndDialect (0.00s)
+=== RUN   TestSubagentRecordValidation
+--- PASS: TestSubagentRecordValidation (0.00s)
+=== RUN   TestSubagentRecordRejectsExhaustedAttemptAndDeadlineBeforeStart
+--- PASS: TestSubagentRecordRejectsExhaustedAttemptAndDeadlineBeforeStart (0.00s)
+=== CONT  TestFormatAndParseClaimDependency
+--- PASS: TestFormatAndParseClaimDependency (0.00s)
+=== CONT  TestPlanStaleArtifactRefreshSkipsAuditAndCaps
+--- PASS: TestPlanStaleArtifactRefreshSkipsAuditAndCaps (0.00s)
+=== CONT  TestEventHeadAndStalePressureThresholds
+--- PASS: TestEventHeadAndStalePressureThresholds (0.00s)
+=== CONT  TestStoreRetentionPolicyDisallowsEventLogPrune
+--- PASS: TestStoreRetentionPolicyDisallowsEventLogPrune (0.00s)
+=== CONT  TestRetryDispositionForRecovery
+--- PASS: TestRetryDispositionForRecovery (0.00s)
+=== CONT  TestFailureRecordValidateAndModelValidationFailure
+--- PASS: TestFailureRecordValidateAndModelValidationFailure (0.00s)
+=== CONT  TestEffectiveContextTokensConservativeMargins
+=== CONT  TestContextBudgetPolicyReductionAndRecovery
+=== CONT  TestArtifactDependsOnMatchesVersionedClaim
+--- PASS: TestEffectiveContextTokensConservativeMargins (0.00s)
+=== CONT  TestChannelCursorValidateAndAdvance
+--- PASS: TestContextBudgetPolicyReductionAndRecovery (0.00s)
+--- PASS: TestArtifactDependsOnMatchesVersionedClaim (0.00s)
+=== CONT  TestNewModelRecoveryBudgetFromSpec
+=== CONT  TestDemoteAdaptationAndShouldDemote
+=== CONT  TestSelectAdaptationPlanNeverPresumesCapabilities
+=== CONT  TestModelContextPressureValidation
+--- PASS: TestChannelCursorValidateAndAdvance (0.00s)
+=== RUN   TestModelContextPressureValidation/missing_time
+--- PASS: TestNewModelRecoveryBudgetFromSpec (0.00s)
+--- PASS: TestSelectAdaptationPlanNeverPresumesCapabilities (0.00s)
+--- PASS: TestDemoteAdaptationAndShouldDemote (0.00s)
+=== RUN   TestModelContextPressureValidation/missing_binding
+=== RUN   TestModelContextPressureValidation/level_overflow
+=== RUN   TestModelContextPressureValidation/invalid_streak
+=== RUN   TestModelContextPressureValidation/zero_with_streak
+--- PASS: TestModelContextPressureValidation (0.00s)
+    --- PASS: TestModelContextPressureValidation/missing_time (0.00s)
+    --- PASS: TestModelContextPressureValidation/missing_binding (0.00s)
+    --- PASS: TestModelContextPressureValidation/level_overflow (0.00s)
+    --- PASS: TestModelContextPressureValidation/invalid_streak (0.00s)
+    --- PASS: TestModelContextPressureValidation/zero_with_streak (0.00s)
+=== CONT  TestChangeAndEvidenceDependencyKeys
+--- PASS: TestChangeAndEvidenceDependencyKeys (0.00s)
+=== CONT  TestDecideNextRecoveryLadderAndExhaustion
+--- PASS: TestDecideNextRecoveryLadderAndExhaustion (0.00s)
+=== CONT  TestPlanArtifactInvalidationDeterministicAndSkipsAudit
+--- PASS: TestPlanArtifactInvalidationDeterministicAndSkipsAudit (0.00s)
+PASS
+ok  	motor-autonomo/internal/domain	(cached)
+=== RUN   TestDecodeFixtures
+--- PASS: TestDecodeFixtures (0.00s)
+=== RUN   TestCognitiveV2ExpandsEveryOperationAndPassesOracle
+--- PASS: TestCognitiveV2ExpandsEveryOperationAndPassesOracle (0.00s)
+=== RUN   TestDecodeFixturesRejectsUnknownAndDuplicate
+--- PASS: TestDecodeFixturesRejectsUnknownAndDuplicate (0.00s)
+=== RUN   TestParseFormatsStrictly
+--- PASS: TestParseFormatsStrictly (0.00s)
+=== RUN   TestRunnerExecutesContextFormatMatrix
+--- PASS: TestRunnerExecutesContextFormatMatrix (0.00s)
+=== RUN   TestRunnerPreservesConfiguredModelWhenEveryProviderCallFails
+--- PASS: TestRunnerPreservesConfiguredModelWhenEveryProviderCallFails (0.00s)
+=== RUN   TestRunnerRecordsBoundedProviderDiagnostics
+--- PASS: TestRunnerRecordsBoundedProviderDiagnostics (0.00s)
+=== RUN   TestRunnerRecordsCompileFailureWithoutCallingProvider
+--- PASS: TestRunnerRecordsCompileFailureWithoutCallingProvider (0.00s)
+=== RUN   TestWriteArtifacts
+--- PASS: TestWriteArtifacts (0.03s)
+=== RUN   TestDecodeCampaignManifestAndCallBound
+--- PASS: TestDecodeCampaignManifestAndCallBound (0.00s)
+=== RUN   TestCampaignManifestRejectsUnsafeOrUnboundedValues
+--- PASS: TestCampaignManifestRejectsUnsafeOrUnboundedValues (0.00s)
+=== RUN   TestCompareReportsFindsPerDimensionRegression
+--- PASS: TestCompareReportsFindsPerDimensionRegression (0.00s)
+=== RUN   TestCompareReportsUsesRatesAcrossExpandedFixture
+--- PASS: TestCompareReportsUsesRatesAcrossExpandedFixture (0.00s)
+=== RUN   TestQualifyReportUsesConservativeThresholds
+=== RUN   TestQualifyReportUsesConservativeThresholds/qualified
+=== RUN   TestQualifyReportUsesConservativeThresholds/degraded
+=== RUN   TestQualifyReportUsesConservativeThresholds/provider_incompatible
+=== RUN   TestQualifyReportUsesConservativeThresholds/syntax_incompatible
+--- PASS: TestQualifyReportUsesConservativeThresholds (0.00s)
+    --- PASS: TestQualifyReportUsesConservativeThresholds/qualified (0.00s)
+    --- PASS: TestQualifyReportUsesConservativeThresholds/degraded (0.00s)
+    --- PASS: TestQualifyReportUsesConservativeThresholds/provider_incompatible (0.00s)
+    --- PASS: TestQualifyReportUsesConservativeThresholds/syntax_incompatible (0.00s)
+=== RUN   TestLoadEmbeddedCognitiveV1
+=== PAUSE TestLoadEmbeddedCognitiveV1
+=== RUN   TestCompileMatrixOffline
+=== PAUSE TestCompileMatrixOffline
+=== RUN   TestEncodeAnswerRoundTrip
+=== PAUSE TestEncodeAnswerRoundTrip
+=== RUN   TestRunOraclePerfectCeiling
+=== PAUSE TestRunOraclePerfectCeiling
+=== RUN   TestQueueProviderExhaustion
+=== PAUSE TestQueueProviderExhaustion
+=== RUN   TestInterpretLiveReportsEmpiricallyStrongestFormat
+=== PAUSE TestInterpretLiveReportsEmpiricallyStrongestFormat
+=== RUN   TestInterpretCompileOnly
+=== PAUSE TestInterpretCompileOnly
+=== RUN   TestWriteArtifactsIncludesInterpretation
+=== PAUSE TestWriteArtifactsIncludesInterpretation
+=== CONT  TestLoadEmbeddedCognitiveV1
+--- PASS: TestLoadEmbeddedCognitiveV1 (0.00s)
+=== CONT  TestWriteArtifactsIncludesInterpretation
+=== CONT  TestInterpretCompileOnly
+--- PASS: TestInterpretCompileOnly (0.00s)
+=== CONT  TestInterpretLiveReportsEmpiricallyStrongestFormat
+--- PASS: TestInterpretLiveReportsEmpiricallyStrongestFormat (0.00s)
+=== CONT  TestQueueProviderExhaustion
+--- PASS: TestQueueProviderExhaustion (0.00s)
+=== CONT  TestRunOraclePerfectCeiling
+--- PASS: TestRunOraclePerfectCeiling (0.00s)
+=== CONT  TestEncodeAnswerRoundTrip
+--- PASS: TestEncodeAnswerRoundTrip (0.00s)
+=== CONT  TestCompileMatrixOffline
+--- PASS: TestCompileMatrixOffline (0.00s)
+--- PASS: TestWriteArtifactsIncludesInterpretation (0.03s)
+PASS
+ok  	motor-autonomo/internal/evaluation	(cached)
+=== RUN   TestBoundedCallRecorderIsSharedAndFailClosed
+--- PASS: TestBoundedCallRecorderIsSharedAndFailClosed (0.00s)
+=== RUN   TestManifestStrictAndBounded
+--- PASS: TestManifestStrictAndBounded (0.00s)
+=== RUN   TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall
+--- PASS: TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall (0.00s)
+=== RUN   TestVerifyRuntimeGateDurabilityRejectsIncompleteAccounting
+--- PASS: TestVerifyRuntimeGateDurabilityRejectsIncompleteAccounting (0.00s)
+=== RUN   TestRunRecordsNaturalProviderThrottleAndReleasesPermits
+--- PASS: TestRunRecordsNaturalProviderThrottleAndReleasesPermits (0.00s)
+=== RUN   TestArtifactsRejectOverBudgetReport
+--- PASS: TestArtifactsRejectOverBudgetReport (0.00s)
+PASS
+ok  	motor-autonomo/internal/gatecampaign	(cached)
+=== RUN   TestIngestFixturePersistsExactImmutableSnapshotAtomically
+--- PASS: TestIngestFixturePersistsExactImmutableSnapshotAtomically (0.00s)
+=== RUN   TestIngestFetchedPreservesAcquiredBytesAndHTTPVersionHint
+--- PASS: TestIngestFetchedPreservesAcquiredBytesAndHTTPVersionHint (0.00s)
+=== RUN   TestIngestFixtureRejectsOversizeAndRollsBackMissingMission
+--- PASS: TestIngestFixtureRejectsOversizeAndRollsBackMissingMission (0.00s)
+PASS
+ok  	motor-autonomo/internal/ingest	(cached)
+=== RUN   TestSSEDrainPacerBoundsImmediatePagesAndResets
+--- PASS: TestSSEDrainPacerBoundsImmediatePagesAndResets (0.00s)
+=== RUN   TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals
+=== PAUSE TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals
+=== RUN   TestSSEKeepAlivePacerCountsOnlyElapsedPollsAndResetsOnFrames
+=== PAUSE TestSSEKeepAlivePacerCountsOnlyElapsedPollsAndResetsOnFrames
+=== RUN   TestListCommitsBrowseAndHTTP
+--- PASS: TestListCommitsBrowseAndHTTP (0.00s)
+=== RUN   TestListModelContextPressuresEmptyAndPopulated
+=== PAUSE TestListModelContextPressuresEmptyAndPopulated
+=== RUN   TestModelContextPressureHTTPEndpoints
+=== PAUSE TestModelContextPressureHTTPEndpoints
+=== RUN   TestProjectContinuityFindingsFromArtifacts
+--- PASS: TestProjectContinuityFindingsFromArtifacts (0.01s)
+=== RUN   TestProjectContinuityFindingsRedactsSecrets
+--- PASS: TestProjectContinuityFindingsRedactsSecrets (0.00s)
+=== RUN   TestFrontierListHygieneAndOpportunityInspector
+--- PASS: TestFrontierListHygieneAndOpportunityInspector (0.01s)
+=== RUN   TestListFrontierRejectsUnknownFilters
+--- PASS: TestListFrontierRejectsUnknownFilters (0.00s)
+=== RUN   TestProjectorOverviewAndEventPagination
+--- PASS: TestProjectorOverviewAndEventPagination (0.00s)
+=== RUN   TestProjectorFilteredEventPaginationFindsLaterSparseMatch
+--- PASS: TestProjectorFilteredEventPaginationFindsLaterSparseMatch (0.00s)
+=== RUN   TestProjectorFilteredEventPaginationDoesNotSkipMatchBeyondProbeWindow
+--- PASS: TestProjectorFilteredEventPaginationDoesNotSkipMatchBeyondProbeWindow (0.00s)
+=== RUN   TestOperationInspectorProjectsModelRecoverySummary
+--- PASS: TestOperationInspectorProjectsModelRecoverySummary (0.00s)
+=== RUN   TestOperationInspectorOmitsModelRecoveryWithoutSignal
+--- PASS: TestOperationInspectorOmitsModelRecoveryWithoutSignal (0.00s)
+=== RUN   TestOperationInspectorReportsCorrelatedEventProjectionTruncation
+--- PASS: TestOperationInspectorReportsCorrelatedEventProjectionTruncation (0.00s)
+=== RUN   TestOperationInspectorReportsGlobalScanTruncation
+--- PASS: TestOperationInspectorReportsGlobalScanTruncation (0.01s)
+=== RUN   TestOperationInspectorCorrelatesCommitChain
+--- PASS: TestOperationInspectorCorrelatesCommitChain (0.00s)
+=== RUN   TestCommitInspectorReportsCorrelatedEventProjectionTruncation
+--- PASS: TestCommitInspectorReportsCorrelatedEventProjectionTruncation (0.00s)
+=== RUN   TestCommandInspectorAndHTTPReadOnlySurface
+--- PASS: TestCommandInspectorAndHTTPReadOnlySurface (0.01s)
+=== RUN   TestCommandInspectorFindsAuditEventsBeyondFirstGlobalPage
+--- PASS: TestCommandInspectorFindsAuditEventsBeyondFirstGlobalPage (0.00s)
+=== RUN   TestCommandInspectorReportsMatchedEventProjectionTruncation
+--- PASS: TestCommandInspectorReportsMatchedEventProjectionTruncation (0.00s)
+=== RUN   TestCommandInspectorReportsGlobalScanTruncation
+--- PASS: TestCommandInspectorReportsGlobalScanTruncation (0.02s)
+=== RUN   TestCommandInspectorDoesNotBorrowSpecializedEventWithSharedResultRef
+--- PASS: TestCommandInspectorDoesNotBorrowSpecializedEventWithSharedResultRef (0.00s)
+=== RUN   TestOperationInspectorProjectsModelAdaptationSummary
+--- PASS: TestOperationInspectorProjectsModelAdaptationSummary (0.00s)
+=== RUN   TestOperationInspectorProjectsModelRoutingSummary
+--- PASS: TestOperationInspectorProjectsModelRoutingSummary (0.00s)
+=== RUN   TestOperationInspectorOmitsModelRoutingWithoutSignal
+--- PASS: TestOperationInspectorOmitsModelRoutingWithoutSignal (0.00s)
+=== RUN   TestKnowledgeCatalogBrowseAndInspectors
+--- PASS: TestKnowledgeCatalogBrowseAndInspectors (0.00s)
+=== RUN   TestKnowledgeHTTPEndpoints
+--- PASS: TestKnowledgeHTTPEndpoints (0.01s)
+=== RUN   TestKnowledgeAdvancedFilters
+--- PASS: TestKnowledgeAdvancedFilters (0.00s)
+=== RUN   TestListModelBindingPosturesCorrelatesOnlyPersistedEvidence
+=== PAUSE TestListModelBindingPosturesCorrelatesOnlyPersistedEvidence
+=== RUN   TestModelBindingsHTTPEndpoint
+=== PAUSE TestModelBindingsHTTPEndpoint
+=== RUN   TestProviderProfileInspectWithoutProvider
+--- PASS: TestProviderProfileInspectWithoutProvider (0.00s)
+=== RUN   TestProviderProfileDeclaredAndProbe
+--- PASS: TestProviderProfileDeclaredAndProbe (0.00s)
+=== RUN   TestProviderProfileAgainstOpenAIAdapter
+--- PASS: TestProviderProfileAgainstOpenAIAdapter (0.00s)
+=== RUN   TestProviderModelsAgainstOpenAIAdapterIsInformationalOnly
+--- PASS: TestProviderModelsAgainstOpenAIAdapterIsInformationalOnly (0.00s)
+=== RUN   TestRedactSensitiveTextMasksSecrets
+--- PASS: TestRedactSensitiveTextMasksSecrets (0.00s)
+=== RUN   TestRedactRawModelOutputTruncates
+--- PASS: TestRedactRawModelOutputTruncates (0.00s)
+=== RUN   TestOperationInspectorLoadsRawOutputsAndHTTPRedacts
+--- PASS: TestOperationInspectorLoadsRawOutputsAndHTTPRedacts (0.00s)
+=== RUN   TestListResourceUsagesEmptyAndPopulated
+=== PAUSE TestListResourceUsagesEmptyAndPopulated
+=== RUN   TestResourcesHTTPEndpoints
+=== PAUSE TestResourcesHTTPEndpoints
+=== RUN   TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds
+--- PASS: TestEventStreamSSEEmitsOneTerminalErrorFrameAndEnds (0.00s)
+=== RUN   TestEventStreamRejectsResumeCursorAheadOfDurableTail
+=== RUN   TestEventStreamRejectsResumeCursorAheadOfDurableTail/100
+=== RUN   TestEventStreamRejectsResumeCursorAheadOfDurableTail/18446744073709551615
+--- PASS: TestEventStreamRejectsResumeCursorAheadOfDurableTail (0.00s)
+    --- PASS: TestEventStreamRejectsResumeCursorAheadOfDurableTail/100 (0.00s)
+    --- PASS: TestEventStreamRejectsResumeCursorAheadOfDurableTail/18446744073709551615 (0.00s)
+=== RUN   TestEventStreamSSEEmitsReadyAndExistingEvents
+--- PASS: TestEventStreamSSEEmitsReadyAndExistingEvents (0.00s)
+=== RUN   TestEventStreamResumesFromAfterSequence
+--- PASS: TestEventStreamResumesFromAfterSequence (0.00s)
+=== RUN   TestEventStreamReadyPreservesAcceptedResumeCursor
+=== RUN   TestEventStreamReadyPreservesAcceptedResumeCursor/query_cursor
+=== RUN   TestEventStreamReadyPreservesAcceptedResumeCursor/Last-Event-ID_wins
+--- PASS: TestEventStreamReadyPreservesAcceptedResumeCursor (0.00s)
+    --- PASS: TestEventStreamReadyPreservesAcceptedResumeCursor/query_cursor (0.00s)
+    --- PASS: TestEventStreamReadyPreservesAcceptedResumeCursor/Last-Event-ID_wins (0.00s)
+=== RUN   TestFilteredEventStreamAdvancesAcrossBoundedSparseWindows
+--- PASS: TestFilteredEventStreamAdvancesAcrossBoundedSparseWindows (0.01s)
+=== RUN   TestStoreRetentionProjectionAndHTTP
+=== PAUSE TestStoreRetentionProjectionAndHTTP
+=== RUN   TestBuildContinuityStrategyCatalogStableAndCloneSafe
+--- PASS: TestBuildContinuityStrategyCatalogStableAndCloneSafe (0.00s)
+=== RUN   TestProjectorOverviewEmbedsContinuityCatalog
+--- PASS: TestProjectorOverviewEmbedsContinuityCatalog (0.00s)
+=== RUN   TestContinuityCatalogHTTPAndVersion
+--- PASS: TestContinuityCatalogHTTPAndVersion (0.00s)
+=== RUN   TestDiagnosisCatalogVersionExtractionEdgeCases
+=== RUN   TestDiagnosisCatalogVersionExtractionEdgeCases/plain
+=== RUN   TestDiagnosisCatalogVersionExtractionEdgeCases/trailing_sep
+=== RUN   TestDiagnosisCatalogVersionExtractionEdgeCases/absent
+--- PASS: TestDiagnosisCatalogVersionExtractionEdgeCases (0.00s)
+    --- PASS: TestDiagnosisCatalogVersionExtractionEdgeCases/plain (0.00s)
+    --- PASS: TestDiagnosisCatalogVersionExtractionEdgeCases/trailing_sep (0.00s)
+    --- PASS: TestDiagnosisCatalogVersionExtractionEdgeCases/absent (0.00s)
+=== RUN   TestTelemetryAndAlertsHTTP
+--- PASS: TestTelemetryAndAlertsHTTP (0.00s)
+=== CONT  TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals
+=== RUN   TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/minimum_poll
+=== RUN   TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/default_poll
+=== RUN   TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/uneven_poll_rounds_up
+=== RUN   TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/maximum_poll
+--- PASS: TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals (0.00s)
+    --- PASS: TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/minimum_poll (0.00s)
+    --- PASS: TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/default_poll (0.00s)
+    --- PASS: TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/uneven_poll_rounds_up (0.00s)
+    --- PASS: TestSSEKeepAliveCadenceIsDurationBoundedAcrossPollIntervals/maximum_poll (0.00s)
+=== CONT  TestStoreRetentionProjectionAndHTTP
+=== CONT  TestResourcesHTTPEndpoints
+=== CONT  TestListResourceUsagesEmptyAndPopulated
+--- PASS: TestListResourceUsagesEmptyAndPopulated (0.00s)
+=== CONT  TestModelBindingsHTTPEndpoint
+=== CONT  TestListModelBindingPosturesCorrelatesOnlyPersistedEvidence
+--- PASS: TestListModelBindingPosturesCorrelatesOnlyPersistedEvidence (0.00s)
+=== CONT  TestModelContextPressureHTTPEndpoints
+=== CONT  TestListModelContextPressuresEmptyAndPopulated
+--- PASS: TestListModelContextPressuresEmptyAndPopulated (0.00s)
+=== CONT  TestSSEKeepAlivePacerCountsOnlyElapsedPollsAndResetsOnFrames
+--- PASS: TestSSEKeepAlivePacerCountsOnlyElapsedPollsAndResetsOnFrames (0.00s)
+--- PASS: TestResourcesHTTPEndpoints (0.00s)
+--- PASS: TestStoreRetentionProjectionAndHTTP (0.00s)
+--- PASS: TestModelContextPressureHTTPEndpoints (0.00s)
+--- PASS: TestModelBindingsHTTPEndpoint (0.01s)
+PASS
+ok  	motor-autonomo/internal/inspect	(cached)
+=== RUN   TestAdmitterMaterialisesOpportunityIntoAgenda
+--- PASS: TestAdmitterMaterialisesOpportunityIntoAgenda (0.00s)
+=== RUN   TestAdmitFromFrontierRespectsMaxReadyAndTarget
+--- PASS: TestAdmitFromFrontierRespectsMaxReadyAndTarget (0.00s)
+=== RUN   TestDecomposerEnforcesFanoutDepthAndNovelty
+--- PASS: TestDecomposerEnforcesFanoutDepthAndNovelty (0.00s)
+=== RUN   TestPreventiveReplenishAndLocalFamilyStrategy
+--- PASS: TestPreventiveReplenishAndLocalFamilyStrategy (0.00s)
+=== RUN   TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio
+--- PASS: TestRegisterDefaultContinuityFamiliesIncludesResidualPortfolio (0.00s)
+=== RUN   TestSchedulerPreventiveAdmissionBeforeStrategies
+--- PASS: TestSchedulerPreventiveAdmissionBeforeStrategies (0.00s)
+=== RUN   TestReserveModelCompleteAllowsAndPersistsUsage
+=== PAUSE TestReserveModelCompleteAllowsAndPersistsUsage
+=== RUN   TestReserveModelCompleteThrottlesWhenConcurrencySaturated
+=== PAUSE TestReserveModelCompleteThrottlesWhenConcurrencySaturated
+=== RUN   TestReserveModelCompleteDeniesWithoutPermission
+=== PAUSE TestReserveModelCompleteDeniesWithoutPermission
+=== RUN   TestModelExecutorWithAuthorizerCompletesAndReleases
+=== PAUSE TestModelExecutorWithAuthorizerCompletesAndReleases
+=== RUN   TestModelExecutorAuthorizerThrottlesWithoutProviderCall
+=== PAUSE TestModelExecutorAuthorizerThrottlesWithoutProviderCall
+=== RUN   TestModelExecutorAuthorizerDisabledKeepsLegacyPath
+=== PAUSE TestModelExecutorAuthorizerDisabledKeepsLegacyPath
+=== RUN   TestPlanChildDraftsSplitsStructuralGapsAndCapsFanOut
+=== PAUSE TestPlanChildDraftsSplitsStructuralGapsAndCapsFanOut
+=== RUN   TestConfigApplierValidateAndApply
+--- PASS: TestConfigApplierValidateAndApply (0.00s)
+=== RUN   TestConfigApplierRejectsNoopAndStale
+--- PASS: TestConfigApplierRejectsNoopAndStale (0.00s)
+=== RUN   TestConfigApplierSemanticRollback
+--- PASS: TestConfigApplierSemanticRollback (0.00s)
+=== RUN   TestActivePoliciesFallBackToDefaults
+--- PASS: TestActivePoliciesFallBackToDefaults (0.00s)
+=== RUN   TestActivePoliciesPreferAppliedRevisions
+--- PASS: TestActivePoliciesPreferAppliedRevisions (0.00s)
+=== RUN   TestSchedulerConsumesActiveHorizonRevision
+--- PASS: TestSchedulerConsumesActiveHorizonRevision (0.00s)
+=== RUN   TestActiveSchedulerCadenceFallbackAndRevision
+--- PASS: TestActiveSchedulerCadenceFallbackAndRevision (0.00s)
+=== RUN   TestQuestionGateProcessorUsesActiveInterruptionPolicy
+--- PASS: TestQuestionGateProcessorUsesActiveInterruptionPolicy (0.00s)
+=== RUN   TestCoverageJoinAndGapCoverageFamilyEffects
+=== PAUSE TestCoverageJoinAndGapCoverageFamilyEffects
+=== RUN   TestPlanChildDraftsFromStoreUsesJoins
+=== PAUSE TestPlanChildDraftsFromStoreUsesJoins
+=== RUN   TestLocalEligible
+=== PAUSE TestLocalEligible
+=== RUN   TestLocalExecutorCompletesContinuityOperation
+=== PAUSE TestLocalExecutorCompletesContinuityOperation
+=== RUN   TestLocalAuditResidualFamilyDepth
+=== PAUSE TestLocalAuditResidualFamilyDepth
+=== RUN   TestLocalExecutorSkipsNonLocalSpec
+=== PAUSE TestLocalExecutorSkipsNonLocalSpec
+=== RUN   TestProcessCyclePathViaSchedulerDispatchAndExecute
+=== PAUSE TestProcessCyclePathViaSchedulerDispatchAndExecute
+=== RUN   TestLocalArtifactRefreshMarksStaleAgainstHead
+=== PAUSE TestLocalArtifactRefreshMarksStaleAgainstHead
+=== RUN   TestLocalSourceFreshnessAgingFindings
+=== PAUSE TestLocalSourceFreshnessAgingFindings
+=== RUN   TestLocalIntegrityAndConflictStructuralFindings
+=== PAUSE TestLocalIntegrityAndConflictStructuralFindings
+=== RUN   TestApplyLocalFamilyEffectsStructuralOrphans
+=== PAUSE TestApplyLocalFamilyEffectsStructuralOrphans
+=== RUN   TestLocalHarnessAndFrontierFamilyEffects
+=== PAUSE TestLocalHarnessAndFrontierFamilyEffects
+=== RUN   TestLocalFrontierManageAppliesHygieneTransitions
+=== PAUSE TestLocalFrontierManageAppliesHygieneTransitions
+=== RUN   TestLocalFrontierManageReopensDeferredUnderCapacity
+=== PAUSE TestLocalFrontierManageReopensDeferredUnderCapacity
+=== RUN   TestFileEligible
+=== PAUSE TestFileEligible
+=== RUN   TestFileExecutorDiscoverAndRead
+=== PAUSE TestFileExecutorDiscoverAndRead
+=== RUN   TestFileExecutorRejectsTraversal
+=== PAUSE TestFileExecutorRejectsTraversal
+=== RUN   TestFileExecutorOversizeRead
+=== PAUSE TestFileExecutorOversizeRead
+=== RUN   TestDispatchRequiresFileWhenUnwired
+=== PAUSE TestDispatchRequiresFileWhenUnwired
+=== RUN   TestFileReserveThrottlesOnZeroBudget
+=== PAUSE TestFileReserveThrottlesOnZeroBudget
+=== RUN   TestFormatAndParseLeaseDeadline
+=== PAUSE TestFormatAndParseLeaseDeadline
+=== RUN   TestLeaseReaperMovesExpiredRunningToReady
+=== PAUSE TestLeaseReaperMovesExpiredRunningToReady
+=== RUN   TestStrategyCooldownBookAntiFixation
+--- PASS: TestStrategyCooldownBookAntiFixation (0.00s)
+=== RUN   TestSchedulerSkipsCooledStrategiesAndRotates
+--- PASS: TestSchedulerSkipsCooledStrategiesAndRotates (0.00s)
+=== RUN   TestLongevityMultiCycleDiversityBudgetAndNoEmptyActivity
+    longevity_test.go:305: longevity cycles=15 completed_ops=14 families=8 strategy_hits=map[artifact_refresh:1 conflict_evidence_review:1 frontier_admission:6 frontier_management:1 gap_scan:1 harness_evaluation:1 integrity_audit:1 mission_coverage_scan:1 source_freshness_scan:1] blocked_drains=1
+--- PASS: TestLongevityMultiCycleDiversityBudgetAndNoEmptyActivity (0.02s)
+=== RUN   TestCompositeReserveModelComplete
+--- PASS: TestCompositeReserveModelComplete (0.00s)
+=== RUN   TestGroqBindingQuotaIsolation
+--- PASS: TestGroqBindingQuotaIsolation (0.00s)
+=== RUN   TestNIMProviderRetryAfterBlocksAllBindings
+--- PASS: TestNIMProviderRetryAfterBlocksAllBindings (0.00s)
+=== RUN   TestModelExecutorCrashReplaySQLite
+--- PASS: TestModelExecutorCrashReplaySQLite (0.36s)
+=== RUN   TestModelExecutorReopenWhileRunningLeavesLeaseRecoverable
+--- PASS: TestModelExecutorReopenWhileRunningLeavesLeaseRecoverable (0.20s)
+=== RUN   TestModelExecutorMultiTurn
+--- PASS: TestModelExecutorMultiTurn (0.00s)
+=== RUN   TestModelExecutorInfiniteLoopToolPrevention
+--- PASS: TestModelExecutorInfiniteLoopToolPrevention (0.09s)
+=== RUN   TestModelEligible
+=== PAUSE TestModelEligible
+=== RUN   TestModelExecutorCompletesWithFakeProvider
+=== PAUSE TestModelExecutorCompletesWithFakeProvider
+=== RUN   TestModelExecutorAcceptsFencedProposal
+=== PAUSE TestModelExecutorAcceptsFencedProposal
+=== RUN   TestModelExecutorInvalidJSONExhaustsWhenBudgetOne
+=== PAUSE TestModelExecutorInvalidJSONExhaustsWhenBudgetOne
+=== RUN   TestModelExecutorShortCorrectionThenSucceeds
+=== PAUSE TestModelExecutorShortCorrectionThenSucceeds
+=== RUN   TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop
+=== PAUSE TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop
+=== RUN   TestModelExecutorFallbackProviderSucceeds
+=== PAUSE TestModelExecutorFallbackProviderSucceeds
+=== RUN   TestDispatchExecutorRoutesLocalVsModel
+=== PAUSE TestDispatchExecutorRoutesLocalVsModel
+=== RUN   TestModelExecutorUsesJSONModeWhenProfileConfirms
+=== PAUSE TestModelExecutorUsesJSONModeWhenProfileConfirms
+=== RUN   TestModelExecutorPersistsNIMContextPressureAndRecoversGradually
+--- PASS: TestModelExecutorPersistsNIMContextPressureAndRecoversGradually (0.00s)
+=== RUN   TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport
+=== PAUSE TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport
+=== RUN   TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure
+=== PAUSE TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure
+=== RUN   TestSafeRateLimitPayloadProjectsOnlyTypedObservedFields
+--- PASS: TestSafeRateLimitPayloadProjectsOnlyTypedObservedFields (0.00s)
+=== RUN   TestModelFailureScopeByProviderKindAndSelectivePermitReporting
+=== RUN   TestModelFailureScopeByProviderKindAndSelectivePermitReporting/groq_binding-wide
+=== RUN   TestModelFailureScopeByProviderKindAndSelectivePermitReporting/NIM_provider-wide
+--- PASS: TestModelFailureScopeByProviderKindAndSelectivePermitReporting (0.00s)
+    --- PASS: TestModelFailureScopeByProviderKindAndSelectivePermitReporting/groq_binding-wide (0.00s)
+    --- PASS: TestModelFailureScopeByProviderKindAndSelectivePermitReporting/NIM_provider-wide (0.00s)
+=== RUN   TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit
+=== PAUSE TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit
+=== RUN   TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall
+=== PAUSE TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall
+=== RUN   TestSelectModelBindingReadsUsageAndRoutes
+--- PASS: TestSelectModelBindingReadsUsageAndRoutes (0.00s)
+=== RUN   TestSelectModelBindingSkipsProviderCircuitOpen
+--- PASS: TestSelectModelBindingSkipsProviderCircuitOpen (0.00s)
+=== RUN   TestQuestionWaitBlocksOnlyDeclaredOperation
+--- PASS: TestQuestionWaitBlocksOnlyDeclaredOperation (0.00s)
+=== RUN   TestQuestionResolutionResumesOnlyMatchingWait
+--- PASS: TestQuestionResolutionResumesOnlyMatchingWait (0.00s)
+=== RUN   TestQuestionWaitFailsClosedForMissingOrForeignTarget
+--- PASS: TestQuestionWaitFailsClosedForMissingOrForeignTarget (0.00s)
+=== RUN   TestQuestionGateDecisionAndOutboxSurviveSQLiteReopen
+--- PASS: TestQuestionGateDecisionAndOutboxSurviveSQLiteReopen (0.19s)
+=== RUN   TestQuestionGateProcessorAdmitsQuestionDeliveryAndAuditAtomically
+--- PASS: TestQuestionGateProcessorAdmitsQuestionDeliveryAndAuditAtomically (0.00s)
+=== RUN   TestQuestionGateProcessorRollsBackDecisionQuestionAndOutboxTogether
+--- PASS: TestQuestionGateProcessorRollsBackDecisionQuestionAndOutboxTogether (0.00s)
+=== RUN   TestQuestionGateProcessorDigestDefersOutboxAvailability
+--- PASS: TestQuestionGateProcessorDigestDefersOutboxAvailability (0.00s)
+=== RUN   TestQuestionGateProcessorPersistsSuppressionWithoutCanonicalQuestion
+--- PASS: TestQuestionGateProcessorPersistsSuppressionWithoutCanonicalQuestion (0.00s)
+=== RUN   TestEvaluateQuestionAdmitsUsefulProposal
+--- PASS: TestEvaluateQuestionAdmitsUsefulProposal (0.00s)
+=== RUN   TestEvaluateQuestionSuppressesDuplicateAndCheapDefaults
+--- PASS: TestEvaluateQuestionSuppressesDuplicateAndCheapDefaults (0.00s)
+=== RUN   TestEvaluateQuestionDefersQuietHoursRateAndCooldown
+--- PASS: TestEvaluateQuestionDefersQuietHoursRateAndCooldown (0.00s)
+=== RUN   TestEvaluateQuestionUrgentBypassesQuietAndAlternativeSuppression
+--- PASS: TestEvaluateQuestionUrgentBypassesQuietAndAlternativeSuppression (0.00s)
+=== RUN   TestEvaluateQuestionNormalizesDuplicateSignatures
+--- PASS: TestEvaluateQuestionNormalizesDuplicateSignatures (0.00s)
+=== RUN   TestEvaluateQuestionTopicCooldownAndBudget
+--- PASS: TestEvaluateQuestionTopicCooldownAndBudget (0.00s)
+=== RUN   TestEvaluateQuestionDigestHoldAndCapacity
+--- PASS: TestEvaluateQuestionDigestHoldAndCapacity (0.00s)
+=== RUN   TestQuestionReminderProcessorSchedulesAndStops
+--- PASS: TestQuestionReminderProcessorSchedulesAndStops (0.00s)
+=== RUN   TestQuestionReminderProcessorDisabledCreatesNothing
+--- PASS: TestQuestionReminderProcessorDisabledCreatesNothing (0.00s)
+=== RUN   TestRecurringSeederCadenceAntiRepetitionAndDelta
+--- PASS: TestRecurringSeederCadenceAntiRepetitionAndDelta (0.00s)
+=== RUN   TestEnsureRecurringStrategyIdempotentAndRegisteredInDefaults
+--- PASS: TestEnsureRecurringStrategyIdempotentAndRegisteredInDefaults (0.00s)
+=== RUN   TestRecurringSeederNoWorkWithoutObligations
+--- PASS: TestRecurringSeederNoWorkWithoutObligations (0.00s)
+=== RUN   TestSchedulerReportsContinuityBlockedAfterTryingEveryStrategy
+--- PASS: TestSchedulerReportsContinuityBlockedAfterTryingEveryStrategy (0.00s)
+=== RUN   TestSchedulerDispatchesWorkAdmittedByAnotherContinuityFamily
+--- PASS: TestSchedulerDispatchesWorkAdmittedByAnotherContinuityFamily (0.00s)
+=== RUN   TestSchedulerResumesDueOperationOnceAndSelectsDeterministically
+--- PASS: TestSchedulerResumesDueOperationOnceAndSelectsDeterministically (0.00s)
+=== RUN   TestSchedulerRegistryExpandPersistsDiagnosisOnBlock
+--- PASS: TestSchedulerRegistryExpandPersistsDiagnosisOnBlock (0.00s)
+=== RUN   TestWorkOpportunityPersistenceAndChildFanout
+--- PASS: TestWorkOpportunityPersistenceAndChildFanout (0.00s)
+=== RUN   TestSchedulerPauseBlocksNewDispatchButStillResumesLocalWaits
+--- PASS: TestSchedulerPauseBlocksNewDispatchButStillResumesLocalWaits (0.00s)
+=== RUN   TestStrategyRegistryOrdersByPriorityAndRejectsDuplicates
+--- PASS: TestStrategyRegistryOrdersByPriorityAndRejectsDuplicates (0.00s)
+=== RUN   TestPlanContinuityActionExpandThenDiagnose
+--- PASS: TestPlanContinuityActionExpandThenDiagnose (0.00s)
+=== RUN   TestStrategyRegistrySnapshotAndRefs
+--- PASS: TestStrategyRegistrySnapshotAndRefs (0.00s)
+=== RUN   TestCapChildDraftsRespectsMaxChildren
+--- PASS: TestCapChildDraftsRespectsMaxChildren (0.00s)
+=== RUN   TestSubagentCompletionProcessor
+--- PASS: TestSubagentCompletionProcessor (0.00s)
+=== RUN   TestDerivedSubagentRPCRequestIDIsBoundedStableAndFramed
+--- PASS: TestDerivedSubagentRPCRequestIDIsBoundedStableAndFramed (0.00s)
+=== RUN   TestSubagentStatusIngressWorkerApplyRestartAndConflict
+--- PASS: TestSubagentStatusIngressWorkerApplyRestartAndConflict (0.00s)
+=== RUN   TestSubagentStatusIngressWorkerQuarantinesAttemptMismatchAndContinues
+--- PASS: TestSubagentStatusIngressWorkerQuarantinesAttemptMismatchAndContinues (0.00s)
+=== RUN   TestSubagentStatusIngressWorkerQuarantinesTerminalConflictAndContinues
+--- PASS: TestSubagentStatusIngressWorkerQuarantinesTerminalConflictAndContinues (0.00s)
+=== RUN   TestSubagentStatusIngressWorkerLeavesUnknownFailurePending
+--- PASS: TestSubagentStatusIngressWorkerLeavesUnknownFailurePending (0.00s)
+=== RUN   TestDecodeUserAnswerExternalEventBindsEnvelope
+--- PASS: TestDecodeUserAnswerExternalEventBindsEnvelope (0.00s)
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/actor
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/channel
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/correlation
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/dedup
+=== RUN   TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/message
+--- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch (0.00s)
+    --- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/actor (0.00s)
+    --- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/channel (0.00s)
+    --- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/correlation (0.00s)
+    --- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/dedup (0.00s)
+    --- PASS: TestDecodeUserAnswerExternalEventFailsClosedOnEnvelopeMismatch/message (0.00s)
+=== RUN   TestDecodeUserAnswerExternalEventRejectsUnknownFieldsAndWrongKind
+--- PASS: TestDecodeUserAnswerExternalEventRejectsUnknownFieldsAndWrongKind (0.00s)
+=== RUN   TestWebEligible
+=== PAUSE TestWebEligible
+=== RUN   TestReserveWebSearchAllowsAndPersistsUsage
+=== PAUSE TestReserveWebSearchAllowsAndPersistsUsage
+=== RUN   TestReserveWebSearchThrottlesWhenConcurrencySaturated
+=== PAUSE TestReserveWebSearchThrottlesWhenConcurrencySaturated
+=== RUN   TestWebExecutorSearchSuccessWithReplay
+=== PAUSE TestWebExecutorSearchSuccessWithReplay
+=== RUN   TestWebExecutorAuthorizerThrottlesWithoutSearcherCall
+=== PAUSE TestWebExecutorAuthorizerThrottlesWithoutSearcherCall
+=== RUN   TestWebExecutorFetchWithIngest
+=== PAUSE TestWebExecutorFetchWithIngest
+=== RUN   TestDispatchExecutorRoutesWeb
+=== PAUSE TestDispatchExecutorRoutesWeb
+=== RUN   TestDispatchExecutorRequiresWebWhenEligible
+=== PAUSE TestDispatchExecutorRequiresWebWhenEligible
+=== RUN   TestCommandProcessorCrashReplaySQLite
+--- PASS: TestCommandProcessorCrashReplaySQLite (0.25s)
+=== RUN   TestCommandProcessorPauseResumeShutdownAndReplay
+--- PASS: TestCommandProcessorPauseResumeShutdownAndReplay (0.00s)
+=== RUN   TestCommandProcessorRejectsStaleMissionRevision
+--- PASS: TestCommandProcessorRejectsStaleMissionRevision (0.00s)
+=== RUN   TestExternalEventProcessorCrashReplaySQLite
+--- PASS: TestExternalEventProcessorCrashReplaySQLite (0.24s)
+=== RUN   TestExternalEventProcessorAnswersAndResumesBlockedOperation
+--- PASS: TestExternalEventProcessorAnswersAndResumesBlockedOperation (0.00s)
+=== RUN   TestExternalEventProcessorWakesMatchingWaitAndIgnoresUnmatched
+--- PASS: TestExternalEventProcessorWakesMatchingWaitAndIgnoresUnmatched (0.00s)
+=== RUN   TestExternalEventProcessorRejectsInvalidAnswerPayload
+--- PASS: TestExternalEventProcessorRejectsInvalidAnswerPayload (0.00s)
+=== RUN   TestExternalEventProcessorWakesSubagentCompletion
+--- PASS: TestExternalEventProcessorWakesSubagentCompletion (0.00s)
+=== RUN   TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent
+--- PASS: TestPersistentSessionManagerPersistsSpawnAndKeepsItIdempotent (0.00s)
+=== RUN   TestPersistentSessionManagerRemoteSpawnIsSingleGeneration
+--- PASS: TestPersistentSessionManagerRemoteSpawnIsSingleGeneration (0.00s)
+=== RUN   TestPersistentSessionManagerRollbackOnPersistenceFailure
+--- PASS: TestPersistentSessionManagerRollbackOnPersistenceFailure (0.00s)
+=== RUN   TestPersistentSessionManagerDoesNotRollbackWhenDurableVerificationFails
+--- PASS: TestPersistentSessionManagerDoesNotRollbackWhenDurableVerificationFails (0.00s)
+=== RUN   TestPersistentSessionManagerPersistsTransportPeerBinding
+--- PASS: TestPersistentSessionManagerPersistsTransportPeerBinding (0.00s)
+=== RUN   TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution
+=== RUN   TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/terminal
+=== RUN   TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/replaced_attempt
+=== RUN   TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/deadline_reached
+--- PASS: TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution (0.00s)
+    --- PASS: TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/terminal (0.00s)
+    --- PASS: TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/replaced_attempt (0.00s)
+    --- PASS: TestRemoteSubagentWorkerFencesInactiveReceiverGenerationBeforeExecution/deadline_reached (0.00s)
+=== RUN   TestRemoteSubagentWorkerExecutesAndCommitsTerminalReceipt
+--- PASS: TestRemoteSubagentWorkerExecutesAndCommitsTerminalReceipt (0.00s)
+=== RUN   TestRemoteSubagentWorkerFencesGenerationLostAfterClaimBeforeExecution
+--- PASS: TestRemoteSubagentWorkerFencesGenerationLostAfterClaimBeforeExecution (0.00s)
+=== RUN   TestRemoteSubagentWorkerRejectsResultWhenGenerationEndsDuringExecution
+--- PASS: TestRemoteSubagentWorkerRejectsResultWhenGenerationEndsDuringExecution (0.00s)
+=== RUN   TestRemoteSubagentWorkersDoNotDoubleClaim
+--- PASS: TestRemoteSubagentWorkersDoNotDoubleClaim (0.00s)
+=== RUN   TestRemoteSubagentWorkerParksExpiredLeaseWithoutReexecution
+--- PASS: TestRemoteSubagentWorkerParksExpiredLeaseWithoutReexecution (0.00s)
+=== RUN   TestRemoteSubagentWorkerDoesNotPublishExpiredFailureAfterCommitConflict
+--- PASS: TestRemoteSubagentWorkerDoesNotPublishExpiredFailureAfterCommitConflict (0.00s)
+=== RUN   TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure
+=== RUN   TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure/complete
+=== RUN   TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure/failed
+--- PASS: TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure (0.00s)
+    --- PASS: TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure/complete (0.00s)
+    --- PASS: TestSupervisorRecoversDurableReceiverTerminalAfterPublicationFailure/failed (0.00s)
+=== RUN   TestRemoteSubagentWorkerSurfacesUnknownExpiredFailurePublicationError
+--- PASS: TestRemoteSubagentWorkerSurfacesUnknownExpiredFailurePublicationError (0.00s)
+=== RUN   TestLocalSessionManager_ConstructorRequiresClockAndValidPolicy
+--- PASS: TestLocalSessionManager_ConstructorRequiresClockAndValidPolicy (0.00s)
+=== RUN   TestLocalSessionManager_SpawnValidatesSpec
+--- PASS: TestLocalSessionManager_SpawnValidatesSpec (0.00s)
+=== RUN   TestLocalSessionManager_SpawnIdempotencyAndIsolation
+--- PASS: TestLocalSessionManager_SpawnIdempotencyAndIsolation (0.00s)
+=== RUN   TestLocalSessionManager_EnforcesConcurrencyLimit
+--- PASS: TestLocalSessionManager_EnforcesConcurrencyLimit (0.00s)
+=== RUN   TestLocalSessionManager_RestoreAndPublishTerminalStatus
+--- PASS: TestLocalSessionManager_RestoreAndPublishTerminalStatus (0.00s)
+=== RUN   TestLocalSessionManagerSpawnDoesNotOverwriteRestoredGeneratedID
+--- PASS: TestLocalSessionManagerSpawnDoesNotOverwriteRestoredGeneratedID (0.00s)
+=== RUN   TestLocalSessionManager_RollbackSpawnCompensatesPendingOnly
+--- PASS: TestLocalSessionManager_RollbackSpawnCompensatesPendingOnly (0.00s)
+=== RUN   TestLocalSessionManager_RetryFailedSessionIsReplaySafe
+--- PASS: TestLocalSessionManager_RetryFailedSessionIsReplaySafe (0.00s)
+=== RUN   TestSubagentContinuityFamilyName
+--- PASS: TestSubagentContinuityFamilyName (0.00s)
+=== RUN   TestSubagentContinuityFamilyReplenishSkipsIfUninitialized
+--- PASS: TestSubagentContinuityFamilyReplenishSkipsIfUninitialized (0.00s)
+=== RUN   TestSubagentContinuityFamilyReplenishDispatchesPendingTasks
+--- PASS: TestSubagentContinuityFamilyReplenishDispatchesPendingTasks (0.00s)
+=== RUN   TestSubagentContinuityFamilyReplenishStopsOnConcurrencyLimit
+--- PASS: TestSubagentContinuityFamilyReplenishStopsOnConcurrencyLimit (0.00s)
+=== RUN   TestSubagentDispatcherDeliversCorrelatedAcknowledgement
+--- PASS: TestSubagentDispatcherDeliversCorrelatedAcknowledgement (0.00s)
+=== RUN   TestSubagentDispatcherLeavesTimeoutEffectUnknown
+--- PASS: TestSubagentDispatcherLeavesTimeoutEffectUnknown (0.00s)
+=== RUN   TestSubagentDispatcherRetriesDefiniteFailure
+--- PASS: TestSubagentDispatcherRetriesDefiniteFailure (0.00s)
+=== RUN   TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive
+=== RUN   TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/terminal_record
+=== RUN   TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/expired_deadline
+=== RUN   TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/superseded_generation
+--- PASS: TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive (0.00s)
+    --- PASS: TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/terminal_record (0.00s)
+    --- PASS: TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/expired_deadline (0.00s)
+    --- PASS: TestSubagentDispatcherCancelsDispatchWhenCanonicalGenerationIsInactive/superseded_generation (0.00s)
+=== RUN   TestSubagentEffectReconcilerCompletesOnlyPositiveSpawnEvidence
+--- PASS: TestSubagentEffectReconcilerCompletesOnlyPositiveSpawnEvidence (0.00s)
+=== RUN   TestSubagentEffectReconcilerBoundsRequestIDForMaximumDeliveryID
+--- PASS: TestSubagentEffectReconcilerBoundsRequestIDForMaximumDeliveryID (0.00s)
+=== RUN   TestSubagentEffectReconcilerLeavesAbsentSpawnParked
+--- PASS: TestSubagentEffectReconcilerLeavesAbsentSpawnParked (0.00s)
+=== RUN   TestSubagentEffectReconcilerBackoffPreventsSameKindStarvation
+--- PASS: TestSubagentEffectReconcilerBackoffPreventsSameKindStarvation (0.00s)
+=== RUN   TestSubagentEffectReconcilerWaitsForDurableBackoff
+--- PASS: TestSubagentEffectReconcilerWaitsForDurableBackoff (0.00s)
+=== RUN   TestSubagentEffectReconcilerBackoffStartsAfterSlowLookup
+--- PASS: TestSubagentEffectReconcilerBackoffStartsAfterSlowLookup (0.00s)
+=== RUN   TestSubagentEffectReconcilerDoesNotDeferConcurrentStatusUpdate
+--- PASS: TestSubagentEffectReconcilerDoesNotDeferConcurrentStatusUpdate (0.00s)
+=== RUN   TestSubagentEffectReconcilerUsesOldestEvidenceAcrossKinds
+--- PASS: TestSubagentEffectReconcilerUsesOldestEvidenceAcrossKinds (0.00s)
+=== RUN   TestSubagentStatusDispatcherBoundsRequestIDForMaximumDeliveryID
+--- PASS: TestSubagentStatusDispatcherBoundsRequestIDForMaximumDeliveryID (0.00s)
+=== RUN   TestSubagentStatusDispatcherUsesSourceGenerationAndMarksACK
+--- PASS: TestSubagentStatusDispatcherUsesSourceGenerationAndMarksACK (0.00s)
+=== RUN   TestSubagentStatusDispatcherRetainsTerminalEvidenceAfterCallFailure
+--- PASS: TestSubagentStatusDispatcherRetainsTerminalEvidenceAfterCallFailure (0.00s)
+=== RUN   TestSubagentStatusDispatcherCompletesOriginGenerationThroughSupervisor
+--- PASS: TestSubagentStatusDispatcherCompletesOriginGenerationThroughSupervisor (0.00s)
+=== RUN   TestSupervisor_Reconcile
+--- PASS: TestSupervisor_Reconcile (0.00s)
+=== RUN   TestSupervisor_RetriesFailedSession
+--- PASS: TestSupervisor_RetriesFailedSession (0.00s)
+=== RUN   TestSupervisorRecoversRetryRearmedBeforeDurableCommit
+--- PASS: TestSupervisorRecoversRetryRearmedBeforeDurableCommit (0.00s)
+=== RUN   TestSupervisorRecoversRetryCompletedBeforeDurableCommit
+--- PASS: TestSupervisorRecoversRetryCompletedBeforeDurableCommit (0.00s)
+=== RUN   TestSupervisorExpiresRetryAdvancedBeforeDurableCommit
+--- PASS: TestSupervisorExpiresRetryAdvancedBeforeDurableCommit (0.00s)
+=== RUN   TestSupervisor_ExpiresOrphanedSession
+--- PASS: TestSupervisor_ExpiresOrphanedSession (0.00s)
+=== RUN   TestSupervisorDeadlineReleasesManagerConcurrency
+--- PASS: TestSupervisorDeadlineReleasesManagerConcurrency (0.00s)
+=== RUN   TestSupervisorTerminalObservationWinsAtDeadline
+--- PASS: TestSupervisorTerminalObservationWinsAtDeadline (0.00s)
+=== RUN   TestSupervisorIgnoresTerminalReceiptFromPreviousReceiverAttempt
+--- PASS: TestSupervisorIgnoresTerminalReceiptFromPreviousReceiverAttempt (0.00s)
+=== RUN   TestSupervisorDoesNotReplaceConflictingManagerTerminalFromDurableReceipt
+--- PASS: TestSupervisorDoesNotReplaceConflictingManagerTerminalFromDurableReceipt (0.00s)
+=== RUN   TestSupervisorPersistsTerminalWakeEventExactlyOnce
+--- PASS: TestSupervisorPersistsTerminalWakeEventExactlyOnce (0.00s)
+=== CONT  TestReserveModelCompleteAllowsAndPersistsUsage
+--- PASS: TestReserveModelCompleteAllowsAndPersistsUsage (0.00s)
+=== CONT  TestDispatchExecutorRequiresWebWhenEligible
+--- PASS: TestDispatchExecutorRequiresWebWhenEligible (0.00s)
+=== CONT  TestDispatchExecutorRoutesWeb
+--- PASS: TestDispatchExecutorRoutesWeb (0.00s)
+=== CONT  TestWebExecutorFetchWithIngest
+--- PASS: TestWebExecutorFetchWithIngest (0.00s)
+=== CONT  TestWebExecutorAuthorizerThrottlesWithoutSearcherCall
+--- PASS: TestWebExecutorAuthorizerThrottlesWithoutSearcherCall (0.00s)
+=== CONT  TestWebExecutorSearchSuccessWithReplay
+--- PASS: TestWebExecutorSearchSuccessWithReplay (0.00s)
+=== CONT  TestReserveWebSearchThrottlesWhenConcurrencySaturated
+--- PASS: TestReserveWebSearchThrottlesWhenConcurrencySaturated (0.00s)
+=== CONT  TestReserveWebSearchAllowsAndPersistsUsage
+--- PASS: TestReserveWebSearchAllowsAndPersistsUsage (0.00s)
+=== CONT  TestWebEligible
+--- PASS: TestWebEligible (0.00s)
+=== CONT  TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall
+=== CONT  TestFileEligible
+--- PASS: TestFileEligible (0.00s)
+=== CONT  TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit
+=== CONT  TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure
+=== CONT  TestLocalAuditResidualFamilyDepth
+--- PASS: TestLocalAuditResidualFamilyDepth (0.00s)
+=== CONT  TestLocalIntegrityAndConflictStructuralFindings
+--- PASS: TestLocalIntegrityAndConflictStructuralFindings (0.00s)
+=== CONT  TestLocalSourceFreshnessAgingFindings
+--- PASS: TestLocalSourceFreshnessAgingFindings (0.00s)
+=== CONT  TestLocalArtifactRefreshMarksStaleAgainstHead
+--- PASS: TestLocalArtifactRefreshMarksStaleAgainstHead (0.01s)
+=== CONT  TestProcessCyclePathViaSchedulerDispatchAndExecute
+=== CONT  TestLocalFrontierManageReopensDeferredUnderCapacity
+--- PASS: TestModelExecutorCatalog503FallsBackOnceAndOpensFailedBindingCircuit (0.01s)
+=== CONT  TestLocalExecutorSkipsNonLocalSpec
+--- PASS: TestLocalExecutorSkipsNonLocalSpec (0.00s)
+=== CONT  TestPlanChildDraftsSplitsStructuralGapsAndCapsFanOut
+--- PASS: TestLocalFrontierManageReopensDeferredUnderCapacity (0.00s)
+=== CONT  TestLocalFrontierManageAppliesHygieneTransitions
+=== CONT  TestLocalHarnessAndFrontierFamilyEffects
+=== CONT  TestApplyLocalFamilyEffectsStructuralOrphans
+--- PASS: TestApplyLocalFamilyEffectsStructuralOrphans (0.00s)
+=== CONT  TestLocalEligible
+--- PASS: TestLocalEligible (0.00s)
+=== CONT  TestPlanChildDraftsFromStoreUsesJoins
+--- PASS: TestPlanChildDraftsSplitsStructuralGapsAndCapsFanOut (0.00s)
+--- PASS: TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall (0.01s)
+=== CONT  TestModelEligible
+--- PASS: TestModelEligible (0.00s)
+=== CONT  TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport
+--- PASS: TestLocalFrontierManageAppliesHygieneTransitions (0.00s)
+=== CONT  TestModelExecutorUsesJSONModeWhenProfileConfirms
+--- PASS: TestPlanChildDraftsFromStoreUsesJoins (0.00s)
+=== CONT  TestDispatchExecutorRoutesLocalVsModel
+--- PASS: TestDispatchExecutorRoutesLocalVsModel (0.00s)
+=== CONT  TestModelExecutorFallbackProviderSucceeds
+--- PASS: TestModelExecutorBaselineOmitsResponseFormatWithoutProfileSupport (0.00s)
+=== CONT  TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop
+--- PASS: TestModelExecutorUsesJSONModeWhenProfileConfirms (0.00s)
+=== CONT  TestModelExecutorShortCorrectionThenSucceeds
+=== CONT  TestLocalExecutorCompletesContinuityOperation
+--- PASS: TestLocalExecutorCompletesContinuityOperation (0.00s)
+=== CONT  TestModelExecutorInvalidJSONExhaustsWhenBudgetOne
+--- PASS: TestProcessCyclePathViaSchedulerDispatchAndExecute (0.00s)
+=== CONT  TestModelExecutorAcceptsFencedProposal
+=== CONT  TestCoverageJoinAndGapCoverageFamilyEffects
+--- PASS: TestCoverageJoinAndGapCoverageFamilyEffects (0.01s)
+=== CONT  TestModelExecutorCompletesWithFakeProvider
+--- PASS: TestModelExecutorInvalidJSONExhaustsWhenBudgetOne (0.01s)
+=== CONT  TestFileExecutorOversizeRead
+--- PASS: TestLocalHarnessAndFrontierFamilyEffects (0.01s)
+=== CONT  TestLeaseReaperMovesExpiredRunningToReady
+--- PASS: TestFileExecutorOversizeRead (0.00s)
+--- PASS: TestModelExecutorDemotesJSONModeOnEnrichmentTransportFailure (0.02s)
+--- PASS: TestModelExecutorShortCorrectionThenSucceeds (0.01s)
+=== CONT  TestFormatAndParseLeaseDeadline
+--- PASS: TestFormatAndParseLeaseDeadline (0.00s)
+=== CONT  TestFileExecutorRejectsTraversal
+--- PASS: TestModelExecutorCompletesWithFakeProvider (0.00s)
+=== CONT  TestFileExecutorDiscoverAndRead
+--- PASS: TestFileExecutorRejectsTraversal (0.00s)
+=== CONT  TestModelExecutorWithAuthorizerCompletesAndReleases
+=== CONT  TestFileReserveThrottlesOnZeroBudget
+--- PASS: TestFileReserveThrottlesOnZeroBudget (0.00s)
+=== CONT  TestModelExecutorAuthorizerDisabledKeepsLegacyPath
+--- PASS: TestFileExecutorDiscoverAndRead (0.00s)
+=== CONT  TestModelExecutorAuthorizerThrottlesWithoutProviderCall
+--- PASS: TestLeaseReaperMovesExpiredRunningToReady (0.01s)
+=== CONT  TestReserveModelCompleteDeniesWithoutPermission
+--- PASS: TestReserveModelCompleteDeniesWithoutPermission (0.00s)
+=== CONT  TestReserveModelCompleteThrottlesWhenConcurrencySaturated
+--- PASS: TestModelExecutorAuthorizerThrottlesWithoutProviderCall (0.01s)
+=== CONT  TestDispatchRequiresFileWhenUnwired
+--- PASS: TestDispatchRequiresFileWhenUnwired (0.00s)
+--- PASS: TestReserveModelCompleteThrottlesWhenConcurrencySaturated (0.00s)
+--- PASS: TestModelExecutorAuthorizerDisabledKeepsLegacyPath (0.01s)
+--- PASS: TestModelExecutorWithAuthorizerCompletesAndReleases (0.02s)
+--- PASS: TestModelExecutorAcceptsFencedProposal (0.02s)
+--- PASS: TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop (0.03s)
+--- PASS: TestModelExecutorFallbackProviderSucceeds (0.03s)
+PASS
+ok  	motor-autonomo/internal/kernel	(cached)
+=== RUN   TestSemanticMemoryAbstractionExists
+--- PASS: TestSemanticMemoryAbstractionExists (0.00s)
+=== RUN   TestDurableMemoryStore
+=== PAUSE TestDurableMemoryStore
+=== RUN   TestMapMemoryStore
+=== PAUSE TestMapMemoryStore
+=== CONT  TestDurableMemoryStore
+--- PASS: TestDurableMemoryStore (0.00s)
+=== CONT  TestMapMemoryStore
+--- PASS: TestMapMemoryStore (0.00s)
+PASS
+ok  	motor-autonomo/internal/memory	(cached)
+=== RUN   TestAcceptorInstallsRevisionCancelsAgendaAndPreservesPrevious
+--- PASS: TestAcceptorInstallsRevisionCancelsAgendaAndPreservesPrevious (0.00s)
+=== RUN   TestAcceptorRejectsNoopWithoutMutation
+--- PASS: TestAcceptorRejectsNoopWithoutMutation (0.00s)
+=== RUN   TestAcceptorWorksOnSQLiteDurableStore
+--- PASS: TestAcceptorWorksOnSQLiteDurableStore (0.27s)
+=== RUN   TestLoaderInstallsRevisionAndAuditEventAtomically
+--- PASS: TestLoaderInstallsRevisionAndAuditEventAtomically (0.00s)
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/trailing_value
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/unknown_field
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/unsupported_schema
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/missing_revision
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/inactive_status
+=== RUN   TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/duplicate_policy
+--- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/trailing_value (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/unknown_field (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/unsupported_schema (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/missing_revision (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/inactive_status (0.00s)
+    --- PASS: TestLoaderRejectsInvalidOrAmbiguousInputWithoutMutation/duplicate_policy (0.00s)
+=== RUN   TestLoaderEnforcesByteLimitAndRevisionUniqueness
+--- PASS: TestLoaderEnforcesByteLimitAndRevisionUniqueness (0.00s)
+PASS
+ok  	motor-autonomo/internal/mission	(cached)
+=== RUN   TestBuildShortCorrectionIsLocalized
+=== PAUSE TestBuildShortCorrectionIsLocalized
+=== RUN   TestBuildShortCorrectionDefaults
+=== PAUSE TestBuildShortCorrectionDefaults
+=== RUN   TestBuildSimplerFormatCorrection
+=== PAUSE TestBuildSimplerFormatCorrection
+=== RUN   TestAppendDelimitedChangeSetInstruction
+--- PASS: TestAppendDelimitedChangeSetInstruction (0.00s)
+=== RUN   TestDelimitedChangeSetJSONStrictConversion
+--- PASS: TestDelimitedChangeSetJSONStrictConversion (0.00s)
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/plain
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/fence_json
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/fence_bare
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/prose_wrap
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/bom+fence
+=== RUN   TestNormalizeJSONCandidateStripsFenceAndProse/trailing_fence_prose
+--- PASS: TestNormalizeJSONCandidateStripsFenceAndProse (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/plain (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/fence_json (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/fence_bare (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/prose_wrap (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/bom+fence (0.00s)
+    --- PASS: TestNormalizeJSONCandidateStripsFenceAndProse/trailing_fence_prose (0.00s)
+=== RUN   TestNormalizeJSONCandidateDoesNotInventOrMerge
+--- PASS: TestNormalizeJSONCandidateDoesNotInventOrMerge (0.00s)
+=== RUN   TestNormalizeJSONCandidateRespectsStringsWithBraces
+--- PASS: TestNormalizeJSONCandidateRespectsStringsWithBraces (0.00s)
+=== RUN   TestNormalizeClosedToken
+--- PASS: TestNormalizeClosedToken (0.00s)
+=== RUN   TestBestJSONCandidate
+--- PASS: TestBestJSONCandidate (0.00s)
+=== CONT  TestBuildShortCorrectionIsLocalized
+--- PASS: TestBuildShortCorrectionIsLocalized (0.00s)
+=== CONT  TestBuildSimplerFormatCorrection
+--- PASS: TestBuildSimplerFormatCorrection (0.00s)
+=== CONT  TestBuildShortCorrectionDefaults
+--- PASS: TestBuildShortCorrectionDefaults (0.00s)
+PASS
+ok  	motor-autonomo/internal/modeltext	(cached)
+=== RUN   TestP2PManagerDisabled
+--- PASS: TestP2PManagerDisabled (0.00s)
+=== RUN   TestP2PManagerLifecycle
+--- PASS: TestP2PManagerLifecycle (0.00s)
+=== RUN   TestP2PManagerLifecycle_WithMDNS
+--- PASS: TestP2PManagerLifecycle_WithMDNS (0.00s)
+=== RUN   TestLoadMTLSConfig_Valid
+--- PASS: TestLoadMTLSConfig_Valid (0.00s)
+=== RUN   TestLoadMTLSConfig_MissingFiles
+--- PASS: TestLoadMTLSConfig_MissingFiles (0.01s)
+=== RUN   TestStaticRegistryLifecycleAndIsolation
+--- PASS: TestStaticRegistryLifecycleAndIsolation (0.00s)
+=== RUN   TestStaticRegistryRejectsInvalidAndCancelledRequests
+--- PASS: TestStaticRegistryRejectsInvalidAndCancelledRequests (0.00s)
+=== RUN   TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport
+--- PASS: TestRouterDispatchesAuthenticatedSubagentStatusWithoutOutboundTransport (0.00s)
+=== RUN   TestRouterHandlesAuthenticatedSyncWithoutTransport
+--- PASS: TestRouterHandlesAuthenticatedSyncWithoutTransport (0.00s)
+=== RUN   TestRouterResolvesAuthorizesAndIsolatesRPC
+--- PASS: TestRouterResolvesAuthorizesAndIsolatesRPC (0.00s)
+=== RUN   TestRouterFailsClosedBeforeTransport
+--- PASS: TestRouterFailsClosedBeforeTransport (0.00s)
+=== RUN   TestRouterRejectsMismatchedResponseAndPropagatesCancellation
+--- PASS: TestRouterRejectsMismatchedResponseAndPropagatesCancellation (0.00s)
+PASS
+ok  	motor-autonomo/internal/network	(cached)
+=== RUN   TestClaimProposal_Skeleton
+--- PASS: TestClaimProposal_Skeleton (0.00s)
+=== RUN   TestMemoryConsensusNode_ProposeAndVerify
+--- PASS: TestMemoryConsensusNode_ProposeAndVerify (0.00s)
+=== RUN   TestMemoryConsensusNode_DoubleVotingRejection
+--- PASS: TestMemoryConsensusNode_DoubleVotingRejection (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/consensus	(cached)
+=== RUN   TestLocalRoutingTable_AddAndList
+--- PASS: TestLocalRoutingTable_AddAndList (0.00s)
+=== RUN   TestLocalRoutingTable_BucketFull
+--- PASS: TestLocalRoutingTable_BucketFull (0.00s)
+=== RUN   TestFilePeerStore_SaveLoadRoundTrip
+--- PASS: TestFilePeerStore_SaveLoadRoundTrip (0.00s)
+=== RUN   TestFilePeerStore_InvalidPath
+--- PASS: TestFilePeerStore_InvalidPath (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/dht	(cached)
+=== RUN   TestIntegration_TransportAndServer
+--- PASS: TestIntegration_TransportAndServer (0.00s)
+=== RUN   TestIntegration_SubagentSpawnReceiptReplaysAcrossMTLSReceiverRestart
+--- PASS: TestIntegration_SubagentSpawnReceiptReplaysAcrossMTLSReceiverRestart (0.02s)
+=== RUN   TestServerHandler_Valid
+--- PASS: TestServerHandler_Valid (0.00s)
+=== RUN   TestServerHandler_Errors
+--- PASS: TestServerHandler_Errors (0.00s)
+=== RUN   TestServerHandler_NilCaller
+--- PASS: TestServerHandler_NilCaller (0.00s)
+=== RUN   TestServerHandler_RejectsMissingVerifiedCertificate
+--- PASS: TestServerHandler_RejectsMissingVerifiedCertificate (0.00s)
+=== RUN   TestServerHandler_RejectsInvalidCallerResponse
+=== RUN   TestServerHandler_RejectsInvalidCallerResponse/request_mismatch
+=== RUN   TestServerHandler_RejectsInvalidCallerResponse/peer_mismatch
+=== RUN   TestServerHandler_RejectsInvalidCallerResponse/payload_oversize
+--- PASS: TestServerHandler_RejectsInvalidCallerResponse (0.00s)
+    --- PASS: TestServerHandler_RejectsInvalidCallerResponse/request_mismatch (0.00s)
+    --- PASS: TestServerHandler_RejectsInvalidCallerResponse/peer_mismatch (0.00s)
+    --- PASS: TestServerHandler_RejectsInvalidCallerResponse/payload_oversize (0.00s)
+=== RUN   TestPeerIDFromCertificate
+--- PASS: TestPeerIDFromCertificate (0.00s)
+=== RUN   TestTransport_Valid
+--- PASS: TestTransport_Valid (0.01s)
+=== RUN   TestTransport_Errors
+--- PASS: TestTransport_Errors (0.00s)
+=== RUN   TestTransport_AcceptsFullRawPayloadDespiteBase64Expansion
+--- PASS: TestTransport_AcceptsFullRawPayloadDespiteBase64Expansion (0.07s)
+PASS
+ok  	motor-autonomo/internal/network/http	(cached)
+=== RUN   TestBeacon_StartStop
+--- PASS: TestBeacon_StartStop (0.10s)
+=== RUN   TestBeacon_ValidateAndRegister
+--- PASS: TestBeacon_ValidateAndRegister (0.00s)
+=== RUN   TestBeacon_Integration_PeerDiscovery
+--- PASS: TestBeacon_Integration_PeerDiscovery (0.50s)
+PASS
+ok  	motor-autonomo/internal/network/mdns	(cached)
+=== RUN   TestServiceMatchesAuthenticatedSpawnReceiptAndFailsClosed
+--- PASS: TestServiceMatchesAuthenticatedSpawnReceiptAndFailsClosed (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/subagentreconcile	(cached)
+=== RUN   TestServiceAdmitsAuthenticatedReplayExactlyOnce
+--- PASS: TestServiceAdmitsAuthenticatedReplayExactlyOnce (0.00s)
+=== RUN   TestServiceRejectsMalformedAndConflictingReplay
+--- PASS: TestServiceRejectsMalformedAndConflictingReplay (0.00s)
+=== RUN   TestServiceScopesRequestIdentityByAuthenticatedPeer
+--- PASS: TestServiceScopesRequestIdentityByAuthenticatedPeer (0.00s)
+=== RUN   TestServiceReplaysDurableReceiptAfterRestart
+--- PASS: TestServiceReplaysDurableReceiptAfterRestart (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/subagentspawn	(cached)
+=== RUN   TestServiceDurablyAdmitsAuthenticatedObservationBeforeACK
+--- PASS: TestServiceDurablyAdmitsAuthenticatedObservationBeforeACK (0.00s)
+=== RUN   TestServiceRejectsWrongPeerMalformedAndOversize
+--- PASS: TestServiceRejectsWrongPeerMalformedAndOversize (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/subagentstatus	(cached)
+=== RUN   TestBasicConflictResolver_NovelEvent
+--- PASS: TestBasicConflictResolver_NovelEvent (0.00s)
+=== RUN   TestBasicConflictResolver_DuplicateEvent
+--- PASS: TestBasicConflictResolver_DuplicateEvent (0.00s)
+=== RUN   TestFrameRoundTrip
+--- PASS: TestFrameRoundTrip (0.00s)
+=== RUN   TestDecodeRejectsUnknownTrailingAndOversize
+--- PASS: TestDecodeRejectsUnknownTrailingAndOversize (0.00s)
+=== RUN   TestServiceStoresBatchAdvancesCursorAndDeduplicates
+--- PASS: TestServiceStoresBatchAdvancesCursorAndDeduplicates (0.00s)
+=== RUN   TestServiceRejectsIdentityMismatchAndCursorGap
+--- PASS: TestServiceRejectsIdentityMismatchAndCursorGap (0.00s)
+=== RUN   TestServiceAckAdvancesPeerScopedOutboundCursor
+--- PASS: TestServiceAckAdvancesPeerScopedOutboundCursor (0.00s)
+=== RUN   TestServicePullReadsBoundedLocalEvents
+--- PASS: TestServicePullReadsBoundedLocalEvents (0.00s)
+=== RUN   TestPullOnceCommitsBeforeAckAndRecoversAfterCrash
+--- PASS: TestPullOnceCommitsBeforeAckAndRecoversAfterCrash (0.00s)
+=== RUN   TestPullOnceDoesNotCommitResponseLostBeforeDurableBoundary
+--- PASS: TestPullOnceDoesNotCommitResponseLostBeforeDurableBoundary (0.00s)
+=== RUN   TestTickerTickExecutesBoundedPullForCapablePeers
+--- PASS: TestTickerTickExecutesBoundedPullForCapablePeers (0.00s)
+=== RUN   TestTickerTickContinuesDespitePeerFailure
+--- PASS: TestTickerTickContinuesDespitePeerFailure (0.00s)
+=== RUN   TestTickerRejectsInvalidConfig
+--- PASS: TestTickerRejectsInvalidConfig (0.00s)
+=== RUN   TestBidirectionalSyncWithResolution
+--- PASS: TestBidirectionalSyncWithResolution (0.00s)
+=== RUN   TestReconcile_AppliesAuthorizedEventToCanonicalLog
+--- PASS: TestReconcile_AppliesAuthorizedEventToCanonicalLog (0.00s)
+=== RUN   TestReconcile_WithResolver
+--- PASS: TestReconcile_WithResolver (0.00s)
+=== RUN   TestEventConflictResolver_Skeleton
+--- PASS: TestEventConflictResolver_Skeleton (0.00s)
+=== RUN   TestInboxCanonicalizer_RejectsNilResolver
+--- PASS: TestInboxCanonicalizer_RejectsNilResolver (0.00s)
+=== RUN   TestInboxCanonicalizer_Reconcile
+--- PASS: TestInboxCanonicalizer_Reconcile (0.00s)
+PASS
+ok  	motor-autonomo/internal/network/sync	(cached)
+=== RUN   TestDisabledRuntimeIsNoopAndDoesNotMutateProvider
+--- PASS: TestDisabledRuntimeIsNoopAndDoesNotMutateProvider (0.00s)
+=== RUN   TestEnabledModelSpansOmitSecretsAndBodies
+--- PASS: TestEnabledModelSpansOmitSecretsAndBodies (0.00s)
+=== RUN   TestModelErrorRecordsBoundedCode
+--- PASS: TestModelErrorRecordsBoundedCode (0.00s)
+=== RUN   TestControlTraceHelper
+--- PASS: TestControlTraceHelper (0.00s)
+=== RUN   TestConfigValidation
+--- PASS: TestConfigValidation (0.00s)
+=== RUN   TestExportRetentionDefaultsAndView
+--- PASS: TestExportRetentionDefaultsAndView (0.00s)
+=== RUN   TestRuntimeRetentionAccessorsWhenDisabled
+--- PASS: TestRuntimeRetentionAccessorsWhenDisabled (0.00s)
+=== RUN   TestEvaluateAlertsDerivedOnly
+--- PASS: TestEvaluateAlertsDerivedOnly (0.00s)
+=== RUN   TestInstrumentCommandEmitsSpanWithoutBodies
+--- PASS: TestInstrumentCommandEmitsSpanWithoutBodies (0.00s)
+=== RUN   TestInstrumentExternalEventProcessPath
+--- PASS: TestInstrumentExternalEventProcessPath (0.00s)
+=== RUN   TestCycleInstrumentsDisabledNoop
+--- PASS: TestCycleInstrumentsDisabledNoop (0.00s)
+=== RUN   TestDisabledProcessorPassthrough
+--- PASS: TestDisabledProcessorPassthrough (0.00s)
+PASS
+ok  	motor-autonomo/internal/observability	(cached)
+=== RUN   TestProposerPersistsExactlyAnchoredObservationAndEvent
+--- PASS: TestProposerPersistsExactlyAnchoredObservationAndEvent (0.00s)
+=== RUN   TestProposerRejectsHallucinatedQuoteAndRollsBackEvent
+--- PASS: TestProposerRejectsHallucinatedQuoteAndRollsBackEvent (0.00s)
+PASS
+ok  	motor-autonomo/internal/observe	(cached)
+=== RUN   TestModelToolProviderInterfaceSatisfied
+--- PASS: TestModelToolProviderInterfaceSatisfied (0.00s)
+PASS
+ok  	motor-autonomo/internal/port	(cached)
+=== RUN   TestCompileSelectsFactsUnderEffectiveBudget
+--- PASS: TestCompileSelectsFactsUnderEffectiveBudget (0.00s)
+=== RUN   TestCompileUsesSmallerProviderBudget
+--- PASS: TestCompileUsesSmallerProviderBudget (0.00s)
+=== RUN   TestCompileRejectsRequiredContentThatDoesNotFit
+--- PASS: TestCompileRejectsRequiredContentThatDoesNotFit (0.00s)
+=== RUN   FuzzCompileNeverExceedsBudget
+=== RUN   FuzzCompileNeverExceedsBudget/seed#0
+=== RUN   FuzzCompileNeverExceedsBudget/seed#1
+--- PASS: FuzzCompileNeverExceedsBudget (0.00s)
+    --- PASS: FuzzCompileNeverExceedsBudget/seed#0 (0.00s)
+    --- PASS: FuzzCompileNeverExceedsBudget/seed#1 (0.00s)
+PASS
+ok  	motor-autonomo/internal/prompt	(cached)
+=== RUN   TestDeclaredProfileIsConservativeWithoutIO
+--- PASS: TestDeclaredProfileIsConservativeWithoutIO (0.00s)
+=== RUN   TestProbeConfirmsTextToTextAndRespectsBudget
+--- PASS: TestProbeConfirmsTextToTextAndRespectsBudget (0.00s)
+=== RUN   TestProbeFailureDoesNotConfirmTextToText
+--- PASS: TestProbeFailureDoesNotConfirmTextToText (0.00s)
+=== RUN   TestProviderImplementsCapabilityReporter
+--- PASS: TestProviderImplementsCapabilityReporter (0.00s)
+=== RUN   TestProviderCompletesPlainTextAgainstFakeServer
+--- PASS: TestProviderCompletesPlainTextAgainstFakeServer (0.00s)
+=== RUN   TestProviderSupportsConfiguredMaxCompletionTokensDialect
+--- PASS: TestProviderSupportsConfiguredMaxCompletionTokensDialect (0.00s)
+=== RUN   TestProviderClassifiesBoundedFailuresWithoutLeakingBody
+=== RUN   TestProviderClassifiesBoundedFailuresWithoutLeakingBody/rate_limit
+=== RUN   TestProviderClassifiesBoundedFailuresWithoutLeakingBody/invalid_response
+=== RUN   TestProviderClassifiesBoundedFailuresWithoutLeakingBody/too_large
+--- PASS: TestProviderClassifiesBoundedFailuresWithoutLeakingBody (0.00s)
+    --- PASS: TestProviderClassifiesBoundedFailuresWithoutLeakingBody/rate_limit (0.00s)
+    --- PASS: TestProviderClassifiesBoundedFailuresWithoutLeakingBody/invalid_response (0.00s)
+    --- PASS: TestProviderClassifiesBoundedFailuresWithoutLeakingBody/too_large (0.00s)
+=== RUN   TestProviderRejectsInvalidConfigurationAndRequest
+--- PASS: TestProviderRejectsInvalidConfigurationAndRequest (0.00s)
+=== RUN   TestProviderEmitsJSONObjectResponseFormatWhenRequested
+--- PASS: TestProviderEmitsJSONObjectResponseFormatWhenRequested (0.00s)
+=== RUN   TestProviderRejectsUnknownResponseFormat
+--- PASS: TestProviderRejectsUnknownResponseFormat (0.00s)
+=== RUN   TestProviderDiscoversModelsWithCacheAndAllowlist
+--- PASS: TestProviderDiscoversModelsWithCacheAndAllowlist (0.00s)
+=== RUN   TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies
+=== RUN   TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/too_large
+=== RUN   TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/invalid_json
+=== RUN   TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/http_error
+--- PASS: TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies (0.00s)
+    --- PASS: TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/too_large (0.00s)
+    --- PASS: TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/invalid_json (0.00s)
+    --- PASS: TestProviderDiscoverModelsRejectsErrorsAndTooLargeBodies/http_error (0.00s)
+=== RUN   TestProviderCompletesWithToolsAndReturnsToolCalls
+--- PASS: TestProviderCompletesWithToolsAndReturnsToolCalls (0.00s)
+PASS
+ok  	motor-autonomo/internal/provider/openai	(cached)
+=== RUN   TestScriptRecordsMismatchForContractTests
+--- PASS: TestScriptRecordsMismatchForContractTests (0.00s)
+=== RUN   TestServerRejectsTrailingAndOversizedRequests
+=== RUN   TestServerRejectsTrailingAndOversizedRequests/trailing_JSON
+=== RUN   TestServerRejectsTrailingAndOversizedRequests/oversized_body
+--- PASS: TestServerRejectsTrailingAndOversizedRequests (0.53s)
+    --- PASS: TestServerRejectsTrailingAndOversizedRequests/trailing_JSON (0.00s)
+    --- PASS: TestServerRejectsTrailingAndOversizedRequests/oversized_body (0.53s)
+PASS
+ok  	motor-autonomo/internal/provider/openai/fakeserver	(cached)
+=== RUN   TestFetcherReturnsExactBoundedAcceptedContent
+--- PASS: TestFetcherReturnsExactBoundedAcceptedContent (0.00s)
+=== RUN   TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral
+=== RUN   TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/type
+=== RUN   TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/oversize
+=== RUN   TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/status
+--- PASS: TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral (0.00s)
+    --- PASS: TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/type (0.00s)
+    --- PASS: TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/oversize (0.00s)
+    --- PASS: TestFetcherRejectsTypeOversizeStatusAndUnsafeLiteral/status (0.00s)
+=== RUN   TestFetcherRevalidatesRedirectDestination
+--- PASS: TestFetcherRevalidatesRedirectDestination (0.00s)
+PASS
+ok  	motor-autonomo/internal/provider/web/httpfetch	(cached)
+=== RUN   TestSearcherReplaysExactBoundedFixtureWithoutAliasing
+--- PASS: TestSearcherReplaysExactBoundedFixtureWithoutAliasing (0.00s)
+=== RUN   TestSearcherRejectsUnknownOrInvalidFixtures
+--- PASS: TestSearcherRejectsUnknownOrInvalidFixtures (0.00s)
+PASS
+ok  	motor-autonomo/internal/provider/web/replay	(cached)
+=== RUN   TestSearcherUsesJSONEndpointAndBoundsHits
+--- PASS: TestSearcherUsesJSONEndpointAndBoundsHits (0.00s)
+=== RUN   TestSearcherClassifiesBoundedFailuresWithoutLeakingBody
+=== RUN   TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/status
+=== RUN   TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/oversize
+=== RUN   TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/invalid
+=== RUN   TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/trailing
+--- PASS: TestSearcherClassifiesBoundedFailuresWithoutLeakingBody (0.00s)
+    --- PASS: TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/status (0.00s)
+    --- PASS: TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/oversize (0.00s)
+    --- PASS: TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/invalid (0.00s)
+    --- PASS: TestSearcherClassifiesBoundedFailuresWithoutLeakingBody/trailing (0.00s)
+PASS
+ok  	motor-autonomo/internal/provider/web/searxng	(cached)
+=== RUN   TestLoadModelPresetCatalogVerifiesEvidenceDigest
+--- PASS: TestLoadModelPresetCatalogVerifiesEvidenceDigest (0.01s)
+=== RUN   TestBuildModelWiresAllBindingsAndLimits
+--- PASS: TestBuildModelWiresAllBindingsAndLimits (0.00s)
+=== RUN   TestModelOptionsFromCatalogSelectsPriorityAndFallback
+--- PASS: TestModelOptionsFromCatalogSelectsPriorityAndFallback (0.00s)
+=== RUN   TestModelOptionsFromCatalogWithNoEnabledBindingsDisablesModel
+--- PASS: TestModelOptionsFromCatalogWithNoEnabledBindingsDisablesModel (0.00s)
+=== RUN   TestSQLiteReopenRestoresEnabledPresetAndRouter
+--- PASS: TestSQLiteReopenRestoresEnabledPresetAndRouter (0.35s)
+=== RUN   TestRuntimeReloadModelExecutorIfNeeded
+--- PASS: TestRuntimeReloadModelExecutorIfNeeded (0.00s)
+=== RUN   TestOpenAssemblesHTTPSurfaces
+=== PAUSE TestOpenAssemblesHTTPSurfaces
+=== RUN   TestProcessCycleDrainsCommandAndStops
+=== PAUSE TestProcessCycleDrainsCommandAndStops
+=== RUN   TestProcessCycleAppliesDurableRemoteCompletionBeforeDeadline
+--- PASS: TestProcessCycleAppliesDurableRemoteCompletionBeforeDeadline (0.00s)
+=== RUN   TestOpenWiresSubagentToolsAndCycleSupervisor
+--- PASS: TestOpenWiresSubagentToolsAndCycleSupervisor (0.00s)
+=== RUN   TestOpenRestoresActiveSubagentAcrossSQLiteRestart
+--- PASS: TestOpenRestoresActiveSubagentAcrossSQLiteRestart (0.29s)
+=== RUN   TestOpenRestoresAppliedTerminalWinnerBeforePendingConflict
+--- PASS: TestOpenRestoresAppliedTerminalWinnerBeforePendingConflict (0.37s)
+=== RUN   TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle
+=== RUN   TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle/complete
+=== RUN   TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle/failed
+--- PASS: TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle (0.61s)
+    --- PASS: TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle/complete (0.29s)
+    --- PASS: TestOpenRestoresReceiverTerminalReceiptBeforeFirstCycle/failed (0.32s)
+=== RUN   TestOpenDoesNotRestoreReceiverTerminalFromPreviousGeneration
+--- PASS: TestOpenDoesNotRestoreReceiverTerminalFromPreviousGeneration (0.26s)
+=== RUN   TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart
+--- PASS: TestOpenRestoresSubagentTransportPeerAcrossSQLiteRestart (0.23s)
+=== RUN   TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch
+=== PAUSE TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch
+=== RUN   TestProcessCycleSchedulerWithMission
+=== PAUSE TestProcessCycleSchedulerWithMission
+=== RUN   TestProcessCycleExecutesLocalContinuityOperation
+=== PAUSE TestProcessCycleExecutesLocalContinuityOperation
+=== RUN   TestProcessCycleHonorsMaxDispatchesCadence
+=== PAUSE TestProcessCycleHonorsMaxDispatchesCadence
+=== RUN   TestOptionsValidateDefaults
+=== PAUSE TestOptionsValidateDefaults
+=== RUN   TestProcessCycleRunsTelegramOutboxWorker
+--- PASS: TestProcessCycleRunsTelegramOutboxWorker (0.00s)
+=== RUN   TestProcessCyclePollsTelegramIngressBeforeEventDrain
+--- PASS: TestProcessCyclePollsTelegramIngressBeforeEventDrain (0.00s)
+=== RUN   TestOpenMountsTelegramWebhookRoute
+--- PASS: TestOpenMountsTelegramWebhookRoute (0.00s)
+=== RUN   TestControlLoopIdleUsesClock
+--- PASS: TestControlLoopIdleUsesClock (0.03s)
+=== RUN   TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath
+=== PAUSE TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath
+=== RUN   TestOpenWiresModelExecutorWhenEnabled
+=== PAUSE TestOpenWiresModelExecutorWhenEnabled
+=== RUN   TestOpenWithoutModelKeepsNilExecutor
+=== PAUSE TestOpenWithoutModelKeepsNilExecutor
+=== RUN   TestOpenWiresFallbackProviderWhenEnabled
+=== PAUSE TestOpenWiresFallbackProviderWhenEnabled
+=== RUN   TestOpenModelFallbackRequiresURLAndName
+=== PAUSE TestOpenModelFallbackRequiresURLAndName
+=== RUN   TestOpenWithoutFallbackKeepsNilFallbackProvider
+=== PAUSE TestOpenWithoutFallbackKeepsNilFallbackProvider
+=== RUN   TestOpenWiresWebAndFileExecutors
+=== PAUSE TestOpenWiresWebAndFileExecutors
+=== RUN   TestOpenWebRequiresAdapter
+=== PAUSE TestOpenWebRequiresAdapter
+=== RUN   TestOpenFileRequiresRoots
+=== PAUSE TestOpenFileRequiresRoots
+=== CONT  TestOpenAssemblesHTTPSurfaces
+=== CONT  TestOpenWiresModelExecutorWhenEnabled
+=== CONT  TestOpenWithoutFallbackKeepsNilFallbackProvider
+=== CONT  TestProcessCycleExecutesLocalContinuityOperation
+=== CONT  TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch
+=== CONT  TestProcessCycleDrainsCommandAndStops
+=== CONT  TestOpenWebRequiresAdapter
+--- PASS: TestOpenWebRequiresAdapter (0.00s)
+=== CONT  TestOpenFileRequiresRoots
+--- PASS: TestOpenFileRequiresRoots (0.00s)
+=== CONT  TestProcessCycleSchedulerWithMission
+--- PASS: TestOpenWiresModelExecutorWhenEnabled (0.00s)
+=== CONT  TestOpenWiresWebAndFileExecutors
+=== CONT  TestOptionsValidateDefaults
+=== CONT  TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath
+=== CONT  TestOpenWiresFallbackProviderWhenEnabled
+=== CONT  TestOpenModelFallbackRequiresURLAndName
+=== CONT  TestProcessCycleHonorsMaxDispatchesCadence
+=== CONT  TestOpenWithoutModelKeepsNilExecutor
+--- PASS: TestOpenWithoutFallbackKeepsNilFallbackProvider (0.00s)
+--- PASS: TestProcessCycleDrainsCommandAndStops (0.00s)
+--- PASS: TestOptionsValidateDefaults (0.00s)
+--- PASS: TestOpenModelFallbackRequiresURLAndName (0.00s)
+--- PASS: TestProcessCycleCompactsExpiredSemanticMemoryWithinBatch (0.00s)
+--- PASS: TestOpenWiresWebAndFileExecutors (0.00s)
+--- PASS: TestOpenAssemblesHTTPSurfaces (0.00s)
+--- PASS: TestProcessCycleExecutesLocalContinuityOperation (0.00s)
+--- PASS: TestOpenWiresFallbackProviderWhenEnabled (0.00s)
+--- PASS: TestOpenWithoutModelKeepsNilExecutor (0.00s)
+--- PASS: TestProcessCycleReconcilesExpiredLeaseAndRunsModelPath (0.00s)
+--- PASS: TestProcessCycleHonorsMaxDispatchesCadence (0.00s)
+--- PASS: TestProcessCycleSchedulerWithMission (0.01s)
+PASS
+ok  	motor-autonomo/internal/runtime/bootstrap	(cached)
+=== RUN   TestManualClock
+--- PASS: TestManualClock (0.00s)
+=== RUN   TestSequenceIDGenerator
+--- PASS: TestSequenceIDGenerator (0.00s)
+=== RUN   TestSequenceRandomSourceFailsWhenExhausted
+--- PASS: TestSequenceRandomSourceFailsWhenExhausted (0.00s)
+PASS
+ok  	motor-autonomo/internal/runtime/source	(cached)
+=== RUN   TestNoReplacePublishesRestrictedFile
+--- PASS: TestNoReplacePublishesRestrictedFile (0.04s)
+=== RUN   TestNoReplaceFailsClosedWhenParentPathIsReplaced
+--- PASS: TestNoReplaceFailsClosedWhenParentPathIsReplaced (0.02s)
+PASS
+ok  	motor-autonomo/internal/safepublish	(cached)
+=== RUN   TestTextSegmenterCoversOrdersAndRoundTripsUTF8
+--- PASS: TestTextSegmenterCoversOrdersAndRoundTripsUTF8 (0.00s)
+=== RUN   TestTextSegmenterRejectsNonTextAndRollsBackDuplicate
+--- PASS: TestTextSegmenterRejectsNonTextAndRollsBackDuplicate (0.00s)
+PASS
+ok  	motor-autonomo/internal/segment	(cached)
+?   	motor-autonomo/internal/storage/contract	[no test files]
+=== RUN   TestServerStoreContract
+    server_test.go:16: DOLT_BIN is not set; Dolt contract tests require an explicit binary
+--- SKIP: TestServerStoreContract (0.00s)
+=== RUN   TestServerStoreDurableContract
+    server_test.go:32: DOLT_BIN is not set; Dolt contract tests require an explicit binary
+--- SKIP: TestServerStoreDurableContract (0.00s)
+=== RUN   TestServerStoreSeparatesSQLAndDoltCommitBoundaries
+    server_test.go:66: DOLT_BIN is not set; Dolt contract tests require an explicit binary
+--- SKIP: TestServerStoreSeparatesSQLAndDoltCommitBoundaries (0.00s)
+=== RUN   TestStoreContract
+    store_test.go:14: DOLT_BIN is not set; Dolt contract tests require an explicit binary
+--- SKIP: TestStoreContract (0.00s)
+=== RUN   TestDurableStoreContract
+    store_test.go:30: DOLT_BIN is not set; Dolt contract tests require an explicit binary
+--- SKIP: TestDurableStoreContract (0.00s)
+PASS
+ok  	motor-autonomo/internal/storage/dolt	(cached)
+=== RUN   TestMemorySurvivesUnrelatedUpdateAndCheckpoint
+--- PASS: TestMemorySurvivesUnrelatedUpdateAndCheckpoint (0.00s)
+=== RUN   TestMemoryIdentityValidationAndDeterministicListing
+--- PASS: TestMemoryIdentityValidationAndDeterministicListing (0.00s)
+=== RUN   TestModelContextPressureSurvivesCheckpoint
+=== PAUSE TestModelContextPressureSurvivesCheckpoint
+=== RUN   TestPeerSyncInboxReplayIgnoresReceivedAtAndPersists
+--- PASS: TestPeerSyncInboxReplayIgnoresReceivedAtAndPersists (0.00s)
+=== RUN   TestPeerSyncCursorScopesStreamsAndRejectsRegression
+--- PASS: TestPeerSyncCursorScopesStreamsAndRejectsRegression (0.00s)
+=== RUN   TestCheckpointEnvelopeRoundTrip
+--- PASS: TestCheckpointEnvelopeRoundTrip (0.00s)
+=== RUN   TestCheckpointRejectsTamperedPayload
+--- PASS: TestCheckpointRejectsTamperedPayload (0.00s)
+=== RUN   TestCheckpointRejectsFutureEnvelope
+--- PASS: TestCheckpointRejectsFutureEnvelope (0.00s)
+=== RUN   TestCheckpointRejectsTrailingGobDocument
+--- PASS: TestCheckpointRejectsTrailingGobDocument (0.00s)
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_v2_envelope
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_v0_payload
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_v1_envelope
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_rejects_v0_payload
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_rejects_v1_envelope
+=== RUN   TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_rejects_v2_envelope
+--- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope (0.01s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_v2_envelope (0.00s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_v0_payload (0.00s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_v1_envelope (0.00s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_rejects_v0_payload (0.00s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v2_table_rejects_v1_envelope (0.00s)
+    --- PASS: TestValidateExternalCheckpointRequiresMatchingEnvelope/v1_table_rejects_v2_envelope (0.00s)
+=== RUN   TestCheckpointAcceptsLegacyUnwrappedState
+--- PASS: TestCheckpointAcceptsLegacyUnwrappedState (0.00s)
+=== RUN   TestCheckpointAcceptsV1Envelope
+--- PASS: TestCheckpointAcceptsV1Envelope (0.00s)
+=== RUN   TestSupportsExternalCheckpointFormat
+--- PASS: TestSupportsExternalCheckpointFormat (0.00s)
+=== RUN   TestSubagentStatusIngressCheckpoint
+--- PASS: TestSubagentStatusIngressCheckpoint (0.00s)
+=== RUN   TestAppliedSubagentStatusIngressWinnerIsDeterministicAndAttemptScoped
+--- PASS: TestAppliedSubagentStatusIngressWinnerIsDeterministicAndAttemptScoped (0.00s)
+=== RUN   TestApplyCommitCascadesDependentArtifactStale
+=== PAUSE TestApplyCommitCascadesDependentArtifactStale
+=== RUN   TestStoreContract
+=== RUN   TestStoreContract/source_ingestion_is_immutable,_content_addressed_and_atomic
+=== RUN   TestStoreContract/source_fragments_require_exact_ordered_coverage_and_round_trip
+=== RUN   TestStoreContract/observations_require_a_recoverable_anchor_and_exact_fragment_quote
+=== RUN   TestStoreContract/claims_require_qualifiers_and_evidence_links_resolve_both_endpoints
+=== RUN   TestStoreContract/evidence_deltas_and_knowledge_artifacts_are_append-only_and_isolated
+=== RUN   TestStoreContract/mission_revisions_are_immutable_and_activation_is_explicit
+=== RUN   TestStoreContract/agenda_records_round_trip_and_mutable_records_require_prior_create
+=== RUN   TestStoreContract/agenda_lineage_and_operation_spec_references_fail_closed
+=== RUN   TestStoreContract/failed_transaction_rolls_back_all_writes
+=== RUN   TestStoreContract/event_log_is_ordered_append-only_and_transactional
+=== RUN   TestStoreContract/idempotency_reservation_and_completion_are_replay_safe
+=== RUN   TestStoreContract/knowledge_commit_is_atomic,_versioned,_and_replay_safe
+=== RUN   TestStoreContract/invalid_data_and_cancelled_contexts_do_not_commit
+=== RUN   TestStoreContract/operator_questions_use_optimistic_revisions_and_deduplicate_transport_answers
+=== RUN   TestStoreContract/operator_question_answer_and_state_update_roll_back_together
+=== RUN   TestStoreContract/question_delivery_outbox_leases_and_completes_optimistically
+=== RUN   TestStoreContract/question_delivery_outbox_exposes_expired_leases_for_recovery
+=== RUN   TestStoreContract/question_gate_decisions_are_persisted_and_retrievable
+=== RUN   TestStoreContract/operator_commands_and_control_state_are_durable_with_optimistic_concurrency
+=== RUN   TestStoreContract/channel_cursors_are_durable_monotonic_and_optimistic
+=== RUN   TestStoreContract/resource_usages_are_durable_sorted_and_replaceable
+=== RUN   TestStoreContract/model_context_pressure_is_durable_binding-local_and_replaceable
+=== RUN   TestStoreContract/config_drafts_revisions_and_apply_receipts_are_durable_with_sequential_activation
+=== RUN   TestStoreContract/work_opportunities_and_continuity_diagnoses_are_durable_with_dedup_and_lineage
+=== RUN   TestStoreContract/external_events_are_durable_with_disposition_and_dedup
+--- PASS: TestStoreContract (0.00s)
+    --- PASS: TestStoreContract/source_ingestion_is_immutable,_content_addressed_and_atomic (0.00s)
+    --- PASS: TestStoreContract/source_fragments_require_exact_ordered_coverage_and_round_trip (0.00s)
+    --- PASS: TestStoreContract/observations_require_a_recoverable_anchor_and_exact_fragment_quote (0.00s)
+    --- PASS: TestStoreContract/claims_require_qualifiers_and_evidence_links_resolve_both_endpoints (0.00s)
+    --- PASS: TestStoreContract/evidence_deltas_and_knowledge_artifacts_are_append-only_and_isolated (0.00s)
+    --- PASS: TestStoreContract/mission_revisions_are_immutable_and_activation_is_explicit (0.00s)
+    --- PASS: TestStoreContract/agenda_records_round_trip_and_mutable_records_require_prior_create (0.00s)
+    --- PASS: TestStoreContract/agenda_lineage_and_operation_spec_references_fail_closed (0.00s)
+    --- PASS: TestStoreContract/failed_transaction_rolls_back_all_writes (0.00s)
+    --- PASS: TestStoreContract/event_log_is_ordered_append-only_and_transactional (0.00s)
+    --- PASS: TestStoreContract/idempotency_reservation_and_completion_are_replay_safe (0.00s)
+    --- PASS: TestStoreContract/knowledge_commit_is_atomic,_versioned,_and_replay_safe (0.00s)
+    --- PASS: TestStoreContract/invalid_data_and_cancelled_contexts_do_not_commit (0.00s)
+    --- PASS: TestStoreContract/operator_questions_use_optimistic_revisions_and_deduplicate_transport_answers (0.00s)
+    --- PASS: TestStoreContract/operator_question_answer_and_state_update_roll_back_together (0.00s)
+    --- PASS: TestStoreContract/question_delivery_outbox_leases_and_completes_optimistically (0.00s)
+    --- PASS: TestStoreContract/question_delivery_outbox_exposes_expired_leases_for_recovery (0.00s)
+    --- PASS: TestStoreContract/question_gate_decisions_are_persisted_and_retrievable (0.00s)
+    --- PASS: TestStoreContract/operator_commands_and_control_state_are_durable_with_optimistic_concurrency (0.00s)
+    --- PASS: TestStoreContract/channel_cursors_are_durable_monotonic_and_optimistic (0.00s)
+    --- PASS: TestStoreContract/resource_usages_are_durable_sorted_and_replaceable (0.00s)
+    --- PASS: TestStoreContract/model_context_pressure_is_durable_binding-local_and_replaceable (0.00s)
+    --- PASS: TestStoreContract/config_drafts_revisions_and_apply_receipts_are_durable_with_sequential_activation (0.00s)
+    --- PASS: TestStoreContract/work_opportunities_and_continuity_diagnoses_are_durable_with_dedup_and_lineage (0.00s)
+    --- PASS: TestStoreContract/external_events_are_durable_with_disposition_and_dedup (0.00s)
+=== RUN   TestSubagentDispatchStorageConflictDueOrderAndCheckpoint
+--- PASS: TestSubagentDispatchStorageConflictDueOrderAndCheckpoint (0.00s)
+=== RUN   TestSubagentSpawnReceiptStorageDueSaveAndCheckpoint
+--- PASS: TestSubagentSpawnReceiptStorageDueSaveAndCheckpoint (0.00s)
+=== RUN   TestTerminalSubagentSpawnReceiptForReceiverElectsDeterministically
+--- PASS: TestTerminalSubagentSpawnReceiptForReceiverElectsDeterministically (0.00s)
+=== CONT  TestModelContextPressureSurvivesCheckpoint
+=== CONT  TestApplyCommitCascadesDependentArtifactStale
+--- PASS: TestApplyCommitCascadesDependentArtifactStale (0.00s)
+--- PASS: TestModelContextPressureSurvivesCheckpoint (0.00s)
+PASS
+ok  	motor-autonomo/internal/storage/memory	(cached)
+=== RUN   TestWriteArtifactsEmitsManifestMetricsAndReport
+--- PASS: TestWriteArtifactsEmitsManifestMetricsAndReport (0.06s)
+=== RUN   TestWriteArtifactsRejectsDatasetMismatch
+--- PASS: TestWriteArtifactsRejectsDatasetMismatch (0.00s)
+=== RUN   TestWriteCrashCampaignArtifactPreservesTrials
+--- PASS: TestWriteCrashCampaignArtifactPreservesTrials (0.02s)
+=== RUN   TestRunCrashCampaignRepeatsAndAggregates
+--- PASS: TestRunCrashCampaignRepeatsAndAggregates (0.03s)
+=== RUN   TestRunCrashCampaignWithInspectorClassifiesCompoundMutation
+--- PASS: TestRunCrashCampaignWithInspectorClassifiesCompoundMutation (0.03s)
+=== RUN   TestRunCrashCampaignRejectsInsufficientRepetition
+--- PASS: TestRunCrashCampaignRejectsInsufficientRepetition (0.00s)
+=== RUN   TestRunCrashCampaignFailsWhenWorkerReturnsNormally
+--- PASS: TestRunCrashCampaignFailsWhenWorkerReturnsNormally (0.03s)
+=== RUN   TestRunCrashTrialWithInspectorUsesCompoundClassifier
+--- PASS: TestRunCrashTrialWithInspectorUsesCompoundClassifier (0.00s)
+=== RUN   TestCrashIntentClassification
+--- PASS: TestCrashIntentClassification (0.00s)
+=== RUN   TestGenerateIsDeterministicAndCounted
+--- PASS: TestGenerateIsDeterministicAndCounted (0.00s)
+=== RUN   TestGenerateChangesDigestWithSeed
+--- PASS: TestGenerateChangesDigestWithSeed (0.00s)
+=== RUN   TestGenerateRejectsInvalidConfig
+--- PASS: TestGenerateRejectsInvalidConfig (0.00s)
+=== RUN   TestDiskFootprintCountsRegularFilesWithoutFollowingSymlinks
+--- PASS: TestDiskFootprintCountsRegularFilesWithoutFollowingSymlinks (0.00s)
+=== RUN   TestDiskFootprintRejectsMissingRoot
+--- PASS: TestDiskFootprintRejectsMissingRoot (0.00s)
+=== RUN   TestInspectOfficialMutationRequiresCompleteConsistentVisibility
+--- PASS: TestInspectOfficialMutationRequiresCompleteConsistentVisibility (0.00s)
+=== RUN   TestInspectOfficialMutationRejectsCrossLinkedRecords
+--- PASS: TestInspectOfficialMutationRejectsCrossLinkedRecords (0.00s)
+=== RUN   TestApplyOfficialMutationProducesCompleteVisibleSet
+--- PASS: TestApplyOfficialMutationProducesCompleteVisibleSet (0.00s)
+=== RUN   TestRunnerAppliesAndQueriesDataset
+--- PASS: TestRunnerAppliesAndQueriesDataset (0.00s)
+=== RUN   TestRunnerRecordsDiskFootprintBeforeAndAfter
+--- PASS: TestRunnerRecordsDiskFootprintBeforeAndAfter (0.00s)
+=== RUN   TestPercentileUsesNearestRankWithoutMutatingInput
+--- PASS: TestPercentileUsesNearestRankWithoutMutatingInput (0.00s)
+=== RUN   TestRunnerHonorsCancelledContext
+--- PASS: TestRunnerHonorsCancelledContext (0.00s)
+=== RUN   TestRunCrashTrialUsesSeparateProcessAndFreshStore
+--- PASS: TestRunCrashTrialUsesSeparateProcessAndFreshStore (0.26s)
+=== RUN   TestCrashWorker
+--- PASS: TestCrashWorker (0.00s)
+=== RUN   TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries
+=== RUN   TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries/before_durable_commit
+=== RUN   TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries/after_durable_commit
+--- PASS: TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries (1.56s)
+    --- PASS: TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries/before_durable_commit (0.29s)
+    --- PASS: TestStorageSpikeWorkerCrashesAtSQLiteDurabilityBoundaries/after_durable_commit (0.26s)
+=== RUN   TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite
+=== RUN   TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite/before_durable_commit
+=== RUN   TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite/after_durable_commit
+--- PASS: TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite (1.48s)
+    --- PASS: TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite/before_durable_commit (0.23s)
+    --- PASS: TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInSQLite/after_durable_commit (0.24s)
+=== RUN   TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInDolt
+    worker_integration_test.go:136: DOLT_BIN is not set; Dolt crash trials require an explicit binary
+--- SKIP: TestStorageSpikeWorkerCrashesOfficialMutationAtomicallyInDolt (0.00s)
+=== RUN   TestStorageSpikeWorkerCrashesOfficialMutationAcrossDoltServerBoundaries
+    worker_integration_test.go:188: DOLT_BIN is not set; Dolt crash trials require an explicit binary
+--- SKIP: TestStorageSpikeWorkerCrashesOfficialMutationAcrossDoltServerBoundaries (0.00s)
+=== RUN   TestDoltServerOfficialCrashCampaigns
+    worker_integration_test.go:247: set STORAGE_SPIKE_FULL=1 to run 30-trial campaigns at every Dolt server boundary
+--- SKIP: TestDoltServerOfficialCrashCampaigns (0.00s)
+=== RUN   TestStorageSpikeWorkerCrashesAtDoltCLIBoundaries
+    worker_integration_test.go:334: DOLT_BIN is not set; Dolt crash trials require an explicit binary
+--- SKIP: TestStorageSpikeWorkerCrashesAtDoltCLIBoundaries (0.00s)
+PASS
+ok  	motor-autonomo/internal/storage/spike	(cached)
+=== RUN   TestPublishBackupNoReplaceRejectsDestinationCreatedAfterPreflight
+--- PASS: TestPublishBackupNoReplaceRejectsDestinationCreatedAfterPreflight (0.00s)
+=== RUN   TestPublishBackupNoReplacePublishesRestrictedInode
+--- PASS: TestPublishBackupNoReplacePublishesRestrictedInode (0.05s)
+=== RUN   TestSyncRegularFileAndDirectory
+--- PASS: TestSyncRegularFileAndDirectory (0.02s)
+=== RUN   TestSubagentStatusIngressSurvivesSQLiteRestart
+--- PASS: TestSubagentStatusIngressSurvivesSQLiteRestart (0.24s)
+=== RUN   TestRejectedSubagentStatusIngressSurvivesSQLiteRestartAndLeavesPendingQueue
+--- PASS: TestRejectedSubagentStatusIngressSurvivesSQLiteRestartAndLeavesPendingQueue (0.24s)
+=== RUN   TestAppliedSubagentStatusIngressWinnerSurvivesSQLiteRestart
+--- PASS: TestAppliedSubagentStatusIngressWinnerSurvivesSQLiteRestart (0.21s)
+=== RUN   TestOnlineBackupPreservesCheckpointAndReopens
+--- PASS: TestOnlineBackupPreservesCheckpointAndReopens (0.31s)
+=== RUN   TestRestoreToVerifiesAndReopensCheckpoint
+--- PASS: TestRestoreToVerifiesAndReopensCheckpoint (0.40s)
+=== RUN   TestRestoreToRejectsExistingDestinationAndInvalidSource
+--- PASS: TestRestoreToRejectsExistingDestinationAndInvalidSource (0.17s)
+=== RUN   TestVerifyBackupRejectsWrongRuntimeHeaderIdentity
+=== RUN   TestVerifyBackupRejectsWrongRuntimeHeaderIdentity/application_id
+=== RUN   TestVerifyBackupRejectsWrongRuntimeHeaderIdentity/user_version
+--- PASS: TestVerifyBackupRejectsWrongRuntimeHeaderIdentity (0.41s)
+    --- PASS: TestVerifyBackupRejectsWrongRuntimeHeaderIdentity/application_id (0.20s)
+    --- PASS: TestVerifyBackupRejectsWrongRuntimeHeaderIdentity/user_version (0.20s)
+=== RUN   TestRestoreToPinsExpectedSourceDigest
+--- PASS: TestRestoreToPinsExpectedSourceDigest (0.35s)
+=== RUN   TestVerifyAndRestoreRejectWrongCheckpointDigest
+--- PASS: TestVerifyAndRestoreRejectWrongCheckpointDigest (0.30s)
+=== RUN   TestOnlineBackupRejectsExistingDestination
+--- PASS: TestOnlineBackupRejectsExistingDestination (0.39s)
+=== RUN   TestOnlineBackupEmptyStore
+--- PASS: TestOnlineBackupEmptyStore (0.30s)
+=== RUN   TestVerifyBackupPinsCheckpointInventoryFields
+--- PASS: TestVerifyBackupPinsCheckpointInventoryFields (0.44s)
+=== RUN   TestVerifyBackupPinsRuntimeSchemaIdentity
+--- PASS: TestVerifyBackupPinsRuntimeSchemaIdentity (0.20s)
+=== RUN   TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects
+=== RUN   TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/TABLE
+=== RUN   TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/INDEX
+=== RUN   TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/VIEW
+=== RUN   TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/TRIGGER
+--- PASS: TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects (0.98s)
+    --- PASS: TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/TABLE (0.23s)
+    --- PASS: TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/INDEX (0.30s)
+    --- PASS: TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/VIEW (0.24s)
+    --- PASS: TestVerifyBackupRejectsAdditionalRuntimeSchemaObjects/TRIGGER (0.21s)
+=== RUN   TestVerifyBackupRejectsCheckpointConstraintViolation
+--- PASS: TestVerifyBackupRejectsCheckpointConstraintViolation (0.21s)
+=== RUN   TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation
+--- PASS: TestVerifyBackupRejectsDigestMismatchAndInvalidExpectation (0.30s)
+=== RUN   TestVerifyBackupRejectsSymlinkPath
+--- PASS: TestVerifyBackupRejectsSymlinkPath (0.18s)
+=== RUN   TestVerifyBackupRejectsCheckpointVersionMismatch
+--- PASS: TestVerifyBackupRejectsCheckpointVersionMismatch (0.22s)
+=== RUN   TestVerifyBackupRejectsTamperedCheckpointPayload
+--- PASS: TestVerifyBackupRejectsTamperedCheckpointPayload (0.33s)
+=== RUN   TestClosedCopyToRejectsMissingAndSymlinkSources
+--- PASS: TestClosedCopyToRejectsMissingAndSymlinkSources (0.18s)
+=== RUN   TestVerifyAndClosedCopyRejectSQLiteSidecars
+=== RUN   TestVerifyAndClosedCopyRejectSQLiteSidecars/wal
+=== RUN   TestVerifyAndClosedCopyRejectSQLiteSidecars/shm
+=== RUN   TestVerifyAndClosedCopyRejectSQLiteSidecars/journal
+--- PASS: TestVerifyAndClosedCopyRejectSQLiteSidecars (0.71s)
+    --- PASS: TestVerifyAndClosedCopyRejectSQLiteSidecars/wal (0.19s)
+    --- PASS: TestVerifyAndClosedCopyRejectSQLiteSidecars/shm (0.31s)
+    --- PASS: TestVerifyAndClosedCopyRejectSQLiteSidecars/journal (0.21s)
+=== RUN   TestVerifyBackupDoesNotMutateSourceOrCreateSidecars
+--- PASS: TestVerifyBackupDoesNotMutateSourceOrCreateSidecars (0.21s)
+=== RUN   TestClosedCopyToDoesNotMutateSourceOrCreateSidecars
+--- PASS: TestClosedCopyToDoesNotMutateSourceOrCreateSidecars (0.48s)
+=== RUN   TestStoreContract
+=== RUN   TestStoreContract/source_ingestion_is_immutable,_content_addressed_and_atomic
+=== RUN   TestStoreContract/source_fragments_require_exact_ordered_coverage_and_round_trip
+=== RUN   TestStoreContract/observations_require_a_recoverable_anchor_and_exact_fragment_quote
+=== RUN   TestStoreContract/claims_require_qualifiers_and_evidence_links_resolve_both_endpoints
+=== RUN   TestStoreContract/evidence_deltas_and_knowledge_artifacts_are_append-only_and_isolated
+=== RUN   TestStoreContract/mission_revisions_are_immutable_and_activation_is_explicit
+=== RUN   TestStoreContract/agenda_records_round_trip_and_mutable_records_require_prior_create
+=== RUN   TestStoreContract/agenda_lineage_and_operation_spec_references_fail_closed
+=== RUN   TestStoreContract/failed_transaction_rolls_back_all_writes
+=== RUN   TestStoreContract/event_log_is_ordered_append-only_and_transactional
+=== RUN   TestStoreContract/idempotency_reservation_and_completion_are_replay_safe
+=== RUN   TestStoreContract/knowledge_commit_is_atomic,_versioned,_and_replay_safe
+=== RUN   TestStoreContract/invalid_data_and_cancelled_contexts_do_not_commit
+=== RUN   TestStoreContract/operator_questions_use_optimistic_revisions_and_deduplicate_transport_answers
+=== RUN   TestStoreContract/operator_question_answer_and_state_update_roll_back_together
+=== RUN   TestStoreContract/question_delivery_outbox_leases_and_completes_optimistically
+=== RUN   TestStoreContract/question_delivery_outbox_exposes_expired_leases_for_recovery
+=== RUN   TestStoreContract/question_gate_decisions_are_persisted_and_retrievable
+=== RUN   TestStoreContract/operator_commands_and_control_state_are_durable_with_optimistic_concurrency
+=== RUN   TestStoreContract/channel_cursors_are_durable_monotonic_and_optimistic
+=== RUN   TestStoreContract/resource_usages_are_durable_sorted_and_replaceable
+=== RUN   TestStoreContract/model_context_pressure_is_durable_binding-local_and_replaceable
+=== RUN   TestStoreContract/config_drafts_revisions_and_apply_receipts_are_durable_with_sequential_activation
+=== RUN   TestStoreContract/work_opportunities_and_continuity_diagnoses_are_durable_with_dedup_and_lineage
+=== RUN   TestStoreContract/external_events_are_durable_with_disposition_and_dedup
+--- PASS: TestStoreContract (9.68s)
+    --- PASS: TestStoreContract/source_ingestion_is_immutable,_content_addressed_and_atomic (0.30s)
+    --- PASS: TestStoreContract/source_fragments_require_exact_ordered_coverage_and_round_trip (0.31s)
+    --- PASS: TestStoreContract/observations_require_a_recoverable_anchor_and_exact_fragment_quote (0.29s)
+    --- PASS: TestStoreContract/claims_require_qualifiers_and_evidence_links_resolve_both_endpoints (0.28s)
+    --- PASS: TestStoreContract/evidence_deltas_and_knowledge_artifacts_are_append-only_and_isolated (0.55s)
+    --- PASS: TestStoreContract/mission_revisions_are_immutable_and_activation_is_explicit (0.31s)
+    --- PASS: TestStoreContract/agenda_records_round_trip_and_mutable_records_require_prior_create (0.35s)
+    --- PASS: TestStoreContract/agenda_lineage_and_operation_spec_references_fail_closed (0.44s)
+    --- PASS: TestStoreContract/failed_transaction_rolls_back_all_writes (0.20s)
+    --- PASS: TestStoreContract/event_log_is_ordered_append-only_and_transactional (0.26s)
+    --- PASS: TestStoreContract/idempotency_reservation_and_completion_are_replay_safe (0.42s)
+    --- PASS: TestStoreContract/knowledge_commit_is_atomic,_versioned,_and_replay_safe (0.33s)
+    --- PASS: TestStoreContract/invalid_data_and_cancelled_contexts_do_not_commit (0.17s)
+    --- PASS: TestStoreContract/operator_questions_use_optimistic_revisions_and_deduplicate_transport_answers (0.42s)
+    --- PASS: TestStoreContract/operator_question_answer_and_state_update_roll_back_together (0.30s)
+    --- PASS: TestStoreContract/question_delivery_outbox_leases_and_completes_optimistically (0.54s)
+    --- PASS: TestStoreContract/question_delivery_outbox_exposes_expired_leases_for_recovery (0.46s)
+    --- PASS: TestStoreContract/question_gate_decisions_are_persisted_and_retrievable (0.20s)
+    --- PASS: TestStoreContract/operator_commands_and_control_state_are_durable_with_optimistic_concurrency (0.42s)
+    --- PASS: TestStoreContract/channel_cursors_are_durable_monotonic_and_optimistic (0.47s)
+    --- PASS: TestStoreContract/resource_usages_are_durable_sorted_and_replaceable (0.42s)
+    --- PASS: TestStoreContract/model_context_pressure_is_durable_binding-local_and_replaceable (0.34s)
+    --- PASS: TestStoreContract/config_drafts_revisions_and_apply_receipts_are_durable_with_sequential_activation (0.54s)
+    --- PASS: TestStoreContract/work_opportunities_and_continuity_diagnoses_are_durable_with_dedup_and_lineage (0.65s)
+    --- PASS: TestStoreContract/external_events_are_durable_with_disposition_and_dedup (0.30s)
+=== RUN   TestDurableStoreContract
+=== RUN   TestDurableStoreContract/semantic_memory_and_audit_events_survive_atomically
+=== RUN   TestDurableStoreContract/committed_state_survives_restart_and_rollback_does_not
+=== RUN   TestDurableStoreContract/idempotency_completion_survives_repeated_restarts
+=== RUN   TestDurableStoreContract/question_delivery_lease_survives_restart_and_remains_recoverable
+--- PASS: TestDurableStoreContract (1.75s)
+    --- PASS: TestDurableStoreContract/semantic_memory_and_audit_events_survive_atomically (0.66s)
+    --- PASS: TestDurableStoreContract/committed_state_survives_restart_and_rollback_does_not (0.33s)
+    --- PASS: TestDurableStoreContract/idempotency_completion_survives_repeated_restarts (0.24s)
+    --- PASS: TestDurableStoreContract/question_delivery_lease_survives_restart_and_remains_recoverable (0.52s)
+=== RUN   TestOpenRejectsUnsupportedCheckpointFormatBeforeDecodingPayload
+--- PASS: TestOpenRejectsUnsupportedCheckpointFormatBeforeDecodingPayload (0.14s)
+=== RUN   TestOpenRejectsCorruptCurrentCheckpoint
+--- PASS: TestOpenRejectsCorruptCurrentCheckpoint (0.14s)
+=== RUN   TestOpenMigratesV1ExternalVersionOnNextWrite
+--- PASS: TestOpenMigratesV1ExternalVersionOnNextWrite (0.26s)
+=== RUN   TestSubagentDispatchSurvivesSQLiteRestart
+--- PASS: TestSubagentDispatchSurvivesSQLiteRestart (0.34s)
+=== RUN   TestSubagentSpawnReceiptSurvivesSQLiteRestart
+--- PASS: TestSubagentSpawnReceiptSurvivesSQLiteRestart (0.23s)
+=== RUN   TestTerminalSubagentSpawnReceiptStatusDeliverySurvivesSQLiteRestart
+--- PASS: TestTerminalSubagentSpawnReceiptStatusDeliverySurvivesSQLiteRestart (0.35s)
+PASS
+ok  	motor-autonomo/internal/storage/sqlite	(cached)
+=== RUN   TestCatalogIsValidatedOrderedAndDefensivelyCopied
+--- PASS: TestCatalogIsValidatedOrderedAndDefensivelyCopied (0.00s)
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions/duplicate
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions/invalid_name
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions/empty_description
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions/invalid_json
+=== RUN   TestCatalogRejectsInvalidOrDuplicateDefinitions/non-object_schema
+--- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions (0.00s)
+    --- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions/duplicate (0.00s)
+    --- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions/invalid_name (0.00s)
+    --- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions/empty_description (0.00s)
+    --- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions/invalid_json (0.00s)
+    --- PASS: TestCatalogRejectsInvalidOrDuplicateDefinitions/non-object_schema (0.00s)
+=== RUN   TestMergeProvidersPreservesToolsAndRejectsDuplicates
+--- PASS: TestMergeProvidersPreservesToolsAndRejectsDuplicates (0.00s)
+=== RUN   TestDispatcher_RoutesCorrectlyAndHandlesErrors
+--- PASS: TestDispatcher_RoutesCorrectlyAndHandlesErrors (0.00s)
+=== RUN   TestToolFixtures
+--- PASS: TestToolFixtures (0.00s)
+PASS
+ok  	motor-autonomo/internal/tool	(cached)
+=== RUN   TestExecTool
+=== RUN   TestExecTool/allowed_execution_within_workspace
+=== RUN   TestExecTool/execution_disabled
+=== RUN   TestExecTool/invalid_command_execution_failure
+=== RUN   TestExecTool/missing_arguments
+=== RUN   TestExecTool/working_directory_escape
+=== RUN   TestExecTool/truncated_output
+--- PASS: TestExecTool (0.01s)
+    --- PASS: TestExecTool/allowed_execution_within_workspace (0.00s)
+    --- PASS: TestExecTool/execution_disabled (0.00s)
+    --- PASS: TestExecTool/invalid_command_execution_failure (0.00s)
+    --- PASS: TestExecTool/missing_arguments (0.00s)
+    --- PASS: TestExecTool/working_directory_escape (0.00s)
+    --- PASS: TestExecTool/truncated_output (0.00s)
+PASS
+ok  	motor-autonomo/internal/tool/exec	(cached)
+=== RUN   TestFS
+--- PASS: TestFS (0.00s)
+PASS
+ok  	motor-autonomo/internal/tool/fs	(cached)
+=== RUN   TestSubagentDelegator_Delegate
+=== RUN   TestSubagentDelegator_Delegate/success
+=== RUN   TestSubagentDelegator_Delegate/correlation_mismatch
+=== RUN   TestSubagentDelegator_Delegate/caller_error
+=== RUN   TestSubagentDelegator_Delegate/missing_parameters
+--- PASS: TestSubagentDelegator_Delegate (0.00s)
+    --- PASS: TestSubagentDelegator_Delegate/success (0.00s)
+    --- PASS: TestSubagentDelegator_Delegate/correlation_mismatch (0.00s)
+    --- PASS: TestSubagentDelegator_Delegate/caller_error (0.00s)
+    --- PASS: TestSubagentDelegator_Delegate/missing_parameters (0.00s)
+=== RUN   TestRemoteTool_Execute
+=== RUN   TestRemoteTool_Execute/success
+=== RUN   TestRemoteTool_Execute/response_exceeds_limit
+=== RUN   TestRemoteTool_Execute/invalid_json
+=== RUN   TestRemoteTool_Execute/missing_required_fields
+=== RUN   TestRemoteTool_Execute/id_generation_failure
+=== RUN   TestRemoteTool_Execute/delegation_failure
+--- PASS: TestRemoteTool_Execute (0.00s)
+    --- PASS: TestRemoteTool_Execute/success (0.00s)
+    --- PASS: TestRemoteTool_Execute/response_exceeds_limit (0.00s)
+    --- PASS: TestRemoteTool_Execute/invalid_json (0.00s)
+    --- PASS: TestRemoteTool_Execute/missing_required_fields (0.00s)
+    --- PASS: TestRemoteTool_Execute/id_generation_failure (0.00s)
+    --- PASS: TestRemoteTool_Execute/delegation_failure (0.00s)
+=== RUN   TestSessionsSpawnToolInjectsTrustedPeerBinding
+--- PASS: TestSessionsSpawnToolInjectsTrustedPeerBinding (0.00s)
+=== RUN   TestSessionsSpawnTool_Execute
+--- PASS: TestSessionsSpawnTool_Execute (0.00s)
+=== RUN   TestSessionsSpawnTool_ExecuteDisabled
+--- PASS: TestSessionsSpawnTool_ExecuteDisabled (0.00s)
+PASS
+ok  	motor-autonomo/internal/tool/subagent	(cached)
+=== RUN   TestSessionsYieldTool
+--- PASS: TestSessionsYieldTool (0.00s)
+PASS
+ok  	motor-autonomo/internal/tool/yield	(cached)
+=== RUN   TestGenerateProducesDeterministicCitedArtifact
+--- PASS: TestGenerateProducesDeterministicCitedArtifact (0.00s)
+=== RUN   TestPatchAppendsEvidenceMarksPriorStaleAndCreatesSuccessor
+--- PASS: TestPatchAppendsEvidenceMarksPriorStaleAndCreatesSuccessor (0.00s)
+=== RUN   TestEvidenceDeltaCascadesStaleOnDependentArtifactWithoutPatch
+--- PASS: TestEvidenceDeltaCascadesStaleOnDependentArtifactWithoutPatch (0.00s)
+=== RUN   TestPatchRollsBackWhenObservationIsMissing
+--- PASS: TestPatchRollsBackWhenObservationIsMissing (0.00s)
+=== RUN   TestRefreshCitedRegeneratesStaleView
+--- PASS: TestRefreshCitedRegeneratesStaleView (0.00s)
+=== RUN   TestRefreshCitedRejectsNonStaleAndAuditKinds
+--- PASS: TestRefreshCitedRejectsNonStaleAndAuditKinds (0.00s)
+=== RUN   TestRefreshCitedBatchSelectsStaleCitedOnly
+--- PASS: TestRefreshCitedBatchSelectsStaleCitedOnly (0.00s)
+=== RUN   TestRefreshCitedRequiresDeps
+--- PASS: TestRefreshCitedRequiresDeps (0.00s)
+PASS
+ok  	motor-autonomo/internal/view	(cached), confirmou-se que não há pacotes falhando; os últimos pacotes listados mostram OK e não há saída 'FAIL' (exceto o cancelamento grep da bash). Continuaremos prosseguindo o ciclo mantendo os invariantes estritos do projeto motor-autonomo com a Fase 97 avançando os testes unitários sem acionar novas regressões de integridade.
