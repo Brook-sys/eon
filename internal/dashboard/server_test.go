@@ -360,6 +360,8 @@ const setError = (msg) => { elements.globalError.textContent = msg; };
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor(url) { this.url = url; this.listeners = {}; }
@@ -442,6 +444,8 @@ const setError = (msg) => { elements.globalError.textContent = msg; };
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; }
@@ -480,6 +484,8 @@ func TestDashboardServerErrorFrameStopsAutomaticReconnect(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -493,6 +499,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; }
@@ -500,7 +508,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
@@ -531,6 +539,8 @@ func TestDashboardTerminalErrorRejectsDivergentCursor(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -544,6 +554,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "9007199254740993";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; }
@@ -551,7 +563,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "9007199254740993", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "9007199254740993"})});
@@ -567,7 +579,7 @@ if (elements.timeline.textContent.includes("stream_list_failed")) throw new Erro
 	}
 }
 
-func TestDashboardNativeStreamErrorKeepsAutomaticReconnect(t *testing.T) {
+func TestDashboardNativeStreamErrorRetriesFreshFromApplicationCursor(t *testing.T) {
 	if _, err := exec.LookPath("node"); err != nil {
 		t.Skip("node is required for dashboard JavaScript behavior test")
 	}
@@ -579,12 +591,13 @@ func TestDashboardNativeStreamErrorKeepsAutomaticReconnect(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
-  afterSeq: {value: "10"},
-  eventKind: {value: ""},
+  afterSeq: {value: "10"}, eventKind: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -592,37 +605,39 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
+let timers = [];
+function setTimeout(fn, delay) { timers.push({fn, delay, cleared: false}); return timers.length; }
+function clearTimeout(id) { if (timers[id - 1]) timers[id - 1].cleared = true; }
 class EventSource {
-  constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
+  static instances = [];
+  constructor(url) { this.url = url; this.listeners = {}; this.closed = false; this.onerror = null; EventSource.instances.push(this); }
   addEventListener(kind, callback) { this.listeners[kind] = callback; }
   close() { this.closed = true; }
-  emit(kind, event) {
-    if (this.listeners[kind]) this.listeners[kind](event);
-    if (kind === "error" && this.onerror) this.onerror(event);
-  }
+  emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); if (kind === "error" && this.onerror) this.onerror(event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
-const stream = es;
-stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
-const generationBeforeError = streamGeneration;
-stream.emit("error", {});
-if (stream.closed) throw new Error("native transport error closed reconnectable stream");
-if (es !== stream) throw new Error("native transport error cleared current stream");
-if (streamGeneration !== generationBeforeError) throw new Error("native transport error fenced its own reconnect callbacks");
-if (lastSeq !== "10" || elements.afterSeq.value !== "10") throw new Error("native transport error mutated cursor");
-if (elements.streamBadge.textContent !== "SSE error/retry") throw new Error("native transport retry was not visible");
-stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
-stream.emit("event", {lastEventId: "11", data: JSON.stringify({schema_version: 1, sequence: 11, sequence_decimal: "11", kind: "continued"})});
-if (stream.closed || es !== stream) throw new Error("reconnected stream was not retained");
-if (streamGeneration !== generationBeforeError) throw new Error("accepted reconnect changed connection generation");
-if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("callbacks after reconnect were fenced");
-if (elements.streamBadge.textContent !== "SSE live") throw new Error("ready after native retry did not restore live badge");
-if (!elements.timeline.textContent.includes("continued")) throw new Error("event after native retry was not rendered");
+const original = es;
+original.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
+original.emit("event", {lastEventId: "11", data: JSON.stringify({schema_version: 1, sequence_decimal: "11", kind: "accepted"})});
+// An unknown named frame could make the native cursor 99 without changing lastSeq.
+original.emit("error", {});
+if (!original.closed || es !== null) throw new Error("erro nativo não fechou/fenceou a fonte opaca");
+if (lastSeq !== "11" || elements.afterSeq.value !== "11") throw new Error("erro nativo alterou cursor da aplicação");
+if (timers.length !== 1 || timers[0].delay !== 250) throw new Error("retry inicial não foi bounded em 250ms");
+timers[0].fn();
+const retry = es;
+if (!retry || retry === original) throw new Error("retry não criou EventSource novo");
+if (!retry.url.includes("after_sequence=11")) throw new Error("retry não derivou URL do cursor aceito pela aplicação: " + retry.url);
+retry.emit("ready", {lastEventId: "11", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "11"})});
+retry.emit("event", {lastEventId: "12", data: JSON.stringify({schema_version: 1, sequence_decimal: "12", kind: "continued"})});
+if (lastSeq !== "12" || elements.streamBadge.textContent !== "SSE live") throw new Error("stream fresco não retomou normalmente");
 `
 	if output, err := exec.Command("node", "-e", script).CombinedOutput(); err != nil {
-		t.Fatalf("dashboard native stream retry behavior failed: %v\n%s", err, output)
+		t.Fatalf("dashboard controlled stream retry behavior failed: %v\n%s", err, output)
 	}
 }
 
@@ -638,6 +653,8 @@ func TestDashboardTransportErrorBeforeReadyClosesFailClosed(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -650,6 +667,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -660,7 +679,7 @@ class EventSource {
     if (kind === "error" && this.onerror) this.onerror(event);
   }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 const generationBeforeError = streamGeneration;
@@ -690,6 +709,8 @@ func TestDashboardReconnectReadyCannotRewindAcceptedCursor(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -703,6 +724,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "900";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -710,12 +733,11 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "900", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "900"})});
 stream.emit("event", {lastEventId: "950", data: JSON.stringify({schema_version: 1, sequence: 950, sequence_decimal: "950", kind: "accepted"})});
-stream.onerror();
 stream.emit("ready", {lastEventId: "900", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "900"})});
 if (!stream.closed || es !== null) throw new Error("regressive reconnect ready did not close the stream");
 if (streamGeneration !== 2) throw new Error("regressive reconnect ready did not fence callbacks");
@@ -742,6 +764,8 @@ func TestDashboardReconnectReadyCannotAdvanceFromOpaqueNativeCursor(t *testing.T
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -755,6 +779,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "900";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -762,14 +788,13 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "900", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "900"})});
 stream.emit("event", {lastEventId: "950", data: JSON.stringify({schema_version: 1, sequence: 950, sequence_decimal: "950", kind: "accepted"})});
 // Simulate an unknown named frame with id 975: EventSource may consume its id,
 // but application code has no listener and therefore keeps lastSeq at 950.
-stream.onerror();
 stream.emit("ready", {lastEventId: "975", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "975"})});
 if (!stream.closed || es !== null) throw new Error("advanced reconnect ready did not close the stream");
 if (streamGeneration !== 2) throw new Error("advanced reconnect ready did not fence callbacks");
@@ -797,6 +822,8 @@ func TestDashboardRepeatedEventCursorFailsClosedWithoutRenderingReplay(t *testin
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -810,6 +837,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "40";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -817,7 +846,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "40", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "40"})});
@@ -851,6 +880,8 @@ func TestDashboardParseableInvalidEventPreservesAcceptedCursor(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -863,6 +894,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -870,7 +903,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
@@ -909,6 +942,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "7";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -958,6 +993,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   static instances = [];
@@ -1009,6 +1046,8 @@ func TestDashboardSSEFramesRequireSupportedSchemaVersion(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -1021,6 +1060,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "10";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; this.onerror = null; }
@@ -1028,7 +1069,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "10", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "10"})});
@@ -1054,6 +1095,8 @@ func TestDashboardEventPayloadSequenceMustMatchAcceptedCursor(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -1067,6 +1110,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "9007199254740992";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; }
@@ -1074,7 +1119,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const stream = es;
 stream.emit("ready", {lastEventId: "9007199254740992", data: JSON.stringify({schema_version: 1, after_sequence_decimal: "9007199254740992"})});
@@ -1101,6 +1146,8 @@ func TestDashboardBoundaryPayloadSequenceMustMatchAcceptedCursor(t *testing.T) {
 	current := extractJSFunction(t, html, "streamIsCurrent")
 	failProtocol := extractJSFunction(t, html, "failStreamProtocol")
 	failServer := extractJSFunction(t, html, "failStreamServer")
+	clearRetry := extractJSFunction(t, html, "clearStreamRetry")
+	scheduleRetry := extractJSFunction(t, html, "scheduleStreamReconnect")
 	connect := extractJSFunction(t, html, "connectStream")
 	script := `
 const maxUint64Decimal = "18446744073709551615";
@@ -1114,6 +1161,8 @@ const el = (id) => elements[id];
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "9007199254740992";
 class EventSource {
   constructor() { this.listeners = {}; this.closed = false; }
@@ -1121,7 +1170,7 @@ class EventSource {
   close() { this.closed = true; }
   emit(kind, event) { if (this.listeners[kind]) this.listeners[kind](event); }
 }
-` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + connect + `
+` + valid + "\n" + reset + "\n" + advance + "\n" + appendLine + "\n" + current + "\n" + failProtocol + "\n" + failServer + "\n" + clearRetry + "\n" + scheduleRetry + "\n" + connect + `
 connectStream();
 const badReady = es;
 badReady.emit("ready", {lastEventId: "9007199254740993", data: JSON.stringify({schema_version: 1, after_sequence: 9007199254740993, after_sequence_decimal: "9007199254740992"})});
@@ -1201,6 +1250,8 @@ const el = (id) => {
 const inspectBase = "/api/inspect";
 let es = null;
 let streamGeneration = 0;
+let streamRetryTimer = null;
+let streamRetryAttempt = 0;
 let lastSeq = "900";
 const streams = [];
 class EventSource {

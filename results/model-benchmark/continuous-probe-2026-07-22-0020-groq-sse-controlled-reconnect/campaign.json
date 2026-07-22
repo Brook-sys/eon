@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "name": "phase87-sse-controlled-reconnect-groq",
+  "fixture_name": "phase87-sse-controlled-reconnect-v1",
+  "planned_calls": 1,
+  "max_calls": 1,
+  "models": [
+    {
+      "provider": "groq",
+      "binding_id": "groq-llama33-70b-phase87",
+      "model": "llama-3.3-70b-versatile",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "phase87-sse-controlled-reconnect-v1",
+        "model": "llama-3.3-70b-versatile",
+        "runs": [
+          {
+            "case_id": "sse-controlled-reconnect",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 328,
+            "actual_input_tokens": 251,
+            "output_tokens": 76,
+            "duration_millis": 595,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "TASK=Choose the safe reconnect policy after a browser EventSource transport error\nFACTS=F1, F2, F3, F4\nCONSTRAINTS=Use only supplied facts; do not invent missing evidence; Choose only one rule\nALLOWED_OUTPUTS=A\nANSWER=rule=close_native_source_and_retry_fresh_from_application_cursor_with_bounded_backoff"
+          }
+        ],
+        "summary": {
+          "total": 1,
+          "compiled": 1,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 251,
+          "output_tokens": 76,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 0,
+          "validation_errors": 1,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "SYNTHESIZE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 1,
+              "compiled": 1,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "strict syntax validity was below 50%"
+      }
+    }
+  ]
+}

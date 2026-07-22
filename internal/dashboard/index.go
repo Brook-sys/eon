@@ -503,6 +503,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   const maxUint64Decimal = "18446744073709551615";
   let es = null;
   let streamGeneration = 0;
+  let streamRetryTimer = null;
+  let streamRetryAttempt = 0;
   let lastSeq = "0";
   let lastMissionRevision = null;
   let inspectorRequestGeneration = 0;
@@ -944,7 +946,37 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     appendTimeline("# cursor ahead; redefina after_sequence explicitamente para " + highWater);
   }
 
-  function connectStream() {
+  function clearStreamRetry() {
+    if (streamRetryTimer !== null) {
+      clearTimeout(streamRetryTimer);
+      streamRetryTimer = null;
+    }
+  }
+
+  function scheduleStreamReconnect(connectionGeneration, connection) {
+    if (!streamIsCurrent(connectionGeneration)) return;
+    ++streamGeneration;
+    connection.close();
+    if (es === connection) es = null;
+    const retryGeneration = streamGeneration;
+    const delay = Math.min(5000, 250 * Math.pow(2, Math.min(streamRetryAttempt, 4)));
+    ++streamRetryAttempt;
+    el("streamBadge").textContent = "SSE retry in " + delay + "ms";
+    el("streamBadge").className = "badge err";
+    clearStreamRetry();
+    streamRetryTimer = setTimeout(function () {
+      if (retryGeneration !== streamGeneration || es !== null) return;
+      streamRetryTimer = null;
+      connectStream(true);
+    }, delay);
+  }
+
+  function connectStream(isRetry) {
+    const retrying = isRetry === true;
+    if (!retrying) {
+      if (typeof clearStreamRetry === "function") clearStreamRetry();
+      streamRetryAttempt = 0;
+    }
     const after = validStreamCursor(el("afterSeq").value.trim() || "0");
     if (after === null) {
       setError("after_sequence deve ser um uint64 decimal canônico");
@@ -963,6 +995,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     if (es) es.close();
     es = candidate;
     const connectionGeneration = ++streamGeneration;
+    const reconnectBaseline = retrying ? after : null;
     let readySeen = false;
     el("timeline").textContent = "conectando " + url + "…\n";
     el("timeline").dataset.empty = "0";
@@ -996,7 +1029,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       // listener, then silently skip evidence when the reconnect ready echoes
       // that opaque cursor. Manual connections still establish their first
       // baseline explicitly and may intentionally rewind.
-      if (readySeen && readyCursor !== lastSeq) {
+      if ((!readySeen && reconnectBaseline !== null && readyCursor !== reconnectBaseline) || (readySeen && readyCursor !== lastSeq)) {
         failStreamProtocol(connectionGeneration, "ready de reconnect com cursor divergente do último cursor aceito");
         return;
       }
@@ -1030,6 +1063,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
           failStreamProtocol(connectionGeneration, "event malformado com cursor inválido, repetido ou regressivo");
           return;
         }
+        streamRetryAttempt = 0;
         appendTimeline("# malformed event " + ev.data);
         return;
       }
@@ -1054,6 +1088,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "event com sequence_decimal ausente ou divergente do cursor");
         return;
       }
+      streamRetryAttempt = 0;
       appendTimeline(data.sequence_decimal + " " + (data.kind||"?") + " " + (data.id||"") + " " + (data.payload_ref||""));
     });
     es.addEventListener("page", function (ev) {
@@ -1082,6 +1117,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         failStreamProtocol(connectionGeneration, "page com cursor inválido ou regressivo");
         return;
       }
+      streamRetryAttempt = 0;
       appendTimeline("# page " + ev.data);
     });
     es.addEventListener("terminal_error", function (ev) {
@@ -1148,17 +1184,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     });
     es.onerror = function () {
       if (!streamIsCurrent(connectionGeneration)) return;
-      // Automatic reconnect is safe only after this EventSource has certified
-      // its baseline. Before ready, the browser may already have consumed an
-      // unobserved SSE id (for example on an unknown named event) and would send
-      // that opaque Last-Event-ID on retry. Close instead of accepting a future
-      // ready as the first handshake for a potentially poisoned native cursor.
+      // Never delegate retry cursor selection to EventSource. The browser may
+      // have consumed an unobserved id from an unknown named frame. Fence and
+      // close this source, then create a fresh URL from the application cursor
+      // after bounded backoff. Before ready there is no certified baseline, so
+      // even a controlled retry would lack trustworthy application state.
       if (!readySeen) {
         failStreamProtocol(connectionGeneration, "falha de transporte antes do handshake ready");
         return;
       }
-      el("streamBadge").textContent = "SSE error/retry";
-      el("streamBadge").className = "badge err";
+      scheduleStreamReconnect(connectionGeneration, candidate);
     };
   }
 

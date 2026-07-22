@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase87-sse-controlled-reconnect-v1",
+  "cases": [{
+    "id": "sse-controlled-reconnect",
+    "operation": "SYNTHESIZE",
+    "task": "Choose the safe reconnect policy after a browser EventSource transport error. The application has accepted cursor 950, but the native EventSource may also have consumed an unknown named frame with opaque id 975 that no application listener validated.",
+    "required_facts": [
+      {"id":"f1","text":"Application state has accepted cursor 950 and must not trust unobserved native Last-Event-ID state.","priority":10},
+      {"id":"f2","text":"Leaving the same EventSource open permits native automatic retry with a potentially opaque cursor.","priority":10},
+      {"id":"f3","text":"A fresh EventSource URL can explicitly request after_sequence=950 from application state.","priority":10},
+      {"id":"f4","text":"The old source and callbacks must be closed and generation-fenced before a bounded delayed retry.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"close_native_source_and_retry_fresh_from_application_cursor_with_bounded_backoff"}
+  }]
+}
