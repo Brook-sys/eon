@@ -24,4 +24,13 @@ func TestSQLInterfaces(t *testing.T) {
 	if scanned.Tokens != 100 {
 		t.Errorf("expected Tokens 100, got %d", scanned.Tokens)
 	}
+	
+	// Test string scanning
+	var scannedString Budget
+	if err := scannedString.Scan(string(bytes)); err != nil {
+		t.Fatalf("unexpected error during Scan (string): %v", err)
+	}
+	if scannedString.Tokens != 100 {
+		t.Errorf("expected Tokens 100, got %d", scannedString.Tokens)
+	}
 }
