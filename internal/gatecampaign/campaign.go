@@ -164,6 +164,7 @@ type RuntimeGateCampaignReport struct {
 	SelectedBindingID    string                  `json:"selected_binding_id"`
 	RouteRejected        map[string]string       `json:"route_rejected,omitempty"`
 	ProviderSucceeded    bool                    `json:"provider_succeeded"`
+	ProviderLatency      time.Duration           `json:"provider_latency"`
 	ProviderErrorClass   string                  `json:"provider_error_class,omitempty"`
 	ProviderHTTPStatus   int                     `json:"provider_http_status,omitempty"`
 	ProviderRetryAfter   time.Duration           `json:"provider_retry_after,omitempty"`
@@ -188,6 +189,7 @@ type boundedCallRecorder struct {
 	max       int
 	calls     int
 	bindingID string
+	latency   time.Duration
 	result    port.CompletionResult
 	err       error
 }
@@ -204,7 +206,9 @@ func (p recordedProvider) Complete(ctx context.Context, request port.CompletionR
 	}
 	p.recorder.calls++
 	p.recorder.bindingID = p.bindingID
+	started := time.Now()
 	p.recorder.result, p.recorder.err = p.provider.Complete(ctx, request)
+	p.recorder.latency = time.Since(started)
 	return p.recorder.result, p.recorder.err
 }
 
@@ -272,6 +276,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		SeededCircuit:      domain.ModelBindingResource(primary.BindingID),
 		SelectedProviderID: selected.ProviderRef, SelectedBindingID: selected.ID,
 		RouteRejected:       map[string]string{primary.BindingID: "circuit_open"},
+		ProviderLatency:     recorder.latency,
 		SecondAcquireReason: secondResult.SkipReason,
 	}
 	if recorder.err == nil {
@@ -280,12 +285,13 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		report.ObservedOutputTokens = recorder.result.OutputTokens
 	} else {
 		report.ProviderErrorClass = "transport"
-		if providerErr, ok := recorder.err.(port.ProviderError); ok {
+		var providerErr port.ProviderError
+		if errors.As(recorder.err, &providerErr) {
 			report.ProviderErrorClass = "provider"
-			delay := providerErr.RetryAfterDelay()
-			report.ProviderRetryAfter = delay
+			report.ProviderRetryAfter = providerErr.RetryAfterDelay()
 		}
-		if httpErr, ok := recorder.err.(port.ProviderHTTPError); ok {
+		var httpErr port.ProviderHTTPError
+		if errors.As(recorder.err, &httpErr) {
 			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
@@ -533,7 +539,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}

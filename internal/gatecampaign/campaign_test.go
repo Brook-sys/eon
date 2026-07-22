@@ -3,6 +3,7 @@ package gatecampaign
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -173,6 +174,33 @@ func (e providerHTTPError) Error() string                  { return "provider un
 func (e providerHTTPError) RetryAfterDelay() time.Duration { return 20 * time.Second }
 func (e providerHTTPError) HTTPStatusCode() int            { return e.status }
 func (e providerHTTPError) RetryableFailure() bool         { return true }
+
+type wrappedProvider struct{ err error }
+
+func (p wrappedProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	return port.CompletionResult{}, fmt.Errorf("wrapped provider failure: %w", p.err)
+}
+
+func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
+	now := time.Date(2026, 7, 22, 12, 0, 0, 0, time.UTC)
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": wrappedProvider{err: providerHTTPError{status: 401}},
+		},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ProviderErrorClass != "http" || report.ProviderHTTPStatus != 401 {
+		t.Fatalf("wrapped provider evidence=%+v", report)
+	}
+	if report.ProviderLatency < 0 {
+		t.Fatalf("provider latency=%s", report.ProviderLatency)
+	}
+}
 
 func TestRunRecordsNaturalProviderThrottleAndReleasesPermits(t *testing.T) {
 	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)

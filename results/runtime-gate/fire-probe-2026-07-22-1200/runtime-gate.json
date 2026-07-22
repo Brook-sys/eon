@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "name": "groq-primary-circuit-to-nim-fallback-2026-07-22-1200",
+  "started_at": "2026-07-22T15:03:51.626957622Z",
+  "completed_at": "2026-07-22T15:03:52.896848207Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-primary",
+  "selected_provider_id": "nvidia-nim",
+  "selected_binding_id": "nim-fallback",
+  "route_rejected": {
+    "groq-primary": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 1095025084,
+  "observed_input_tokens": 239,
+  "observed_output_tokens": 32,
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-22T15:04:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-primary",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-22T15:04:51.626957622Z",
+      "last_failure_at": "2026-07-22T15:03:51.626957622Z"
+    },
+    {
+      "resource": "model-binding:nim-fallback",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-22T15:03:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-22T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-22T15:03:00Z",
+      "token_minute_count": 271,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nvidia-nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-22T15:03:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-22T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-22T15:03:00Z",
+      "token_minute_count": 271,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
