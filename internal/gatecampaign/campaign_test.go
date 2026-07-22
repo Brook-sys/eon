@@ -65,6 +65,20 @@ func TestManifestStrictAndBounded(t *testing.T) {
 	}
 }
 
+func TestRuntimeGateSeedUsesExactTextProbeContract(t *testing.T) {
+	manifest := runtimeGateTestManifest()
+	_, spec, operation, err := runtimeGateSeed(memory.New(), manifest, time.Date(2026, 7, 22, 16, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.OutputSchema != "exact_text" || len(spec.Validators) != 1 || spec.Validators[0] != "exact_text" {
+		t.Fatalf("runtime gate retained changeset contract: %+v", spec)
+	}
+	if operation.ExpectedOutput != manifest.ProbePrompt {
+		t.Fatalf("probe task=%q want %q", operation.ExpectedOutput, manifest.ProbePrompt)
+	}
+}
+
 func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T) {
 	now := time.Date(2026, 7, 18, 10, 0, 30, 0, time.UTC)
 	clock := source.NewManualClock(now)

@@ -1154,6 +1154,14 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 	if task == "" {
 		task = "propose a single ProposedChangeSet JSON object"
 	}
+	if spec.OutputSchema == "exact_text" {
+		return prompt.Input{
+			Task:           task,
+			Constraints:    []string{"Return exactly the text requested by the task, with no explanation or formatting."},
+			AllowedOutputs: []string{"exact requested text"},
+			AnswerFormat:   "exact requested text only",
+		}, nil
+	}
 	facts := []prompt.Fact{
 		{ID: "operation_id", Text: string(operation.ID), Required: true, Priority: 100},
 		{ID: "mission_revision_id", Text: string(operation.MissionRevision), Required: true, Priority: 100},
