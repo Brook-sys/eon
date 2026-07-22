@@ -4081,3 +4081,10 @@ A suite `go test -v ./internal/inspect -run TestEventStreamSSEFiltersByNamespace
 
 
 2026-07-22 16:00 - HEARTBEAT - Fase 119 concluída. Em `internal/network/http/server.go`, a rota GET para SSE foi estendida para forçar a query `namespace=peerID` utilizando o peer ID extraído da cadeia TLS do chamador autorizado. Qualquer requisição P2P de streaming é estritamente confinada às métricas associadas ao seu respectivo namespace. Validação por `TestServerHandler_RoutesSSEToHandlerMethod` confirmou injeção transparente e status de repouso alcançado sem expor regras P2P à API HTTP local (que continua consumindo qualquer namespace configurado via UI).
+
+### Fase 120 - Runtime HTTP Gate
+
+- [ ] `READY` Executar teste de fogo (gatecampaign) simulando multiplas chamadas live ao runtime via HTTP, assegurando validade, consumo controlado e logs íntegros.
+- [ ] `READY` Atualizar estado documentado e métricas da bateria de benchmarks P2P.
+
+2026-07-22 16:05 - HEARTBEAT - Tentativa de executar a Fase 120 (Runtime HTTP Gate). O artefato do gatecampaign falhou com 'environment variable GROQ_API_KEY is required' pois as credenciais live não estão acessíveis no ambiente do executor nesta iteração, bloqueando a execução dos testes de fogo nas APIs externas. Irei atualizar o CONTINUOUS_DEVELOPMENT.md registrando essa tentativa.
