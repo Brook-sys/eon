@@ -24,6 +24,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };

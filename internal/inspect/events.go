@@ -20,6 +20,7 @@ type EventFilter struct {
 	AfterSequence   uint64
 	Limit           int
 	Kind            string
+	Namespace       string
 	MissionRevision domain.MissionRevisionID
 	InquiryID       domain.InquiryID
 	OperationID     domain.OperationID
@@ -48,7 +49,7 @@ func (p *Projector) ListEvents(ctx context.Context, filter EventFilter) (EventPa
 	if limit > MaxEventPageLimit {
 		return EventPage{}, fmt.Errorf("event page limit must be <= %d", MaxEventPageLimit)
 	}
-	filterApplied := filter.Kind != "" || filter.MissionRevision != "" || filter.InquiryID != "" || filter.OperationID != "" || filter.CommitID != ""
+	filterApplied := filter.Kind != "" || filter.Namespace != "" || filter.MissionRevision != "" || filter.InquiryID != "" || filter.OperationID != "" || filter.CommitID != ""
 
 	var page EventPage
 	err := p.Store.View(ctx, func(r port.Reader) error {
@@ -128,6 +129,9 @@ func (p *Projector) ListEvents(ctx context.Context, filter EventFilter) (EventPa
 
 func eventMatches(event domain.Event, filter EventFilter) bool {
 	if filter.Kind != "" && event.Kind != filter.Kind {
+		return false
+	}
+	if filter.Namespace != "" && event.Namespace != filter.Namespace {
 		return false
 	}
 	if filter.MissionRevision != "" && event.MissionRevision != filter.MissionRevision {

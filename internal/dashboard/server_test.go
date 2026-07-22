@@ -311,6 +311,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10x"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "existing stream", dataset: {empty: "0"}},
   streamBadge: {textContent: "SSE live", className: "badge live"},
   globalError: {textContent: ""}
@@ -351,6 +352,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""},
   globalError: {textContent: ""}
@@ -400,6 +402,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "healthy timeline", dataset: {empty: "0"}},
   streamBadge: {textContent: "SSE live", className: "badge live"},
   globalError: {textContent: ""}
@@ -437,6 +440,7 @@ func TestDashboardManualConstructionFailurePreservesPendingRetry(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "waiting for retry", dataset: {empty: "0"}},
   streamBadge: {textContent: "SSE retry in 250ms", className: "badge err"},
   globalError: {textContent: ""}
@@ -477,6 +481,7 @@ func TestDashboardRetryConstructionFailureIsTerminalAndVisible(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "SSE retry in 250ms", className: "badge err"},
   globalError: {textContent: ""}
@@ -517,6 +522,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""},
   globalError: {textContent: ""}
@@ -574,6 +580,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -629,6 +636,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "9007199254740993"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -680,6 +688,7 @@ func TestDashboardNativeStreamErrorRetriesFreshFromApplicationCursor(t *testing.
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -745,6 +754,7 @@ func TestDashboardStreamRetryBudgetStopsPersistentTransportLoop(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -818,6 +828,7 @@ func TestDashboardTransportErrorBeforeReadyClosesFailClosed(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -875,6 +886,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "900"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -930,6 +942,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "900"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -988,6 +1001,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "40"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1045,6 +1059,7 @@ func TestDashboardParseableInvalidEventPreservesAcceptedCursor(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1093,6 +1108,7 @@ func TestDashboardCursorAheadRequiresExplicitReset(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "18446744073709551615"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1144,6 +1160,7 @@ func TestDashboardSSERequiresReadyBeforeApplicationFrames(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1211,6 +1228,7 @@ func TestDashboardSSEFramesRequireSupportedSchemaVersion(t *testing.T) {
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "10"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1261,6 +1279,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "9007199254740992"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1312,6 +1331,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "9007199254740992"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1397,6 +1417,7 @@ func TestDashboardDefaultSSEMessageFailsClosedWithoutCursorAdvance(t *testing.T)
 const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "40"}, eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };
@@ -1454,6 +1475,7 @@ const maxUint64Decimal = "18446744073709551615";
 const elements = {
   afterSeq: {value: "900"},
   eventKind: {value: ""},
+  eventNamespace: {value: ""},
   timeline: {textContent: "", dataset: {empty: "1"}, scrollTop: 0, scrollHeight: 0},
   streamBadge: {textContent: "", className: ""}
 };

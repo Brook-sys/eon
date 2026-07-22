@@ -60,4 +60,4 @@
 
 | Case | Operation | Format | Context | Result | HTTP | Retry-After | Input/output tokens | Latency |
 | --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: |
-| tool-search-single | SYNTHESIZE | JSON | 2048 | PROVIDER | 401 | 0 ms | 0/0 | 102 ms |
+| tool-search-single | SYNTHESIZE | JSON | 2048 | PROVIDER | 401 | 0 ms | 0/0 | 93 ms |

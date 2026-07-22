@@ -379,6 +379,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
         <label>filtro kind
           <input id="eventKind" placeholder="opcional" spellcheck="false"/>
         </label>
+        <label>filtro namespace
+          <input id="eventNamespace" placeholder="opcional" spellcheck="false"/>
+        </label>
       </div>
       <div id="timeline" class="timeline">aguardando conexão…</div>
     </section>
@@ -1005,6 +1008,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     const kind = el("eventKind").value.trim();
     let url = inspectBase + "/events/stream?after_sequence=" + encodeURIComponent(after) + "&poll_ms=400&limit=50";
     if (kind) url += "&kind=" + encodeURIComponent(kind);
+    const ns = el("eventNamespace") ? el("eventNamespace").value.trim() : "";
+    if (ns) url += "&namespace=" + encodeURIComponent(ns);
     let candidate;
     try {
       candidate = new EventSource(url);

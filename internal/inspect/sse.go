@@ -131,6 +131,7 @@ func (a *API) handleEventStream(w http.ResponseWriter, r *http.Request) {
 		AfterSequence:   after,
 		Limit:           limit,
 		Kind:            r.URL.Query().Get("kind"),
+		Namespace:       r.URL.Query().Get("namespace"),
 		MissionRevision: domain.MissionRevisionID(r.URL.Query().Get("mission_revision_id")),
 		InquiryID:       domain.InquiryID(r.URL.Query().Get("inquiry_id")),
 		OperationID:     domain.OperationID(r.URL.Query().Get("operation_id")),

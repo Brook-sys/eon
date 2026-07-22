@@ -18,6 +18,7 @@ type Event struct {
 	InquiryID       InquiryID         `json:"inquiry_id,omitempty"`
 	OperationID     OperationID       `json:"operation_id,omitempty"`
 	CommitID        CommitID          `json:"commit_id,omitempty"`
+	Namespace       string            `json:"namespace,omitempty"`
 	PayloadRef      string            `json:"payload_ref,omitempty"`
 }
 
