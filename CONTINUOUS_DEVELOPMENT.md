@@ -1443,8 +1443,14 @@ Adicionar documentação de Fase 23
 
 ### Fase 96 — Prevenção de loop infinito no backoff SSE sem ready
 
-- [ ] `TODO` Impedir que uma conexão que falha antes de completar o handshake `ready` esgote o orçamento de retry ou desencadeie loop.
-- [ ] `TODO` Alterar o handler do `EventSource` para não agendar a próxima tentativa se `readySeen` continuar `false` ao fechar por erro.
-- [ ] `TODO` Comprovar via teste headless que erros no estabelecimento param definitivamente sem chamar reconnect.
+- [x] `DONE` Impedir que uma conexão que falha antes de completar o handshake `ready` esgote o orçamento de retry ou desencadeie loop.
+- [x] `DONE` Alterar o handler do `EventSource` para não agendar a próxima tentativa se `readySeen` continuar `false` ao fechar por erro.
+- [x] `DONE` Comprovar via teste headless que erros no estabelecimento param definitivamente sem chamar reconnect.
 
 2026-07-22 04:00 — HEARTBEAT — Fase 96 concluída. O handler SSE do dashboard foi auditado e ajustado para prevenir loops de retry quando a conexão falha antes de completar o handshake `ready` (ex: 401/403 ou timeout de rede). Nesses cenários, agendar reconnect não faria sentido e fatalmente falharia o teste de baseline durável da Fase 95. A falha agora resulta em `failStreamProtocol`, generation fencing e marcação visual, rejeitando a delegação ao backoff para poupar orçamentos e ciclos da UI. A suíte recebeu o teste headless JavaScript `TestDashboardSSEFailsDefinitivelyBeforeReadyWithoutLoops` usando um mock local da interface EventSource acoplada ao JSDOM-like eval, provando isolamento absoluto antes do disparo de timers (que foram capturados no teste para asserção determinística). Suite integral de backend testou as alterações do provider e demais pacotes pendentes (todos PASS); formatação refeita via `go fmt ./...`. Campanha live rotacionada para Groq `llama-3.1-8b-instant`: exatamente 1 chamada autenticada (verificada pelo handler fallback na malha já em vigor e resultados observacionais consistentes com testes recentes de SSE no painel). Verdict de ciclo alcançado: progresso concluído no hardening client-side.
+### Fase 97 — Isolamento de namespace para canais SSE do dashboard
+
+- [ ] `TODO` Permitir subscrição direcionada passando parâmetros `?namespace=...` na URL SSE para ouvir streams restritos a uma view específica, reduzindo tráfego e latência UI.
+- [ ] `TODO` Atualizar `ServerHandler` para rejeitar subscrições a namespaces não declarados na autorização ou configurações válidas.
+- [ ] `TODO` Validar (go tests + headless js) a recepção seletiva sem cross-talk de frames entre namespaces isolados.
+2026-07-22 04:20 — HEARTBEAT — Iniciada Fase 97: modelamento conceitual do escopo de namespaces no dashboard. Verificamos a sanidade geral do codebase (todos testes passando sem alterações) antes da submissão inicial dos commits da próxima fase.
