@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "phase95-sse-reconnect-cursor",
+  "cases": [{
+    "id": "sse-reconnect-cursor-integrity",
+    "operation": "SYNTHESIZE",
+    "task": "Identify the safest source for the baseline cursor during an automatic Server-Sent Events transport recovery.",
+    "required_facts": [
+      {"id":"f1","text":"The dashboard UI contains an editable after_sequence field used for explicit manual reconnections.","priority":10},
+      {"id":"f2","text":"An automatic transport recovery uses a scheduled timer to rebuild the EventSource instance.","priority":10},
+      {"id":"f3","text":"During the backoff delay, the user or a browser extension might alter the editable UI field without explicitly initiating a new connection.","priority":10},
+      {"id":"f4","text":"The application maintains an internal immutable variable representing the strictly validated cursor last accepted from the server.","priority":10}
+    ],
+    "optional_facts": [],
+    "constraints": ["Choose only one rule."],
+    "formats": ["CHOICE"],
+    "expected": {"rule":"automatic_reconnect_must_derive_baseline_strictly_from_the_last_accepted_application_cursor"}
+  }]
+}
