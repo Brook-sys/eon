@@ -25,14 +25,39 @@ const sustainedIngressMultiprocessMode = "MOTOR_AUTONOMO_SUSTAINED_INGRESS_MULTI
 
 const sustainedIngressRecoveryDelay = 100 * time.Millisecond
 
-const sustainedIngressCampaignReportSchema = "motor-autonomo.sustained-ingress-campaign.v2"
+const sustainedIngressCampaignReportSchema = "motor-autonomo.sustained-ingress-campaign.v3"
 
 type sustainedIngressAttemptTiming struct {
-	Cycle         int    `json:"cycle"`
-	Worker        int    `json:"worker"`
-	Attempt       int    `json:"attempt"`
-	ElapsedMicros int64  `json:"elapsed_micros"`
-	Outcome       string `json:"outcome"`
+	Cycle                int    `json:"cycle"`
+	Worker               int    `json:"worker"`
+	Attempt              int    `json:"attempt"`
+	ElapsedMicros        int64  `json:"elapsed_micros"`
+	CallbackMicros       int64  `json:"callback_micros"`
+	BeginMicros          int64  `json:"begin_micros"`
+	WriteCASMicros       int64  `json:"write_cas_micros"`
+	CommitMicros         int64  `json:"commit_micros"`
+	ConflictReloadMicros int64  `json:"conflict_reload_micros"`
+	Outcome              string `json:"outcome"`
+}
+
+type sustainedIngressSQLiteTimingCollector struct {
+	mu      sync.Mutex
+	timings []sqlite.UpdateTiming
+}
+
+func (c *sustainedIngressSQLiteTimingCollector) record(timing sqlite.UpdateTiming) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.timings = append(c.timings, timing)
+}
+
+func (c *sustainedIngressSQLiteTimingCollector) take(index int) sqlite.UpdateTiming {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if index < 0 || index >= len(c.timings) {
+		return sqlite.UpdateTiming{}
+	}
+	return c.timings[index]
 }
 
 type sustainedIngressHostLoad struct {
@@ -62,8 +87,9 @@ type sustainedIngressProcessReport struct {
 
 type sustainedIngressObservedStore struct {
 	port.Store
-	mu      sync.Mutex
-	timings []sustainedIngressAttemptTiming
+	mu            sync.Mutex
+	timings       []sustainedIngressAttemptTiming
+	sqliteTimings *sustainedIngressSQLiteTimingCollector
 }
 
 func (s *sustainedIngressObservedStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
@@ -79,7 +105,14 @@ func (s *sustainedIngressObservedStore) Update(ctx context.Context, fn func(port
 		outcome = "error"
 	}
 	s.mu.Lock()
-	s.timings = append(s.timings, sustainedIngressAttemptTiming{Attempt: len(s.timings) + 1, ElapsedMicros: time.Since(started).Microseconds(), Outcome: outcome})
+	attempt := len(s.timings) + 1
+	phase := s.sqliteTimings.take(attempt - 1)
+	s.timings = append(s.timings, sustainedIngressAttemptTiming{
+		Attempt: attempt, ElapsedMicros: time.Since(started).Microseconds(), Outcome: outcome,
+		CallbackMicros: phase.Callback.Microseconds(), BeginMicros: phase.Begin.Microseconds(),
+		WriteCASMicros: phase.WriteCAS.Microseconds(), CommitMicros: phase.Commit.Microseconds(),
+		ConflictReloadMicros: phase.ConflictReload.Microseconds(),
+	})
 	s.mu.Unlock()
 	return err
 }
@@ -233,6 +266,12 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 	if len(attemptTimings) != totalAttempts {
 		t.Fatalf("attempt timing count=%d want attempts=%d", len(attemptTimings), totalAttempts)
 	}
+	for _, timing := range attemptTimings {
+		phaseTotal := timing.CallbackMicros + timing.BeginMicros + timing.WriteCASMicros + timing.CommitMicros + timing.ConflictReloadMicros
+		if timing.CallbackMicros < 0 || timing.BeginMicros < 0 || timing.WriteCASMicros < 0 || timing.CommitMicros < 0 || timing.ConflictReloadMicros < 0 || phaseTotal > timing.ElapsedMicros {
+			t.Fatalf("invalid decomposed attempt timing: %+v", timing)
+		}
+	}
 	if convergence <= 0 || convergence > 20*time.Second {
 		t.Fatalf("time to convergence=%s outside bounded window (0,20s]", convergence)
 	}
@@ -292,7 +331,8 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 		t.Fatal("multiprocess helper paths are incomplete")
 	}
 
-	options := sqlite.Options{}
+	sqliteTimings := &sustainedIngressSQLiteTimingCollector{}
+	options := sqlite.Options{ObserveUpdate: sqliteTimings.record}
 	if worker == leader {
 		firstCommit := true
 		options.Failpoint = func(point sqlite.Failpoint) {
@@ -331,7 +371,7 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 	}
 	waitForMixedIngressFile(t, startPath, 5*time.Second)
 
-	observedStore := &sustainedIngressObservedStore{Store: store}
+	observedStore := &sustainedIngressObservedStore{Store: store, sqliteTimings: sqliteTimings}
 	runner := kernel.SubagentStatusIngressWorker{
 		Store: observedStore, Manager: manager, Clock: clock, Batch: 1, LeaseTTL: mixedIngressLeaseTTL,
 		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{},

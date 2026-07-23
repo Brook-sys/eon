@@ -1,0 +1,159 @@
+{
+  "schema_version": "motor-autonomo.sqlite-phase-timing-matrix.v1",
+  "campaigns": 9,
+  "by_delay": {
+    "50": {
+      "runs": 3,
+      "outcomes": {
+        "success": {
+          "count": 59,
+          "elapsed_us": {
+            "p50": 85151,
+            "p95": 451819
+          },
+          "callback_us": {
+            "p50": 10,
+            "p95": 24
+          },
+          "write_cas_us": {
+            "p50": 395,
+            "p95": 559
+          },
+          "conflict_reload_us": {
+            "p50": 0,
+            "p95": 0
+          },
+          "commit_us": {
+            "p50": 67271,
+            "p95": 147277
+          }
+        },
+        "cas_conflict": {
+          "count": 97,
+          "elapsed_us": {
+            "p50": 335242,
+            "p95": 536175
+          },
+          "callback_us": {
+            "p50": 11,
+            "p95": 25
+          },
+          "write_cas_us": {
+            "p50": 329905,
+            "p95": 530319
+          },
+          "conflict_reload_us": {
+            "p50": 1549,
+            "p95": 3418
+          },
+          "commit_us": {
+            "p50": 0,
+            "p95": 0
+          }
+        }
+      }
+    },
+    "100": {
+      "runs": 3,
+      "outcomes": {
+        "success": {
+          "count": 61,
+          "elapsed_us": {
+            "p50": 16307,
+            "p95": 338315
+          },
+          "callback_us": {
+            "p50": 9,
+            "p95": 22
+          },
+          "write_cas_us": {
+            "p50": 381,
+            "p95": 510
+          },
+          "conflict_reload_us": {
+            "p50": 0,
+            "p95": 0
+          },
+          "commit_us": {
+            "p50": 8716,
+            "p95": 70568
+          }
+        },
+        "cas_conflict": {
+          "count": 90,
+          "elapsed_us": {
+            "p50": 334936,
+            "p95": 436468
+          },
+          "callback_us": {
+            "p50": 10,
+            "p95": 22
+          },
+          "write_cas_us": {
+            "p50": 329854,
+            "p95": 430192
+          },
+          "conflict_reload_us": {
+            "p50": 1647,
+            "p95": 3208
+          },
+          "commit_us": {
+            "p50": 0,
+            "p95": 0
+          }
+        }
+      }
+    },
+    "200": {
+      "runs": 3,
+      "outcomes": {
+        "success": {
+          "count": 62,
+          "elapsed_us": {
+            "p50": 45568,
+            "p95": 482509
+          },
+          "callback_us": {
+            "p50": 9,
+            "p95": 19
+          },
+          "write_cas_us": {
+            "p50": 362,
+            "p95": 495
+          },
+          "conflict_reload_us": {
+            "p50": 0,
+            "p95": 0
+          },
+          "commit_us": {
+            "p50": 9230,
+            "p95": 219281
+          }
+        },
+        "cas_conflict": {
+          "count": 92,
+          "elapsed_us": {
+            "p50": 335372,
+            "p95": 635257
+          },
+          "callback_us": {
+            "p50": 11,
+            "p95": 33
+          },
+          "write_cas_us": {
+            "p50": 330006,
+            "p95": 630333
+          },
+          "conflict_reload_us": {
+            "p50": 1654,
+            "p95": 3087
+          },
+          "commit_us": {
+            "p50": 0,
+            "p95": 0
+          }
+        }
+      }
+    }
+  }
+}

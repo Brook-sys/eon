@@ -32,8 +32,21 @@ const (
 )
 
 type Options struct {
-	Failpoint   func(Failpoint)
-	BusyTimeout time.Duration
+	Failpoint     func(Failpoint)
+	BusyTimeout   time.Duration
+	ObserveUpdate func(UpdateTiming)
+}
+
+// UpdateTiming separates work performed by the in-memory transaction callback
+// from database/sql/SQLite phases. WriteCAS includes SQLite lock acquisition,
+// the checkpoint write, and evaluation of the optimistic CAS predicate; the
+// driver does not expose those three sub-phases independently.
+type UpdateTiming struct {
+	Callback       time.Duration
+	Begin          time.Duration
+	WriteCAS       time.Duration
+	Commit         time.Duration
+	ConflictReload time.Duration
 }
 
 type Store struct {
@@ -43,6 +56,7 @@ type Store struct {
 	persistedFormat  int
 	persistedPayload []byte
 	failpoint        func(Failpoint)
+	observeUpdate    func(UpdateTiming)
 }
 
 func Open(path string) (*Store, error) { return OpenWithOptions(path, Options{}) }
@@ -62,7 +76,7 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint}, nil
+	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint, observeUpdate: options.ObserveUpdate}, nil
 }
 
 func configure(db *sql.DB, busyTimeout time.Duration) error {
@@ -153,6 +167,10 @@ func (s *Store) RuntimeVersion() (string, error) {
 }
 
 func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	timing := UpdateTiming{}
+	if s.observeUpdate != nil {
+		defer func() { s.observeUpdate(timing) }()
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -167,23 +185,30 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 	if err != nil {
 		return err
 	}
-	if err := working.Update(ctx, fn); err != nil {
+	started := time.Now()
+	err = working.Update(ctx, fn)
+	timing.Callback = time.Since(started)
+	if err != nil {
 		return err
 	}
 	payload, err := working.MarshalBinary()
 	if err != nil {
 		return err
 	}
+	started = time.Now()
 	tx, err := s.db.BeginTx(ctx, nil)
+	timing.Begin = time.Since(started)
 	if err != nil {
 		return fmt.Errorf("begin sqlite checkpoint: %w", err)
 	}
 	defer tx.Rollback()
+	started = time.Now()
 	result, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
 		VALUES(?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload
 		WHERE runtime_checkpoint.format_version = ? AND runtime_checkpoint.payload = ?`,
 		checkpointID, memory.CheckpointFormatVersion, payload, s.persistedFormat, s.persistedPayload)
+	timing.WriteCAS = time.Since(started)
 	if err != nil {
 		return fmt.Errorf("write sqlite checkpoint: %w", err)
 	}
@@ -195,7 +220,9 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 		if err := tx.Rollback(); err != nil {
 			return fmt.Errorf("rollback stale sqlite checkpoint: %w", err)
 		}
+		started = time.Now()
 		latest, format, persisted, err := loadCheckpoint(s.db)
+		timing.ConflictReload = time.Since(started)
 		if err != nil {
 			return fmt.Errorf("reload sqlite checkpoint after conflict: %w", err)
 		}
@@ -207,7 +234,10 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 	if s.failpoint != nil {
 		s.failpoint(FailpointBeforeDurableCommit)
 	}
-	if err := tx.Commit(); err != nil {
+	started = time.Now()
+	err = tx.Commit()
+	timing.Commit = time.Since(started)
+	if err != nil {
 		return fmt.Errorf("commit sqlite checkpoint: %w", err)
 	}
 	if s.failpoint != nil {

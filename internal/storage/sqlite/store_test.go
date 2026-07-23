@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/gob"
 	"errors"
@@ -17,6 +18,38 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+func TestUpdateTimingSeparatesCallbackFromSQLitePhases(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	var observed []storage.UpdateTiming
+	store, err := storage.OpenWithOptions(path, storage.Options{ObserveUpdate: func(timing storage.UpdateTiming) {
+		observed = append(observed, timing)
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	if err := store.Update(context.Background(), func(port.Transaction) error {
+		time.Sleep(5 * time.Millisecond)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(observed) != 1 {
+		t.Fatalf("observations=%d want=1", len(observed))
+	}
+	got := observed[0]
+	if got.Callback < 5*time.Millisecond {
+		t.Fatalf("callback duration=%s want >=5ms", got.Callback)
+	}
+	if got.Begin <= 0 || got.WriteCAS <= 0 || got.Commit <= 0 {
+		t.Fatalf("SQLite phase timing incomplete: %+v", got)
+	}
+	if got.ConflictReload != 0 {
+		t.Fatalf("successful update reloaded conflict state: %+v", got)
+	}
+}
 
 func TestStoreContract(t *testing.T) {
 	contract.TestStore(t, func() port.Store {
