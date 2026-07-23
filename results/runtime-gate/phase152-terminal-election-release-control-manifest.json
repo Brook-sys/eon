@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase152-terminal-election-release-control-nim-llama31-8b",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "output_schema": "exact_json",
+  "probe_prompt": "Bounded control for exact-generation terminal election and post-commit capacity release. Return exactly {\"terminal_election_release\":\"OK\"}. Raw JSON only, no Markdown or explanation.",
+  "expected_response": "{\"terminal_election_release\":\"OK\"}",
+  "seed_primary_circuit_seconds": 1,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-8b",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-unused",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    }
+  ]
+}

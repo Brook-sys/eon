@@ -184,6 +184,106 @@ func TestSupervisorRetriesTerminalReleaseAfterPostCommitFailure(t *testing.T) {
 	}
 }
 
+func TestSupervisorReleasesExactGenerationAfterTerminalIngressElectionAndPostCommitFailure(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 23, 13, 0, 0, 0, time.UTC)}
+	local, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	persistent, err := kernel.NewPersistentSessionManager(local, store, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{
+		MissionID: "mission-ingress-terminal-release", MaxAttempts: 1, Timeout: time.Minute,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := persistent.Spawn(ctx, kernel.SubagentSpec{
+		Task:        "elect one terminal transport result",
+		ContextMode: "isolated",
+		Labels: map[string]string{
+			"task_id":                         "ingress-terminal-release-holder",
+			kernel.SubagentTransportPeerLabel: "peer-a",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, incoming := range []struct {
+		deliveryID  string
+		observation kernel.SubagentObservation
+	}{
+		{deliveryID: "terminal-winner", observation: kernel.SubagentObservation{ID: id, Attempt: 0, State: kernel.SessionStateComplete, Result: "winner"}},
+		{deliveryID: "terminal-replay", observation: kernel.SubagentObservation{ID: id, Attempt: 0, State: kernel.SessionStateComplete, Result: "winner"}},
+		{deliveryID: "terminal-conflict", observation: kernel.SubagentObservation{ID: id, Attempt: 0, State: kernel.SessionStateFailed, Failure: "divergent"}},
+	} {
+		if err := persistent.AdmitRemoteStatus(ctx, "peer-a", incoming.deliveryID, incoming.observation); err != nil {
+			t.Fatalf("admit %s: %v", incoming.deliveryID, err)
+		}
+		clock.currentTime = clock.currentTime.Add(time.Second)
+	}
+	worker := &kernel.SubagentStatusIngressWorker{Store: store, Manager: persistent, Clock: clock, Batch: 3}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 3 {
+		t.Fatalf("terminal ingress election=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		winner, err := r.SubagentStatusIngressReceipt("peer-a", "terminal-winner")
+		if err != nil {
+			return err
+		}
+		replay, err := r.SubagentStatusIngressReceipt("peer-a", "terminal-replay")
+		if err != nil {
+			return err
+		}
+		conflict, err := r.SubagentStatusIngressReceipt("peer-a", "terminal-conflict")
+		if err != nil {
+			return err
+		}
+		if winner.Status != domain.SubagentStatusIngressApplied || replay.Status != domain.SubagentStatusIngressApplied || conflict.Status != domain.SubagentStatusIngressRejected || conflict.RejectionCode != domain.SubagentStatusIngressRejectionTerminalConflict {
+			t.Fatalf("winner=%+v replay=%+v conflict=%+v", winner, replay, conflict)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	blocked := kernel.SubagentSpec{Task: "wait for elected terminal durability", ContextMode: "isolated", Labels: map[string]string{"task_id": "ingress-terminal-release-blocked"}}
+	if _, err := persistent.Spawn(ctx, blocked); !errors.Is(err, kernel.ErrSessionLimit) {
+		t.Fatalf("spawn before canonical terminal = %v, want ErrSessionLimit", err)
+	}
+	manager := &failOnceReleaseSessionManager{SessionManager: persistent, err: errors.New("injected post-commit release failure")}
+	supervisor := &kernel.Supervisor{Store: store, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := supervisor.Reconcile(ctx); n != 1 || err == nil || err.Error() != "injected post-commit release failure" {
+		t.Fatalf("first reconcile=(%d,%v)", n, err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		record, err := r.SubagentRecord(string(id))
+		if err != nil {
+			return err
+		}
+		if record.State != domain.SubagentStateComplete || record.Attempt != 0 || record.Result != "winner" {
+			t.Fatalf("committed elected terminal = %+v", record)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := persistent.ReleaseTerminal(ctx, id, 1); !errors.Is(err, kernel.ErrSessionAttempt) {
+		t.Fatalf("wrong-generation release = %v, want ErrSessionAttempt", err)
+	}
+	if _, err := persistent.Spawn(ctx, blocked); !errors.Is(err, kernel.ErrSessionLimit) {
+		t.Fatalf("spawn after wrong-generation release = %v, want ErrSessionLimit", err)
+	}
+
+	restartedSupervisor := &kernel.Supervisor{Store: store, Manager: persistent, Clock: clock, IDs: &supervisorIDs{}}
+	if n, err := restartedSupervisor.Reconcile(ctx); err != nil || n != 0 {
+		t.Fatalf("release recovery reconcile=(%d,%v)", n, err)
+	}
+	if _, err := persistent.Spawn(ctx, blocked); err != nil {
+		t.Fatalf("spawn after exact-generation release recovery: %v", err)
+	}
+}
+
 func TestSupervisorTransportTerminalHoldsCapacityUntilCanonicalCommit(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
