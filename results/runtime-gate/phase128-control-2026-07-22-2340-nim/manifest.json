@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase128-control-single-call-nim",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return exactly one JSON object with keys status and values, where status is ok and values is the array [1,2,3,4,5]. Raw JSON only; do not use Markdown, code fences, or prose.",
+  "expected_response": "{\"status\":\"ok\",\"values\":[1,2,3,4,5]}",
+  "seed_primary_circuit_seconds": 30,
+  "bindings": [
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama-primary",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "nvidia",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nvidia-mistral-fallback",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

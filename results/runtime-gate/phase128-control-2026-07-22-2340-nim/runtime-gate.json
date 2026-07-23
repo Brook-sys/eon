@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "name": "phase128-control-single-call-nim",
+  "started_at": "2026-07-23T02:42:38.703783519Z",
+  "completed_at": "2026-07-23T02:42:41.639406883Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-llama-primary",
+  "selected_provider_id": "nvidia",
+  "selected_binding_id": "nvidia-mistral-fallback",
+  "route_rejected": {
+    "groq-llama-primary": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 1091236583,
+  "observed_input_tokens": 114,
+  "observed_output_tokens": 25,
+  "finish_reason": "stop",
+  "response_bytes": 43,
+  "response_sha256": "92400f00b6635a2f250e27918b1bc5e4f6bd2ef35a313ce85ec27c1276819256",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-23T02:43:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-llama-primary",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-23T02:43:08.703783519Z",
+      "last_failure_at": "2026-07-23T02:42:38.703783519Z"
+    },
+    {
+      "resource": "model-binding:nvidia-mistral-fallback",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-23T02:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-23T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-23T02:42:00Z",
+      "token_minute_count": 139,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nvidia",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-23T02:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-23T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-23T02:42:00Z",
+      "token_minute_count": 139,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
