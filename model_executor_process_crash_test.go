@@ -42,6 +42,34 @@ func (p *rejectRetransmissionProvider) Complete(context.Context, port.Completion
 	return port.CompletionResult{}, errors.New("provider retransmission after ambiguous crash")
 }
 
+type exitAfterReceiptTx struct {
+	port.Transaction
+	receiptAppended *bool
+}
+
+func (tx exitAfterReceiptTx) AppendModelCompletionReceipt(receipt domain.ModelCompletionReceipt) error {
+	if err := tx.Transaction.AppendModelCompletionReceipt(receipt); err != nil {
+		return err
+	}
+	*tx.receiptAppended = true
+	return nil
+}
+
+type exitAfterReceiptStore struct{ port.Store }
+
+func (s exitAfterReceiptStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	receiptAppended := false
+	err := s.Store.Update(ctx, func(tx port.Transaction) error {
+		return fn(exitAfterReceiptTx{Transaction: tx, receiptAppended: &receiptAppended})
+	})
+	if err == nil && receiptAppended {
+		// The wrapped store has committed the receipt transaction. Terminate before
+		// ModelExecutor can parse/process the proposal or commit canonical state.
+		os.Exit(78)
+	}
+	return err
+}
+
 // TestModelExecutorProcessCrashAfterResponseBeforeReceipt is an integration
 // boundary test rather than a core kernel test because it deliberately spawns
 // and kills a subprocess. Core tests remain offline and process-free.
@@ -145,6 +173,105 @@ func TestModelExecutorProcessCrashAfterResponseBeforeReceipt(t *testing.T) {
 	}
 }
 
+// TestModelExecutorProcessCrashAfterReceiptBeforeCommit proves the complementary
+// process boundary: a durable receipt from an expired lease is replayed after
+// restart, so the canonical commit completes without a second provider request.
+func TestModelExecutorProcessCrashAfterReceiptBeforeCommit(t *testing.T) {
+	const helperEnv = "MOTOR_AUTONOMO_CRASH_AFTER_RECEIPT_HELPER"
+	if os.Getenv(helperEnv) == "1" {
+		runCrashAfterReceiptHelper(t)
+	}
+
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "process-crash-after-receipt.sqlite")
+	proposal := processCrashProposal()
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fixture-model", InputTokens: 10, OutputTokens: 20})
+	defer server.Close()
+
+	cmd := exec.Command(os.Args[0], "-test.run", "^TestModelExecutorProcessCrashAfterReceiptBeforeCommit$")
+	cmd.Env = append(os.Environ(), helperEnv+"=1", "MOTOR_AUTONOMO_CRASH_DB="+dbPath, "MOTOR_AUTONOMO_CRASH_SERVER="+server.URL())
+	output, runErr := cmd.CombinedOutput()
+	var exitErr *exec.ExitError
+	if !errors.As(runErr, &exitErr) || exitErr.ExitCode() != 78 {
+		t.Fatalf("crash helper exit=%v output=%s", runErr, output)
+	}
+	if got := len(server.Requests()); got != 1 {
+		t.Fatalf("controlled provider requests=%d, want exactly one before crash", got)
+	}
+
+	store, err := sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	ctx := context.Background()
+	if err := store.View(ctx, func(r port.Reader) error {
+		reservations, err := r.ModelCallReservations("operation_model")
+		if err != nil || len(reservations) != 1 {
+			return fmt.Errorf("reservations after crash = %#v err=%v", reservations, err)
+		}
+		if _, err := r.ModelCompletionReceipt("operation_model", 1, 1); err != nil {
+			return fmt.Errorf("completion receipt after crash: %w", err)
+		}
+		if _, err := r.CanonicalEntity("observation", "obs_process_crash"); !errors.Is(err, port.ErrNotFound) {
+			return fmt.Errorf("canonical entity unexpectedly present after crash: %v", err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	clock := source.NewManualClock(time.Date(2026, 7, 23, 5, 17, 0, 0, time.UTC))
+	ids := source.NewSequenceIDGenerator(100)
+	reconciled, err := (kernel.LeaseReaper{Store: store, Clock: clock, IDs: ids}).Reconcile(ctx, "revision_1")
+	if err != nil || reconciled.Reconciled != 1 {
+		t.Fatalf("reconcile=%+v err=%v", reconciled, err)
+	}
+	provider := &rejectRetransmissionProvider{}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@process-crash"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := kernel.ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@process-crash", LeaseTTL: time.Minute,
+	}
+	result, executeErr := executor.Execute(ctx, "operation_model")
+	if executeErr != nil || !result.Completed || result.ModelCalls != 0 || result.CommitID == "" {
+		t.Fatalf("restart replay result=%+v err=%v", result, executeErr)
+	}
+	if provider.calls != 0 || len(server.Requests()) != 1 {
+		t.Fatalf("provider retransmission: local=%d controlled_total=%d", provider.calls, len(server.Requests()))
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		if op.State != domain.StateSucceeded || op.Attempt != 2 {
+			return fmt.Errorf("operation after replay = state %s attempt %d", op.State, op.Attempt)
+		}
+		if _, err := r.CanonicalEntity("observation", "obs_process_crash"); err != nil {
+			return fmt.Errorf("canonical entity after replay: %w", err)
+		}
+		reservations, err := r.ModelCallReservations(op.ID)
+		if err != nil || len(reservations) != 1 {
+			return fmt.Errorf("reservations after replay = %#v err=%v", reservations, err)
+		}
+		if _, err := r.ModelCompletionReceipt(op.ID, 1, 1); err != nil {
+			return fmt.Errorf("original completion receipt after replay: %w", err)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func runCrashAfterResponseHelper(t *testing.T) {
 	dbPath := os.Getenv("MOTOR_AUTONOMO_CRASH_DB")
 	baseURL := os.Getenv("MOTOR_AUTONOMO_CRASH_SERVER")
@@ -176,6 +303,48 @@ func runCrashAfterResponseHelper(t *testing.T) {
 	}
 	_, _ = executor.Execute(context.Background(), "operation_model")
 	t.Fatal("crash helper returned without exiting")
+}
+
+func runCrashAfterReceiptHelper(t *testing.T) {
+	dbPath := os.Getenv("MOTOR_AUTONOMO_CRASH_DB")
+	baseURL := os.Getenv("MOTOR_AUTONOMO_CRASH_SERVER")
+	if dbPath == "" || baseURL == "" {
+		t.Fatal("crash helper requires database and server")
+	}
+	now := time.Date(2026, 7, 23, 5, 15, 0, 0, time.UTC)
+	store, err := sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedProcessCrashAgenda(t, store, now, processCrashModelSpec())
+	provider, err := openai.New(openai.Config{BaseURL: baseURL, Model: "fixture-model"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	processor, err := changeset.New(changeset.Config{Store: exitAfterReceiptStore{Store: store}, Clock: clock, IDs: ids, PolicyVersion: "policy@process-crash"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := kernel.ModelExecutor{
+		Store: exitAfterReceiptStore{Store: store}, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@process-crash", LeaseTTL: time.Minute,
+	}
+	_, _ = executor.Execute(context.Background(), "operation_model")
+	t.Fatal("crash helper returned without exiting")
+}
+
+func processCrashProposal() domain.ProposedChangeSet {
+	return domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_process_crash", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_process_crash", PayloadRef: "payload_process_crash"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
 }
 
 func processCrashModelSpec() domain.OperationSpec {
