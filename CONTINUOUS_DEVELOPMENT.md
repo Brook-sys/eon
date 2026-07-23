@@ -4286,3 +4286,6 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 - [x] `DONE` Analisar os logs atuais e a persistência de tools no receipt de completion do provider (especialmente para long-polling tools / multi-turn) visando mitigação do tamanho da payload armazenada no SQLite.
 
 2026-07-23 06:42 — HEARTBEAT — Concluído e verificado o teste da Fase 140 para mitigação e otimização do storage de tool calls em completions. Modificada a assinatura e omitempty no `model_completion_receipt.go` além do `model.go` truncando payloads maiores de 64KB e validado em cima de testes de domínio, core e integração port-sqlite sem perda de contexto semântico vital para logs locais.
+
+### Fase 141 - Executar testnet de simulação extrema para ModelContextPressure
+- [ ] `READY` Elaborar uma nova campaign isolada instanciando o modelo mais caro e criando sucessivas requisições para forçar saturação de budget no `ContextPressureState` e provocar LevelOverflow explícito. Confirmar que ele desarma sem vazar slots antes de liberar.
