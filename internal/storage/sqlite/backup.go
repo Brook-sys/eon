@@ -330,12 +330,12 @@ func openReadOnlyStore(path string, expectedIdentity os.FileInfo) (*Store, error
 	if err != nil {
 		return nil, fmt.Errorf("open offline backup source read-only: %w", err)
 	}
-	core, err := load(db)
+	core, format, payload, err := loadCheckpoint(db)
 	if err != nil {
 		db.Close()
 		return nil, err
 	}
-	return &Store{db: db, core: core}, nil
+	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload}, nil
 }
 
 // openReadOnlyDatabase binds SQLite to the already-inspected regular inode and

@@ -36,10 +36,12 @@ type Options struct {
 }
 
 type Store struct {
-	mu        sync.RWMutex
-	db        *sql.DB
-	core      *memory.Store
-	failpoint func(Failpoint)
+	mu               sync.RWMutex
+	db               *sql.DB
+	core             *memory.Store
+	persistedFormat  int
+	persistedPayload []byte
+	failpoint        func(Failpoint)
 }
 
 func Open(path string) (*Store, error) { return OpenWithOptions(path, Options{}) }
@@ -54,18 +56,19 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	core, err := load(db)
+	core, format, payload, err := loadCheckpoint(db)
 	if err != nil {
 		db.Close()
 		return nil, err
 	}
-	return &Store{db: db, core: core, failpoint: options.Failpoint}, nil
+	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint}, nil
 }
 
 func configure(db *sql.DB) error {
 	for _, statement := range []string{
 		`PRAGMA journal_mode=WAL`,
 		`PRAGMA synchronous=FULL`,
+		`PRAGMA busy_timeout=5000`,
 		`PRAGMA foreign_keys=ON`,
 		fmt.Sprintf(`PRAGMA application_id=%d`, runtimeApplicationID),
 		fmt.Sprintf(`PRAGMA user_version=%d`, runtimeUserVersion),
@@ -82,27 +85,27 @@ func configure(db *sql.DB) error {
 	return nil
 }
 
-func load(db *sql.DB) (*memory.Store, error) {
+func loadCheckpoint(db *sql.DB) (*memory.Store, int, []byte, error) {
 	var formatVersion int
 	var payload []byte
 	err := db.QueryRow(`SELECT format_version, payload FROM runtime_checkpoint WHERE id = ?`, checkpointID).Scan(&formatVersion, &payload)
 	if errors.Is(err, sql.ErrNoRows) {
-		return memory.New(), nil
+		return memory.New(), 0, nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("load sqlite checkpoint: %w", err)
+		return nil, 0, nil, fmt.Errorf("load sqlite checkpoint: %w", err)
 	}
 	if !memory.SupportsExternalCheckpointFormat(formatVersion) {
-		return nil, fmt.Errorf("load sqlite checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, formatVersion, memory.CheckpointFormatVersion)
+		return nil, 0, nil, fmt.Errorf("load sqlite checkpoint: %w: got %d, support %d", memory.ErrUnsupportedCheckpointFormat, formatVersion, memory.CheckpointFormatVersion)
 	}
 	if err := memory.ValidateExternalCheckpoint(formatVersion, payload); err != nil {
-		return nil, fmt.Errorf("validate sqlite checkpoint: %w", err)
+		return nil, 0, nil, fmt.Errorf("validate sqlite checkpoint: %w", err)
 	}
 	core, err := memory.NewFromBinary(payload)
 	if err != nil {
-		return nil, fmt.Errorf("restore sqlite checkpoint: %w", err)
+		return nil, 0, nil, fmt.Errorf("restore sqlite checkpoint: %w", err)
 	}
-	return core, nil
+	return core, formatVersion, payload, nil
 }
 
 func (s *Store) View(ctx context.Context, fn func(port.Reader) error) error {
@@ -168,10 +171,30 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 		return fmt.Errorf("begin sqlite checkpoint: %w", err)
 	}
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
+	result, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
 		VALUES(?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload`, checkpointID, memory.CheckpointFormatVersion, payload); err != nil {
+		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload
+		WHERE runtime_checkpoint.format_version = ? AND runtime_checkpoint.payload = ?`,
+		checkpointID, memory.CheckpointFormatVersion, payload, s.persistedFormat, s.persistedPayload)
+	if err != nil {
 		return fmt.Errorf("write sqlite checkpoint: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("inspect sqlite checkpoint write: %w", err)
+	}
+	if rows != 1 {
+		if err := tx.Rollback(); err != nil {
+			return fmt.Errorf("rollback stale sqlite checkpoint: %w", err)
+		}
+		latest, format, persisted, err := loadCheckpoint(s.db)
+		if err != nil {
+			return fmt.Errorf("reload sqlite checkpoint after conflict: %w", err)
+		}
+		s.core = latest
+		s.persistedFormat = format
+		s.persistedPayload = persisted
+		return port.ErrConflict
 	}
 	if s.failpoint != nil {
 		s.failpoint(FailpointBeforeDurableCommit)
@@ -183,6 +206,8 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 		s.failpoint(FailpointAfterDurableCommit)
 	}
 	s.core = working
+	s.persistedFormat = memory.CheckpointFormatVersion
+	s.persistedPayload = append(s.persistedPayload[:0], payload...)
 	return nil
 }
 
