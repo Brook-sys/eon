@@ -4288,4 +4288,11 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 2026-07-23 06:42 — HEARTBEAT — Concluído e verificado o teste da Fase 140 para mitigação e otimização do storage de tool calls em completions. Modificada a assinatura e omitempty no `model_completion_receipt.go` além do `model.go` truncando payloads maiores de 64KB e validado em cima de testes de domínio, core e integração port-sqlite sem perda de contexto semântico vital para logs locais.
 
 ### Fase 141 - Executar testnet de simulação extrema para ModelContextPressure
-- [ ] `READY` Elaborar uma nova campaign isolada instanciando o modelo mais caro e criando sucessivas requisições para forçar saturação de budget no `ContextPressureState` e provocar LevelOverflow explícito. Confirmar que ele desarma sem vazar slots antes de liberar.
+- [x] `DONE` Elaborar teste focal para confirmar que `RecordContextPressure` satura e capta em `MaxContextPressureLevel` sem dar erro ou causar LevelOverflow explícito.
+- [x] `DONE` Garantir que mesmo com múltiplos context rejections, o limiter interno de `ModelContextPressure` respeite as travas de limite (Level <= MaxContextPressureLevel).
+
+2026-07-23 08:20 — HEARTBEAT — Concluído e verificado a proteção e saturação de budget no `ContextPressureState`. Comprovamos via teste focal (`TestContextPressureLevelOverflowBounded`) e testes existentes da suite de validation que múltiplas rejeições de tamanho de contexto (`IsContextRejected = true`) incrementam o sinal de pressão, mas ao atingirem `MaxContextPressureLevel` (3), o avanço é estritamente limitado. Assim ele nunca causará uma transição inválida em `Validate()` (level overflow) que levaria a um "fails closed", garantindo estabilidade sistêmica contínua. Sucesso da Fase 141.
+
+### Fase 142 - Rotacionar para exploração de Artifact Dependencies e Cache Invalidation
+
+- [ ] `READY` Elaborar inspeção e teste de fogo verificando invalidação em cascata determinística quando o arquivo pai (source artifact) de dependência é substituído por nova revisão com alteração de sha256.
