@@ -1,0 +1,421 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-campaign.v2",
+  "workers": 4,
+  "cycles": 6,
+  "retry_max_attempts": 3,
+  "recovery_delay_millis": 50,
+  "worker_cycles": 24,
+  "attempts": 52,
+  "exhaustions": 4,
+  "exhaustion_rate": 0.16666666666666666,
+  "pending_depth": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ],
+  "convergence_millis": 3899,
+  "processed_by_worker": [
+    2,
+    2,
+    1,
+    1
+  ],
+  "exhaustions_by_worker": [
+    1,
+    0,
+    1,
+    2
+  ],
+  "attempt_timings": [
+    {
+      "cycle": 0,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313407,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 436097,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 10481,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 335233,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11101,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 335566,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 13636,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 10903,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336045,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12307,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 13031,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313236,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 334924,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11331,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 336043,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12497,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 10873,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336141,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11072,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 334564,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 13945,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 10581,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 312633,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 336309,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12151,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 11929,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335198,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11041,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 335204,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 5019,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 10964,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336159,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12035,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 12082,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 312844,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313141,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 335982,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 10760,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 311083,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 10766,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 310764,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12212,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 5055,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336364,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12262,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 10765,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313340,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 384753,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 4978,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 11632,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 334629,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12555,
+      "outcome": "success"
+    }
+  ],
+  "host_load_start": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 0.87,
+    "load_5": 0.41,
+    "load_15": 0.32
+  },
+  "host_load_end": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 1.04,
+    "load_5": 0.45,
+    "load_15": 0.34
+  },
+  "matrix_run_id": "phase173-ordinal-23",
+  "matrix_ordinal": 23,
+  "matrix_block": 7,
+  "order_position": 2,
+  "order_strategy": "rotating_latin_20_blocks_v1",
+  "matrix_metadata_present": true
+}

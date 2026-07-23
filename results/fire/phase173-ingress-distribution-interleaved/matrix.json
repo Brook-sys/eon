@@ -1,0 +1,159 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-observability-matrix.v2",
+  "order_strategy": "rotating_latin_20_blocks_v1",
+  "production_delay_millis": 100,
+  "blocks": 20,
+  "runs": 60,
+  "cells": [
+    {
+      "delay_millis": 50,
+      "runs": 20,
+      "convergence_millis": {
+        "min": 3866,
+        "p50": 3991,
+        "p95": 4371,
+        "max": 6378
+      },
+      "exhaustion_rate": {
+        "min": 0.041666666666666664,
+        "p50": 0.16666666666666666,
+        "p95": 0.20833333333333334,
+        "max": 0.25
+      },
+      "attempts": {
+        "min": 49,
+        "p50": 52,
+        "p95": 54,
+        "max": 54
+      },
+      "fairness_preserved_runs": 20,
+      "pending_trace_preserved_runs": 20,
+      "attempt_outcomes": {
+        "cas_conflict": {
+          "count": 623,
+          "elapsed_micros": {
+            "min": 3436,
+            "p50": 334745,
+            "p95": 436097,
+            "max": 636719
+          }
+        },
+        "success": {
+          "count": 407,
+          "elapsed_micros": {
+            "min": 2256,
+            "p50": 11664,
+            "p95": 314395,
+            "max": 459894
+          }
+        }
+      },
+      "normalized_load_1": {
+        "min": 0.04125,
+        "p50": 0.07,
+        "p95": 0.1475,
+        "max": 0.16375
+      }
+    },
+    {
+      "delay_millis": 100,
+      "runs": 20,
+      "convergence_millis": {
+        "min": 4126,
+        "p50": 4235,
+        "p95": 9864,
+        "max": 12092
+      },
+      "exhaustion_rate": {
+        "min": 0.08333333333333333,
+        "p50": 0.16666666666666666,
+        "p95": 0.25,
+        "max": 0.25
+      },
+      "attempts": {
+        "min": 49,
+        "p50": 52,
+        "p95": 54,
+        "max": 54
+      },
+      "fairness_preserved_runs": 20,
+      "pending_trace_preserved_runs": 20,
+      "attempt_outcomes": {
+        "cas_conflict": {
+          "count": 632,
+          "elapsed_micros": {
+            "min": 3419,
+            "p50": 334811,
+            "p95": 436683,
+            "max": 537573
+          }
+        },
+        "success": {
+          "count": 400,
+          "elapsed_micros": {
+            "min": 2336,
+            "p50": 12091,
+            "p95": 319411,
+            "max": 475213
+          }
+        }
+      },
+      "normalized_load_1": {
+        "min": 0.04125,
+        "p50": 0.07375,
+        "p95": 0.135,
+        "max": 0.16625
+      }
+    },
+    {
+      "delay_millis": 200,
+      "runs": 20,
+      "convergence_millis": {
+        "min": 4208,
+        "p50": 4566,
+        "p95": 8168,
+        "max": 11032
+      },
+      "exhaustion_rate": {
+        "min": 0.08333333333333333,
+        "p50": 0.16666666666666666,
+        "p95": 0.20833333333333334,
+        "max": 0.20833333333333334
+      },
+      "attempts": {
+        "min": 50,
+        "p50": 51,
+        "p95": 53,
+        "max": 53
+      },
+      "fairness_preserved_runs": 20,
+      "pending_trace_preserved_runs": 20,
+      "attempt_outcomes": {
+        "cas_conflict": {
+          "count": 624,
+          "elapsed_micros": {
+            "min": 3526,
+            "p50": 334815,
+            "p95": 436592,
+            "max": 937078
+          }
+        },
+        "success": {
+          "count": 405,
+          "elapsed_micros": {
+            "min": 2440,
+            "p50": 11738,
+            "p95": 319824,
+            "max": 543441
+          }
+        }
+      },
+      "normalized_load_1": {
+        "min": 0.0425,
+        "p50": 0.075,
+        "p95": 0.16,
+        "max": 0.16625
+      }
+    }
+  ]
+}

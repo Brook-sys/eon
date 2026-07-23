@@ -1,0 +1,413 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-campaign.v2",
+  "workers": 4,
+  "cycles": 6,
+  "retry_max_attempts": 3,
+  "recovery_delay_millis": 100,
+  "worker_cycles": 24,
+  "attempts": 51,
+  "exhaustions": 3,
+  "exhaustion_rate": 0.125,
+  "pending_depth": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ],
+  "convergence_millis": 4126,
+  "processed_by_worker": [
+    2,
+    2,
+    1,
+    1
+  ],
+  "exhaustions_by_worker": [
+    1,
+    0,
+    1,
+    1
+  ],
+  "attempt_timings": [
+    {
+      "cycle": 0,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313083,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 436731,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 10912,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 315938,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11171,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 434873,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 13630,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 11102,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335979,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11423,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313412,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 436439,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 10965,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 335066,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12041,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 11071,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336128,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12096,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 11984,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 336400,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 10911,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 313700,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 336102,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12486,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 11229,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336138,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11437,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 335059,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 12239,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 11008,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336098,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12116,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 11932,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 313022,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 325577,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 336707,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 12005,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 11058,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 334734,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12356,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 434987,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 12274,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 334947,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12527,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313154,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336139,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12151,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 10961,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 334669,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 13220,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 12044,
+      "outcome": "cas_conflict"
+    }
+  ],
+  "host_load_start": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 0.37,
+    "load_5": 0.2,
+    "load_15": 0.26
+  },
+  "host_load_end": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 0.34,
+    "load_5": 0.2,
+    "load_15": 0.26
+  },
+  "matrix_run_id": "phase173-ordinal-1",
+  "matrix_ordinal": 1,
+  "order_position": 1,
+  "order_strategy": "rotating_latin_20_blocks_v1",
+  "matrix_metadata_present": true
+}
