@@ -9,6 +9,7 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/storage/memory"
 )
 
@@ -26,6 +27,28 @@ func (i *ingressWorkerIDs) NewID(prefix string) (string, error) {
 type ingressWorkerFailingManager struct {
 	SessionManager
 	err error
+}
+
+type ingressWorkerConflictStore struct {
+	port.Store
+	conflicts int
+	updates   int
+}
+
+func (s *ingressWorkerConflictStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	s.updates++
+	if s.conflicts > 0 {
+		s.conflicts--
+		return port.ErrConflict
+	}
+	return s.Store.Update(ctx, fn)
+}
+
+type ingressWorkerSleeper struct{ delays []time.Duration }
+
+func (s *ingressWorkerSleeper) Sleep(_ context.Context, delay time.Duration) error {
+	s.delays = append(s.delays, delay)
+	return nil
 }
 
 func (m ingressWorkerFailingManager) PublishStatus(context.Context, SubagentObservation) error {
@@ -68,6 +91,83 @@ func TestSubagentStatusIngressWorkerApplyRestartAndConflict(t *testing.T) {
 			return err
 		}
 		if receipt.Status != domain.SubagentStatusIngressApplied {
+			t.Fatalf("receipt=%+v", receipt)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSubagentStatusIngressWorkerRetriesIdempotentReceiptCASBoundedly(t *testing.T) {
+	ctx := context.Background()
+	clock := ingressWorkerClock{now: time.Unix(125, 0).UTC()}
+	base := memory.New()
+	local := NewLocalSessionManager(clock)
+	manager, err := NewPersistentSessionManager(local, base, clock, &ingressWorkerIDs{}, PersistentSessionPolicy{MissionID: "mission-retry", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, SubagentSpec{Task: "retry receipt cas", ContextMode: "isolated", Labels: map[string]string{SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-retry", SubagentObservation{ID: id, State: SessionStateComplete, Result: "done"}); err != nil {
+		t.Fatal(err)
+	}
+	store := &ingressWorkerConflictStore{Store: base, conflicts: 2}
+	sleeper := &ingressWorkerSleeper{}
+	var report retry.Report
+	worker := SubagentStatusIngressWorker{
+		Store: store, Manager: manager, Clock: clock, Batch: 1,
+		RetryPolicy:  retry.Policy{MaxAttempts: 3, BaseDelay: time.Millisecond, MaxDelay: 2 * time.Millisecond},
+		RetrySleeper: sleeper,
+		RetryObserve: func(observed retry.Report) { report = observed },
+	}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 1 {
+		t.Fatalf("apply n=%d err=%v", n, err)
+	}
+	if store.updates != 3 || report.Attempts != 3 || report.Retries != 2 || report.Classes["conflict"] != 2 {
+		t.Fatalf("updates=%d report=%+v", store.updates, report)
+	}
+	if len(sleeper.delays) != 2 || sleeper.delays[0] != time.Millisecond || sleeper.delays[1] != 2*time.Millisecond {
+		t.Fatalf("delays=%v", sleeper.delays)
+	}
+	if n, err := worker.ApplyPending(ctx); err != nil || n != 0 {
+		t.Fatalf("replay n=%d err=%v", n, err)
+	}
+}
+
+func TestSubagentStatusIngressWorkerRetryBudgetExhaustionLeavesReceiptPending(t *testing.T) {
+	ctx := context.Background()
+	clock := ingressWorkerClock{now: time.Unix(130, 0).UTC()}
+	base := memory.New()
+	local := NewLocalSessionManager(clock)
+	manager, err := NewPersistentSessionManager(local, base, clock, &ingressWorkerIDs{}, PersistentSessionPolicy{MissionID: "mission-exhaustion", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, SubagentSpec{Task: "exhaust receipt cas", ContextMode: "isolated", Labels: map[string]string{SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-exhaust", SubagentObservation{ID: id, State: SessionStateComplete, Result: "done"}); err != nil {
+		t.Fatal(err)
+	}
+	store := &ingressWorkerConflictStore{Store: base, conflicts: 3}
+	worker := SubagentStatusIngressWorker{
+		Store: store, Manager: manager, Clock: clock, Batch: 1,
+		RetryPolicy: retry.Policy{MaxAttempts: 2}, RetrySleeper: &ingressWorkerSleeper{},
+	}
+	if n, err := worker.ApplyPending(ctx); n != 0 || !errors.Is(err, retry.ErrBudgetExhausted) || !errors.Is(err, port.ErrConflict) {
+		t.Fatalf("apply n=%d err=%v", n, err)
+	}
+	if err := base.View(ctx, func(r port.Reader) error {
+		receipt, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-exhaust")
+		if err != nil {
+			return err
+		}
+		if receipt.Status != domain.SubagentStatusIngressPending {
 			t.Fatalf("receipt=%+v", receipt)
 		}
 		return nil

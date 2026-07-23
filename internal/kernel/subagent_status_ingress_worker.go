@@ -7,6 +7,7 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 )
 
 // SubagentStatusIngressWorker applies a bounded batch of durable transport
@@ -19,6 +20,13 @@ type SubagentStatusIngressWorker struct {
 	// LeaseTTL renews the active generation only after an authenticated RUNNING
 	// receipt has been accepted by SessionManager. Zero keeps lease renewal off.
 	LeaseTTL time.Duration
+	// RetryPolicy is optional and applies only to the idempotent receipt CAS
+	// transaction. SessionManager publication remains replay-safe and storage
+	// adapters still perform exactly one Update attempt per invocation.
+	RetryPolicy  retry.Policy
+	RetrySleeper retry.Sleeper
+	RetryJitter  retry.JitterSource
+	RetryObserve func(retry.Report)
 }
 
 func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, error) {
@@ -49,7 +57,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				rejectionCode = domain.SubagentStatusIngressRejectionTerminalConflict
 			}
 			transitioned := false
-			err = w.Store.Update(ctx, func(tx port.Transaction) error {
+			err = w.updateReceipt(ctx, func(tx port.Transaction) error {
 				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 				if err != nil {
 					return err
@@ -73,7 +81,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				return nil
 			})
 			if err != nil {
-				if errors.Is(err, port.ErrConflict) {
+				if errors.Is(err, port.ErrConflict) && !errors.Is(err, retry.ErrBudgetExhausted) {
 					continue
 				}
 				return processed, err
@@ -84,7 +92,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			continue
 		}
 		transitioned := false
-		err = w.Store.Update(ctx, func(tx port.Transaction) error {
+		err = w.updateReceipt(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 			if err != nil {
 				return err
@@ -129,7 +137,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			return nil
 		})
 		if err != nil {
-			if errors.Is(err, port.ErrConflict) {
+			if errors.Is(err, port.ErrConflict) && !errors.Is(err, retry.ErrBudgetExhausted) {
 				continue
 			}
 			return processed, err
@@ -139,6 +147,25 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 		}
 	}
 	return processed, nil
+}
+
+func (w *SubagentStatusIngressWorker) updateReceipt(ctx context.Context, update func(port.Transaction) error) error {
+	operation := func(context.Context, int) error {
+		return w.Store.Update(ctx, update)
+	}
+	if w.RetryPolicy.MaxAttempts == 0 {
+		return operation(ctx, 1)
+	}
+	report, err := retry.Do(ctx, w.RetryPolicy, w.RetrySleeper, w.RetryJitter, func(err error) (string, bool) {
+		if errors.Is(err, port.ErrConflict) {
+			return "conflict", true
+		}
+		return "fatal", false
+	}, operation)
+	if w.RetryObserve != nil {
+		w.RetryObserve(report)
+	}
+	return err
 }
 
 func ingressObservation(receipt domain.SubagentStatusIngressReceipt) SubagentObservation {

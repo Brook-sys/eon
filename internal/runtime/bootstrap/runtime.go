@@ -27,6 +27,7 @@ import (
 	"motor-autonomo/internal/network/http"
 	"motor-autonomo/internal/observability"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/storage/memory"
@@ -391,7 +392,11 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		subagentDispatcher = &kernel.SubagentDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Owner: opts.RuntimeName, Batch: 4, Lease: 30 * time.Second, RetryDelay: 15 * time.Second, RPCTimeout: 10 * time.Second}
 		subagentEffectReconciler = &kernel.SubagentEffectReconciler{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
 		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
-		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{Store: store, Manager: sessionManager, Clock: clock, Batch: 4, LeaseTTL: opts.Subagent.LeaseTTL}
+		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{
+			Store: store, Manager: sessionManager, Clock: clock, Batch: 4, LeaseTTL: opts.Subagent.LeaseTTL,
+			RetryPolicy:  retry.Policy{MaxAttempts: 3, BaseDelay: 10 * time.Millisecond, MaxDelay: 40 * time.Millisecond, MaxJitter: 10 * time.Millisecond},
+			RetrySleeper: retry.SystemSleeper{}, RetryJitter: random,
+		}
 		if modelExec != nil && modelExec.Provider != nil {
 			remoteSubagentWorker = &kernel.RemoteSubagentWorker{Store: store, Manager: sessionManager, Executor: kernel.ModelRemoteSubagentExecutor{Provider: modelExec.Provider, MaxOutputTokens: 512}, Clock: clock, Owner: opts.RuntimeName, Batch: 2, Lease: 2 * time.Minute, Timeout: 90 * time.Second}
 		}
