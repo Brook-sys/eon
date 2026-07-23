@@ -523,7 +523,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		var permits []*domain.ResourcePermit
 		var replayed bool
 		var receipt domain.ModelCompletionReceipt
-		
+
 		// Attempt to load durable receipt inside the loop for the specific attempt + model call.
 		if operation.Attempt > 0 {
 			err := e.Store.View(ctx, func(r port.Reader) error {

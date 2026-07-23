@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "simpler-format-recovery-campaign-groq",
+  "timeout_seconds": 90,
+  "max_calls": 3,
+  "injected_failures": 2,
+  "max_output_tokens": 192,
+  "probe_prompt": "You are completing an integration test for the SimplerFormat JSON recovery stage. Return a valid JSON matching the exact output schema but simplified to just the data required without the outer wrapper.",
+  "bindings": [
+    {
+      "binding_id": "groq",
+      "provider": "groq",
+      "provider_kind": "openai_compatible",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env": "GROQ_API_KEY",
+      "model": "llama-3.1-8b-instant",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 1
+    }
+  ]
+}

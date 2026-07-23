@@ -28,7 +28,7 @@ func TestEventStreamSSEFiltersByNamespace(t *testing.T) {
 
 	srv := httptest.NewServer(api.Handler())
 	defer srv.Close()
-	
+
 	if err := store.Update(context.Background(), func(tx port.Transaction) error {
 		for i := 0; i < 5; i++ {
 			ns := "namespace_alpha"
@@ -42,7 +42,9 @@ func TestEventStreamSSEFiltersByNamespace(t *testing.T) {
 				Namespace:     ns,
 				OccurredAt:    now.Add(time.Duration(i) * time.Millisecond),
 			})
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}); err != nil {

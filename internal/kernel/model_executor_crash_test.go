@@ -141,12 +141,12 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Re-add an operation linked to the already seeded mission/inquiry
 	if err := store.Update(ctx, func(tx port.Transaction) error {
 		op := domain.Operation{
 			SchemaVersion: domain.SchemaVersionV1,
-			ID: "operation_model_2", InquiryID: "inquiry_1", MissionRevision: "revision_1", SpecID: "extract@1",
+			ID:            "operation_model_2", InquiryID: "inquiry_1", MissionRevision: "revision_1", SpecID: "extract@1",
 			State: domain.StateReady, ExpectedOutput: "test2", IdempotencyKey: "idem_model_2",
 			Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
 			InputRefs:    []string{"fragment_1"},
@@ -157,7 +157,7 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = store.Close()
-	
+
 	store, err = sqlite.Open(dbPath)
 	if err != nil {
 		t.Fatal(err)
@@ -229,7 +229,7 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 	}
 	clock4 := source.NewManualClock(now.Add(4 * time.Minute))
 	ids4 := source.NewSequenceIDGenerator(2000)
-	
+
 	processor4, err := changeset.New(changeset.Config{
 		Store: ErrorProcessorStore{Store: store},
 		Clock: clock4, IDs: ids4, PolicyVersion: "policy@model-crash",
@@ -246,10 +246,14 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 		PolicyVersion: "policy@model-crash",
 	}
 	// Debug state before phase 4 execution
-	_ = store.View(ctx, func(r port.Reader) error { op, _ := r.Operation("operation_model_2"); t.Logf("State before Phase 4 Exec: %s", op.State); return nil })
+	_ = store.View(ctx, func(r port.Reader) error {
+		op, _ := r.Operation("operation_model_2")
+		t.Logf("State before Phase 4 Exec: %s", op.State)
+		return nil
+	})
 
 	again4, err4 := exec4.Execute(ctx, "operation_model_2")
-t.Logf("again4 = %+v, err4 = %v", again4, err4)
+	t.Logf("again4 = %+v, err4 = %v", again4, err4)
 
 	if again4.Completed || again4.Skipped {
 		t.Fatalf("want no completion for invalid JSON, got %+v", again4)
@@ -260,7 +264,7 @@ t.Logf("again4 = %+v, err4 = %v", again4, err4)
 		if err == nil && op.State == domain.StateSucceeded {
 			t.Fatal("operation state must not be SUCCEEDED if processor fails")
 		}
-		
+
 		// Load receipt
 		_, err = r.ModelCompletionReceipt("operation_model_2", 2, 1)
 		if err != nil {
@@ -268,13 +272,12 @@ t.Logf("again4 = %+v, err4 = %v", again4, err4)
 		}
 		return nil
 	})
-	
+
 	// Execute Phase 4 again - should not hit provider, use receipt, and fail processing again.
 	_, _ = exec4.Execute(ctx, "operation_model_2")
 	if len(server4.Requests()) != 1 {
 		t.Fatalf("expected 1 call to provider, got %d", len(server4.Requests()))
 	}
-
 
 	// Phase 2: reopen with fresh clocks/IDs/provider script and prove pure terminal skip.
 	store, err = sqlite.Open(dbPath)

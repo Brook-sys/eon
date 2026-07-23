@@ -33,13 +33,21 @@ func NewAuthenticatedServerHandler(handler port.PeerRPCHandler, identityFrom fun
 func (h *ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.URL.Path == "/events/stream" {
 		peerID, err := authenticatedPeerID(r, h.identityFrom)
-		if err != nil { http.Error(w, "unauthenticated peer", http.StatusUnauthorized); return }
+		if err != nil {
+			http.Error(w, "unauthenticated peer", http.StatusUnauthorized)
+			return
+		}
 		q := r.URL.Query()
 		q.Set("namespace", peerID)
 		r.URL.RawQuery = q.Encode()
 
-		if h.handler == nil { http.Error(w, "bad request", http.StatusBadRequest); return }
-		if sseHandler, ok := h.handler.(interface{ HandleSSE(http.ResponseWriter, *http.Request) }); ok {
+		if h.handler == nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if sseHandler, ok := h.handler.(interface {
+			HandleSSE(http.ResponseWriter, *http.Request)
+		}); ok {
 			sseHandler.HandleSSE(w, r)
 			return
 		}

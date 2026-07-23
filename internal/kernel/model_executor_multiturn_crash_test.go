@@ -18,6 +18,7 @@ import (
 type resumedMultiTurnProvider struct {
 	calls int
 }
+
 func (p *resumedMultiTurnProvider) ID() string { return "resumed-fake" }
 func (p *resumedMultiTurnProvider) Kind() domain.ProviderKind {
 	return domain.ProviderKindOpenAICompatible
@@ -32,13 +33,14 @@ func (p *resumedMultiTurnProvider) CompleteWithTools(ctx context.Context, req po
 	p.calls++
 	return port.CompletionResult{
 		Model: "resumed-fake",
-		Text:  `{"changes":[{"kind":"ADD","entity_type":"observation","entity_id":"obs_final","payload_ref":"payload"}],"expected_delta":"one observation","validator_ids":["schema"]}`, 
+		Text:  `{"changes":[{"kind":"ADD","entity_type":"observation","entity_id":"obs_final","payload_ref":"payload"}],"expected_delta":"one observation","validator_ids":["schema"]}`,
 	}, nil
 }
 
 type dummyMultiTool struct {
 	def port.ToolDefinition
 }
+
 func (c *dummyMultiTool) Definition() port.ToolDefinition { return c.def }
 func (c *dummyMultiTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
 	return "sunny", nil
@@ -63,7 +65,7 @@ func TestModelExecutorMultiTurnReplaysReceipt(t *testing.T) {
 		op.Attempt = 1
 		op.Reevaluation = domain.ReevaluationCondition{Kind: domain.ReevaluateLease, Reference: leaseRef}
 		tx.SaveOperation(op)
-		
+
 		res := port.DurableModelCompletionResult(port.CompletionResult{
 			Model: "fake",
 			ToolCalls: []port.ToolCall{
@@ -96,7 +98,7 @@ func TestModelExecutorMultiTurnReplaysReceipt(t *testing.T) {
 
 	clock := source.NewManualClock(now.Add(10 * time.Minute))
 	ids := source.NewSequenceIDGenerator(100)
-	
+
 	reaper := LeaseReaper{Store: store2, Clock: clock, IDs: ids}
 	rec, err := reaper.Reconcile(ctx, "revision_1")
 	if err != nil {
@@ -107,7 +109,7 @@ func TestModelExecutorMultiTurnReplaysReceipt(t *testing.T) {
 	}
 
 	prov := &resumedMultiTurnProvider{}
-	
+
 	weatherDef := port.ToolDefinition{
 		Name:        "get_weather",
 		Description: "Get weather",
@@ -144,7 +146,7 @@ func TestModelExecutorMultiTurnReplaysReceipt(t *testing.T) {
 	if !result.Completed {
 		t.Errorf("expected Completed=true")
 	}
-	
+
 	if prov.calls != 1 {
 		t.Errorf("expected provider to be called exactly 1 time in the resumed process, got %d", prov.calls)
 	}
