@@ -1778,3 +1778,113 @@ func TestModelExecutorCatalogQuotaDenialWaitsWithoutProviderCall(t *testing.T) {
 		t.Fatalf("denial changed usage unexpectedly: provider=%+v binding=%+v", providerUsage, bindingUsage)
 	}
 }
+
+func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 23, 9, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	
+	spec := modelTestSpec()
+	spec.Budget.ModelCalls = 2
+	spec.Budget.Attempts = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
+
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		op.State = domain.StateReady
+		op.Attempt = 2 // Ready for second attempt
+		op.Reevaluation = domain.ReevaluationCondition{Kind: domain.ReevaluateReady}
+		if err := tx.SaveOperation(op); err != nil {
+			return err
+		}
+		
+		// Attempt 1 exhausted the lifetime call budget (2 calls).
+		// Neither has a receipt (simulating crash before receipt, or rejected output).
+		if err := tx.AppendModelCallReservation(domain.ModelCallReservation{
+			SchemaVersion: domain.SchemaVersionV1,
+			OperationID:   op.ID,
+			Attempt:       1,
+			ModelCall:     1,
+			BindingID:     "fixture-binding",
+			ReservedAt:    now.Add(-time.Hour),
+		}); err != nil {
+			return err
+		}
+		return tx.AppendModelCallReservation(domain.ModelCallReservation{
+			SchemaVersion: domain.SchemaVersionV1,
+			OperationID:   op.ID,
+			Attempt:       1,
+			ModelCall:     2,
+			BindingID:     "fixture-binding",
+			ReservedAt:    now.Add(-time.Hour),
+		})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	server := fakeserver.New(fakeserver.Exchange{StatusCode: 500})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "must-not-run", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@test", LeaseTTL: 5 * time.Minute,
+	}
+
+	result, err := executor.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("execute redispatch: %v", err)
+	}
+	
+	if !result.Exhausted {
+		t.Errorf("expected result to be Exhausted when lifetime budget is gone")
+	}
+	if result.ModelCalls != 0 {
+		t.Errorf("expected 0 new provider calls, got %d", result.ModelCalls)
+	}
+	if len(server.Requests()) != 0 {
+		t.Errorf("expected 0 HTTP requests, got %d", len(server.Requests()))
+	}
+	
+	if err := store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		if op.State != domain.StateExhausted {
+			t.Errorf("operation state = %s, want EXHAUSTED", op.State)
+		}
+		if op.Attempt != 2 {
+			t.Errorf("operation attempt = %d, want 2", op.Attempt)
+		}
+		events, err := r.Events(0, 100)
+		if err != nil {
+			return err
+		}
+		var exhausted bool
+		for _, ev := range events {
+			if ev.Kind == "operation.model_exhausted" && ev.OperationID == op.ID {
+				exhausted = true
+				break
+			}
+		}
+		if !exhausted {
+			t.Errorf("missing operation.model_exhausted event")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
