@@ -4295,4 +4295,10 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 
 ### Fase 142 - Rotacionar para exploração de Artifact Dependencies e Cache Invalidation
 
-- [ ] `READY` Elaborar inspeção e teste de fogo verificando invalidação em cascata determinística quando o arquivo pai (source artifact) de dependência é substituído por nova revisão com alteração de sha256.
+- [x] `DONE` Elaborar teste focal (`TestApplyCommitCascadesStaleOnParentArtifactReplacement`) verificando invalidação em cascata determinística quando o artefato pai dependente (source artifact) sofre substituição completa de conteúdo (`ChangeReplace`).
+
+2026-07-23 08:35 — HEARTBEAT — Sucesso na exploração da Fase 142. O teste focal confirmou que modificações estruturais do tipo `ChangeReplace` em um `KnowledgeArtifact` corretamente marcam como `Stale` os artefatos derivados que o tenham como dependência (prefixo `artifact:`). O processo é determinístico e atende à regra de invalidação de cascata do store no momento de `ApplyCommit`.
+
+### Fase 143 - Preparar validação em Storage/SQLite de Dependent Artifacts Cascade
+
+- [ ] `READY` Elaborar teste de persistência análogo no SQLite local demonstrando o comportamento e preservação do estado `Stale` através de checkpoints/restarts.
