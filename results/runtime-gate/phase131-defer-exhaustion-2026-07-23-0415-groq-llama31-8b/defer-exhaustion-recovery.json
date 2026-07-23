@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "name": "phase131-defer-exhaustion-groq-llama31-8b",
+  "started_at": "2026-07-23T06:50:34.611820358Z",
+  "completed_at": "2026-07-23T06:50:35.494060588Z",
+  "model_calls": 4,
+  "external_calls": 1,
+  "injected_calls": 3,
+  "recovery_stages": [
+    "SHORT_CORRECTION",
+    "SIMPLER_FORMAT",
+    "FALLBACK_MODEL",
+    "DEFER"
+  ],
+  "operation_state": "EXHAUSTED",
+  "receipt_count": 4,
+  "canonical_entity_absent": true,
+  "final_disposition": "EXHAUST",
+  "exhaustion_reason": "model_recovery_budget_exhausted",
+  "exhaustion_events": 1,
+  "durable_reopen": true,
+  "primary_binding": "nim-primary",
+  "fallback_binding": "groq-fallback",
+  "binding_switched": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "nim-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 175,
+      "response_sha256": "7239eb1a18de2bb99ca4ea6629768a8c98af12c3c7c9e394f1ac1b91fbaac49e",
+      "presented_invalid": false
+    },
+    {
+      "call": 2,
+      "binding_id": "nim-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 556,
+      "response_sha256": "2125b65e9a544a3f5422e19d7bbf13b34ef054f373ccc2fa6a4845836a4f373b",
+      "presented_invalid": false
+    },
+    {
+      "call": 3,
+      "binding_id": "nim-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 162,
+      "response_sha256": "6ac8f295a79dbd20e9fddc95a8d025c459dd09ce896ad80c9e287b937e2c4625",
+      "presented_invalid": false
+    },
+    {
+      "call": 4,
+      "binding_id": "groq-fallback",
+      "injected": false,
+      "succeeded": true,
+      "latency": 500728138,
+      "input_tokens": 625,
+      "output_tokens": 168,
+      "finish_reason": "stop",
+      "response_bytes": 585,
+      "response_sha256": "d10c5261d5a01d0616f6d37a250e57301b9944c31ce9a48f8d5530d5cf5ec811",
+      "presented_invalid": true,
+      "presented_bytes": 162,
+      "presented_sha256": "6ac8f295a79dbd20e9fddc95a8d025c459dd09ce896ad80c9e287b937e2c4625"
+    }
+  ]
+}
