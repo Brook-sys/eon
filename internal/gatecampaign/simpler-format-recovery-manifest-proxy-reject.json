@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "simpler-format-recovery-campaign-proxy-reject",
+  "timeout_seconds": 90,
+  "max_calls": 3,
+  "injected_failures": 3,
+  "max_output_tokens": 192,
+  "probe_prompt": "Propose exactly one observation for this integration test. Preserve the operation lineage and return only the requested change-set serialization; do not add prose or Markdown.",
+  "bindings": [
+    {
+      "binding_id": "nim",
+      "provider": "nim",
+      "provider_kind": "openai_compatible",
+      "base_url": "http://100.83.108.127:8317/v1",
+      "api_key_env": "PROVIDER_API_KEY",
+      "model": "topmodel",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 1
+    },
+    {
+      "binding_id": "groq",
+      "provider": "groq",
+      "provider_kind": "openai_compatible",
+      "base_url": "http://100.83.108.127:8317/v1",
+      "api_key_env": "PROVIDER_API_KEY",
+      "model": "topmodel",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 2
+    }
+  ]
+}

@@ -4277,3 +4277,7 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 - [x] Executar campanha live bounded com duas fallhas injetadas (a primeira simulando `SHORT_CORRECTION` via parser failure, a segunda simulando payload incompleto para forçar `SIMPLER_FORMAT`). Apenas a terceira chamada alcança o provider real usando fallback delimitado e timeout reduzido.
 
 2026-07-23 06:30 — HEARTBEAT — Concluído e verificado o teste de fallback em runtime `simpler-format-recovery-campaign-proxy`. O pipeline de Fallback funcionou perfeitamente injetando duas falhas determinísticas seguidas e forçando a recuperação. O modelo superou a injestão e forneceu as chaves esperadas, confirmando o sucesso da Phase 138.
+
+### Fase 139 - Simpler Format Campaign (Third Injected - Rejection)
+- [ ] Executar campanha live bounded com três falhas injetadas. Validar o mecanismo de rejeição do executor por esgotamento de attempts no fallback loop. Apenas requisições fakes.
+2026-07-23 06:40 — HEARTBEAT — Concluído e verificado o teste de exaustão de fallback em runtime `simpler-format-recovery-campaign-proxy-reject`. O pipeline interceptou corretamente a terceira falha consecutiva injetada (malformed -> incomplete -> incomplete), e em vez de tentar chamadas além do orçado de fallback ou cometer dados corrompidos, rejeitou apropriadamente, esgotou a operação (`StateExhausted`), e preservou integralmente o trail atestando o esgotamento via receipts. Com isso, confirmamos estabilidade estrita do loop. Sucesso da Fase 139.

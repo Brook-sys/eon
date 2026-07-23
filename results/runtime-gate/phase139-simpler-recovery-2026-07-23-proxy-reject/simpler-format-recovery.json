@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "simpler-format-recovery-campaign-proxy-reject",
+  "started_at": "2026-07-23T09:37:09.505139902Z",
+  "completed_at": "2026-07-23T09:37:11.000340315Z",
+  "model_calls": 3,
+  "external_calls": 0,
+  "injected_calls": 3,
+  "recovery_stages": [
+    "SHORT_CORRECTION",
+    "SIMPLER_FORMAT",
+    "DEFER"
+  ],
+  "commit_id": "",
+  "operation_state": "EXHAUSTED",
+  "receipt_count": 3,
+  "canonical_entity_stored": false,
+  "durable_reopen": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "nim",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 175,
+      "response_sha256": "5600250e01cbbb32313ea543b465b96f187d921421143b007aff9196b3ad1a74"
+    },
+    {
+      "call": 2,
+      "binding_id": "nim",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 554,
+      "response_sha256": "ef3627b02bad3d4a82d599eed406a16c3ba9b1ff11020ba37d6adbf5c9e1d557"
+    },
+    {
+      "call": 3,
+      "binding_id": "nim",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 554,
+      "response_sha256": "ef3627b02bad3d4a82d599eed406a16c3ba9b1ff11020ba37d6adbf5c9e1d557"
+    }
+  ]
+}

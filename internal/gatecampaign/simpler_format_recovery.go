@@ -39,8 +39,8 @@ func (m SimplerFormatRecoveryCampaignManifest) Validate() error {
 	if m.TimeoutSeconds <= 0 || m.TimeoutSeconds > 300 {
 		return errors.New("simpler format recovery campaign timeout must be between 1 and 300 seconds")
 	}
-	if m.MaxCalls != 3 || m.InjectedFailures != 2 {
-		return errors.New("simpler format recovery campaign requires three model calls with exactly two injected failures")
+	if m.MaxCalls != 3 || m.InjectedFailures < 2 || m.InjectedFailures > 3 {
+		return errors.New("simpler format recovery campaign requires three model calls with exactly two or three injected failures")
 	}
 	if m.MaxOutputTokens < 192 || m.MaxOutputTokens > 512 {
 		return errors.New("simpler format recovery campaign max_output_tokens must be between 192 and 512")
@@ -133,6 +133,14 @@ func (p simplerTwiceThenLiveProvider) Complete(ctx context.Context, request port
 		time.Sleep(10 * time.Millisecond)
 		return result, nil
 	}
+	if call == 3 && p.recorder.inject == 3 {
+		result := port.CompletionResult{Text: `{"schema_version": 1, "id": "changeset_simpler_recovery", "mission_revision_id": "revision_simpler_recovery", "operation_id": "operation_simpler_recovery", "base_commit_id": "commit_genesis", "read_set": ["manifest"], "preconditions": [], "changes": [{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_simpler_recovery", "payload_ref": "artifact_simpler_recovery"}], "expected_delta": "one observation", "validator_ids": ["schema"], "provenance": "operator", "idempotency_key": "simpler-format-recovery-campaign", "unexpected": true}`, Model: "injected-exhaust", FinishReason: port.CompletionFinishStop}
+		digest := sha256.Sum256([]byte(result.Text))
+		p.recorder.records = append(p.recorder.records, SimplerFormatRecoveryCall{Call: call, BindingID: p.bindingID, Injected: true, Succeeded: true, FinishReason: result.FinishReason, ResponseBytes: len(result.Text), ResponseHash: fmt.Sprintf("%x", digest[:])})
+		p.recorder.mu.Unlock()
+		time.Sleep(10 * time.Millisecond)
+		return result, nil
+	}
 	p.recorder.external++
 	p.recorder.mu.Unlock()
 
@@ -196,17 +204,21 @@ func (r SimplerFormatRecoveryCampaignRunner) Run(ctx context.Context, manifest S
 	}
 	execution, err := executor.Execute(ctx, "operation_simpler_recovery")
 	if err != nil {
-		return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("execute simpler format recovery campaign: %w", err)
+		if manifest.InjectedFailures == 3 && strings.Contains(err.Error(), "model recovery exhausted") {
+			// This is expected. We want to return the report anyway.
+		} else {
+			return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("execute simpler format recovery campaign: %w", err)
+		}
 	}
-	if !execution.Completed || execution.CommitID == "" {
+	if (!execution.Completed || execution.CommitID == "") && manifest.InjectedFailures != 3 {
 		return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("simpler format recovery campaign did not commit: %+v", execution)
 	}
 	recorder.mu.Lock()
 	records := append([]SimplerFormatRecoveryCall(nil), recorder.records...)
 	external, total := recorder.external, recorder.calls
 	recorder.mu.Unlock()
-	if total != manifest.MaxCalls || external != 1 {
-		return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("simpler format recovery calls total=%d external=%d, want total=%d external=1", total, external, manifest.MaxCalls)
+	if total != manifest.MaxCalls || (manifest.InjectedFailures == 2 && external != 1) || (manifest.InjectedFailures == 3 && external != 0) {
+		return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("simpler format recovery calls total=%d external=%d, want total=%d external=%d", total, external, manifest.MaxCalls, 3-manifest.InjectedFailures)
 	}
 	report := SimplerFormatRecoveryCampaignReport{SchemaVersion: SimplerFormatRecoveryCampaignSchemaVersion, Name: manifest.Name, StartedAt: started, CompletedAt: r.Clock.Now().UTC(), ModelCalls: execution.ModelCalls, ExternalCalls: external, InjectedCalls: manifest.InjectedFailures, RecoveryStages: execution.RecoveryStages, CommitID: execution.CommitID, Calls: records}
 	if err := simplerFormatRecoverySnapshot(ctx, r.Store, &report); err != nil {
@@ -296,6 +308,14 @@ func simplerFormatRecoverySnapshot(ctx context.Context, store port.ReadStore, re
 			}
 			report.ReceiptCount++
 		}
+		if report.InjectedCalls == 3 {
+			// Expected to fail, so no canonical entity
+			report.CanonicalStored = false
+			if op.State != domain.StateExhausted {
+				return fmt.Errorf("simpler format recovery durable state is incomplete for rejection, op state is: %s", op.State)
+			}
+			return nil
+		}
 		entity, err := r.CanonicalEntity("observation", "observation_simpler_recovery")
 		if err != nil {
 			return err
@@ -333,7 +353,7 @@ func WriteSimplerFormatRecoveryCampaignManifest(path string, manifest SimplerFor
 }
 
 func WriteSimplerFormatRecoveryCampaignArtifacts(directory string, report SimplerFormatRecoveryCampaignReport) error {
-	if strings.TrimSpace(directory) == "" || report.SchemaVersion != SimplerFormatRecoveryCampaignSchemaVersion || report.ExternalCalls != 1 || report.ReceiptCount != report.ModelCalls {
+	if strings.TrimSpace(directory) == "" || report.SchemaVersion != SimplerFormatRecoveryCampaignSchemaVersion || (report.InjectedCalls == 2 && report.ExternalCalls != 1) || (report.InjectedCalls == 3 && report.ExternalCalls != 0) || report.ReceiptCount != report.ModelCalls {
 		return errors.New("artifact directory and complete simpler format recovery report are required")
 	}
 	body, err := json.MarshalIndent(report, "", "  ")
