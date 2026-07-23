@@ -58,7 +58,11 @@ func DurableModelCompletionResult(result CompletionResult) domain.ModelCompletio
 		toolCalls = make([]domain.ModelCompletionToolCall, len(result.ToolCalls))
 	}
 	for i, call := range result.ToolCalls {
-		toolCalls[i] = domain.ModelCompletionToolCall{ID: call.ID, Name: call.Name, Arguments: call.Arguments}
+		args := call.Arguments
+		if len(args) > 65536 {
+			args = args[:65536] + "... (truncated)"
+		}
+		toolCalls[i] = domain.ModelCompletionToolCall{ID: call.ID, Name: call.Name, Arguments: args}
 	}
 	return domain.ModelCompletionResult{
 		Text: result.Text, ToolCalls: toolCalls, InputTokens: result.InputTokens,

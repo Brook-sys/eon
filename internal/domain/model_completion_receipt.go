@@ -25,8 +25,8 @@ type ModelCompletionReceipt struct {
 // ModelCompletionResult mirrors the provider-neutral completion value without
 // importing port from domain. Keep it lossless when converting at the boundary.
 type ModelCompletionResult struct {
-	Text         string                    `json:"text"`
-	ToolCalls    []ModelCompletionToolCall `json:"tool_calls"`
+	Text         string                    `json:"text,omitempty"`
+	ToolCalls    []ModelCompletionToolCall `json:"tool_calls,omitempty"`
 	InputTokens  int                       `json:"input_tokens"`
 	OutputTokens int                       `json:"output_tokens"`
 	Model        string                    `json:"model"`
@@ -36,7 +36,7 @@ type ModelCompletionResult struct {
 type ModelCompletionToolCall struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	Arguments string `json:"arguments"`
+	Arguments string `json:"arguments,omitempty"`
 }
 
 func (r ModelCompletionReceipt) Validate() error {
