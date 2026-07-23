@@ -164,6 +164,10 @@ func TestSQLiteSubprocessHelper(t *testing.T) {
 }
 
 func runSQLiteSubprocessHelper(t *testing.T, mode string) {
+	if mode == "contend-leader" || mode == "contend-follower" {
+		runSQLiteBoundedContentionHelper(t, mode)
+		return
+	}
 	dbPath := os.Getenv("MOTOR_AUTONOMO_SQLITE_SUBPROCESS_DB")
 	key := os.Getenv("MOTOR_AUTONOMO_SQLITE_SUBPROCESS_KEY")
 	if dbPath == "" || key == "" {

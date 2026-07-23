@@ -32,7 +32,8 @@ const (
 )
 
 type Options struct {
-	Failpoint func(Failpoint)
+	Failpoint   func(Failpoint)
+	BusyTimeout time.Duration
 }
 
 type Store struct {
@@ -52,7 +53,7 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 	db.SetMaxOpenConns(1)
-	if err := configure(db); err != nil {
+	if err := configure(db, options.BusyTimeout); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -64,11 +65,18 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint}, nil
 }
 
-func configure(db *sql.DB) error {
+func configure(db *sql.DB, busyTimeout time.Duration) error {
+	if busyTimeout <= 0 {
+		busyTimeout = 5 * time.Second
+	}
+	busyMilliseconds := busyTimeout.Milliseconds()
+	if busyMilliseconds < 1 {
+		busyMilliseconds = 1
+	}
 	for _, statement := range []string{
 		`PRAGMA journal_mode=WAL`,
 		`PRAGMA synchronous=FULL`,
-		`PRAGMA busy_timeout=5000`,
+		fmt.Sprintf(`PRAGMA busy_timeout=%d`, busyMilliseconds),
 		`PRAGMA foreign_keys=ON`,
 		fmt.Sprintf(`PRAGMA application_id=%d`, runtimeApplicationID),
 		fmt.Sprintf(`PRAGMA user_version=%d`, runtimeUserVersion),
