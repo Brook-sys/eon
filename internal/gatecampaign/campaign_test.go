@@ -55,7 +55,7 @@ func runtimeGateTestManifest() RuntimeGateCampaignManifest {
 
 func TestManifestStrictAndBounded(t *testing.T) {
 	manifest := runtimeGateTestManifest()
-	manifest.MaxCalls = 6
+	manifest.MaxCalls = 2
 	if err := manifest.Validate(); err == nil {
 		t.Fatal("max_calls above five must fail closed")
 	}

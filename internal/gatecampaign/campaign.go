@@ -86,8 +86,8 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	if m.TimeoutSeconds <= 0 || m.TimeoutSeconds > 300 {
 		return errors.New("runtime gate campaign timeout must be between 1 and 300 seconds")
 	}
-	if m.MaxCalls < 1 || m.MaxCalls > 5 {
-		return errors.New("runtime gate campaign requires max_calls between 1 and 5")
+	if m.MaxCalls != 1 {
+		return errors.New("runtime gate campaign requires exactly one external call")
 	}
 	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 512 {
 		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 512")
