@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "phase130-fallback-model-recovery-nim-mistral-small-4",
+  "timeout_seconds": 90,
+  "max_calls": 4,
+  "injected_failures": 3,
+  "max_output_tokens": 256,
+  "probe_prompt": "Propose exactly one ADD observation with entity_id observation_fallback_recovery and payload_ref artifact_fallback_recovery. Preserve every operation lineage value exactly. Return only the requested change-set serialization; do not add prose or Markdown.",
+  "bindings": [
+    {
+      "binding_id": "groq-primary",
+      "provider": "groq",
+      "provider_kind": "groq",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env": "GROQ_API_KEY",
+      "model": "llama-3.1-8b-instant",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 1
+    },
+    {
+      "binding_id": "nim-fallback",
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 2
+    }
+  ]
+}

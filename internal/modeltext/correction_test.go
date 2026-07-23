@@ -75,4 +75,14 @@ func TestAppendDelimitedChangeSetInstruction(t *testing.T) {
 	if !strings.HasPrefix(got, "task\n\nOUTPUT_OVERRIDE:") || !strings.Contains(got, "CHANGESET_DELIMITED_V1") {
 		t.Fatalf("instruction = %q", got)
 	}
+	for _, required := range []string{
+		"expected_delta, provenance, and idempotency_key must be quoted JSON strings",
+		"read_set, preconditions, and validator_ids must be JSON arrays of strings",
+		"changes must be a JSON array of objects containing only quoted string fields",
+		"include all 12 lines exactly once even when an array is empty",
+	} {
+		if !strings.Contains(got, required) {
+			t.Fatalf("instruction lacks typed constraint %q: %q", required, got)
+		}
+	}
 }

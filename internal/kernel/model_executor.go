@@ -628,7 +628,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				if err != nil {
 					return err
 				}
-				if op.State != domain.StateRunning || op.Reevaluation.Reference != leaseRef {
+				// A recovery call runs under the same lease after the first completion
+				// has moved the operation to VERIFYING. Provider failures there are
+				// still audit-relevant and must not be misclassified as lease loss.
+				if (op.State != domain.StateRunning && op.State != domain.StateVerifying) || op.Reevaluation.Reference != leaseRef {
 					return fmt.Errorf("%w: operation lease changed during failed model call", port.ErrConflict)
 				}
 				_, err = tx.AppendEvent(domain.Event{

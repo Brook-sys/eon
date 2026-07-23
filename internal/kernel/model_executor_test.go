@@ -681,6 +681,60 @@ func TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop(t *testing.T) {
 	}
 }
 
+func TestModelExecutorAuditsProviderFailureWhileRecoveryLeaseIsVerifying(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 23, 3, 30, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	spec := modelTestSpec()
+	spec.Budget.ModelCalls = 3
+	seedModelAgendaWithSpec(t, store, now, spec)
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "bad-primary", ResponseModel: "primary"},
+		fakeserver.Exchange{StatusCode: 503, RawBody: `{"error":{"message":"temporary"}}`},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "primary", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@model-test",
+	}
+	_, err = exec.Execute(ctx, "operation_model")
+	if err == nil {
+		t.Fatal("expected provider failure after validation recovery")
+	}
+	if strings.Contains(err.Error(), "operation lease changed during failed model call") {
+		t.Fatalf("provider failure in VERIFYING was misclassified as lease loss: %v", err)
+	}
+	var invoked int
+	if viewErr := store.View(ctx, func(r port.Reader) error {
+		events, readErr := r.Events(0, 100)
+		if readErr != nil {
+			return readErr
+		}
+		for _, event := range events {
+			if event.OperationID == "operation_model" && event.Kind == EventOperationModelInvoked && strings.Contains(event.PayloadRef, "outcome=provider_error") {
+				invoked++
+			}
+		}
+		return nil
+	}); viewErr != nil {
+		t.Fatal(viewErr)
+	}
+	if invoked != 1 {
+		t.Fatalf("provider failure audit events=%d, want 1", invoked)
+	}
+}
+
 func TestModelExecutorFallbackProviderSucceeds(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

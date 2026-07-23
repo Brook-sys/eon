@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "name": "phase130-fallback-model-recovery-nim-mistral-small-4",
+  "started_at": "2026-07-23T06:31:46.758897935Z",
+  "completed_at": "2026-07-23T06:31:50.020404295Z",
+  "model_calls": 4,
+  "external_calls": 1,
+  "injected_calls": 3,
+  "recovery_stages": [
+    "SHORT_CORRECTION",
+    "SIMPLER_FORMAT",
+    "FALLBACK_MODEL"
+  ],
+  "commit_id": "commit_0000000000000007",
+  "operation_state": "SUCCEEDED",
+  "receipt_count": 4,
+  "canonical_entity_stored": true,
+  "durable_reopen": true,
+  "primary_binding": "groq-primary",
+  "fallback_binding": "nim-fallback",
+  "binding_switched": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 177,
+      "response_sha256": "401097b462fce341f808e0c0c17bf011b3157a443ce15019f216300d0715f439"
+    },
+    {
+      "call": 2,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 559,
+      "response_sha256": "8079c00634aeee9b318fb06a576c44181a04950cf076e8f0302ccef63c5308c2"
+    },
+    {
+      "call": 3,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 166,
+      "response_sha256": "5affad6a136b8ae541b0888e89cd27c0d93ea1580ab0c8c7e259d71a3989f7d5"
+    },
+    {
+      "call": 4,
+      "binding_id": "nim-fallback",
+      "injected": false,
+      "succeeded": true,
+      "latency": 2980244418,
+      "input_tokens": 612,
+      "output_tokens": 151,
+      "finish_reason": "stop",
+      "response_bytes": 538,
+      "response_sha256": "c8b890b7404dd80e60cb52033da18f4b52b504723bc698cf55353aef53e4625c"
+    }
+  ]
+}

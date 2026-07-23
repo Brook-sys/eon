@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "fallback-model-recovery-campaign-example",
+  "timeout_seconds": 90,
+  "max_calls": 4,
+  "injected_failures": 3,
+  "max_output_tokens": 256,
+  "probe_prompt": "Propose exactly one observation for this integration test. Preserve the operation lineage and return only the requested change-set serialization; do not add prose or Markdown.",
+  "bindings": [
+    {
+      "binding_id": "primary",
+      "provider": "primary",
+      "provider_kind": "openai_compatible",
+      "base_url": "https://primary.example/v1",
+      "api_key_env": "PRIMARY_API_KEY",
+      "model": "primary-model",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 1
+    },
+    {
+      "binding_id": "alternate",
+      "provider": "alternate",
+      "provider_kind": "openai_compatible",
+      "base_url": "https://alternate.example/v1",
+      "api_key_env": "ALTERNATE_API_KEY",
+      "model": "alternate-model",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8000,
+      "priority": 2
+    }
+  ]
+}

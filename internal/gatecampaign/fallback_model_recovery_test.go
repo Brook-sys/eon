@@ -1,0 +1,130 @@
+package gatecampaign
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+	"time"
+
+	"motor-autonomo/internal/port"
+
+	"motor-autonomo/internal/provider/openai/fakeserver"
+	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/storage/memory"
+	"motor-autonomo/internal/storage/sqlite"
+)
+
+func TestFallbackModelRecoveryCampaignSwitchesBindingWithOneExternalCall(t *testing.T) {
+	t.Parallel()
+	manifest := FallbackModelRecoveryCampaignManifest{
+		SchemaVersion: 1, Name: "test-fallback-model-recovery", TimeoutSeconds: 30,
+		MaxCalls: 4, InjectedFailures: 3, MaxOutputTokens: 256,
+		ProbePrompt: "Create the required observation.",
+		Bindings: []RuntimeGateBinding{
+			{Provider: "primary", ProviderKind: "openai_compatible", BindingID: "primary-binding", BaseURL: "http://primary", Model: "primary", APIKeyEnvironment: "PRIMARY_KEY", MaxOutputField: "max_tokens", ContextTokens: 8192, Priority: 1},
+			{Provider: "fallback", ProviderKind: "openai_compatible", BindingID: "fallback-binding", BaseURL: "http://fallback", Model: "fallback", APIKeyEnvironment: "FALLBACK_KEY", MaxOutputField: "max_tokens", ContextTokens: 8192, Priority: 2},
+		},
+	}
+	proposal := map[string]any{
+		"schema_version": 1, "id": "changeset_fallback_recovery", "mission_revision_id": "revision_fallback_recovery",
+		"operation_id": "operation_fallback_recovery", "base_commit_id": "commit_genesis", "read_set": []string{"manifest"},
+		"preconditions": []string{}, "changes": []map[string]string{{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_fallback_recovery", "payload_ref": "artifact_fallback_recovery"}},
+		"expected_delta": "one observation", "validator_ids": []string{"schema"}, "provenance": "model:fallback", "idempotency_key": "fallback-model-recovery-campaign",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fallback"})
+	defer server.Close()
+	provider, err := newTestOpenAIProvider(server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := memory.New()
+	report, err := (FallbackModelRecoveryCampaignRunner{Store: store, Clock: source.NewManualClock(time.Date(2026, 7, 23, 3, 0, 0, 0, time.UTC)), Providers: map[string]port.ModelProvider{"primary-binding": provider, "fallback-binding": provider}}).Run(context.Background(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ExternalCalls != 1 || report.InjectedCalls != 3 || report.ModelCalls != 4 || len(server.Requests()) != 1 {
+		t.Fatalf("unexpected bounds: report=%+v requests=%d", report, len(server.Requests()))
+	}
+	want := []string{"SHORT_CORRECTION", "SIMPLER_FORMAT", "FALLBACK_MODEL"}
+	if len(report.RecoveryStages) != len(want) {
+		t.Fatalf("recovery stages=%v", report.RecoveryStages)
+	}
+	for i := range want {
+		if string(report.RecoveryStages[i]) != want[i] {
+			t.Fatalf("recovery stages=%v", report.RecoveryStages)
+		}
+	}
+	if report.ReceiptCount != 4 || !report.CanonicalStored || report.OperationState != "SUCCEEDED" {
+		t.Fatalf("durability snapshot=%+v", report)
+	}
+	if !report.BindingSwitched || report.PrimaryBinding != "primary-binding" || report.FallbackBinding != "fallback-binding" {
+		t.Fatalf("binding switch=%+v", report)
+	}
+	for i := 0; i < 3; i++ {
+		if !report.Calls[i].Injected || report.Calls[i].BindingID != "primary-binding" {
+			t.Fatalf("primary injected call %d=%+v", i+1, report.Calls[i])
+		}
+	}
+	if report.Calls[3].Injected || report.Calls[3].BindingID != "fallback-binding" {
+		t.Fatalf("external fallback call=%+v", report.Calls[3])
+	}
+	if err := VerifyFallbackModelRecoveryDurability(context.Background(), store, report); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFallbackModelRecoveryCampaignSQLiteReopenVerifiesCommitAndEntity(t *testing.T) {
+	manifest := FallbackModelRecoveryCampaignManifest{
+		SchemaVersion: 1, Name: "test-fallback-model-recovery-sqlite", TimeoutSeconds: 30,
+		MaxCalls: 4, InjectedFailures: 3, MaxOutputTokens: 256,
+		ProbePrompt: "Create the required observation.",
+		Bindings: []RuntimeGateBinding{
+			{Provider: "primary", ProviderKind: "openai_compatible", BindingID: "primary-binding", BaseURL: "http://primary", Model: "primary", APIKeyEnvironment: "PRIMARY_KEY", MaxOutputField: "max_tokens", ContextTokens: 8192, Priority: 1},
+			{Provider: "fallback", ProviderKind: "openai_compatible", BindingID: "fallback-binding", BaseURL: "http://fallback", Model: "fallback", APIKeyEnvironment: "FALLBACK_KEY", MaxOutputField: "max_tokens", ContextTokens: 8192, Priority: 2},
+		},
+	}
+	proposal := map[string]any{
+		"schema_version": 1, "id": "changeset_fallback_recovery", "mission_revision_id": "revision_fallback_recovery",
+		"operation_id": "operation_fallback_recovery", "base_commit_id": "commit_genesis", "read_set": []string{"manifest"},
+		"preconditions": []string{}, "changes": []map[string]string{{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_fallback_recovery", "payload_ref": "artifact_fallback_recovery"}},
+		"expected_delta": "one observation", "validator_ids": []string{"schema"}, "provenance": "model:fallback", "idempotency_key": "fallback-model-recovery-campaign",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: string(body), ResponseModel: "fallback"})
+	defer server.Close()
+	provider, err := newTestOpenAIProvider(server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	databasePath := t.TempDir() + "/fallback-model-recovery.sqlite"
+	store, err := sqlite.Open(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := (FallbackModelRecoveryCampaignRunner{Store: store, Clock: source.NewManualClock(time.Date(2026, 7, 23, 3, 0, 0, 0, time.UTC)), Providers: map[string]port.ModelProvider{"primary-binding": provider, "fallback-binding": provider}}).Run(context.Background(), manifest)
+	if err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := sqlite.Open(databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	if err := VerifyFallbackModelRecoveryDurability(context.Background(), reopened, report); err != nil {
+		t.Fatal(err)
+	}
+	if report.CommitID == "" || report.ReceiptCount != 4 || !report.CanonicalStored {
+		t.Fatalf("incomplete durable report: %+v", report)
+	}
+}
