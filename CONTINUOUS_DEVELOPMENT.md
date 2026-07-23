@@ -4145,3 +4145,9 @@ Verificacao: testes focais de domain/store/kernel/restart/replay, `go test ./...
 2026-07-22 22:20 - HEARTBEAT - Fase 126 concluída. Extração de credenciais do background via `.provider-secrets.env` confirmou execução bounded e restabelecimento de quota resource limit no loop trial=1. A matriz de falhas foi reestruturada de forma que testes focais de memory/SQLite provaram ser autossuficientes end-to-end antes, validando o comportamento de crash/reopen.
 
 ### Fase 127 - Otimização de Retries em Falhas Transitórias e Tool Errors
+
+- [x] `DONE` Implementar fallback de erro de validação JSON em runtime no nível do `ModelExecutor` para permitir que o modelo se auto-corrija quando o schema falha.
+- [x] `DONE` Adicionar restrições de loop infinito / backoff progressivo caso as retentativas falhem sucessivamente.
+- [x] `DONE` Acoplar o log das falhas corrigidas automaticamente nos recibos `ModelCompletionReceipt` para manter evidência sem poluir o registro canônico.
+- [ ] `TODO` Executar campanha bounded live de stress com JSONs deliberadamente complexos para demonstrar auto-correção via LLM.
+
