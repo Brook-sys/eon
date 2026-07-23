@@ -4321,4 +4321,9 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 2026-07-23 08:48 — HEARTBEAT — Fase 146 concluída. Novos testes focais em `storage/memory` e `storage/sqlite` verificam rigorosamente as atualizações sob concorrência otimista (optimistic concurrency) de `ChannelCursor`. As threads atrasadas falham devidamente com um erro nativo de transação (`ErrConflict`) ao tentar reverter o cursor remoto de comunicação de um transport channel.
 
 ### Fase 147 - Integridade do Ingestion Snapshotting
-- [ ] `READY` Elaborar teste focando na resiliência do `SourceIngestion` demonstrando que artefatos fracionados de forma imutável rejeitam fragmentos contendo corrupção ou incompatibilidade de digest (`FragmentHash`), e falham atomicamente (fail-closed) protegendo a persistência do `Store`.
+- [x] `DONE` Elaborar teste focando na resiliência do `SourceIngestion` demonstrando que artefatos fracionados de forma imutável rejeitam fragmentos contendo corrupção ou incompatibilidade de digest, falhando atomicamente (fail-closed) para proteger a integridade transacional do `Store`. Implementado `TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic` no Memory e SQLite.
+
+2026-07-23 08:52 — HEARTBEAT — Fase 147 concluída. Validação da integridade transacional focada em ingestão de conteúdo particionado e imutável. `TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic` injetado no Store in-memory e no db real (SQLite) demonstrando a resistência do motor transacional a fracionamentos corrompidos (onde boundaries sintáticas como `EndOffset <= StartOffset` invadem um batch hígido), promovendo o rollback atômico e evitando fragmentos "órfãos" não mapeados e corrupção silenciosa no acervo de observações (`knowledge_artifacts` e dependências). 
+
+### Fase 148 - Avaliação do Context Pressure Degradation na Gestão de Sessões Locais
+- [ ] `READY` Elaborar teste estendendo o `kernel.localSessionManager` provando que sucessivos agendamentos abortados por limites operacionais (como excesso de tentativas ou timeouts sintéticos nas policies) sejam mapeados coerentemente no status do Sub-Agent antes do rollback. 
