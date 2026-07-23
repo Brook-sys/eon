@@ -602,32 +602,36 @@ func (rt *Runtime) Close(ctx context.Context) error {
 
 // CycleResult summarizes one control-loop iteration for tests and diagnostics.
 type CycleResult struct {
-	CommandsProcessed          int
-	EventsProcessed            int
-	MemoriesCompacted          int
-	RemindersScheduled         int
-	DeliveriesProcessed        int
-	TelegramFetched            int
-	TelegramAccepted           int
-	TelegramRejected           int
-	TelegramDuplicate          int
-	LeasesReconciled           int
-	SubagentsReconciled        int
-	SubagentDispatches         int
-	SubagentEffectsReconciled  int
-	RemoteSubagentsExecuted    int
-	SubagentStatusesDispatched int
-	SubagentStatusesApplied    int
-	SchedulerRan               bool
-	SchedulerSteps             int
-	SchedulerKind              kernel.DecisionKind
-	OperationsExecuted         int
-	OperationsSkipped          int
-	DispatchBudgetHit          bool
-	CycleBudgetHit             bool
-	CadenceVersion             string
-	Worked                     bool
-	Stopping                   bool
+	CommandsProcessed            int
+	EventsProcessed              int
+	MemoriesCompacted            int
+	RemindersScheduled           int
+	DeliveriesProcessed          int
+	TelegramFetched              int
+	TelegramAccepted             int
+	TelegramRejected             int
+	TelegramDuplicate            int
+	LeasesReconciled             int
+	SubagentsReconciled          int
+	SubagentDispatches           int
+	SubagentEffectsReconciled    int
+	RemoteSubagentsExecuted      int
+	SubagentStatusesDispatched   int
+	SubagentStatusesApplied      int
+	SubagentIngressRetryAttempts int
+	SubagentIngressRetries       int
+	SubagentIngressConflicts     int
+	SubagentIngressRetrySleep    time.Duration
+	SchedulerRan                 bool
+	SchedulerSteps               int
+	SchedulerKind                kernel.DecisionKind
+	OperationsExecuted           int
+	OperationsSkipped            int
+	DispatchBudgetHit            bool
+	CycleBudgetHit               bool
+	CadenceVersion               string
+	Worked                       bool
+	Stopping                     bool
 }
 
 // ProcessCycle drains inboxes and steps the scheduler under cadence budgets.
@@ -657,16 +661,20 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 		observability.EndControl(span, outcome, "")
 		if rt.cycleTelemetry != nil {
 			rt.cycleTelemetry.Record(ctx, observability.CycleSnapshot{
-				Outcome:            outcome,
-				CommandsProcessed:  result.CommandsProcessed,
-				EventsProcessed:    result.EventsProcessed,
-				OperationsExecuted: result.OperationsExecuted,
-				OperationsSkipped:  result.OperationsSkipped,
-				LeasesReconciled:   result.LeasesReconciled,
-				SchedulerRan:       result.SchedulerRan,
-				SchedulerKind:      string(result.SchedulerKind),
-				Worked:             result.Worked,
-				Stopping:           result.Stopping,
+				Outcome:                      outcome,
+				CommandsProcessed:            result.CommandsProcessed,
+				EventsProcessed:              result.EventsProcessed,
+				OperationsExecuted:           result.OperationsExecuted,
+				OperationsSkipped:            result.OperationsSkipped,
+				LeasesReconciled:             result.LeasesReconciled,
+				SubagentIngressRetryAttempts: result.SubagentIngressRetryAttempts,
+				SubagentIngressRetries:       result.SubagentIngressRetries,
+				SubagentIngressConflicts:     result.SubagentIngressConflicts,
+				SubagentIngressRetrySleep:    result.SubagentIngressRetrySleep,
+				SchedulerRan:                 result.SchedulerRan,
+				SchedulerKind:                string(result.SchedulerKind),
+				Worked:                       result.Worked,
+				Stopping:                     result.Stopping,
 			})
 		}
 	}()
@@ -690,11 +698,15 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	// Make durable authenticated status evidence process-visible before enforcing
 	// local deadlines. Supervisor remains the sole canonical lifecycle writer.
 	if rt.SubagentStatusIngressWorker != nil {
-		applied, err := rt.SubagentStatusIngressWorker.ApplyPending(ctx)
+		applied, retryReport, err := rt.SubagentStatusIngressWorker.ApplyPendingWithRetryReport(ctx)
 		if err != nil {
 			return result, fmt.Errorf("subagent status ingress worker: %w", err)
 		}
 		result.SubagentStatusesApplied = applied
+		result.SubagentIngressRetryAttempts = retryReport.Attempts
+		result.SubagentIngressRetries = retryReport.Retries
+		result.SubagentIngressConflicts = retryReport.Classes["conflict"]
+		result.SubagentIngressRetrySleep = retryReport.SleepTotal
 		if applied > 0 {
 			result.Worked = true
 		}

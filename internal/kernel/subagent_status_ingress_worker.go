@@ -30,8 +30,16 @@ type SubagentStatusIngressWorker struct {
 }
 
 func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, error) {
+	processed, _, err := w.ApplyPendingWithRetryReport(ctx)
+	return processed, err
+}
+
+// ApplyPendingWithRetryReport returns cycle-scoped aggregate retry telemetry.
+// The report has no receipt/session labels and is derived evidence only.
+func (w *SubagentStatusIngressWorker) ApplyPendingWithRetryReport(ctx context.Context) (int, retry.Report, error) {
+	retryReport := retry.Report{Classes: make(map[string]int)}
 	if w == nil || w.Store == nil || w.Manager == nil || w.Clock == nil {
-		return 0, errors.New("subagent status ingress worker dependencies are incomplete")
+		return 0, retryReport, errors.New("subagent status ingress worker dependencies are incomplete")
 	}
 	batch := w.Batch
 	if batch <= 0 {
@@ -43,21 +51,21 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 		receipts, err = r.PendingSubagentStatusIngressReceipts(batch)
 		return err
 	}); err != nil {
-		return 0, err
+		return 0, retryReport, err
 	}
 	processed := 0
 	for _, receipt := range receipts {
 		err := w.Manager.PublishStatus(ctx, ingressObservation(receipt))
 		if err != nil {
 			if !errors.Is(err, ErrSessionAttempt) && !errors.Is(err, ErrSessionTerminal) {
-				return processed, err
+				return processed, retryReport, err
 			}
 			rejectionCode := domain.SubagentStatusIngressRejectionAttemptMismatch
 			if errors.Is(err, ErrSessionTerminal) {
 				rejectionCode = domain.SubagentStatusIngressRejectionTerminalConflict
 			}
 			transitioned := false
-			err = w.updateReceipt(ctx, func(tx port.Transaction) error {
+			err = w.updateReceipt(ctx, &retryReport, func(tx port.Transaction) error {
 				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 				if err != nil {
 					return err
@@ -84,7 +92,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				if errors.Is(err, port.ErrConflict) && !errors.Is(err, retry.ErrBudgetExhausted) {
 					continue
 				}
-				return processed, err
+				return processed, retryReport, err
 			}
 			if transitioned {
 				processed++
@@ -92,7 +100,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			continue
 		}
 		transitioned := false
-		err = w.updateReceipt(ctx, func(tx port.Transaction) error {
+		err = w.updateReceipt(ctx, &retryReport, func(tx port.Transaction) error {
 			current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 			if err != nil {
 				return err
@@ -140,16 +148,16 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			if errors.Is(err, port.ErrConflict) && !errors.Is(err, retry.ErrBudgetExhausted) {
 				continue
 			}
-			return processed, err
+			return processed, retryReport, err
 		}
 		if transitioned {
 			processed++
 		}
 	}
-	return processed, nil
+	return processed, retryReport, nil
 }
 
-func (w *SubagentStatusIngressWorker) updateReceipt(ctx context.Context, update func(port.Transaction) error) error {
+func (w *SubagentStatusIngressWorker) updateReceipt(ctx context.Context, aggregate *retry.Report, update func(port.Transaction) error) error {
 	operation := func(context.Context, int) error {
 		return w.Store.Update(ctx, update)
 	}
@@ -165,7 +173,23 @@ func (w *SubagentStatusIngressWorker) updateReceipt(ctx context.Context, update 
 	if w.RetryObserve != nil {
 		w.RetryObserve(report)
 	}
+	mergeRetryReport(aggregate, report)
 	return err
+}
+
+func mergeRetryReport(aggregate *retry.Report, report retry.Report) {
+	if aggregate == nil {
+		return
+	}
+	aggregate.Attempts += report.Attempts
+	aggregate.Retries += report.Retries
+	aggregate.SleepTotal += report.SleepTotal
+	if aggregate.Classes == nil {
+		aggregate.Classes = make(map[string]int)
+	}
+	for class, count := range report.Classes {
+		aggregate.Classes[class] += count
+	}
 }
 
 func ingressObservation(receipt domain.SubagentStatusIngressReceipt) SubagentObservation {

@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -10,13 +11,17 @@ import (
 // CycleInstruments holds derived counters for control-loop activity.
 // Instruments are nil-safe: recording is a no-op when telemetry is disabled.
 type CycleInstruments struct {
-	cycles    metric.Int64Counter
-	commands  metric.Int64Counter
-	events    metric.Int64Counter
-	opsDone   metric.Int64Counter
-	opsSkip   metric.Int64Counter
-	leases    metric.Int64Counter
-	scheduler metric.Int64Counter
+	cycles               metric.Int64Counter
+	commands             metric.Int64Counter
+	events               metric.Int64Counter
+	opsDone              metric.Int64Counter
+	opsSkip              metric.Int64Counter
+	leases               metric.Int64Counter
+	scheduler            metric.Int64Counter
+	ingressRetryAttempts metric.Int64Counter
+	ingressRetries       metric.Int64Counter
+	ingressConflicts     metric.Int64Counter
+	ingressRetrySleepMS  metric.Int64Counter
 }
 
 // NewCycleInstruments binds counters to the runtime meter. Safe with nil/disabled.
@@ -47,22 +52,38 @@ func NewCycleInstruments(rt *Runtime) *CycleInstruments {
 	if c, err := meter.Int64Counter("motor.control.scheduler.steps"); err == nil {
 		ci.scheduler = c
 	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.attempts"); err == nil {
+		ci.ingressRetryAttempts = c
+	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.retries"); err == nil {
+		ci.ingressRetries = c
+	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.conflicts"); err == nil {
+		ci.ingressConflicts = c
+	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.sleep_ms"); err == nil {
+		ci.ingressRetrySleepMS = c
+	}
 	return ci
 }
 
 // CycleSnapshot is a telemetry-only summary of one control cycle.
 // It must never be used as authority for kernel decisions.
 type CycleSnapshot struct {
-	Outcome            string
-	CommandsProcessed  int
-	EventsProcessed    int
-	OperationsExecuted int
-	OperationsSkipped  int
-	LeasesReconciled   int
-	SchedulerRan       bool
-	SchedulerKind      string
-	Worked             bool
-	Stopping           bool
+	Outcome                      string
+	CommandsProcessed            int
+	EventsProcessed              int
+	OperationsExecuted           int
+	OperationsSkipped            int
+	LeasesReconciled             int
+	SchedulerRan                 bool
+	SchedulerKind                string
+	Worked                       bool
+	Stopping                     bool
+	SubagentIngressRetryAttempts int
+	SubagentIngressRetries       int
+	SubagentIngressConflicts     int
+	SubagentIngressRetrySleep    time.Duration
 }
 
 // Record emits derived cycle metrics. Never panics; ignores nil receivers.
@@ -96,5 +117,17 @@ func (c *CycleInstruments) Record(ctx context.Context, snap CycleSnapshot) {
 	if snap.SchedulerRan && c.scheduler != nil {
 		kindAttrs := append(attrs, attribute.String("motor.scheduler.kind", sanitizeLabel(snap.SchedulerKind, "unknown")))
 		c.scheduler.Add(ctx, 1, metric.WithAttributes(kindAttrs...))
+	}
+	if snap.SubagentIngressRetryAttempts > 0 && c.ingressRetryAttempts != nil {
+		c.ingressRetryAttempts.Add(ctx, int64(snap.SubagentIngressRetryAttempts), metric.WithAttributes(attrs...))
+	}
+	if snap.SubagentIngressRetries > 0 && c.ingressRetries != nil {
+		c.ingressRetries.Add(ctx, int64(snap.SubagentIngressRetries), metric.WithAttributes(attrs...))
+	}
+	if snap.SubagentIngressConflicts > 0 && c.ingressConflicts != nil {
+		c.ingressConflicts.Add(ctx, int64(snap.SubagentIngressConflicts), metric.WithAttributes(attrs...))
+	}
+	if snap.SubagentIngressRetrySleep > 0 && c.ingressRetrySleepMS != nil {
+		c.ingressRetrySleepMS.Add(ctx, snap.SubagentIngressRetrySleep.Milliseconds(), metric.WithAttributes(attrs...))
 	}
 }

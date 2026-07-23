@@ -124,7 +124,8 @@ func TestSubagentStatusIngressWorkerRetriesIdempotentReceiptCASBoundedly(t *test
 		RetrySleeper: sleeper,
 		RetryObserve: func(observed retry.Report) { report = observed },
 	}
-	if n, err := worker.ApplyPending(ctx); err != nil || n != 1 {
+	n, aggregate, err := worker.ApplyPendingWithRetryReport(ctx)
+	if err != nil || n != 1 {
 		t.Fatalf("apply n=%d err=%v", n, err)
 	}
 	if store.updates != 3 || report.Attempts != 3 || report.Retries != 2 || report.Classes["conflict"] != 2 {
@@ -132,6 +133,9 @@ func TestSubagentStatusIngressWorkerRetriesIdempotentReceiptCASBoundedly(t *test
 	}
 	if len(sleeper.delays) != 2 || sleeper.delays[0] != time.Millisecond || sleeper.delays[1] != 2*time.Millisecond {
 		t.Fatalf("delays=%v", sleeper.delays)
+	}
+	if aggregate.Attempts != 3 || aggregate.Retries != 2 || aggregate.Classes["conflict"] != 2 || aggregate.SleepTotal != 3*time.Millisecond {
+		t.Fatalf("aggregate=%+v", aggregate)
 	}
 	if n, err := worker.ApplyPending(ctx); err != nil || n != 0 {
 		t.Fatalf("replay n=%d err=%v", n, err)
