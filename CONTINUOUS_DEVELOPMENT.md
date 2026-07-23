@@ -4301,4 +4301,9 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 
 ### Fase 143 - Preparar validação em Storage/SQLite de Dependent Artifacts Cascade
 
-- [ ] `READY` Elaborar teste de persistência análogo no SQLite local demonstrando o comportamento e preservação do estado `Stale` através de checkpoints/restarts.
+- [x] `DONE` Elaborar teste de persistência no SQLite (`TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart`) demonstrando o comportamento e preservação do estado `Stale` em artefatos derivados através de restarts do banco.
+
+2026-07-23 08:38 — HEARTBEAT — Fase 143 concluída. Implementado teste de persistência no `storage/sqlite` (`TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart`) confirmando que o estado `Stale` gerado em artefatos derivados pela alteração (`ChangeReplace`) do parent é devidamente serializado, consolidado na WAL e reconstituído de forma transparente após a reinicialização (restart do driver sqlite) do armazenamento. Nenhuma intervenção no layer de domínio precisou ser alterada, a implementação do `store` já persiste as flags mutáveis.
+
+### Fase 144 - Exploração de Validações Sub-Agent Status
+- [ ] `READY` O motor autônomo executa delegates para processamento em background (Sub-Agents). Adicionar teste para garantir que delegações simultâneas ou status ingresses tardios, que conflitam ou já possuem sucessor, sejam corretamente limitadas na view e não quebrem a máquina de estados idempotente.
