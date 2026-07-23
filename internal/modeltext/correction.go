@@ -76,7 +76,7 @@ func BuildShortCorrection(in ShortCorrectionInput) ShortCorrectionResult {
 // Each value remains a JSON scalar/array, but the outer object punctuation is
 // removed. This avoids the long-range brace/comma bookkeeping that weak models
 // commonly truncate while preserving deterministic, typed local validation.
-const DelimitedChangeSetFormat = `CHANGESET_DELIMITED_V1 followed by exactly one KEY: JSON_VALUE line for SCHEMA_VERSION, ID, MISSION_REVISION_ID, OPERATION_ID, BASE_COMMIT_ID, READ_SET, PRECONDITIONS, CHANGES, EXPECTED_DELTA, VALIDATOR_IDS, PROVENANCE, IDEMPOTENCY_KEY; every value after ':' must be valid JSON on that same line: quote all strings (example ID: "changeset_1"), use decimal 1 for SCHEMA_VERSION, and use compact arrays/objects for collection values; include all 12 lines exactly once; no markdown; no prose`
+const DelimitedChangeSetFormat = `CHANGESET_DELIMITED_V1 followed by exactly one line per property matching KEY: JSON_VALUE for schema_version, id, mission_revision_id, operation_id, base_commit_id, read_set, preconditions, changes, expected_delta, validator_ids, provenance, idempotency_key; keys must be strictly lowercase exactly as spelled here; every value after ':' must be valid JSON on that same line: quote all strings (example id: "changeset_1"), use decimal 1 for schema_version, and use compact arrays/objects for collection values; include all 12 lines exactly once; do not include unknown fields, file contents, or other properties; do not output Markdown fences or prose`
 
 // BuildSimplerFormatCorrection is step 6: short correction plus a stricter/simpler format.
 func BuildSimplerFormatCorrection(previousOutput, safeError string) ShortCorrectionResult {

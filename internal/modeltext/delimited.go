@@ -21,6 +21,12 @@ var delimitedChangeSetKeys = []string{
 // unknown, duplicate, missing, multiline, or non-JSON values fail closed.
 func DelimitedChangeSetJSON(text string) (string, error) {
 	text = strings.TrimSpace(strings.TrimPrefix(text, "\ufeff"))
+	// Standardize markdown stripping
+	text = strings.TrimPrefix(text, "```markdown")
+	text = strings.TrimPrefix(text, "```text")
+	text = strings.TrimPrefix(text, "```")
+	text = strings.TrimSuffix(text, "```")
+	text = strings.TrimSpace(text)
 	lines := strings.Split(text, "\n")
 	if len(lines) == 0 || strings.TrimSpace(lines[0]) != delimitedChangeSetHeader {
 		return "", errors.New("delimited changeset header is required")

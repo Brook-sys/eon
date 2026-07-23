@@ -52,7 +52,7 @@ func TestBuildShortCorrectionDefaults(t *testing.T) {
 func TestBuildSimplerFormatCorrection(t *testing.T) {
 	t.Parallel()
 	got := BuildSimplerFormatCorrection(`{"bad":true}`, "unknown field")
-	if !strings.Contains(got.Prompt, "CHANGESET_DELIMITED_V1") || !strings.Contains(got.Prompt, "CHANGES") || !strings.Contains(got.Prompt, "IDEMPOTENCY_KEY") {
+	if !strings.Contains(got.Prompt, "CHANGESET_DELIMITED_V1") || !strings.Contains(got.Prompt, "changes") || !strings.Contains(got.Prompt, "idempotency_key") {
 		t.Fatalf("simpler format missing keys: %s", got.Prompt)
 	}
 	found := false
