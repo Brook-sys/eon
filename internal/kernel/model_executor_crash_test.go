@@ -3,6 +3,7 @@ package kernel
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -16,6 +17,40 @@ import (
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/sqlite"
 )
+
+type ErrorProcessorTx struct {
+	port.Transaction
+}
+
+func (e ErrorProcessorTx) CreateCommit(c domain.Commit) error {
+	return errors.New("forced processor error")
+}
+
+func (e ErrorProcessorTx) AppendEvent(ev domain.Event) (domain.Event, error) {
+	return e.Transaction.AppendEvent(ev)
+}
+
+func (e ErrorProcessorTx) CreateOperation(op domain.Operation) error {
+	return e.Transaction.CreateOperation(op)
+}
+
+func (e ErrorProcessorTx) SaveOperation(op domain.Operation) error {
+	return e.Transaction.SaveOperation(op)
+}
+
+func (e ErrorProcessorTx) AppendModelCompletionReceipt(r domain.ModelCompletionReceipt) error {
+	return e.Transaction.AppendModelCompletionReceipt(r)
+}
+
+type ErrorProcessorStore struct {
+	port.Store
+}
+
+func (e ErrorProcessorStore) Update(ctx context.Context, fn func(tx port.Transaction) error) error {
+	return e.Store.Update(ctx, func(tx port.Transaction) error {
+		return fn(ErrorProcessorTx{Transaction: tx})
+	})
+}
 
 // TestModelExecutorCrashReplaySQLite proves that after a durable SUCCEED the
 // model path is pure on reopen: re-Execute is terminal skip, commit/entity
@@ -87,6 +122,159 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 	if err := store.Close(); err != nil {
 		t.Fatal(err)
 	}
+	// Phase 3: reopen and crash before completion receipt.
+	proposal2 := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_crash2", MissionRevision: "revision_1",
+		OperationID: "operation_model_2", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_crash2", PayloadRef: "payload_crash2",
+		}},
+		ExpectedDelta: "two observations", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model_2",
+	}
+	body2, err := json.Marshal(proposal2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err = sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	
+	// Re-add an operation linked to the already seeded mission/inquiry
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		op := domain.Operation{
+			SchemaVersion: domain.SchemaVersionV1,
+			ID: "operation_model_2", InquiryID: "inquiry_1", MissionRevision: "revision_1", SpecID: "extract@1",
+			State: domain.StateReady, ExpectedOutput: "test2", IdempotencyKey: "idem_model_2",
+			Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady},
+			InputRefs:    []string{"fragment_1"},
+			ReadSet:      []string{"fragment_1"},
+		}
+		return tx.CreateOperation(op)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_ = store.Close()
+	
+	store, err = sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server3 := fakeserver.New(fakeserver.Exchange{
+		ResponseText:  string(body2),
+		ResponseModel: "fixture-model",
+		InputTokens:   10,
+		OutputTokens:  20,
+		StatusCode:    500,
+	})
+	defer server3.Close()
+	provider3, err := openai.New(openai.Config{BaseURL: server3.URL(), Model: "fixture-model", Client: server3.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock3 := source.NewManualClock(now.Add(2 * time.Minute))
+	ids3 := source.NewSequenceIDGenerator(1000)
+	processor3, err := changeset.New(changeset.Config{
+		Store: store, Clock: clock3, IDs: ids3, PolicyVersion: "policy@model-crash",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec3 := ModelExecutor{
+		Store: store, Clock: clock3, IDs: ids3, Provider: provider3, Changes: processor3,
+		Compiler: prompt.Compiler{
+			Estimator:             prompt.ConservativeEstimator{},
+			ProviderContextTokens: 8000,
+		},
+		PolicyVersion: "policy@model-crash",
+	}
+	again3, _ := exec3.Execute(ctx, "operation_model_2")
+	if again3.Completed || again3.Skipped {
+		t.Fatalf("want no completion for 500, got %+v", again3)
+	}
+	_ = store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation("operation_model_2")
+		if err == nil && op.State == domain.StateSucceeded {
+			t.Fatal("operation state must not be SUCCEEDED if completion receipt fails")
+		}
+		return nil
+	})
+	_ = store.Close()
+	// Phase 4: Reopen, execute to receipt boundary, crash before commit.
+	// We achieve this by letting Complete succeed, but the processor returns an error.
+	store, err = sqlite.Open(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Reset state of operation_model_2 to READY for phase 4
+	_ = store.Update(ctx, func(tx port.Transaction) error {
+		op, _ := tx.Operation("operation_model_2")
+		op.State = domain.StateReady
+		op.Attempt = 1 // Reset to attempt 1
+		op.Reevaluation = domain.ReevaluationCondition{Kind: domain.ReevaluateReady}
+		return tx.SaveOperation(op)
+	})
+	server4 := fakeserver.New(fakeserver.Exchange{
+		ResponseText:  "invalid-json-causes-processor-error",
+		ResponseModel: "fixture-model",
+		InputTokens:   10,
+		OutputTokens:  20,
+	})
+	defer server4.Close()
+	provider4, err := openai.New(openai.Config{BaseURL: server4.URL(), Model: "fixture-model", Client: server4.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock4 := source.NewManualClock(now.Add(4 * time.Minute))
+	ids4 := source.NewSequenceIDGenerator(2000)
+	
+	processor4, err := changeset.New(changeset.Config{
+		Store: ErrorProcessorStore{Store: store},
+		Clock: clock4, IDs: ids4, PolicyVersion: "policy@model-crash",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec4 := ModelExecutor{
+		Store: ErrorProcessorStore{Store: store}, Clock: clock4, IDs: ids4, Provider: provider4, Changes: processor4,
+		Compiler: prompt.Compiler{
+			Estimator:             prompt.ConservativeEstimator{},
+			ProviderContextTokens: 8000,
+		},
+		PolicyVersion: "policy@model-crash",
+	}
+	// Debug state before phase 4 execution
+	_ = store.View(ctx, func(r port.Reader) error { op, _ := r.Operation("operation_model_2"); t.Logf("State before Phase 4 Exec: %s", op.State); return nil })
+
+	again4, err4 := exec4.Execute(ctx, "operation_model_2")
+t.Logf("again4 = %+v, err4 = %v", again4, err4)
+
+	if again4.Completed || again4.Skipped {
+		t.Fatalf("want no completion for invalid JSON, got %+v", again4)
+	}
+	// Verify receipt was stored despite the failure.
+	_ = store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation("operation_model_2")
+		if err == nil && op.State == domain.StateSucceeded {
+			t.Fatal("operation state must not be SUCCEEDED if processor fails")
+		}
+		
+		// Load receipt
+		_, err = r.ModelCompletionReceipt("operation_model_2", 2, 1)
+		if err != nil {
+			t.Fatalf("expected receipt to be persisted after provider call, got: %v", err)
+		}
+		return nil
+	})
+	
+	// Execute Phase 4 again - should not hit provider, use receipt, and fail processing again.
+	_, _ = exec4.Execute(ctx, "operation_model_2")
+	if len(server4.Requests()) != 1 {
+		t.Fatalf("expected 1 call to provider, got %d", len(server4.Requests()))
+	}
+
 
 	// Phase 2: reopen with fresh clocks/IDs/provider script and prove pure terminal skip.
 	store, err = sqlite.Open(dbPath)
