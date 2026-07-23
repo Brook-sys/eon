@@ -48,6 +48,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			if errors.Is(err, ErrSessionTerminal) {
 				rejectionCode = domain.SubagentStatusIngressRejectionTerminalConflict
 			}
+			transitioned := false
 			err = w.Store.Update(ctx, func(tx port.Transaction) error {
 				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 				if err != nil {
@@ -65,7 +66,11 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				if err != nil {
 					return err
 				}
-				return tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending)
+				if err := tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending); err != nil {
+					return err
+				}
+				transitioned = true
+				return nil
 			})
 			if err != nil {
 				if errors.Is(err, port.ErrConflict) {
@@ -73,9 +78,12 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 				}
 				return processed, err
 			}
-			processed++
+			if transitioned {
+				processed++
+			}
 			continue
 		}
+		transitioned := false
 		err = w.Store.Update(ctx, func(tx port.Transaction) error {
 			current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 			if err != nil {
@@ -109,6 +117,7 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			if err := tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending); err != nil {
 				return err
 			}
+			transitioned = true
 			if receipt.State == string(SessionStateRunning) && w.LeaseTTL > 0 {
 				renewedUntil := now.Add(w.LeaseTTL)
 				if renewedUntil.After(record.LeaseExpiresAt) {
@@ -125,7 +134,9 @@ func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, er
 			}
 			return processed, err
 		}
-		processed++
+		if transitioned {
+			processed++
+		}
 	}
 	return processed, nil
 }

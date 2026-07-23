@@ -2,6 +2,7 @@ package kernel_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,15 +16,15 @@ func TestSubagentStatusIngressWorkerLimitsConflictsConcurrently(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	store := memory.New()
-	
+
 	clock := &mockClock{now: time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC)}
 	ids := &mockIDGenerator{}
-	
+
 	localManager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 4})
 	if err != nil {
 		t.Fatalf("local manager: %v", err)
 	}
-	
+
 	manager, err := kernel.NewPersistentSessionManager(localManager, store, clock, ids, kernel.PersistentSessionPolicy{MissionID: "mission-1"})
 	if err != nil {
 		t.Fatalf("persistent manager: %v", err)
@@ -135,17 +136,17 @@ func TestSubagentStatusIngressWorkerLimitsConflictsConcurrently(t *testing.T) {
 		if r1.Status != domain.SubagentStatusIngressApplied {
 			t.Errorf("run-1 expected APPLIED, got %v", r1.Status)
 		}
-		
+
 		r2, _ := r.SubagentStatusIngressReceipt("peer-a", "complete-1")
 		if r2.Status != domain.SubagentStatusIngressApplied {
 			t.Errorf("complete-1 expected APPLIED, got %v", r2.Status)
 		}
-		
+
 		r3, _ := r.SubagentStatusIngressReceipt("peer-a", "run-2-late")
 		if r3.Status != domain.SubagentStatusIngressRejected || r3.RejectionCode != domain.SubagentStatusIngressRejectionTerminalConflict {
 			t.Errorf("run-2-late expected REJECTED with TERMINAL_CONFLICT, got %v %v", r3.Status, r3.RejectionCode)
 		}
-		
+
 		r4, _ := r.SubagentStatusIngressReceipt("peer-a", "complete-2-conflict")
 		if r4.Status != domain.SubagentStatusIngressRejected || r4.RejectionCode != domain.SubagentStatusIngressRejectionTerminalConflict {
 			t.Errorf("complete-2-conflict expected REJECTED with TERMINAL_CONFLICT, got %v %v", r4.Status, r4.RejectionCode)
@@ -153,5 +154,100 @@ func TestSubagentStatusIngressWorkerLimitsConflictsConcurrently(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatalf("verify storage: %v", err)
+	}
+}
+
+func TestSubagentStatusIngressWorkersCountEachPendingReceiptOnce(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := &mockClock{now: time.Date(2026, 7, 23, 14, 30, 0, 0, time.UTC)}
+	ids := &mockIDGenerator{}
+
+	localManager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+	if err != nil {
+		t.Fatalf("local manager: %v", err)
+	}
+	manager, err := kernel.NewPersistentSessionManager(localManager, store, clock, ids, kernel.PersistentSessionPolicy{MissionID: "mission-1"})
+	if err != nil {
+		t.Fatalf("persistent manager: %v", err)
+	}
+	sessionID, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "work", ContextMode: "isolated"})
+	if err != nil {
+		t.Fatalf("spawn: %v", err)
+	}
+	receipt := domain.SubagentStatusIngressReceipt{
+		SchemaVersion: 1,
+		CallerPeerID:  "peer-a",
+		DeliveryID:    "terminal-1",
+		SessionID:     string(sessionID),
+		Attempt:       0,
+		State:         "COMPLETE",
+		Result:        "winner",
+		Status:        domain.SubagentStatusIngressPending,
+		RecordedAt:    clock.now.Add(time.Minute),
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		return tx.CreateSubagentStatusIngressReceipt(receipt)
+	}); err != nil {
+		t.Fatalf("store receipt: %v", err)
+	}
+	clock.now = receipt.RecordedAt.Add(time.Minute)
+
+	workers := []*kernel.SubagentStatusIngressWorker{
+		{Store: store, Manager: manager, Clock: clock, Batch: 1},
+		{Store: store, Manager: manager, Clock: clock, Batch: 1},
+	}
+	start := make(chan struct{})
+	counts := make(chan int, len(workers))
+	errs := make(chan error, len(workers))
+	var wg sync.WaitGroup
+	for _, worker := range workers {
+		wg.Add(1)
+		go func(worker *kernel.SubagentStatusIngressWorker) {
+			defer wg.Done()
+			<-start
+			count, applyErr := worker.ApplyPending(ctx)
+			counts <- count
+			errs <- applyErr
+		}(worker)
+	}
+	close(start)
+	wg.Wait()
+	close(counts)
+	close(errs)
+
+	total := 0
+	for applyErr := range errs {
+		if applyErr != nil {
+			t.Fatalf("apply pending: %v", applyErr)
+		}
+	}
+	for count := range counts {
+		total += count
+	}
+	if total != 1 {
+		t.Fatalf("expected one durable pending-to-applied transition, got processed total %d", total)
+	}
+	status, err := manager.Wait(ctx, sessionID)
+	if err != nil {
+		t.Fatalf("wait: %v", err)
+	}
+	if status.State != kernel.SessionStateComplete || status.Result != "winner" {
+		t.Fatalf("unexpected elected terminal status: %+v", status)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		got, readErr := r.SubagentStatusIngressReceipt("peer-a", "terminal-1")
+		if readErr != nil {
+			return readErr
+		}
+		if got.Status != domain.SubagentStatusIngressApplied {
+			t.Fatalf("expected APPLIED receipt, got %s", got.Status)
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("verify receipt: %v", err)
+	}
+	if _, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "must remain backpressured", ContextMode: "isolated"}); err != kernel.ErrSessionLimit {
+		t.Fatalf("terminal capacity released before canonical acknowledgement: got %v", err)
 	}
 }
