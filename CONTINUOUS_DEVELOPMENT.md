@@ -4316,4 +4316,9 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 2026-07-23 08:44 — HEARTBEAT — Fase 145 concluída. Adicionado o teste `TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage` no pacote `spike`, confirmando que quando o isolamento excede o timeout por via de uma simulação de "fallback intent" (limite de conectividade ou boundary durability fake fail), a reversão transacional não propaga o context leakage (ou erro nativo de cancelamento) silencioso, registrando adequadamente o `OutcomeNotApplied` preservando integridade da engine e do `EventLog`.
 
 ### Fase 146 - Refatorar persistência de Cursor em Transport Syncs 
-- [ ] `READY` Elaborar caso de teste verificando concorrência otimista (optimistic concurrency) ao persistir `ChannelCursor`. Um erro conflitivo (stale revision) deve impedir que ponteiros remotos antigos desfaçam observações de polling mais avançadas geradas por outras threads.
+- [x] `DONE` Elaborar caso de teste (`TestSaveChannelCursorRejectsStaleRevisionAndPreservesNewerValue` no Memory e SQLite) verificando a concorrência otimista ao persistir `ChannelCursor`. Foi comprovado que atualizações stale baseadas em expectedRevisions desatualizadas são confiavelmente bloqueadas com `port.ErrConflict` garantindo a imutabilidade temporal de cursores de integração remota.
+
+2026-07-23 08:48 — HEARTBEAT — Fase 146 concluída. Novos testes focais em `storage/memory` e `storage/sqlite` verificam rigorosamente as atualizações sob concorrência otimista (optimistic concurrency) de `ChannelCursor`. As threads atrasadas falham devidamente com um erro nativo de transação (`ErrConflict`) ao tentar reverter o cursor remoto de comunicação de um transport channel.
+
+### Fase 147 - Integridade do Ingestion Snapshotting
+- [ ] `READY` Elaborar teste focando na resiliência do `SourceIngestion` demonstrando que artefatos fracionados de forma imutável rejeitam fragmentos contendo corrupção ou incompatibilidade de digest (`FragmentHash`), e falham atomicamente (fail-closed) protegendo a persistência do `Store`.
