@@ -515,7 +515,52 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		failErr := e.failRunning(ctx, operation, leaseRef, errors.New("operation model_calls budget is zero"))
 		return result, failErr
 	}
-	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, 0)
+	// Reconstruct operation-lifetime spending before entering recovery. A
+	// reservation is written before network I/O, so an unresolved reservation
+	// after a crash is conservatively burned rather than silently retried.
+	modelCallsUsed := 0
+	var reservedReplay []domain.ModelCompletionReceipt
+	if err := e.Store.View(ctx, func(r port.Reader) error {
+		reservations, err := r.ModelCallReservations(operation.ID)
+		if err != nil {
+			return err
+		}
+		modelCallsUsed = len(reservations)
+		if operation.Attempt <= 1 {
+			return nil
+		}
+		events, err := r.Events(0, 10000)
+		if err != nil {
+			return err
+		}
+		rejected := make(map[uint32]bool)
+		for _, event := range events {
+			if event.OperationID != operation.ID || event.Kind != "operation.model_failed" {
+				continue
+			}
+			for attempt := uint32(1); attempt < operation.Attempt; attempt++ {
+				if strings.HasPrefix(string(event.ID), fmt.Sprintf("%s:model_fail:%d:", operation.ID, attempt)) {
+					rejected[attempt] = true
+				}
+			}
+		}
+		for _, reservation := range reservations {
+			if reservation.Attempt >= operation.Attempt || rejected[reservation.Attempt] {
+				continue
+			}
+			receipt, receiptErr := r.ModelCompletionReceipt(operation.ID, reservation.Attempt, reservation.ModelCall)
+			if receiptErr == nil {
+				reservedReplay = append(reservedReplay, receipt)
+			} else if !errors.Is(receiptErr, port.ErrNotFound) {
+				return receiptErr
+			}
+		}
+		return nil
+	}); err != nil {
+		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
+		return result, fmt.Errorf("load model call reservations: %w", err)
+	}
+	budget := domain.NewModelRecoveryBudget(spec, operation.Attempt, modelCallsUsed)
 	budget.FallbackAvailable = e.FallbackProvider != nil
 	if e.ModelsConfig != nil {
 		// New path allows multiple bindings
@@ -529,8 +574,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	var lastRaw string
 	var lastRetryAfter *time.Time
 
+	replayIndex := 0
 	for {
-		if budget.ModelCallsUsed >= maxCalls {
+		if replayIndex >= len(reservedReplay) && budget.ModelCallsUsed >= maxCalls {
 			break
 		}
 		if activeKind == domain.ProviderKindNVIDIANIM && strings.TrimSpace(activeBindingID) != "" {
@@ -545,10 +591,18 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 		var permits []*domain.ResourcePermit
 		var replayed bool
+		var replayedReserved bool
 		var receipt domain.ModelCompletionReceipt
 
-		// Attempt to load durable receipt inside the loop for the specific attempt + model call.
-		if operation.Attempt > 0 {
+		// First replay receipts from a prior lease that ended without an explicit
+		// model_failed decision. Rejected attempts are deliberately excluded.
+		if replayIndex < len(reservedReplay) {
+			receipt = reservedReplay[replayIndex]
+			replayIndex++
+			replayed = true
+			replayedReserved = true
+		} else if operation.Attempt > 0 {
+			// Backward compatibility for checkpoints created before reservations.
 			err := e.Store.View(ctx, func(r port.Reader) error {
 				var rErr error
 				receipt, rErr = r.ModelCompletionReceipt(operation.ID, operation.Attempt, uint32(budget.ModelCallsUsed+1))
@@ -625,6 +679,31 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				lastErr = fmt.Errorf("active provider is nil")
 				break
 			}
+			callOrdinal := uint32(budget.ModelCallsUsed + 1)
+			if reserveErr := e.Store.Update(ctx, func(tx port.Transaction) error {
+				op, err := tx.Operation(operationID)
+				if err != nil {
+					return err
+				}
+				if (op.State != domain.StateRunning && op.State != domain.StateVerifying) || op.Reevaluation.Reference != leaseRef {
+					return fmt.Errorf("%w: operation lease changed before model call reservation", port.ErrConflict)
+				}
+				return tx.AppendModelCallReservation(domain.ModelCallReservation{
+					SchemaVersion: domain.SchemaVersionV1,
+					OperationID:   op.ID,
+					Attempt:       op.Attempt,
+					ModelCall:     callOrdinal,
+					BindingID:     activeBindingID,
+					ReservedAt:    e.Clock.Now().UTC(),
+				})
+			}); reserveErr != nil {
+				lastErr = fmt.Errorf("reserve model call: %w", reserveErr)
+				break
+			}
+			// Spending becomes visible in the in-process budget immediately after
+			// the durable commit and before Complete can have an ambiguous outcome.
+			budget.ModelCallsUsed++
+			result.ModelCalls++
 			var ok bool
 			if e.Tools != nil && len(e.Tools.Definitions()) > 0 {
 				if activeToolProvider, ok = activeProvider.(port.ModelToolProvider); ok {
@@ -637,9 +716,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 		}
 
-		budget.ModelCallsUsed++
-		if !replayed {
-			result.ModelCalls++
+		if replayed && !replayedReserved {
+			budget.ModelCallsUsed++
 		}
 		if callErr != nil {
 			// A provider attempt is audit-relevant even when transport or HTTP

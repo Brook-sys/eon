@@ -273,6 +273,20 @@ type ModelCompletionReceiptWriter interface {
 	AppendModelCompletionReceipt(domain.ModelCompletionReceipt) error
 }
 
+// ModelCallReservationReader exposes durable pre-invocation spending records.
+// Reservations are operation-lifetime ordinals, even when Attempts cause a
+// later dispatch to continue the same bounded recovery budget.
+type ModelCallReservationReader interface {
+	ModelCallReservation(domain.OperationID, uint32) (domain.ModelCallReservation, error)
+	ModelCallReservations(domain.OperationID) ([]domain.ModelCallReservation, error)
+}
+
+// ModelCallReservationWriter is append-idempotent. Once reserved, a call slot
+// is never returned merely because its provider outcome is unknown.
+type ModelCallReservationWriter interface {
+	AppendModelCallReservation(domain.ModelCallReservation) error
+}
+
 // ConfigReader exposes versioned operator configuration drafts and revisions.
 // Active revision is the last applied pointer per scope.
 type ConfigReader interface {
@@ -306,6 +320,7 @@ type Reader interface {
 	ResourceReader
 	ModelContextReader
 	ModelCompletionReceiptReader
+	ModelCallReservationReader
 	EventReader
 	PeerSyncReader
 	IdempotencyReader
@@ -324,6 +339,7 @@ type Transaction interface {
 	ResourceWriter
 	ModelContextWriter
 	ModelCompletionReceiptWriter
+	ModelCallReservationWriter
 	EventWriter
 	PeerSyncWriter
 	IdempotencyWriter

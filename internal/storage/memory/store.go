@@ -154,6 +154,7 @@ type state struct {
 	resourceUsages            map[domain.ResourceID]domain.ResourceUsage
 	modelContextPressures     map[string]domain.ModelContextPressure
 	modelCompletionReceipts   map[string]domain.ModelCompletionReceipt
+	modelCallReservations     map[string]domain.ModelCallReservation
 }
 
 func New() *Store { return &Store{state: newState()} }
@@ -220,6 +221,7 @@ func newState() state {
 		resourceUsages:            make(map[domain.ResourceID]domain.ResourceUsage),
 		modelContextPressures:     make(map[string]domain.ModelContextPressure),
 		modelCompletionReceipts:   make(map[string]domain.ModelCompletionReceipt),
+		modelCallReservations:     make(map[string]domain.ModelCallReservation),
 	}
 }
 
@@ -294,6 +296,52 @@ func (t transaction) AppendModelCompletionReceipt(v domain.ModelCompletionReceip
 		return fmt.Errorf("%w: model completion receipt %s", port.ErrConflict, key)
 	}
 	t.state.modelCompletionReceipts[key] = cloneModelCompletionReceipt(v)
+	return nil
+}
+
+func modelCallReservationKey(operationID domain.OperationID, modelCall uint32) string {
+	return fmt.Sprintf("%s\x00%d", operationID, modelCall)
+}
+
+func (r reader) ModelCallReservation(operationID domain.OperationID, modelCall uint32) (domain.ModelCallReservation, error) {
+	v, ok := r.state.modelCallReservations[modelCallReservationKey(operationID, modelCall)]
+	if !ok {
+		return domain.ModelCallReservation{}, notFound("model call reservation", operationID)
+	}
+	return v, nil
+}
+
+func (r reader) ModelCallReservations(operationID domain.OperationID) ([]domain.ModelCallReservation, error) {
+	out := make([]domain.ModelCallReservation, 0)
+	for _, v := range r.state.modelCallReservations {
+		if v.OperationID == operationID {
+			out = append(out, v)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ModelCall < out[j].ModelCall })
+	return out, nil
+}
+
+func (t transaction) ModelCallReservation(operationID domain.OperationID, modelCall uint32) (domain.ModelCallReservation, error) {
+	return reader(t).ModelCallReservation(operationID, modelCall)
+}
+
+func (t transaction) ModelCallReservations(operationID domain.OperationID) ([]domain.ModelCallReservation, error) {
+	return reader(t).ModelCallReservations(operationID)
+}
+
+func (t transaction) AppendModelCallReservation(v domain.ModelCallReservation) error {
+	if err := v.Validate(); err != nil {
+		return fmt.Errorf("validate model call reservation: %w", err)
+	}
+	key := modelCallReservationKey(v.OperationID, v.ModelCall)
+	if current, ok := t.state.modelCallReservations[key]; ok {
+		if current.Attempt == v.Attempt && current.BindingID == v.BindingID {
+			return nil
+		}
+		return fmt.Errorf("%w: model call reservation %s", port.ErrConflict, key)
+	}
+	t.state.modelCallReservations[key] = v
 	return nil
 }
 
@@ -2651,6 +2699,9 @@ func cloneState(src state) state {
 	}
 	for k, v := range src.modelCompletionReceipts {
 		dst.modelCompletionReceipts[k] = cloneModelCompletionReceipt(v)
+	}
+	for k, v := range src.modelCallReservations {
+		dst.modelCallReservations[k] = v
 	}
 	return dst
 }

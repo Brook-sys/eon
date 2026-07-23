@@ -260,25 +260,28 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 	if again4.Completed || again4.Skipped {
 		t.Fatalf("want no completion for invalid JSON, got %+v", again4)
 	}
-	// Verify receipt was stored despite the failure.
+	// Phase 3 durably reserved the only model-call slot before its failed
+	// provider contact. Resetting the operation cannot reset that lifetime
+	// spend: phase 4 must conservatively exhaust without another request.
 	_ = store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation("operation_model_2")
-		if err == nil && op.State == domain.StateSucceeded {
-			t.Fatal("operation state must not be SUCCEEDED if processor fails")
-		}
-
-		// Load receipt
-		_, err = r.ModelCompletionReceipt("operation_model_2", 2, 1)
 		if err != nil {
-			t.Fatalf("expected receipt to be persisted after provider call, got: %v", err)
+			return err
+		}
+		if op.State != domain.StateExhausted {
+			t.Fatalf("operation state = %s, want EXHAUSTED after burned reservation", op.State)
+		}
+		reservations, err := r.ModelCallReservations("operation_model_2")
+		if err != nil {
+			return err
+		}
+		if len(reservations) != 1 || reservations[0].Attempt != 1 || reservations[0].ModelCall != 1 {
+			t.Fatalf("reservations = %#v", reservations)
 		}
 		return nil
 	})
-
-	// Execute Phase 4 again - should not hit provider, use receipt, and fail processing again.
-	_, _ = exec4.Execute(ctx, "operation_model_2")
-	if len(server4.Requests()) != 1 {
-		t.Fatalf("expected 1 call to provider, got %d", len(server4.Requests()))
+	if len(server4.Requests()) != 0 {
+		t.Fatalf("provider must not be contacted after ambiguous call burned the budget, got %d", len(server4.Requests()))
 	}
 
 	// Phase 2: reopen with fresh clocks/IDs/provider script and prove pure terminal skip.

@@ -19,6 +19,45 @@ type Factory func() port.Store
 
 func TestStore(t *testing.T, factory Factory) {
 	t.Helper()
+	t.Run("model call reservation is durable append-idempotent spending", func(t *testing.T) {
+		store := factory()
+		reservation := domain.ModelCallReservation{SchemaVersion: 1, OperationID: "operation-1", Attempt: 2, ModelCall: 3, BindingID: "binding-a", ReservedAt: time.Date(2026, 7, 23, 4, 40, 0, 0, time.UTC)}
+		appendReservation := func(v domain.ModelCallReservation) error {
+			return store.Update(context.Background(), func(tx port.Transaction) error { return tx.AppendModelCallReservation(v) })
+		}
+		if err := appendReservation(reservation); err != nil {
+			t.Fatalf("append reservation: %v", err)
+		}
+		replay := reservation
+		replay.ReservedAt = replay.ReservedAt.Add(time.Hour)
+		if err := appendReservation(replay); err != nil {
+			t.Fatalf("idempotent replay: %v", err)
+		}
+		if err := store.View(context.Background(), func(r port.Reader) error {
+			got, err := r.ModelCallReservation("operation-1", 3)
+			if err != nil {
+				return err
+			}
+			if got.Attempt != 2 || got.BindingID != "binding-a" {
+				t.Fatalf("reservation = %#v", got)
+			}
+			all, err := r.ModelCallReservations("operation-1")
+			if err != nil {
+				return err
+			}
+			if len(all) != 1 {
+				t.Fatalf("reservations = %#v", all)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		divergent := reservation
+		divergent.BindingID = "binding-b"
+		if err := appendReservation(divergent); !errors.Is(err, port.ErrConflict) {
+			t.Fatalf("divergent replay error = %v, want ErrConflict", err)
+		}
+	})
 	t.Run("model completion receipt is lossless and append-idempotent", func(t *testing.T) {
 		store := factory()
 		result := port.CompletionResult{

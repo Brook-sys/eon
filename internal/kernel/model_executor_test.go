@@ -19,6 +19,72 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
+type crashAfterReservedProvider struct{ calls int }
+
+func (p *crashAfterReservedProvider) ID() string { return "crash-after-reserved" }
+func (p *crashAfterReservedProvider) Kind() domain.ProviderKind {
+	return domain.ProviderKindOpenAICompatible
+}
+func (p *crashAfterReservedProvider) Profile() domain.ProviderProfile {
+	return domain.ProviderProfile{MaxOutputTokens: 512, MaxContextTokens: 8000}
+}
+func (p *crashAfterReservedProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	p.calls++
+	return port.CompletionResult{}, errors.New("simulated process loss after request start")
+}
+
+func TestModelExecutorBurnsUnresolvedReservationAcrossRedispatch(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 23, 4, 40, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	spec := modelTestSpec()
+	spec.Budget.Attempts = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
+	provider := &crashAfterReservedProvider{}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@reservation-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor := ModelExecutor{Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor, Compiler: prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000}, PolicyVersion: "policy@reservation-test", LeaseTTL: time.Minute}
+
+	first, err := executor.Execute(ctx, "operation_model")
+	if err == nil || first.ModelCalls != 1 || provider.calls != 1 {
+		t.Fatalf("first result=%+v err=%v calls=%d", first, err, provider.calls)
+	}
+	var reservations []domain.ModelCallReservation
+	if err := store.View(ctx, func(r port.Reader) error {
+		var err error
+		reservations, err = r.ModelCallReservations("operation_model")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(reservations) != 1 || reservations[0].Attempt != 1 || reservations[0].ModelCall != 1 {
+		t.Fatalf("reservations after ambiguous call = %#v", reservations)
+	}
+
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		op.State = domain.StateReady
+		op.Reevaluation = domain.ReevaluationCondition{Kind: domain.ReevaluateReady}
+		return tx.SaveOperation(op)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := executor.Execute(ctx, "operation_model")
+	if err == nil || !second.Exhausted || second.ModelCalls != 0 {
+		t.Fatalf("second result=%+v err=%v", second, err)
+	}
+	if provider.calls != 1 {
+		t.Fatalf("provider calls = %d, want one lifetime call", provider.calls)
+	}
+}
+
 func TestBuildPromptInputUsesMinimalExactTextContract(t *testing.T) {
 	executor := ModelExecutor{}
 	spec := modelTestSpec()

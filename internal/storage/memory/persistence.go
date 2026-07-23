@@ -96,6 +96,7 @@ type persistedState struct {
 	ResourceUsages            map[domain.ResourceID]domain.ResourceUsage
 	ModelContextPressures     map[string]domain.ModelContextPressure
 	ModelCompletionReceipts   map[string]domain.ModelCompletionReceipt
+	ModelCallReservations     map[string]domain.ModelCallReservation
 }
 
 // MarshalBinary returns an isolated, versioned checkpoint of the reference
@@ -137,6 +138,7 @@ func (s *Store) MarshalBinary() ([]byte, error) {
 		ResourceUsages:          cloned.resourceUsages,
 		ModelContextPressures:   cloned.modelContextPressures,
 		ModelCompletionReceipts: cloned.modelCompletionReceipts,
+		ModelCallReservations:   cloned.modelCallReservations,
 	}
 	var state bytes.Buffer
 	if err := gob.NewEncoder(&state).Encode(p); err != nil {
@@ -347,12 +349,21 @@ func newFromPersistedState(p persistedState) (*Store, error) {
 	base.resourceUsages = nonNil(p.ResourceUsages, base.resourceUsages)
 	base.modelContextPressures = nonNil(p.ModelContextPressures, base.modelContextPressures)
 	base.modelCompletionReceipts = nonNil(p.ModelCompletionReceipts, base.modelCompletionReceipts)
+	base.modelCallReservations = nonNil(p.ModelCallReservations, base.modelCallReservations)
 	for key, receipt := range base.modelCompletionReceipts {
 		if err := receipt.Validate(); err != nil {
 			return nil, fmt.Errorf("decode checkpoint invalid model completion receipt %q: %w", key, err)
 		}
 		if expected := modelCompletionReceiptKey(receipt.OperationID, receipt.Attempt, receipt.ModelCall); key != expected {
 			return nil, fmt.Errorf("decode checkpoint model completion receipt key %q does not match %q", key, expected)
+		}
+	}
+	for key, reservation := range base.modelCallReservations {
+		if err := reservation.Validate(); err != nil {
+			return nil, fmt.Errorf("decode checkpoint invalid model call reservation %q: %w", key, err)
+		}
+		if expected := modelCallReservationKey(reservation.OperationID, reservation.ModelCall); key != expected {
+			return nil, fmt.Errorf("decode checkpoint model call reservation key %q does not match %q", key, expected)
 		}
 	}
 	return &Store{state: base}, nil
