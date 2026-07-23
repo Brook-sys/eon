@@ -56,7 +56,9 @@ func TestModelExecutorMultiTurnReplaysReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seedModelAgenda(t, store, now)
+	spec := modelTestSpec()
+	spec.Budget.Attempts = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
 
 	leaseRef := FormatLeaseRef("lease_01", "operation_model", 1, now.Add(5*time.Minute))
 	err = store.Update(ctx, func(tx port.Transaction) error {

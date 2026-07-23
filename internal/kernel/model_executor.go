@@ -255,7 +255,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if err != nil {
 		return result, err
 	}
-	if result.Skipped {
+	if result.Skipped || result.Exhausted {
 		return result, nil
 	}
 
@@ -373,6 +373,29 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			return nil
 		}
 
+		if loadedSpec.Budget.Attempts <= 0 || int(op.Attempt) >= loadedSpec.Budget.Attempts {
+			done, err := domain.Transition(
+				domain.OperationalSnapshot{State: op.State, Reevaluation: op.Reevaluation},
+				domain.TransitionInput{Event: domain.EventExhaust},
+			)
+			if err != nil {
+				return fmt.Errorf("exhaust attempt budget: %w", err)
+			}
+			op.State, op.Reevaluation = done.State, done.Reevaluation
+			if err := tx.SaveOperation(op); err != nil {
+				return err
+			}
+			_, err = tx.AppendEvent(domain.Event{
+				SchemaVersion: domain.SchemaVersionV1, ID: domain.EventID(fmt.Sprintf("%s:model_attempts_exhausted:%d", op.ID, op.Attempt)),
+				Kind: "operation.model_exhausted", OccurredAt: e.Clock.Now().UTC(), MissionRevision: op.MissionRevision,
+				InquiryID: op.InquiryID, OperationID: op.ID,
+				PayloadRef: fmt.Sprintf("reason=attempt_budget_exhausted;attempt=%d;max_attempts=%d", op.Attempt, loadedSpec.Budget.Attempts),
+			})
+			result.Exhausted = true
+			result.SkipReason = "attempt_budget_exhausted"
+			return err
+		}
+
 		leaseID, err := e.IDs.NewID("lease")
 		if err != nil {
 			return fmt.Errorf("generate lease id: %w", err)
@@ -419,8 +442,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 		return result, err
 	}
-	if result.Skipped {
-		// Race: another path changed state after authorize — release reservation.
+	if result.Skipped || result.Exhausted {
+		// Race or budget fence: release any reservation before provider contact.
 		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
 		return result, nil
 	}

@@ -251,7 +251,9 @@ func TestModelExecutorReusesReceiptAfterExpiredAttemptWithoutProviderCall(t *tes
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	seedModelAgenda(t, store, now)
+	spec := modelTestSpec()
+	spec.Budget.Attempts = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
 
 	proposal := domain.ProposedChangeSet{
 		SchemaVersion: 1, ID: "changeset_replayed", MissionRevision: "revision_1",
@@ -678,6 +680,61 @@ func TestModelExecutorAlwaysInvalidExhaustsWithoutCallLoop(t *testing.T) {
 	})
 	if op.State != domain.StateExhausted {
 		t.Fatalf("state=%s", op.State)
+	}
+}
+
+func TestModelExecutorFencesAttemptBudgetBeforeDispatch(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 7, 23, 7, 40, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+	if err := store.Update(ctx, func(tx port.Transaction) error {
+		op, err := tx.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		op.Attempt = 1
+		return tx.SaveOperation(op)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	server := fakeserver.New(fakeserver.Exchange{ResponseText: "must-not-run", ResponseModel: "fixture-model"})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	exec := ModelExecutor{Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler: prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000}, PolicyVersion: "policy@model-test"}
+	result, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Exhausted || result.SkipReason != "attempt_budget_exhausted" || result.ModelCalls != 0 {
+		t.Fatalf("result=%+v", result)
+	}
+	if len(server.Requests()) != 0 {
+		t.Fatal("provider contacted past attempt budget")
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		op, err := r.Operation("operation_model")
+		if err != nil {
+			return err
+		}
+		if op.State != domain.StateExhausted || op.Attempt != 1 {
+			t.Fatalf("op=%+v", op)
+		}
+		_, err = r.EventByID("operation_model:model_attempts_exhausted:1")
+		return err
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

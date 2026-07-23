@@ -89,7 +89,9 @@ func TestModelExecutorCrashReplaySQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seedModelAgenda(t, store, now)
+	spec := modelTestSpec()
+	spec.Budget.Attempts = 2
+	seedModelAgendaWithSpec(t, store, now, spec)
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture-model", Client: server.Client()})

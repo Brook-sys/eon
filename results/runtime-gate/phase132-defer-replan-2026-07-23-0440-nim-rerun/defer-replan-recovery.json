@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "name": "phase132-defer-replan-nim-mistral-small-4",
+  "started_at": "2026-07-23T07:29:07.52799101Z",
+  "completed_at": "2026-07-23T07:29:10.964857547Z",
+  "model_calls": 4,
+  "external_calls": 1,
+  "injected_calls": 3,
+  "recovery_stages": [
+    "SHORT_CORRECTION",
+    "SIMPLER_FORMAT",
+    "FALLBACK_MODEL",
+    "DEFER"
+  ],
+  "operation_state": "READY",
+  "operation_attempt": 1,
+  "receipt_count": 4,
+  "canonical_entity_absent": true,
+  "final_disposition": "REPLAN",
+  "decision_reason": "intra_execute_recovery_exhausted_replan_allowed",
+  "replan_events": 1,
+  "model_failed_events": 1,
+  "exhaustion_events": 0,
+  "durable_reopen": true,
+  "primary_binding": "groq-primary",
+  "fallback_binding": "nim-fallback",
+  "binding_switched": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 167,
+      "response_sha256": "ab8ca932bfc428c765a4eee39c973f0870dee3965c107063dc038d7d9209c67b",
+      "presented_invalid": false
+    },
+    {
+      "call": 2,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 532,
+      "response_sha256": "33386b62373d173b66a6973eca748876db106b21b29b8ba0a773c80f4bddc3b4",
+      "presented_invalid": false
+    },
+    {
+      "call": 3,
+      "binding_id": "groq-primary",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 146,
+      "response_sha256": "51b05d216b02bff55874e2359f7eb03a928328bba5692fad2fe3bedd77a318fe",
+      "presented_invalid": false
+    },
+    {
+      "call": 4,
+      "binding_id": "nim-fallback",
+      "injected": false,
+      "succeeded": true,
+      "latency": 3124499120,
+      "input_tokens": 614,
+      "output_tokens": 150,
+      "finish_reason": "stop",
+      "response_bytes": 501,
+      "response_sha256": "cae90192466e49b6a1d85bc8283ce67961cedd1a00ae31e3f0060be6c94f1c6a",
+      "presented_invalid": true,
+      "presented_bytes": 146,
+      "presented_sha256": "51b05d216b02bff55874e2359f7eb03a928328bba5692fad2fe3bedd77a318fe"
+    }
+  ]
+}
