@@ -31,6 +31,10 @@ type Supervisor struct {
 // their persisted state if they have completed or failed.
 func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 	var reconciled int
+	var releasedTerminals []struct {
+		ID      string
+		Attempt int
+	}
 
 	err := s.Store.Update(ctx, func(tx port.Transaction) error {
 		pending, err := tx.SubagentRecordsByState(domain.SubagentStatePending, 0)
@@ -83,13 +87,13 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 			recoveredRetry := statusErr == nil && rec.State == domain.SubagentStateRunning && status.Attempt == rec.Attempt+1 && rec.Attempt < rec.MaxAttempts-1
 			statusForCurrentAttempt := statusErr == nil && (status.Attempt == rec.Attempt || recoveredRetry)
 			terminalForCurrentAttempt := statusForCurrentAttempt && (status.State == SessionStateComplete || status.State == SessionStateFailed)
-			deadlineFailureForCurrentAttempt := terminalForCurrentAttempt && status.State == SessionStateFailed && status.Error != nil && status.Error.Error() == subagentDeadlineExceeded
+			supervisorExpiryFailureForCurrentAttempt := terminalForCurrentAttempt && status.State == SessionStateFailed && status.Error != nil && (status.Error.Error() == subagentDeadlineExceeded || status.Error.Error() == "lease_expired")
 			// Positive terminal evidence for the active generation wins over the
 			// local deadline. This matters when authenticated remote completion was
 			// already durable before the deadline but only became process-visible in
 			// the current control cycle.
 			leaseExpired := !rec.LeaseExpiresAt.IsZero() && !now.Before(rec.LeaseExpiresAt)
-			if (!terminalForCurrentAttempt || deadlineFailureForCurrentAttempt) && (!rec.Deadline.IsZero() && !now.Before(rec.Deadline) || leaseExpired) {
+			if (!terminalForCurrentAttempt || supervisorExpiryFailureForCurrentAttempt) && (!rec.Deadline.IsZero() && !now.Before(rec.Deadline) || leaseExpired) {
 				// Fence a process-visible active generation before publishing the
 				// durable timeout. Otherwise the record leaves the active scan while the
 				// manager keeps consuming a concurrency slot forever. Publishing first
@@ -123,6 +127,10 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				if err := s.appendTerminalEvent(tx, rec, now); err != nil {
 					return err
 				}
+				releasedTerminals = append(releasedTerminals, struct {
+					ID      string
+					Attempt int
+				}{ID: rec.ID, Attempt: rec.Attempt})
 				reconciled++
 				continue
 			}
@@ -202,18 +210,34 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 						return err
 					}
 				}
-				if (rec.State == domain.SubagentStateComplete || rec.State == domain.SubagentStateError) && s.IDs != nil {
-					if err := s.appendTerminalEvent(tx, rec, rec.UpdatedAt); err != nil {
-						return err
+				if rec.State == domain.SubagentStateComplete || rec.State == domain.SubagentStateError {
+					if s.IDs != nil {
+						if err := s.appendTerminalEvent(tx, rec, rec.UpdatedAt); err != nil {
+							return err
+						}
 					}
+					releasedTerminals = append(releasedTerminals, struct {
+						ID      string
+						Attempt int
+					}{ID: rec.ID, Attempt: rec.Attempt})
 				}
 				reconciled++
 			}
 		}
 		return nil
 	})
-
-	return reconciled, err
+	if err != nil {
+		return reconciled, err
+	}
+	// Capacity is released only after the canonical transaction commits. A
+	// failed commit leaves supervisor-published deadline/lease terminals held,
+	// and the next reconcile will commit the same terminal before releasing it.
+	for _, terminal := range releasedTerminals {
+		if releaseErr := s.Manager.ReleaseTerminal(context.WithoutCancel(ctx), SessionID(terminal.ID), terminal.Attempt); releaseErr != nil && !errors.Is(releaseErr, ErrSessionNotFound) {
+			return reconciled, releaseErr
+		}
+	}
+	return reconciled, nil
 }
 
 func (s *Supervisor) armLease(rec *domain.SubagentRecord, now time.Time) {

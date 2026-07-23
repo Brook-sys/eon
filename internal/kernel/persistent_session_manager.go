@@ -256,6 +256,10 @@ func (m *PersistentSessionManager) PublishStatus(ctx context.Context, observatio
 	return m.manager.PublishStatus(ctx, observation)
 }
 
+func (m *PersistentSessionManager) ReleaseTerminal(ctx context.Context, id SessionID, attempt int) error {
+	return m.manager.ReleaseTerminal(ctx, id, attempt)
+}
+
 func (m *PersistentSessionManager) Retry(ctx context.Context, id SessionID) error {
 	return m.manager.Retry(ctx, id)
 }

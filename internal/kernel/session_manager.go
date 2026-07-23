@@ -75,6 +75,11 @@ type SessionManager interface {
 	RollbackSpawn(ctx context.Context, id SessionID) error
 	Restore(ctx context.Context, status SubagentStatus) error
 	PublishStatus(ctx context.Context, observation SubagentObservation) error
+	// ReleaseTerminal confirms that a supervisor-published deadline/lease
+	// terminal is durable. Until confirmation, the generation continues to
+	// consume admission capacity so a rolled-back canonical commit cannot open
+	// an extra process-local slot.
+	ReleaseTerminal(ctx context.Context, id SessionID, attempt int) error
 	Retry(ctx context.Context, id SessionID) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
 	Wait(ctx context.Context, id SessionID) (SubagentStatus, error)
@@ -97,6 +102,7 @@ func (m *localSessionManager) RollbackSpawn(ctx context.Context, id SessionID) e
 		return ErrSessionTerminal
 	}
 	delete(m.sessions, id)
+	delete(m.terminalHeld, id)
 	if taskID := status.Spec.Labels["task_id"]; taskID != "" && m.byTaskID[taskID] == id {
 		delete(m.byTaskID, taskID)
 	}
@@ -115,12 +121,13 @@ var (
 // tests and isolated local boundaries. Production transports can implement the
 // same interface while preserving the policy at their own authority boundary.
 type localSessionManager struct {
-	mu       sync.RWMutex
-	sessions map[SessionID]*SubagentStatus
-	byTaskID map[string]SessionID
-	clock    interface{ Now() time.Time }
-	policy   SessionPolicy
-	nextID   uint64
+	mu           sync.RWMutex
+	sessions     map[SessionID]*SubagentStatus
+	byTaskID     map[string]SessionID
+	terminalHeld map[SessionID]int
+	clock        interface{ Now() time.Time }
+	policy       SessionPolicy
+	nextID       uint64
 }
 
 // NewLocalSessionManager creates a manager with a conservative default limit.
@@ -141,11 +148,12 @@ func NewLocalSessionManagerWithPolicy(clock interface{ Now() time.Time }, policy
 		return nil, err
 	}
 	return &localSessionManager{
-		sessions: make(map[SessionID]*SubagentStatus),
-		byTaskID: make(map[string]SessionID),
-		clock:    clock,
-		policy:   policy,
-		nextID:   1,
+		sessions:     make(map[SessionID]*SubagentStatus),
+		byTaskID:     make(map[string]SessionID),
+		terminalHeld: make(map[SessionID]int),
+		clock:        clock,
+		policy:       policy,
+		nextID:       1,
 	}, nil
 }
 
@@ -175,8 +183,10 @@ func (m *localSessionManager) Spawn(ctx context.Context, spec SubagentSpec) (Ses
 		}
 	}
 	active := 0
-	for _, status := range m.sessions {
+	for id, status := range m.sessions {
 		if status.State == SessionStatePending || status.State == SessionStateRunning {
+			active++
+		} else if _, held := m.terminalHeld[id]; held {
 			active++
 		}
 	}
@@ -235,8 +245,10 @@ func (m *localSessionManager) Restore(ctx context.Context, status SubagentStatus
 		return nil
 	}
 	active := 0
-	for _, existing := range m.sessions {
+	for id, existing := range m.sessions {
 		if existing.State == SessionStatePending || existing.State == SessionStateRunning {
+			active++
+		} else if _, held := m.terminalHeld[id]; held {
 			active++
 		}
 	}
@@ -301,6 +313,31 @@ func (m *localSessionManager) PublishStatus(ctx context.Context, observation Sub
 	if failure != "" {
 		status.Error = errors.New(failure)
 	}
+	if state == SessionStateFailed && (failure == subagentDeadlineExceeded || failure == "lease_expired") {
+		m.terminalHeld[id] = observation.Attempt
+	} else if state == SessionStateComplete || state == SessionStateFailed {
+		delete(m.terminalHeld, id)
+	}
+	return nil
+}
+
+func (m *localSessionManager) ReleaseTerminal(ctx context.Context, id SessionID, attempt int) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	status, ok := m.sessions[id]
+	if !ok {
+		return ErrSessionNotFound
+	}
+	if status.Attempt != attempt {
+		return ErrSessionAttempt
+	}
+	if status.State != SessionStateComplete && status.State != SessionStateFailed {
+		return ErrSessionTerminal
+	}
+	delete(m.terminalHeld, id)
 	return nil
 }
 
@@ -321,6 +358,7 @@ func (m *localSessionManager) Retry(ctx context.Context, id SessionID) error {
 	case SessionStatePending:
 		return nil
 	case SessionStateFailed:
+		delete(m.terminalHeld, id)
 		status.State = SessionStatePending
 		status.Attempt++
 		status.Result = ""

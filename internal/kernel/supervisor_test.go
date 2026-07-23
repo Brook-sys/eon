@@ -113,6 +113,17 @@ func (m *mockSessionManager) PublishStatus(ctx context.Context, observation kern
 	return nil
 }
 
+func (m *mockSessionManager) ReleaseTerminal(ctx context.Context, id kernel.SessionID, attempt int) error {
+	status, ok := m.sessions[id]
+	if !ok {
+		return kernel.ErrSessionNotFound
+	}
+	if status.Attempt != attempt {
+		return kernel.ErrSessionAttempt
+	}
+	return nil
+}
+
 func (m *mockSessionManager) Retry(ctx context.Context, id kernel.SessionID) error {
 	status, ok := m.sessions[id]
 	if !ok {
