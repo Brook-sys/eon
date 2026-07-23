@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "name": "phase128-malformed-recovery-groq-short-correction",
+  "started_at": "2026-07-23T03:10:35.795375139Z",
+  "completed_at": "2026-07-23T03:10:36.688698754Z",
+  "model_calls": 2,
+  "external_calls": 1,
+  "injected_calls": 1,
+  "recovery_stages": [
+    "SHORT_CORRECTION"
+  ],
+  "commit_id": "commit_0000000000000006",
+  "operation_state": "SUCCEEDED",
+  "receipt_count": 2,
+  "canonical_entity_stored": true,
+  "durable_reopen": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "groq-llama-fallback",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 179,
+      "response_sha256": "d3af5198be70deaf0cf1264113b070fe149418bbc4af0e6fe652e7e1d871e179"
+    },
+    {
+      "call": 2,
+      "binding_id": "groq-llama-fallback",
+      "injected": false,
+      "succeeded": true,
+      "latency": 740972506,
+      "input_tokens": 167,
+      "output_tokens": 214,
+      "finish_reason": "stop",
+      "response_bytes": 180,
+      "response_sha256": "0305a55d2c55006dd9b7db5c52ab7c382f934f81131d3fae543aaff0b5c2c0c9"
+    }
+  ]
+}

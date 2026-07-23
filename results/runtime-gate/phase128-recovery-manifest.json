@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "phase128-malformed-recovery-groq-short-correction",
+  "timeout_seconds": 45,
+  "max_calls": 2,
+  "injected_failures": 1,
+  "max_output_tokens": 512,
+  "probe_prompt": "Return exactly one raw JSON ProposedChangeSet object. Use only these top-level keys: schema_version, id, mission_revision_id, operation_id, base_commit_id, read_set, preconditions, changes, expected_delta, validator_ids, provenance, idempotency_key. Use exactly these values: schema_version=1; id=changeset_malformed_recovery; mission_revision_id=revision_malformed_recovery; operation_id=operation_malformed_recovery; base_commit_id=commit_genesis; read_set=[\"manifest\"]; preconditions=[]; changes=[{\"kind\":\"ADD\",\"entity_type\":\"observation\",\"entity_id\":\"observation_malformed_recovery\",\"payload_ref\":\"artifact_malformed_recovery\"}]; expected_delta=\"one observation\"; validator_ids=[\"schema\"]; provenance=\"model:groq-live-fallback\"; idempotency_key=\"malformed-recovery-campaign\". No wrapper, Markdown, prose, added field, or omitted field.",
+  "bindings": [
+    {
+      "provider": "nvidia",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nvidia-mistral-primary",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama-fallback",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-120b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    }
+  ]
+}
