@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"motor-autonomo/internal/port"
-	
+
 	"motor-autonomo/internal/provider/openai/fakeserver"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
@@ -25,9 +25,9 @@ func TestSimplerFormatRecoveryCampaignRunsFullLadderWithOneLiveCall(t *testing.T
 		},
 	}
 	proposal := map[string]any{
-		"schema_version": 1, "id": "changeset_simpler_format_recovery", "mission_revision_id": "revision_simpler_format_recovery",
-		"operation_id": "operation_simpler_format_recovery", "base_commit_id": "commit_genesis", "read_set": []string{"manifest"},
-		"preconditions": []string{}, "changes": []map[string]string{{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_simpler_format_recovery", "payload_ref": "artifact_simpler_format_recovery"}},
+		"schema_version": 1, "id": "changeset_simpler_recovery", "mission_revision_id": "revision_simpler_recovery",
+		"operation_id": "operation_simpler_recovery", "base_commit_id": "commit_genesis", "read_set": []string{"manifest"},
+		"preconditions": []string{}, "changes": []map[string]string{{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_simpler_recovery", "payload_ref": "artifact_simpler_recovery"}},
 		"expected_delta": "one observation", "validator_ids": []string{"schema"}, "provenance": "model:fallback", "idempotency_key": "simpler-format-recovery-campaign",
 	}
 	body, err := json.Marshal(proposal)

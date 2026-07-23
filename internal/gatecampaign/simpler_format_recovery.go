@@ -40,7 +40,7 @@ func (m SimplerFormatRecoveryCampaignManifest) Validate() error {
 		return errors.New("simpler format recovery campaign timeout must be between 1 and 300 seconds")
 	}
 	if m.MaxCalls != 3 || m.InjectedFailures != 2 {
-		return errors.New("simpler format recovery campaign requires three model calls with exactly two injected failure")
+		return errors.New("simpler format recovery campaign requires three model calls with exactly two injected failures")
 	}
 	if m.MaxOutputTokens < 192 || m.MaxOutputTokens > 512 {
 		return errors.New("simpler format recovery campaign max_output_tokens must be between 192 and 512")
@@ -48,8 +48,8 @@ func (m SimplerFormatRecoveryCampaignManifest) Validate() error {
 	if prompt := strings.TrimSpace(m.ProbePrompt); prompt == "" || len(prompt) > 2048 {
 		return errors.New("simpler format recovery campaign probe_prompt is required and bounded to 2048 bytes")
 	}
-	if len(m.Bindings) == 0 {
-		return errors.New("simpler format recovery campaign requires at least one binding")
+	if len(m.Bindings) != 2 {
+		return errors.New("simpler format recovery campaign requires exactly two bindings")
 	}
 	seenBindings, seenProviders := map[string]bool{}, map[string]bool{}
 	for i, binding := range m.Bindings {
@@ -95,10 +95,10 @@ type SimplerFormatRecoveryCampaignReport struct {
 	ReceiptCount    int                         `json:"receipt_count"`
 	CanonicalStored bool                        `json:"canonical_entity_stored"`
 	DurableReopen   bool                        `json:"durable_reopen"`
-	Calls           []SimplerFormatRecoveryCall     `json:"calls"`
+	Calls           []SimplerFormatRecoveryCall `json:"calls"`
 }
 
-type simplerFormatRecoveryRecorder struct {
+type simplerRecoveryRecorder struct {
 	mu       sync.Mutex
 	inject   int
 	calls    int
@@ -106,24 +106,31 @@ type simplerFormatRecoveryRecorder struct {
 	records  []SimplerFormatRecoveryCall
 }
 
-type simplerFormatThenLiveProvider struct {
+type simplerTwiceThenLiveProvider struct {
 	bindingID string
 	provider  port.ModelProvider
-	recorder  *simplerFormatRecoveryRecorder
+	recorder  *simplerRecoveryRecorder
 }
 
-func (p simplerFormatThenLiveProvider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
+func (p simplerTwiceThenLiveProvider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
 	p.recorder.mu.Lock()
 	p.recorder.calls++
 	call := p.recorder.calls
-	if call <= p.recorder.inject {
-		result := port.CompletionResult{Text: "not json", Model: "injected-simpler-format", FinishReason: port.CompletionFinishStop}
-		if call == 2 && p.recorder.inject > 1 {
-			result.Text = "still not json"
-		}
+	if call == 1 {
+		result := port.CompletionResult{Text: `{"changes":[{"kind":"ADD","entity_type":"observation","entity_id":"observation_simpler_recovery","payload_ref":"artifact_simpler_recovery"}],"expected_delta":"one observation"`, Model: "injected-malformed", FinishReason: port.CompletionFinishStop}
 		digest := sha256.Sum256([]byte(result.Text))
 		p.recorder.records = append(p.recorder.records, SimplerFormatRecoveryCall{Call: call, BindingID: p.bindingID, Injected: true, Succeeded: true, FinishReason: result.FinishReason, ResponseBytes: len(result.Text), ResponseHash: fmt.Sprintf("%x", digest[:])})
 		p.recorder.mu.Unlock()
+		// Sleep so the lease doesn't get instantly reaped as concurrent/conflict, simulating real clock advancement
+		time.Sleep(10 * time.Millisecond)
+		return result, nil
+	}
+	if call == 2 {
+		result := port.CompletionResult{Text: `{"schema_version": 1, "id": "changeset_simpler_recovery", "mission_revision_id": "revision_simpler_recovery", "operation_id": "operation_simpler_recovery", "base_commit_id": "commit_genesis", "read_set": ["manifest"], "preconditions": [], "changes": [{"kind": "ADD", "entity_type": "observation", "entity_id": "observation_simpler_recovery", "payload_ref": "artifact_simpler_recovery"}], "expected_delta": "one observation", "validator_ids": ["schema"], "provenance": "operator", "idempotency_key": "simpler-format-recovery-campaign", "unexpected": true}`, Model: "injected-unknown-field", FinishReason: port.CompletionFinishStop}
+		digest := sha256.Sum256([]byte(result.Text))
+		p.recorder.records = append(p.recorder.records, SimplerFormatRecoveryCall{Call: call, BindingID: p.bindingID, Injected: true, Succeeded: true, FinishReason: result.FinishReason, ResponseBytes: len(result.Text), ResponseHash: fmt.Sprintf("%x", digest[:])})
+		p.recorder.mu.Unlock()
+		time.Sleep(10 * time.Millisecond)
 		return result, nil
 	}
 	p.recorder.external++
@@ -164,8 +171,8 @@ func (r SimplerFormatRecoveryCampaignRunner) Run(ctx context.Context, manifest S
 	if err := manifest.Validate(); err != nil {
 		return SimplerFormatRecoveryCampaignReport{}, err
 	}
-	if r.Store == nil || r.Clock == nil || len(r.Providers) == 0 {
-		return SimplerFormatRecoveryCampaignReport{}, errors.New("simpler format recovery campaign requires store, clock, and providers")
+	if r.Store == nil || r.Clock == nil || len(r.Providers) != 2 {
+		return SimplerFormatRecoveryCampaignReport{}, errors.New("simpler format recovery campaign requires store, clock, and two providers")
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -182,12 +189,12 @@ func (r SimplerFormatRecoveryCampaignRunner) Run(ctx context.Context, manifest S
 	// by runtime-gate-campaign; disabling it here prevents injected non-network
 	// calls from being misrepresented as provider quota consumption.
 	executor.Authorizer = nil
-	recorder := &simplerFormatRecoveryRecorder{inject: manifest.InjectedFailures}
+	recorder := &simplerRecoveryRecorder{inject: manifest.InjectedFailures}
 	executor.Providers = make(map[string]port.ModelProvider, 2)
 	for bindingID, provider := range r.Providers {
-		executor.Providers[bindingID] = simplerFormatThenLiveProvider{bindingID: bindingID, provider: provider, recorder: recorder}
+		executor.Providers[bindingID] = simplerTwiceThenLiveProvider{bindingID: bindingID, provider: provider, recorder: recorder}
 	}
-	execution, err := executor.Execute(ctx, "operation_simpler_format_recovery")
+	execution, err := executor.Execute(ctx, "operation_simpler_recovery")
 	if err != nil {
 		return SimplerFormatRecoveryCampaignReport{}, fmt.Errorf("execute simpler format recovery campaign: %w", err)
 	}
@@ -227,17 +234,17 @@ func simplerFormatRecoverySeed(store port.Store, manifest SimplerFormatRecoveryC
 		return config, err
 	}
 	spec := domain.OperationSpec{SchemaVersion: 1, ID: "simpler-format-recovery@1", ContractVersion: 1, TemplateVersion: 1, InputSchema: "probe_text", OutputSchema: "proposed_changeset", Budget: domain.Budget{ModelCalls: manifest.MaxCalls, Tokens: 16000, Attempts: 1}, MaxOutputTokens: manifest.MaxOutputTokens, SafetyMargin: 1, Validators: []string{"schema"}, RetryPolicy: "bounded_recovery", FallbackPolicy: "catalog", MaximumAuthority: domain.AuthorityProposeOnly}
-	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_simpler_format_recovery", MissionID: "mission_simpler_format_recovery", Revision: 1, OriginalText: "bounded simpler format recovery probe", Purpose: "validate persisted recovery ladder", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: manifest.MaxCalls, Tokens: 16000, Attempts: 1}}
-	question := domain.Question{SchemaVersion: 1, ID: "question_simpler_format_recovery", MissionRevision: revision.ID, Text: "does malformed output recover through the bounded ladder?", Origin: "campaign", Relevance: "diagnostic", AnswerCondition: "durable commit"}
-	candidate := domain.InquiryCandidate{SchemaVersion: 1, ID: "candidate_simpler_format_recovery", MissionRevision: revision.ID, QuestionID: question.ID, DerivedFrom: []string{"manifest"}, ExpectedProgress: "runtime evidence", Novelty: "dated probe", Risk: domain.RiskLow, SourcePlan: []string{"provider"}, AnswerCondition: "report", StopCondition: "one flow", ReviewAfter: now.Add(time.Hour)}
-	inquiry := domain.Inquiry{SchemaVersion: 1, ID: "inquiry_simpler_format_recovery", CandidateID: candidate.ID, MissionRevision: revision.ID, QuestionID: question.ID, AdmissionReason: "bounded campaign", StopCondition: "one flow", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
-	operation := domain.Operation{SchemaVersion: 1, ID: "operation_simpler_format_recovery", InquiryID: inquiry.ID, MissionRevision: revision.ID, SpecID: spec.ID, ReadSet: []string{"manifest"}, InputRefs: []string{"probe_prompt"}, ExpectedOutput: manifest.ProbePrompt, IdempotencyKey: "simpler-format-recovery-campaign", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
+	revision := domain.MissionRevision{SchemaVersion: 1, ID: "revision_simpler_recovery", MissionID: "mission_simpler_recovery", Revision: 1, OriginalText: "bounded simpler format recovery probe", Purpose: "validate persisted recovery ladder", Domains: []string{"operations"}, Policies: []string{"no authority"}, Status: domain.MissionActive, Provenance: "operator-manifest", AcceptedAt: now, Budget: domain.Budget{ModelCalls: manifest.MaxCalls, Tokens: 16000, Attempts: 1}}
+	question := domain.Question{SchemaVersion: 1, ID: "question_simpler_recovery", MissionRevision: revision.ID, Text: "does malformed output recover through the bounded ladder?", Origin: "campaign", Relevance: "diagnostic", AnswerCondition: "durable commit"}
+	candidate := domain.InquiryCandidate{SchemaVersion: 1, ID: "candidate_simpler_recovery", MissionRevision: revision.ID, QuestionID: question.ID, DerivedFrom: []string{"manifest"}, ExpectedProgress: "runtime evidence", Novelty: "dated probe", Risk: domain.RiskLow, SourcePlan: []string{"provider"}, AnswerCondition: "report", StopCondition: "one flow", ReviewAfter: now.Add(time.Hour)}
+	inquiry := domain.Inquiry{SchemaVersion: 1, ID: "inquiry_simpler_recovery", CandidateID: candidate.ID, MissionRevision: revision.ID, QuestionID: question.ID, AdmissionReason: "bounded campaign", StopCondition: "one flow", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
+	operation := domain.Operation{SchemaVersion: 1, ID: "operation_simpler_recovery", InquiryID: inquiry.ID, MissionRevision: revision.ID, SpecID: spec.ID, ReadSet: []string{"manifest"}, InputRefs: []string{"probe_prompt"}, ExpectedOutput: manifest.ProbePrompt, IdempotencyKey: "simpler-format-recovery-campaign", State: domain.StateReady, Reevaluation: domain.ReevaluationCondition{Kind: domain.ReevaluateReady}}
 	return config, store.Update(context.Background(), func(tx port.Transaction) error {
 		hash, err := domain.ConfigPayloadHash(domain.ConfigScopeModels, nil, nil, nil, nil, nil, &config)
 		if err != nil {
 			return err
 		}
-		draft := domain.ConfigDraft{SchemaVersion: 1, ID: "draft_simpler_format_recovery_models", Scope: domain.ConfigScopeModels, Applicability: domain.ConfigHot, Status: domain.ConfigDraftOpen, ActorType: domain.ActorOperator, ActorID: "simpler-format-recovery-campaign", Reason: "bounded live simpler format recovery campaign", Models: &config, CreatedAt: now}
+		draft := domain.ConfigDraft{SchemaVersion: 1, ID: "draft_simpler_recovery_models", Scope: domain.ConfigScopeModels, Applicability: domain.ConfigHot, Status: domain.ConfigDraftOpen, ActorType: domain.ActorOperator, ActorID: "simpler-format-recovery-campaign", Reason: "bounded live simpler format recovery campaign", Models: &config, CreatedAt: now}
 		if err := tx.CreateConfigDraft(draft); err != nil {
 			return err
 		}
@@ -250,7 +257,7 @@ func simplerFormatRecoverySeed(store port.Store, manifest SimplerFormatRecoveryC
 		if err := tx.SaveConfigDraft(draft); err != nil {
 			return err
 		}
-		rev := domain.ConfigRevision{SchemaVersion: 1, ID: "config_simpler_format_recovery_models", Scope: domain.ConfigScopeModels, Revision: 1, Applicability: domain.ConfigHot, ContentHash: hash, ActorType: domain.ActorOperator, ActorID: "simpler-format-recovery-campaign", Reason: draft.Reason, DraftID: draft.ID, Models: &config, AcceptedAt: now}
+		rev := domain.ConfigRevision{SchemaVersion: 1, ID: "config_simpler_recovery_models", Scope: domain.ConfigScopeModels, Revision: 1, Applicability: domain.ConfigHot, ContentHash: hash, ActorType: domain.ActorOperator, ActorID: "simpler-format-recovery-campaign", Reason: draft.Reason, DraftID: draft.ID, Models: &config, AcceptedAt: now}
 		if err := tx.AppendConfigRevision(rev); err != nil {
 			return err
 		}
@@ -278,7 +285,7 @@ func simplerFormatRecoverySeed(store port.Store, manifest SimplerFormatRecoveryC
 
 func simplerFormatRecoverySnapshot(ctx context.Context, store port.ReadStore, report *SimplerFormatRecoveryCampaignReport) error {
 	return store.View(ctx, func(r port.Reader) error {
-		op, err := r.Operation("operation_simpler_format_recovery")
+		op, err := r.Operation("operation_simpler_recovery")
 		if err != nil {
 			return err
 		}
@@ -289,11 +296,11 @@ func simplerFormatRecoverySnapshot(ctx context.Context, store port.ReadStore, re
 			}
 			report.ReceiptCount++
 		}
-		entity, err := r.CanonicalEntity("observation", "observation_simpler_format_recovery")
+		entity, err := r.CanonicalEntity("observation", "observation_simpler_recovery")
 		if err != nil {
 			return err
 		}
-		report.CanonicalStored = entity.CommitID == report.CommitID && entity.PayloadRef == "artifact_simpler_format_recovery"
+		report.CanonicalStored = entity.CommitID == report.CommitID && entity.PayloadRef == "artifact_simpler_recovery"
 		if op.State != domain.StateSucceeded || !report.CanonicalStored || report.ReceiptCount != report.ModelCalls {
 			return errors.New("simpler format recovery durable state is incomplete")
 		}
@@ -337,7 +344,7 @@ func WriteSimplerFormatRecoveryCampaignArtifacts(directory string, report Simple
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Malformed recovery campaign\n\n- Name: `%s`\n- Model calls: %d\n- Injected malformed calls: %d\n- External live calls: %d\n- Recovery stages: `%s`\n- Commit: `%s`\n- Operation state: `%s`\n- Completion receipts: %d\n- Canonical entity stored: `%t`\n- Durable reopen verified: `%t`\n\n", report.Name, report.ModelCalls, report.InjectedCalls, report.ExternalCalls, strings.Join(simplerFormatRecoveryStageStrings(report.RecoveryStages), " -> "), report.CommitID, report.OperationState, report.ReceiptCount, report.CanonicalStored, report.DurableReopen)
+	fmt.Fprintf(&md, "# Malformed recovery campaign\n\n- Name: `%s`\n- Model calls: %d\n- Injected malformed calls: %d\n- External live calls: %d\n- Recovery stages: `%s`\n- Commit: `%s`\n- Operation state: `%s`\n- Completion receipts: %d\n- Canonical entity stored: `%t`\n- Durable reopen verified: `%t`\n\n", report.Name, report.ModelCalls, report.InjectedCalls, report.ExternalCalls, strings.Join(simplerRecoveryStageStrings(report.RecoveryStages), " -> "), report.CommitID, report.OperationState, report.ReceiptCount, report.CanonicalStored, report.DurableReopen)
 	md.WriteString("| Call | Binding | Source | Success | Latency | Input tokens | Output tokens | Finish | Bytes | SHA-256 | Error |\n| ---: | --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- | --- |\n")
 	for _, call := range report.Calls {
 		source := "live"
@@ -350,7 +357,7 @@ func WriteSimplerFormatRecoveryCampaignArtifacts(directory string, report Simple
 	return atomicWrite(directory+"/simpler-format-recovery.md", []byte(md.String()))
 }
 
-func simplerFormatRecoveryStageStrings(stages []domain.ModelRecoveryStage) []string {
+func simplerRecoveryStageStrings(stages []domain.ModelRecoveryStage) []string {
 	out := make([]string, len(stages))
 	for i := range stages {
 		out[i] = string(stages[i])

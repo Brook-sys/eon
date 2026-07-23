@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "name": "simpler-format-recovery-campaign-groq",
+  "started_at": "2026-07-23T06:04:12.078229553Z",
+  "completed_at": "2026-07-23T06:04:15.148065533Z",
+  "model_calls": 3,
+  "external_calls": 1,
+  "injected_calls": 2,
+  "recovery_stages": [
+    "SHORT_CORRECTION",
+    "SIMPLER_FORMAT"
+  ],
+  "commit_id": "commit_0000000000000006",
+  "operation_state": "SUCCEEDED",
+  "receipt_count": 3,
+  "canonical_entity_stored": true,
+  "durable_reopen": true,
+  "calls": [
+    {
+      "call": 1,
+      "binding_id": "nim",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 175,
+      "response_sha256": "5600250e01cbbb32313ea543b465b96f187d921421143b007aff9196b3ad1a74"
+    },
+    {
+      "call": 2,
+      "binding_id": "nim",
+      "injected": true,
+      "succeeded": true,
+      "finish_reason": "stop",
+      "response_bytes": 554,
+      "response_sha256": "ef3627b02bad3d4a82d599eed406a16c3ba9b1ff11020ba37d6adbf5c9e1d557"
+    },
+    {
+      "call": 3,
+      "binding_id": "nim",
+      "injected": false,
+      "succeeded": true,
+      "latency": 1973944532,
+      "input_tokens": 376,
+      "output_tokens": 153,
+      "finish_reason": "stop",
+      "response_bytes": 534,
+      "response_sha256": "3302c6a5af280c4b980739b9cb4354eadfab103a3c89e5ef1d552110f509db7e"
+    }
+  ]
+}

@@ -72,6 +72,7 @@ func run() error {
 		return err
 	}
 	databasePath := filepath.Join(*outputDirectory, "simpler-format-recovery.sqlite")
+	os.Remove(databasePath)
 	store, err := sqlite.Open(databasePath)
 	if err != nil {
 		return err

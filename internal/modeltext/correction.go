@@ -10,6 +10,12 @@ import (
 // short-correction prompt. Keeps step 5 far smaller than a full resend.
 const DefaultMaxCorrectionSnippet = 480
 
+// SimplerFormatMaxCorrectionSnippet keeps a complete compact change-set in the
+// step-6 prompt often enough to preserve lineage fields that occur near the end
+// (notably idempotency_key), while remaining bounded and much smaller than a
+// full task/prompt resend.
+const SimplerFormatMaxCorrectionSnippet = 1024
+
 // ShortCorrectionInput is the authority-free material for FR-MODEL-004 step 5.
 // Callers MUST NOT pass secrets, full system prompts, or capability names.
 type ShortCorrectionInput struct {
@@ -84,6 +90,7 @@ func BuildSimplerFormatCorrection(previousOutput, safeError string) ShortCorrect
 		PreviousOutput: previousOutput,
 		SafeError:      safeError,
 		AnswerFormat:   DelimitedChangeSetFormat,
+		MaxSnippet:     SimplerFormatMaxCorrectionSnippet,
 	})
 	r.Applied = append(r.Applied, "simpler_delimited_format")
 	return r

@@ -51,9 +51,13 @@ func TestBuildShortCorrectionDefaults(t *testing.T) {
 
 func TestBuildSimplerFormatCorrection(t *testing.T) {
 	t.Parallel()
-	got := BuildSimplerFormatCorrection(`{"bad":true}`, "unknown field")
+	previous := strings.Repeat("x", DefaultMaxCorrectionSnippet+1) + `"idempotency_key":"idem_model"}`
+	got := BuildSimplerFormatCorrection(previous, "unknown field")
 	if !strings.Contains(got.Prompt, "CHANGESET_DELIMITED_V1") || !strings.Contains(got.Prompt, "changes") || !strings.Contains(got.Prompt, "idempotency_key") {
 		t.Fatalf("simpler format missing keys: %s", got.Prompt)
+	}
+	if !strings.Contains(got.Prompt, `"idempotency_key":"idem_model"}`) {
+		t.Fatalf("simpler format lost bounded lineage tail: %s", got.Prompt)
 	}
 	found := false
 	for _, a := range got.Applied {
