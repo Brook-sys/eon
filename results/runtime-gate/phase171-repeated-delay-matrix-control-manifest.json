@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase171-repeated-delay-matrix-nim-llama31-8b",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "output_schema": "exact_json",
+  "probe_prompt": "Bounded control accompanying fifteen isolated multiprocess SQLite ingress recovery campaigns. The offline matrix repeats 50, 100, and 200 ms five times each, measures convergence, exhaustion and fairness, and keeps production policy frozen. Return exactly {\"repeated_delay_matrix\":\"OK\"}. Raw JSON only, no Markdown or explanation.",
+  "expected_response": "{\"repeated_delay_matrix\":\"OK\"}",
+  "seed_primary_circuit_seconds": 1,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-8b",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-unused",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-delay-matrix.v2",
+  "hypothesis": "Repeated isolated runs can separate fixed recovery-delay effects from scheduler variance without changing production policy.",
+  "scenario": "Four SQLite processes, six rotating-leader cycles, one durable winner per cycle.",
+  "bounds": {
+    "delays_millis": [
+      50,
+      100,
+      200
+    ],
+    "runs_per_delay": 5,
+    "total_campaigns": 15,
+    "workers": 4,
+    "cycles": 6,
+    "max_attempts_per_worker_cycle": 3,
+    "campaign_timeout_seconds": 20
+  },
+  "results": [
+    {
+      "recovery_delay_millis": 50,
+      "runs": 5,
+      "convergence_millis": {
+        "min": 3922,
+        "p50": 3984,
+        "p95": 4221,
+        "max": 4221
+      },
+      "exhaustion_rate": {
+        "min": 0.125,
+        "p50": 0.125,
+        "p95": 0.16666666666666666,
+        "max": 0.16666666666666666
+      },
+      "attempts": {
+        "min": 51,
+        "p50": 51,
+        "p95": 52,
+        "max": 52
+      },
+      "exhaustions": {
+        "min": 3,
+        "p50": 3,
+        "p95": 4,
+        "max": 4
+      },
+      "fair_and_converged_runs": 5,
+      "processed_by_worker_samples": [
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "recovery_delay_millis": 100,
+      "runs": 5,
+      "convergence_millis": {
+        "min": 4036,
+        "p50": 4225,
+        "p95": 4533,
+        "max": 4533
+      },
+      "exhaustion_rate": {
+        "min": 0.125,
+        "p50": 0.16666666666666666,
+        "p95": 0.20833333333333334,
+        "max": 0.20833333333333334
+      },
+      "attempts": {
+        "min": 52,
+        "p50": 53,
+        "p95": 53,
+        "max": 53
+      },
+      "exhaustions": {
+        "min": 3,
+        "p50": 4,
+        "p95": 5,
+        "max": 5
+      },
+      "fair_and_converged_runs": 5,
+      "processed_by_worker_samples": [
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ]
+      ]
+    },
+    {
+      "recovery_delay_millis": 200,
+      "runs": 5,
+      "convergence_millis": {
+        "min": 4400,
+        "p50": 4508,
+        "p95": 10493,
+        "max": 10493
+      },
+      "exhaustion_rate": {
+        "min": 0.041666666666666664,
+        "p50": 0.16666666666666666,
+        "p95": 0.20833333333333334,
+        "max": 0.20833333333333334
+      },
+      "attempts": {
+        "min": 49,
+        "p50": 52,
+        "p95": 53,
+        "max": 53
+      },
+      "exhaustions": {
+        "min": 1,
+        "p50": 4,
+        "p95": 5,
+        "max": 5
+      },
+      "fair_and_converged_runs": 5,
+      "processed_by_worker_samples": [
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ],
+        [
+          2,
+          2,
+          1,
+          1
+        ]
+      ]
+    }
+  ],
+  "decision": "Keep the production delay at 100 ms. All 15 runs converged fairly. The 50 ms cell had the lowest median convergence, but its exhaustion range overlaps 100 ms and one 200 ms scheduler outlier dominated p95; the evidence is not strong enough to tune production.",
+  "next_experiment": "Randomize/interleave delay order and increase to at least 20 runs per cell, recording host load and per-attempt BUSY/CAS timing before considering a production change."
+}

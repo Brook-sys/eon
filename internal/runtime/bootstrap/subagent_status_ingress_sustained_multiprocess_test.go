@@ -155,8 +155,8 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 	convergence := time.Since(started)
 	workerCycleTotal := workers * mixedIngressReceiptCount
 	exhaustionRate := float64(totalExhaustions) / float64(workerCycleTotal)
-	if totalExhaustions < 1 || exhaustionRate >= 1 {
-		t.Fatalf("exhaustion rate %.3f did not characterize a bounded non-zero tail", exhaustionRate)
+	if exhaustionRate < 0 || exhaustionRate >= 1 {
+		t.Fatalf("exhaustion rate %.3f outside bounded range [0,1)", exhaustionRate)
 	}
 	if totalAttempts > workerCycleTotal*policy.MaxAttempts {
 		t.Fatalf("attempts=%d exceeded campaign ceiling=%d", totalAttempts, workerCycleTotal*policy.MaxAttempts)

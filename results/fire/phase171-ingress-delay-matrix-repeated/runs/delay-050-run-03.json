@@ -1,0 +1,33 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-campaign.v1",
+  "workers": 4,
+  "cycles": 6,
+  "retry_max_attempts": 3,
+  "recovery_delay_millis": 50,
+  "worker_cycles": 24,
+  "attempts": 51,
+  "exhaustions": 4,
+  "exhaustion_rate": 0.16666666666666666,
+  "pending_depth": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ],
+  "convergence_millis": 4221,
+  "processed_by_worker": [
+    2,
+    2,
+    1,
+    1
+  ],
+  "exhaustions_by_worker": [
+    1,
+    1,
+    0,
+    2
+  ]
+}
