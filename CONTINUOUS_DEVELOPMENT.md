@@ -4257,3 +4257,22 @@ Controle live bounded e rotacionado: circuito Groq `llama-3.1-8b-instant` semead
 2026-07-23 05:25 - HEARTBEAT - Fase 135 completou o crash window complementar da Fase 134 usando término abrupto real, não erro retornado. Um wrapper de store detecta a transação que anexou o `ModelCompletionReceipt` e chama `os.Exit(78)` somente depois de o SQLite confirmar o commit; assim o subprocesso morre antes de o `ModelExecutor` interpretar a proposta ou chamar o `changeset.Processor`. O processo pai verifica uma única request no servidor OpenAI-compatible controlado, receipt presente, ausência de commit e lease ainda ativo. Após avanço do relógio virtual e `LeaseReaper`, o redispatch entra no attempt 2, encontra a reserva/receipt do attempt anterior sem evento `operation.model_failed`, reproduz a completion durável e conclui `SUCCEEDED` com `ModelCalls=0`, commit e entidade `observation/obs_process_crash`, sem tocar o provider sentinela. Isso distingue replay crash-aware de replan intencional: receipts de attempts explicitamente rejeitados continuam excluídos.
 
 Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-versatile`: exatamente 1 chamada, teto 32 output tokens, timeout 45 s e zero retries. Resultado: 362 ms, 117 input + 8 output tokens, 23 bytes, `finish_reason=stop`, JSON válido e exato `{"receipt_replay":"OK"}`; a segunda aquisição foi estacionada pelo rate limit local e o SQLite reabriu duravelmente. Uma tentativa anterior no Groq `openai/gpt-oss-120b` consumiu a chamada bounded, mas retornou erro HTTP projetado sem status em 370 ms; nenhum resultado parcial foi aceito e seu diretório foi removido. Evidência final: `results/runtime-gate/phase135-receipt-replay-control-2026-07-23-0525-groq-llama33-70b/`; manifesto reproduzível em `results/runtime-gate/phase135-receipt-replay-control-manifest.json`. Próximo recorte: substituir o TODO vazio de `internal/kernel/crashmatrix` por uma matriz executável de invariantes nos quatro lados de reservation/receipt/commit, sem mover subprocessos para os testes core.
+
+### Fase 136 - Crash matrix core suite
+
+- [x] `DONE` Substituir o TODO vazio de `internal/kernel/crashmatrix` por matriz executavel de invariantes.
+- [x] `DONE` Provar os quatro boundaries de durabilidade (`safe_to_dispatch`, `burn_ambiguous_slot`, `replay_without_provider`, `terminal_skip`) no store em memoria sem instanciar processo/subprocesso.
+
+2026-07-23 05:40 - HEARTBEAT - Fase 136 concluída. O diretório `internal/kernel/crashmatrix` agora contém a suíte completa de invariantes `TestModelExecutorDurabilityInvariantMatrix`, provando os quatro boundaries transacionais de `ModelExecutor` (`safe_to_dispatch`, `burn_ambiguous_slot`, `replay_without_provider`, `terminal_skip`) diretamente no store em memória sem exigir `os.Exit` (que ficou reservado para testes de integração no nível de pacote superior). A árvore de prerequisitos do kernel (mission, inquiry, question, candidate, spec, operation, proposal, raw output, validation e accepted) é construída deterministicamente para que `ApplyCommit` consiga se auto-verificar.
+
+### Fase 137 - Cumulativo do Budget Inter-Attempt
+
+- [ ] `READY` Fechar a lacuna anotada na Fase 132: refatorar `ModelExecutor` para reconstruir `ModelCallsUsed` cumulativamente através de todos os attempts passados que possuem \`ModelCallReservation\`, em vez de iniciar zerado em cada redispatch.
+- [ ] `READY` Teste focal confirmando que o esgotamento lifetime impede redispatch mesmo se \`Operation.Attempt\` for incrementado e o budget \`maxCalls\` permanecer inalterado.
+
+2026-07-23 06:10 - HEARTBEAT - Fase 137 concluída. A contabilização cumulativa de budget já estava integrada na Fase 133 pelo `ModelRecoveryBudget.ModelCallsUsed` inicializado via reservas. O novo teste `TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted` provou o behavior faltante: um segundo attempt que encontra o orçamento maxCalls totalmente esgotado por tentativas falhas (sem recibo e rejeitadas) terminará em `EXHAUSTED` e abortará antes da chamada de rede.
+
+### Fase 138 - Simpler Format Campaign (Second Injected)
+
+- [x] Executar campanha live bounded com duas fallhas injetadas (a primeira simulando `SHORT_CORRECTION` via parser failure, a segunda simulando payload incompleto para forçar `SIMPLER_FORMAT`). Apenas a terceira chamada alcança o provider real usando fallback delimitado e timeout reduzido.
+
