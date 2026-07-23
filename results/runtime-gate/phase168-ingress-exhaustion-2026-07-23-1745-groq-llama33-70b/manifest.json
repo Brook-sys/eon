@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase168-ingress-exhaustion-groq-llama33-70b",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "probe_prompt": "Bounded control accompanying ingress retry-budget exhaustion telemetry and delayed recovery scheduling. Exhausted receipts remain durable PENDING, the control loop waits before another bounded cycle, and the model has no authority over retry policy or state. Return exactly {\"ingress_exhaustion_scheduling\":\"OK\"}. Raw JSON only, no Markdown or explanation.",
+  "expected_response": "{\"ingress_exhaustion_scheduling\":\"OK\"}",
+  "seed_primary_circuit_seconds": 1,
+  "bindings": [
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-70b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    },
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-unused",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    }
+  ]
+}

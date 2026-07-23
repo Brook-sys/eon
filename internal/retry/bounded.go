@@ -30,10 +30,11 @@ type Policy struct {
 }
 
 type Report struct {
-	Attempts   int
-	Retries    int
-	SleepTotal time.Duration
-	Classes    map[string]int
+	Attempts    int
+	Retries     int
+	Exhaustions int
+	SleepTotal  time.Duration
+	Classes     map[string]int
 }
 
 type SystemSleeper struct{}
@@ -78,6 +79,7 @@ func Do(ctx context.Context, policy Policy, sleeper Sleeper, jitter JitterSource
 			return report, err
 		}
 		if attempt == policy.MaxAttempts {
+			report.Exhaustions = 1
 			return report, errors.Join(ErrBudgetExhausted, err)
 		}
 		delay, err := delayFor(policy, attempt, jitter)

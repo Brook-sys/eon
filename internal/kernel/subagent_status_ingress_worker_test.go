@@ -247,8 +247,12 @@ func TestSubagentStatusIngressWorkerRetryBudgetExhaustionLeavesReceiptPending(t 
 		Store: store, Manager: manager, Clock: clock, Batch: 1,
 		RetryPolicy: retry.Policy{MaxAttempts: 2}, RetrySleeper: &ingressWorkerSleeper{},
 	}
-	if n, err := worker.ApplyPending(ctx); n != 0 || !errors.Is(err, retry.ErrBudgetExhausted) || !errors.Is(err, port.ErrConflict) {
-		t.Fatalf("apply n=%d err=%v", n, err)
+	n, report, err := worker.ApplyPendingWithRetryReport(ctx)
+	if n != 0 || !errors.Is(err, retry.ErrBudgetExhausted) || !errors.Is(err, port.ErrConflict) {
+		t.Fatalf("apply n=%d report=%+v err=%v", n, report, err)
+	}
+	if report.Attempts != 2 || report.Retries != 1 || report.Exhaustions != 1 || report.Classes["conflict"] != 2 {
+		t.Fatalf("exhaustion report=%+v", report)
 	}
 	if err := base.View(ctx, func(r port.Reader) error {
 		receipt, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-exhaust")

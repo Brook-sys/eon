@@ -44,6 +44,10 @@ type Options struct {
 	// IdleMin/IdleMax bound the sleep after an empty control cycle.
 	IdleMin time.Duration
 	IdleMax time.Duration
+	// SubagentIngressRecoveryDelay bounds the wait before another ingress cycle
+	// after the per-transaction retry budget is exhausted. It prevents a durable
+	// PENDING receipt from turning contention into a tight process-level loop.
+	SubagentIngressRecoveryDelay time.Duration
 	// MaxInboxBatch caps commands/events drained per cycle (fairness).
 	MaxInboxBatch int
 	// MemoryCompactionBatch caps expired semantic memories removed per cycle.
@@ -283,6 +287,9 @@ func (o *Options) Validate() error {
 	}
 	if o.IdleMax <= 0 {
 		o.IdleMax = time.Second
+	}
+	if o.SubagentIngressRecoveryDelay <= 0 {
+		o.SubagentIngressRecoveryDelay = 100 * time.Millisecond
 	}
 	if o.IdleMin > o.IdleMax {
 		return errors.New("idle min must not exceed idle max")

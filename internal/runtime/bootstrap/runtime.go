@@ -621,7 +621,9 @@ type CycleResult struct {
 	SubagentIngressRetryAttempts int
 	SubagentIngressRetries       int
 	SubagentIngressConflicts     int
+	SubagentIngressExhaustions   int
 	SubagentIngressRetrySleep    time.Duration
+	SubagentIngressRecoveryDelay time.Duration
 	SchedulerRan                 bool
 	SchedulerSteps               int
 	SchedulerKind                kernel.DecisionKind
@@ -670,7 +672,9 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 				SubagentIngressRetryAttempts: result.SubagentIngressRetryAttempts,
 				SubagentIngressRetries:       result.SubagentIngressRetries,
 				SubagentIngressConflicts:     result.SubagentIngressConflicts,
+				SubagentIngressExhaustions:   result.SubagentIngressExhaustions,
 				SubagentIngressRetrySleep:    result.SubagentIngressRetrySleep,
+				SubagentIngressRecoveryDelay: result.SubagentIngressRecoveryDelay,
 				SchedulerRan:                 result.SchedulerRan,
 				SchedulerKind:                string(result.SchedulerKind),
 				Worked:                       result.Worked,
@@ -699,14 +703,18 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	// local deadlines. Supervisor remains the sole canonical lifecycle writer.
 	if rt.SubagentStatusIngressWorker != nil {
 		applied, retryReport, err := rt.SubagentStatusIngressWorker.ApplyPendingWithRetryReport(ctx)
-		if err != nil {
+		if err != nil && !errors.Is(err, retry.ErrBudgetExhausted) {
 			return result, fmt.Errorf("subagent status ingress worker: %w", err)
 		}
 		result.SubagentStatusesApplied = applied
 		result.SubagentIngressRetryAttempts = retryReport.Attempts
 		result.SubagentIngressRetries = retryReport.Retries
 		result.SubagentIngressConflicts = retryReport.Classes["conflict"]
+		result.SubagentIngressExhaustions = retryReport.Exhaustions
 		result.SubagentIngressRetrySleep = retryReport.SleepTotal
+		if errors.Is(err, retry.ErrBudgetExhausted) {
+			result.SubagentIngressRecoveryDelay = rt.Opts.SubagentIngressRecoveryDelay
+		}
 		if applied > 0 {
 			result.Worked = true
 		}
@@ -1058,22 +1066,34 @@ func (rt *Runtime) RunControlLoop(ctx context.Context) error {
 			rt.logger.Printf("runtime control loop exiting: process stopping")
 			return nil
 		}
-		if result.Worked {
-			idle = idleMin
+		delay, nextIdle := nextControlCycleDelay(result, idle, idleMin, idleMax)
+		idle = nextIdle
+		if delay <= 0 {
 			continue
 		}
 		// Bounded wait — never spin. Clock is injectable for tests via WaitUntil.
-		deadline := rt.Clock.Now().UTC().Add(idle)
+		deadline := rt.Clock.Now().UTC().Add(delay)
 		if err := rt.Clock.WaitUntil(ctx, deadline); err != nil {
 			return err
 		}
-		if idle < idleMax {
-			idle *= 2
-			if idle > idleMax {
-				idle = idleMax
-			}
+	}
+}
+
+func nextControlCycleDelay(result CycleResult, idle, idleMin, idleMax time.Duration) (time.Duration, time.Duration) {
+	if result.SubagentIngressRecoveryDelay > 0 {
+		return result.SubagentIngressRecoveryDelay, idleMin
+	}
+	if result.Worked {
+		return 0, idleMin
+	}
+	next := idle
+	if next < idleMax {
+		next *= 2
+		if next > idleMax {
+			next = idleMax
 		}
 	}
+	return idle, next
 }
 
 // continuityCatalogFromRegistry projects the process StrategyRegistry into an

@@ -94,7 +94,7 @@ func TestDoExhaustionPreservesLastError(t *testing.T) {
 	if !errors.Is(err, retry.ErrBudgetExhausted) || !errors.Is(err, errBusy) {
 		t.Fatalf("error = %v, want budget exhausted joined with busy", err)
 	}
-	if report.Attempts != 2 || report.Retries != 1 || report.Classes["busy"] != 2 {
+	if report.Attempts != 2 || report.Retries != 1 || report.Exhaustions != 1 || report.Classes["busy"] != 2 {
 		t.Fatalf("report = %+v", report)
 	}
 }

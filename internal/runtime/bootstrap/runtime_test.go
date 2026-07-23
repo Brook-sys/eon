@@ -13,6 +13,7 @@ import (
 	"motor-autonomo/internal/kernel"
 	"motor-autonomo/internal/mission"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/runtime/bootstrap"
 	"motor-autonomo/internal/runtime/source"
 )
@@ -139,6 +140,69 @@ func TestProcessCycleDrainsCommandAndStops(t *testing.T) {
 	}
 	if !result.Stopping || result.CommandsProcessed != 0 {
 		t.Fatalf("expected clean stopping cycle, got %#v", result)
+	}
+}
+
+type runtimeIngressConflictStore struct {
+	port.Store
+	conflicts int
+}
+
+func (s *runtimeIngressConflictStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	if s.conflicts > 0 {
+		s.conflicts--
+		return port.ErrConflict
+	}
+	return s.Store.Update(ctx, fn)
+}
+
+func TestProcessCycleSchedulesBoundedRecoveryAfterIngressExhaustion(t *testing.T) {
+	ctx := context.Background()
+	recoveryDelay := 125 * time.Millisecond
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		StoreBackend:                 bootstrap.StorageMemory,
+		MissionID:                    "mission-ingress-exhaustion",
+		SubagentIngressRecoveryDelay: recoveryDelay,
+		Subagent:                     &bootstrap.SubagentOptions{Enabled: true, MaxAttempts: 2, Timeout: time.Minute},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = rt.Close(ctx) })
+	id, err := rt.Subagents.Spawn(ctx, kernel.SubagentSpec{Task: "delay exhausted ingress", ContextMode: "isolated", Labels: map[string]string{kernel.SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := rt.Subagents.(*kernel.PersistentSessionManager)
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-exhausted", kernel.SubagentObservation{ID: id, State: kernel.SessionStateComplete, Result: "done"}); err != nil {
+		t.Fatal(err)
+	}
+	rt.SubagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{
+		Store: &runtimeIngressConflictStore{Store: rt.Store, conflicts: 2}, Manager: rt.Subagents, Clock: rt.Clock, Batch: 1,
+		RetryPolicy: retry.Policy{MaxAttempts: 2}, RetrySleeper: retry.SystemSleeper{},
+	}
+	result, err := rt.ProcessCycle(ctx)
+	if err != nil {
+		t.Fatalf("exhausted cycle: %v", err)
+	}
+	if result.SubagentStatusesApplied != 0 || result.SubagentIngressRetryAttempts != 2 || result.SubagentIngressRetries != 1 || result.SubagentIngressConflicts != 2 || result.SubagentIngressExhaustions != 1 || result.SubagentIngressRecoveryDelay != recoveryDelay {
+		t.Fatalf("cycle=%+v", result)
+	}
+	if err := rt.Store.View(ctx, func(r port.Reader) error {
+		receipt, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-exhausted")
+		if err != nil {
+			return err
+		}
+		if receipt.Status != domain.SubagentStatusIngressPending {
+			t.Fatalf("receipt=%+v", receipt)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	result, err = rt.ProcessCycle(ctx)
+	if err != nil || result.SubagentStatusesApplied != 1 || result.SubagentIngressExhaustions != 0 || result.SubagentIngressRecoveryDelay != 0 {
+		t.Fatalf("recovery cycle=%+v err=%v", result, err)
 	}
 }
 

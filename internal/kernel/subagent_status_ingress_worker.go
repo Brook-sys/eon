@@ -203,6 +203,7 @@ func mergeRetryReport(aggregate *retry.Report, report retry.Report) {
 	}
 	aggregate.Attempts += report.Attempts
 	aggregate.Retries += report.Retries
+	aggregate.Exhaustions += report.Exhaustions
 	aggregate.SleepTotal += report.SleepTotal
 	if aggregate.Classes == nil {
 		aggregate.Classes = make(map[string]int)

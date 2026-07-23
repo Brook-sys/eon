@@ -21,7 +21,9 @@ type CycleInstruments struct {
 	ingressRetryAttempts metric.Int64Counter
 	ingressRetries       metric.Int64Counter
 	ingressConflicts     metric.Int64Counter
+	ingressExhaustions   metric.Int64Counter
 	ingressRetrySleepMS  metric.Int64Counter
+	ingressRecoveryMS    metric.Int64Counter
 }
 
 // NewCycleInstruments binds counters to the runtime meter. Safe with nil/disabled.
@@ -61,8 +63,14 @@ func NewCycleInstruments(rt *Runtime) *CycleInstruments {
 	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.conflicts"); err == nil {
 		ci.ingressConflicts = c
 	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.exhaustions"); err == nil {
+		ci.ingressExhaustions = c
+	}
 	if c, err := meter.Int64Counter("motor.subagent.ingress.retry.sleep_ms"); err == nil {
 		ci.ingressRetrySleepMS = c
+	}
+	if c, err := meter.Int64Counter("motor.subagent.ingress.recovery.delay_ms"); err == nil {
+		ci.ingressRecoveryMS = c
 	}
 	return ci
 }
@@ -83,7 +91,9 @@ type CycleSnapshot struct {
 	SubagentIngressRetryAttempts int
 	SubagentIngressRetries       int
 	SubagentIngressConflicts     int
+	SubagentIngressExhaustions   int
 	SubagentIngressRetrySleep    time.Duration
+	SubagentIngressRecoveryDelay time.Duration
 }
 
 // Record emits derived cycle metrics. Never panics; ignores nil receivers.
@@ -127,7 +137,13 @@ func (c *CycleInstruments) Record(ctx context.Context, snap CycleSnapshot) {
 	if snap.SubagentIngressConflicts > 0 && c.ingressConflicts != nil {
 		c.ingressConflicts.Add(ctx, int64(snap.SubagentIngressConflicts), metric.WithAttributes(attrs...))
 	}
+	if snap.SubagentIngressExhaustions > 0 && c.ingressExhaustions != nil {
+		c.ingressExhaustions.Add(ctx, int64(snap.SubagentIngressExhaustions), metric.WithAttributes(attrs...))
+	}
 	if snap.SubagentIngressRetrySleep > 0 && c.ingressRetrySleepMS != nil {
 		c.ingressRetrySleepMS.Add(ctx, snap.SubagentIngressRetrySleep.Milliseconds(), metric.WithAttributes(attrs...))
+	}
+	if snap.SubagentIngressRecoveryDelay > 0 && c.ingressRecoveryMS != nil {
+		c.ingressRecoveryMS.Add(ctx, snap.SubagentIngressRecoveryDelay.Milliseconds(), metric.WithAttributes(attrs...))
 	}
 }
