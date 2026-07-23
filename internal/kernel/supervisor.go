@@ -26,15 +26,17 @@ type Supervisor struct {
 	LeaseTTL time.Duration
 }
 
+type terminalGeneration struct {
+	ID      string
+	Attempt int
+}
+
 // Reconcile scans pending and running subagent records in storage,
 // checks their actual status in the SessionManager, and updates
 // their persisted state if they have completed or failed.
 func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 	var reconciled int
-	var releasedTerminals []struct {
-		ID      string
-		Attempt int
-	}
+	releasedTerminals := make(map[terminalGeneration]struct{})
 
 	err := s.Store.Update(ctx, func(tx port.Transaction) error {
 		pending, err := tx.SubagentRecordsByState(domain.SubagentStatePending, 0)
@@ -50,6 +52,18 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 		var active []domain.SubagentRecord
 		active = append(active, pending...)
 		active = append(active, running...)
+		// Terminal canonical records are the durable retry source for the
+		// process-local capacity acknowledgement. This also survives replacing
+		// the Supervisor object after a post-commit ReleaseTerminal failure.
+		for _, state := range []domain.SubagentState{domain.SubagentStateComplete, domain.SubagentStateError} {
+			terminal, err := tx.SubagentRecordsByState(state, 0)
+			if err != nil {
+				return err
+			}
+			for _, rec := range terminal {
+				releasedTerminals[terminalGeneration{ID: rec.ID, Attempt: rec.Attempt}] = struct{}{}
+			}
+		}
 
 		for _, rec := range active {
 			now := s.Clock.Now()
@@ -127,10 +141,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 				if err := s.appendTerminalEvent(tx, rec, now); err != nil {
 					return err
 				}
-				releasedTerminals = append(releasedTerminals, struct {
-					ID      string
-					Attempt int
-				}{ID: rec.ID, Attempt: rec.Attempt})
+				releasedTerminals[terminalGeneration{ID: rec.ID, Attempt: rec.Attempt}] = struct{}{}
 				reconciled++
 				continue
 			}
@@ -216,10 +227,7 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 							return err
 						}
 					}
-					releasedTerminals = append(releasedTerminals, struct {
-						ID      string
-						Attempt int
-					}{ID: rec.ID, Attempt: rec.Attempt})
+					releasedTerminals[terminalGeneration{ID: rec.ID, Attempt: rec.Attempt}] = struct{}{}
 				}
 				reconciled++
 			}
@@ -230,11 +238,12 @@ func (s *Supervisor) Reconcile(ctx context.Context) (int, error) {
 		return reconciled, err
 	}
 	// Capacity is released only after the canonical transaction commits. A
-	// failed commit leaves supervisor-published deadline/lease terminals held,
-	// and the next reconcile will commit the same terminal before releasing it.
-	for _, terminal := range releasedTerminals {
-		if releaseErr := s.Manager.ReleaseTerminal(context.WithoutCancel(ctx), SessionID(terminal.ID), terminal.Attempt); releaseErr != nil && !errors.Is(releaseErr, ErrSessionNotFound) {
-			return reconciled, releaseErr
+	// transient failure is retried from the terminal canonical record on the
+	// next reconcile, even if a new Supervisor instance performs that cycle.
+	for terminal := range releasedTerminals {
+		err := s.Manager.ReleaseTerminal(context.WithoutCancel(ctx), SessionID(terminal.ID), terminal.Attempt)
+		if err != nil && !errors.Is(err, ErrSessionNotFound) {
+			return reconciled, err
 		}
 	}
 	return reconciled, nil
