@@ -29,6 +29,18 @@ type SubagentStatusIngressWorker struct {
 	RetryObserve func(retry.Report)
 }
 
+// DefaultSubagentStatusIngressRetryPolicy is the production budget for the
+// idempotent receipt CAS. Keeping it next to the worker lets integration and
+// fire tests exercise the exact policy instead of copying timing constants.
+func DefaultSubagentStatusIngressRetryPolicy() retry.Policy {
+	return retry.Policy{
+		MaxAttempts: 3,
+		BaseDelay:   10 * time.Millisecond,
+		MaxDelay:    40 * time.Millisecond,
+		MaxJitter:   10 * time.Millisecond,
+	}
+}
+
 func (w *SubagentStatusIngressWorker) ApplyPending(ctx context.Context) (int, error) {
 	processed, _, err := w.ApplyPendingWithRetryReport(ctx)
 	return processed, err
@@ -66,6 +78,10 @@ func (w *SubagentStatusIngressWorker) ApplyPendingWithRetryReport(ctx context.Co
 			}
 			transitioned := false
 			err = w.updateReceipt(ctx, &retryReport, func(tx port.Transaction) error {
+				// A callback can complete against a stale SQLite checkpoint and then
+				// lose the durable CAS. Keep this flag scoped to the final successful
+				// attempt so a later idempotent replay cannot overcount processed.
+				transitioned = false
 				current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 				if err != nil {
 					return err
@@ -101,6 +117,10 @@ func (w *SubagentStatusIngressWorker) ApplyPendingWithRetryReport(ctx context.Co
 		}
 		transitioned := false
 		err = w.updateReceipt(ctx, &retryReport, func(tx port.Transaction) error {
+			// Reset attempt-local evidence before every retried callback. The
+			// durable checkpoint CAS, not a successful in-memory callback, decides
+			// whether this worker owns the transition.
+			transitioned = false
 			current, err := tx.SubagentStatusIngressReceipt(receipt.CallerPeerID, receipt.DeliveryID)
 			if err != nil {
 				return err

@@ -35,10 +35,52 @@ type ingressWorkerConflictStore struct {
 	updates   int
 }
 
+type ingressWorkerPostCallbackConflictStore struct {
+	port.Store
+	conflicts int
+	updates   int
+	caller    string
+	delivery  string
+	now       time.Time
+}
+
 func (s *ingressWorkerConflictStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
 	s.updates++
 	if s.conflicts > 0 {
 		s.conflicts--
+		return port.ErrConflict
+	}
+	return s.Store.Update(ctx, fn)
+}
+
+func (s *ingressWorkerPostCallbackConflictStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	s.updates++
+	if s.conflicts > 0 {
+		s.conflicts--
+		if err := s.Store.Update(ctx, func(tx port.Transaction) error {
+			if err := fn(tx); err != nil {
+				return err
+			}
+			return port.ErrConflict
+		}); !errors.Is(err, port.ErrConflict) {
+			return err
+		}
+		// Model the independent winner that made the just-executed callback's
+		// checkpoint stale. The retry must observe APPLIED as an idempotent replay
+		// and must not retain transition evidence from the rolled-back callback.
+		if err := s.Store.Update(ctx, func(tx port.Transaction) error {
+			current, err := tx.SubagentStatusIngressReceipt(s.caller, s.delivery)
+			if err != nil {
+				return err
+			}
+			next, err := domain.MarkSubagentStatusIngressApplied(current, s.now)
+			if err != nil {
+				return err
+			}
+			return tx.SaveSubagentStatusIngressReceipt(next, domain.SubagentStatusIngressPending)
+		}); err != nil {
+			return err
+		}
 		return port.ErrConflict
 	}
 	return s.Store.Update(ctx, fn)
@@ -139,6 +181,48 @@ func TestSubagentStatusIngressWorkerRetriesIdempotentReceiptCASBoundedly(t *test
 	}
 	if n, err := worker.ApplyPending(ctx); err != nil || n != 0 {
 		t.Fatalf("replay n=%d err=%v", n, err)
+	}
+}
+
+func TestSubagentStatusIngressWorkerDoesNotCountRolledBackRetryCallback(t *testing.T) {
+	ctx := context.Background()
+	clock := ingressWorkerClock{now: time.Unix(127, 0).UTC()}
+	base := memory.New()
+	local := NewLocalSessionManager(clock)
+	manager, err := NewPersistentSessionManager(local, base, clock, &ingressWorkerIDs{}, PersistentSessionPolicy{MissionID: "mission-post-callback", MaxAttempts: 2, Timeout: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := manager.Spawn(ctx, SubagentSpec{Task: "post callback conflict", ContextMode: "isolated", Labels: map[string]string{SubagentTransportPeerLabel: "peer-a"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.AdmitRemoteStatus(ctx, "peer-a", "delivery-post-callback", SubagentObservation{ID: id, State: SessionStateComplete, Result: "done"}); err != nil {
+		t.Fatal(err)
+	}
+	store := &ingressWorkerPostCallbackConflictStore{Store: base, conflicts: 1, caller: "peer-a", delivery: "delivery-post-callback", now: clock.Now()}
+	worker := SubagentStatusIngressWorker{
+		Store: store, Manager: manager, Clock: clock, Batch: 1,
+		RetryPolicy: retry.Policy{MaxAttempts: 2}, RetrySleeper: &ingressWorkerSleeper{},
+	}
+	processed, report, err := worker.ApplyPendingWithRetryReport(ctx)
+	if err != nil || processed != 0 {
+		t.Fatalf("apply processed=%d report=%+v err=%v", processed, report, err)
+	}
+	if store.updates != 2 || report.Attempts != 2 || report.Retries != 1 || report.Classes["conflict"] != 1 {
+		t.Fatalf("updates=%d report=%+v", store.updates, report)
+	}
+	if err := base.View(ctx, func(reader port.Reader) error {
+		receipt, err := reader.SubagentStatusIngressReceipt("peer-a", "delivery-post-callback")
+		if err != nil {
+			return err
+		}
+		if receipt.Status != domain.SubagentStatusIngressApplied {
+			t.Fatalf("receipt=%+v", receipt)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

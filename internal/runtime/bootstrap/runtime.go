@@ -394,7 +394,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		subagentStatusDispatcher = &kernel.SubagentStatusDispatcher{Store: store, Caller: peerTransport.Caller, Clock: clock, Batch: 4, RPCTimeout: 10 * time.Second}
 		subagentStatusIngressWorker = &kernel.SubagentStatusIngressWorker{
 			Store: store, Manager: sessionManager, Clock: clock, Batch: 4, LeaseTTL: opts.Subagent.LeaseTTL,
-			RetryPolicy:  retry.Policy{MaxAttempts: 3, BaseDelay: 10 * time.Millisecond, MaxDelay: 40 * time.Millisecond, MaxJitter: 10 * time.Millisecond},
+			RetryPolicy:  kernel.DefaultSubagentStatusIngressRetryPolicy(),
 			RetrySleeper: retry.SystemSleeper{}, RetryJitter: random,
 		}
 		if modelExec != nil && modelExec.Provider != nil {
