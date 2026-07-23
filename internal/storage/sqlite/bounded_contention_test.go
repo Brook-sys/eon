@@ -169,9 +169,9 @@ func runSQLiteBoundedContentionHelper(t *testing.T, mode string) {
 	// The operation is safe to repeat because ReserveIdempotency is keyed by
 	// writer and the store rejects a divergent replay. Keep retry ownership in
 	// this caller rather than hiding it in the SQLite adapter.
-	hash := fnv.New32a()
+	hash := fnv.New64a()
 	_, _ = hash.Write([]byte(writer))
-	jitter := fixedJitterSource{value: uint64(hash.Sum32() % 37)}
+	jitter := &deterministicJitterSource{state: hash.Sum64()}
 	report, runErr := retry.Do(
 		context.Background(),
 		retry.Policy{
@@ -218,12 +218,20 @@ func runSQLiteBoundedContentionHelper(t *testing.T, mode string) {
 	}
 }
 
-type fixedJitterSource struct {
-	value uint64
+// deterministicJitterSource gives each writer a stable but attempt-varying
+// jitter stream. A constant per-writer offset re-synchronized followers once
+// exponential backoff reached its cap, which made long contention runs flaky.
+// SplitMix64 keeps the campaign reproducible while decorrelating capped retries.
+type deterministicJitterSource struct {
+	state uint64
 }
 
-func (source fixedJitterSource) Uint64() (uint64, error) {
-	return source.value, nil
+func (source *deterministicJitterSource) Uint64() (uint64, error) {
+	source.state += 0x9e3779b97f4a7c15
+	value := source.state
+	value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9
+	value = (value ^ (value >> 27)) * 0x94d049bb133111eb
+	return value ^ (value >> 31), nil
 }
 
 func writeSignalFile(t *testing.T, path string) {
