@@ -8,10 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/sqlite"
@@ -21,37 +25,94 @@ const sustainedIngressMultiprocessMode = "MOTOR_AUTONOMO_SUSTAINED_INGRESS_MULTI
 
 const sustainedIngressRecoveryDelay = 100 * time.Millisecond
 
-const sustainedIngressCampaignReportSchema = "motor-autonomo.sustained-ingress-campaign.v1"
+const sustainedIngressCampaignReportSchema = "motor-autonomo.sustained-ingress-campaign.v2"
+
+type sustainedIngressAttemptTiming struct {
+	Cycle         int    `json:"cycle"`
+	Worker        int    `json:"worker"`
+	Attempt       int    `json:"attempt"`
+	ElapsedMicros int64  `json:"elapsed_micros"`
+	Outcome       string `json:"outcome"`
+}
+
+type sustainedIngressHostLoad struct {
+	Source      string  `json:"source"`
+	Available   bool    `json:"available"`
+	LogicalCPUs int     `json:"logical_cpus"`
+	Load1       float64 `json:"load_1,omitempty"`
+	Load5       float64 `json:"load_5,omitempty"`
+	Load15      float64 `json:"load_15,omitempty"`
+}
 
 type sustainedIngressProcessReport struct {
-	Cycle          int    `json:"cycle"`
-	Worker         int    `json:"worker"`
-	Leader         bool   `json:"leader"`
-	Processed      int    `json:"processed"`
-	Attempts       int    `json:"attempts"`
-	Retries        int    `json:"retries"`
-	Conflicts      int    `json:"conflicts"`
-	Exhaustions    int    `json:"exhaustions"`
-	SleepMillis    int64  `json:"sleep_millis"`
-	RecoveryMillis int64  `json:"recovery_millis"`
-	ElapsedMillis  int64  `json:"elapsed_millis"`
-	Error          string `json:"error,omitempty"`
+	Cycle          int                             `json:"cycle"`
+	Worker         int                             `json:"worker"`
+	Leader         bool                            `json:"leader"`
+	Processed      int                             `json:"processed"`
+	Attempts       int                             `json:"attempts"`
+	Retries        int                             `json:"retries"`
+	Conflicts      int                             `json:"conflicts"`
+	Exhaustions    int                             `json:"exhaustions"`
+	SleepMillis    int64                           `json:"sleep_millis"`
+	RecoveryMillis int64                           `json:"recovery_millis"`
+	ElapsedMillis  int64                           `json:"elapsed_millis"`
+	AttemptTimings []sustainedIngressAttemptTiming `json:"attempt_timings"`
+	Error          string                          `json:"error,omitempty"`
+}
+
+type sustainedIngressObservedStore struct {
+	port.Store
+	mu      sync.Mutex
+	timings []sustainedIngressAttemptTiming
+}
+
+func (s *sustainedIngressObservedStore) Update(ctx context.Context, fn func(port.Transaction) error) error {
+	started := time.Now()
+	err := s.Store.Update(ctx, fn)
+	outcome := "success"
+	switch {
+	case errors.Is(err, port.ErrConflict):
+		outcome = "cas_conflict"
+	case err != nil && (strings.Contains(strings.ToLower(err.Error()), "busy") || strings.Contains(strings.ToLower(err.Error()), "locked")):
+		outcome = "sqlite_busy"
+	case err != nil:
+		outcome = "error"
+	}
+	s.mu.Lock()
+	s.timings = append(s.timings, sustainedIngressAttemptTiming{Attempt: len(s.timings) + 1, ElapsedMicros: time.Since(started).Microseconds(), Outcome: outcome})
+	s.mu.Unlock()
+	return err
+}
+
+func (s *sustainedIngressObservedStore) snapshot() []sustainedIngressAttemptTiming {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]sustainedIngressAttemptTiming(nil), s.timings...)
 }
 
 type sustainedIngressCampaignReport struct {
-	SchemaVersion       string  `json:"schema_version"`
-	Workers             int     `json:"workers"`
-	Cycles              int     `json:"cycles"`
-	RetryMaxAttempts    int     `json:"retry_max_attempts"`
-	RecoveryDelayMillis int64   `json:"recovery_delay_millis"`
-	WorkerCycles        int     `json:"worker_cycles"`
-	Attempts            int     `json:"attempts"`
-	Exhaustions         int     `json:"exhaustions"`
-	ExhaustionRate      float64 `json:"exhaustion_rate"`
-	PendingDepth        []int   `json:"pending_depth"`
-	ConvergenceMillis   int64   `json:"convergence_millis"`
-	ProcessedByWorker   []int   `json:"processed_by_worker"`
-	ExhaustionsByWorker []int   `json:"exhaustions_by_worker"`
+	SchemaVersion       string                          `json:"schema_version"`
+	Workers             int                             `json:"workers"`
+	Cycles              int                             `json:"cycles"`
+	RetryMaxAttempts    int                             `json:"retry_max_attempts"`
+	RecoveryDelayMillis int64                           `json:"recovery_delay_millis"`
+	WorkerCycles        int                             `json:"worker_cycles"`
+	Attempts            int                             `json:"attempts"`
+	Exhaustions         int                             `json:"exhaustions"`
+	ExhaustionRate      float64                         `json:"exhaustion_rate"`
+	PendingDepth        []int                           `json:"pending_depth"`
+	ConvergenceMillis   int64                           `json:"convergence_millis"`
+	ProcessedByWorker   []int                           `json:"processed_by_worker"`
+	ExhaustionsByWorker []int                           `json:"exhaustions_by_worker"`
+	AttemptTimings      []sustainedIngressAttemptTiming `json:"attempt_timings"`
+	HostLoadStart       sustainedIngressHostLoad        `json:"host_load_start"`
+	HostLoadEnd         sustainedIngressHostLoad        `json:"host_load_end"`
+	MatrixRunID         string                          `json:"matrix_run_id,omitempty"`
+	MatrixOrdinal       int                             `json:"matrix_ordinal,omitempty"`
+	MatrixBlock         int                             `json:"matrix_block,omitempty"`
+	OrderPosition       int                             `json:"order_position,omitempty"`
+	OrderStrategy       string                          `json:"order_strategy,omitempty"`
+	MatrixMetadata      bool                            `json:"matrix_metadata_present"`
 }
 
 // TestSubagentStatusIngressSustainedContentionCampaign keeps the production
@@ -70,11 +131,14 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 
 	const workers = 4
 	recoveryDelay := sustainedIngressCampaignRecoveryDelay(t)
+	matrixRunID, matrixOrdinal, matrixBlock, orderPosition, orderStrategy, matrixMetadata := sustainedIngressMatrixMetadata(t)
 	pendingDepth := []int{mixedIngressReceiptCount}
 	processedByWorker := make([]int, workers)
 	exhaustionsByWorker := make([]int, workers)
 	workerCycles := make([]int, workers)
 	totalAttempts, totalExhaustions := 0, 0
+	attemptTimings := make([]sustainedIngressAttemptTiming, 0, workers*mixedIngressReceiptCount*policy.MaxAttempts)
+	hostLoadStart := readSustainedIngressHostLoad()
 	started := time.Now()
 
 	for cycle := 0; cycle < mixedIngressReceiptCount; cycle++ {
@@ -141,6 +205,11 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 			processedByWorker[worker] += report.Processed
 			exhaustionsByWorker[worker] += report.Exhaustions
 			workerCycles[worker]++
+			for _, timing := range report.AttemptTimings {
+				timing.Cycle = cycle
+				timing.Worker = worker
+				attemptTimings = append(attemptTimings, timing)
+			}
 		}
 		if cycleProcessed != 1 {
 			t.Fatalf("cycle %d processed=%d want exactly one bounded winner", cycle, cycleProcessed)
@@ -160,6 +229,9 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 	}
 	if totalAttempts > workerCycleTotal*policy.MaxAttempts {
 		t.Fatalf("attempts=%d exceeded campaign ceiling=%d", totalAttempts, workerCycleTotal*policy.MaxAttempts)
+	}
+	if len(attemptTimings) != totalAttempts {
+		t.Fatalf("attempt timing count=%d want attempts=%d", len(attemptTimings), totalAttempts)
 	}
 	if convergence <= 0 || convergence > 20*time.Second {
 		t.Fatalf("time to convergence=%s outside bounded window (0,20s]", convergence)
@@ -188,6 +260,9 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 		WorkerCycles: workerCycleTotal, Attempts: totalAttempts, Exhaustions: totalExhaustions,
 		ExhaustionRate: exhaustionRate, PendingDepth: pendingDepth, ConvergenceMillis: convergence.Milliseconds(),
 		ProcessedByWorker: processedByWorker, ExhaustionsByWorker: exhaustionsByWorker,
+		AttemptTimings: attemptTimings, HostLoadStart: hostLoadStart, HostLoadEnd: readSustainedIngressHostLoad(),
+		MatrixRunID: matrixRunID, MatrixOrdinal: matrixOrdinal, MatrixBlock: matrixBlock,
+		OrderPosition: orderPosition, OrderStrategy: orderStrategy, MatrixMetadata: matrixMetadata,
 	}
 	writeSustainedIngressCampaignReport(t, report)
 	t.Logf("sustained ingress: exhaustion_rate=%.3f pending_depth=%v convergence=%s attempts=%d processed_by_worker=%v exhaustions_by_worker=%v", exhaustionRate, pendingDepth, convergence, totalAttempts, processedByWorker, exhaustionsByWorker)
@@ -256,8 +331,9 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 	}
 	waitForMixedIngressFile(t, startPath, 5*time.Second)
 
+	observedStore := &sustainedIngressObservedStore{Store: store}
 	runner := kernel.SubagentStatusIngressWorker{
-		Store: store, Manager: manager, Clock: clock, Batch: 1, LeaseTTL: mixedIngressLeaseTTL,
+		Store: observedStore, Manager: manager, Clock: clock, Batch: 1, LeaseTTL: mixedIngressLeaseTTL,
 		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{},
 		RetryJitter: source.NewSequenceRandomSource(uint64(worker*3), uint64(worker*3)),
 	}
@@ -267,6 +343,7 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 		Cycle: cycle, Worker: worker, Leader: worker == leader, Processed: processed,
 		Attempts: report.Attempts, Retries: report.Retries, Conflicts: report.Classes["conflict"],
 		Exhaustions: report.Exhaustions, SleepMillis: report.SleepTotal.Milliseconds(),
+		AttemptTimings: observedStore.snapshot(),
 	}
 	if errors.Is(runErr, retry.ErrBudgetExhausted) {
 		recoveryDelay := sustainedIngressCampaignRecoveryDelay(t)
@@ -282,6 +359,65 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 	}
 	if err := os.WriteFile(resultPath, append(body, '\n'), 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func readSustainedIngressHostLoad() sustainedIngressHostLoad {
+	load := sustainedIngressHostLoad{Source: "unavailable", LogicalCPUs: runtime.NumCPU()}
+	body, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return load
+	}
+	if _, err := fmt.Sscanf(string(body), "%f %f %f", &load.Load1, &load.Load5, &load.Load15); err != nil {
+		return load
+	}
+	load.Source = "proc_loadavg"
+	load.Available = true
+	return load
+}
+
+func TestReadSustainedIngressHostLoad(t *testing.T) {
+	load := readSustainedIngressHostLoad()
+	if load.Available && (load.Load1 < 0 || load.Load5 < 0 || load.Load15 < 0) {
+		t.Fatalf("invalid host load: %+v", load)
+	}
+}
+
+func sustainedIngressMatrixMetadata(t *testing.T) (string, int, int, int, string, bool) {
+	t.Helper()
+	runID := os.Getenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_MATRIX_RUN_ID")
+	if runID == "" {
+		return "", 0, 0, 0, "", false
+	}
+	strategy := os.Getenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_ORDER_STRATEGY")
+	if strategy == "" {
+		t.Fatal("matrix order strategy is required when matrix run id is set")
+	}
+	values := make([]int, 3)
+	for i, name := range []string{"MATRIX_ORDINAL", "MATRIX_BLOCK", "ORDER_POSITION"} {
+		text := os.Getenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_" + name)
+		if _, err := fmt.Sscanf(text, "%d", &values[i]); err != nil || values[i] < 0 {
+			t.Fatalf("invalid sustained ingress %s %q", strings.ToLower(name), text)
+		}
+	}
+	if values[2] > 2 {
+		t.Fatalf("invalid sustained ingress order position %d: require 0..2", values[2])
+	}
+	return runID, values[0], values[1], values[2], strategy, true
+}
+
+func TestSustainedIngressMatrixMetadata(t *testing.T) {
+	if _, _, _, _, _, present := sustainedIngressMatrixMetadata(t); present {
+		t.Fatal("matrix metadata unexpectedly present")
+	}
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_MATRIX_RUN_ID", "phase172-block-00")
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_MATRIX_ORDINAL", "2")
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_MATRIX_BLOCK", "0")
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_ORDER_POSITION", "2")
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_ORDER_STRATEGY", "rotating_latin_v1")
+	runID, ordinal, block, position, strategy, present := sustainedIngressMatrixMetadata(t)
+	if !present || runID != "phase172-block-00" || ordinal != 2 || block != 0 || position != 2 || strategy != "rotating_latin_v1" {
+		t.Fatalf("matrix metadata mismatch: %q %d %d %d %q %t", runID, ordinal, block, position, strategy, present)
 	}
 }
 

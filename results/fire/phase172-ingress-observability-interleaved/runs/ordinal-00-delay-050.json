@@ -1,0 +1,390 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-campaign.v2",
+  "workers": 4,
+  "cycles": 6,
+  "retry_max_attempts": 3,
+  "recovery_delay_millis": 50,
+  "worker_cycles": 24,
+  "attempts": 48,
+  "exhaustions": 2,
+  "exhaustion_rate": 0.08333333333333333,
+  "pending_depth": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ],
+  "convergence_millis": 4224,
+  "processed_by_worker": [
+    2,
+    2,
+    1,
+    1
+  ],
+  "exhaustions_by_worker": [
+    1,
+    0,
+    0,
+    1
+  ],
+  "attempt_timings": [
+    {
+      "cycle": 0,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 312570,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 436259,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 11005,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336391,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11693,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 338360,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 8032,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 12743,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 334373,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 13530,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 10781,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313131,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 334865,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11183,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 335916,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 8178,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 14568,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335789,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 22279,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 3570,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 335018,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 12548,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 313852,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 334881,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 13466,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 10862,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 537383,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12185,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 436289,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 15742,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 335479,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11207,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 312819,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313113,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 437209,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 11284,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336705,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11239,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 536700,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 10932,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 436170,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 12704,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 11658,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 312896,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 309599,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12732,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 436406,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 11716,
+      "outcome": "success"
+    }
+  ],
+  "host_load_start": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 1.34,
+    "load_5": 0.53,
+    "load_15": 0.32
+  },
+  "host_load_end": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 1.23,
+    "load_5": 0.52,
+    "load_15": 0.31
+  },
+  "matrix_run_id": "phase172-ordinal-0",
+  "order_strategy": "rotating_latin_v1",
+  "matrix_metadata_present": true
+}

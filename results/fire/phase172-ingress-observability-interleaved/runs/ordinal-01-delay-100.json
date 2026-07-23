@@ -1,0 +1,427 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-campaign.v2",
+  "workers": 4,
+  "cycles": 6,
+  "retry_max_attempts": 3,
+  "recovery_delay_millis": 100,
+  "worker_cycles": 24,
+  "attempts": 53,
+  "exhaustions": 4,
+  "exhaustion_rate": 0.16666666666666666,
+  "pending_depth": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+  ],
+  "convergence_millis": 4152,
+  "processed_by_worker": [
+    2,
+    2,
+    1,
+    1
+  ],
+  "exhaustions_by_worker": [
+    2,
+    0,
+    1,
+    1
+  ],
+  "attempt_timings": [
+    {
+      "cycle": 0,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313251,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 336521,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 11097,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 337197,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12160,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 10862,
+      "outcome": "success"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 387613,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 3772,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 0,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 11111,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335188,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11714,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313493,
+      "outcome": "success"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 335589,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12215,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 12283,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 336652,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 7318,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 1,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 10878,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335282,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 38239,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 3562,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 338108,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 22735,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 10598,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 313911,
+      "outcome": "success"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 336406,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 2,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 11625,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 336424,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 22366,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 0,
+      "attempt": 3,
+      "elapsed_micros": 4506,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 335161,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 11019,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 335817,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12254,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 3,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 11268,
+      "outcome": "success"
+    },
+    {
+      "cycle": 3,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 313313,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 313336,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 334761,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 2,
+      "elapsed_micros": 14091,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 1,
+      "attempt": 3,
+      "elapsed_micros": 10951,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 335319,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 11300,
+      "outcome": "success"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 435621,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 4,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 11042,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 1,
+      "elapsed_micros": 335418,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 0,
+      "attempt": 2,
+      "elapsed_micros": 11900,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 1,
+      "attempt": 1,
+      "elapsed_micros": 313488,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 1,
+      "elapsed_micros": 336588,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 2,
+      "elapsed_micros": 12779,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 2,
+      "attempt": 3,
+      "elapsed_micros": 11003,
+      "outcome": "success"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 1,
+      "elapsed_micros": 335151,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 2,
+      "elapsed_micros": 23657,
+      "outcome": "cas_conflict"
+    },
+    {
+      "cycle": 5,
+      "worker": 3,
+      "attempt": 3,
+      "elapsed_micros": 3629,
+      "outcome": "cas_conflict"
+    }
+  ],
+  "host_load_start": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 1.23,
+    "load_5": 0.52,
+    "load_15": 0.31
+  },
+  "host_load_end": {
+    "source": "proc_loadavg",
+    "available": true,
+    "logical_cpus": 8,
+    "load_1": 1.3,
+    "load_5": 0.54,
+    "load_15": 0.32
+  },
+  "matrix_run_id": "phase172-ordinal-1",
+  "matrix_ordinal": 1,
+  "order_position": 1,
+  "order_strategy": "rotating_latin_v1",
+  "matrix_metadata_present": true
+}
