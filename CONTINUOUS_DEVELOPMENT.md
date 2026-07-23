@@ -4283,4 +4283,6 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 2026-07-23 06:40 — HEARTBEAT — Concluído e verificado o teste de exaustão de fallback em runtime `simpler-format-recovery-campaign-proxy-reject`. O pipeline interceptou corretamente a terceira falha consecutiva injetada (malformed -> incomplete -> incomplete), e em vez de tentar chamadas além do orçado de fallback ou cometer dados corrompidos, rejeitou apropriadamente, esgotou a operação (`StateExhausted`), e preservou integralmente o trail atestando o esgotamento via receipts. Com isso, confirmamos estabilidade estrita do loop. Sucesso da Fase 139.
 
 ### Fase 140 - Otimização de Storage de Tool Calls em Completions
-- [ ] Analisar os logs atuais e a persistência de tools no receipt de completion do provider (especialmente para long-polling tools / multi-turn) visando mitigação do tamanho da payload armazenada no SQLite.
+- [x] `DONE` Analisar os logs atuais e a persistência de tools no receipt de completion do provider (especialmente para long-polling tools / multi-turn) visando mitigação do tamanho da payload armazenada no SQLite.
+
+2026-07-23 06:42 — HEARTBEAT — Concluído e verificado o teste da Fase 140 para mitigação e otimização do storage de tool calls em completions. Modificada a assinatura e omitempty no `model_completion_receipt.go` além do `model.go` truncando payloads maiores de 64KB e validado em cima de testes de domínio, core e integração port-sqlite sem perda de contexto semântico vital para logs locais.
