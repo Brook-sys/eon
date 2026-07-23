@@ -13,6 +13,7 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/storage/sqlite"
 )
 
@@ -165,38 +166,48 @@ func runSQLiteBoundedContentionHelper(t *testing.T, mode string) {
 	writeSignalFile(t, readyPath)
 	waitForFile(t, startPath, 5*time.Second)
 
-	result := boundedContentionResult{Writer: writer}
-	for attempt := 1; attempt <= boundedContentionMaxAttempts; attempt++ {
-		result.Attempts = attempt
-		ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
-		err := store.Update(ctx, reserveIdempotency(writer))
-		cancel()
-		if err == nil {
-			result.Succeeded = true
-			break
-		}
-		if errors.Is(err, port.ErrConflict) {
-			result.Conflicts++
-		} else if isSQLiteBusy(err) || errors.Is(err, context.DeadlineExceeded) {
-			result.Busy++
-		} else {
-			result.Error = err.Error()
-			break
-		}
-		backoff := boundedContentionBaseBackoff << (attempt - 1)
-		if backoff > 120*time.Millisecond {
-			backoff = 120 * time.Millisecond
-		}
-		// A stable per-writer offset prevents all subprocesses that observed the
-		// same lock from waking in phase and colliding for every retry.
-		hash := fnv.New32a()
-		_, _ = hash.Write([]byte(writer))
-		backoff += time.Duration(hash.Sum32()%37) * time.Millisecond
-		result.BackoffMillis += backoff.Milliseconds()
-		time.Sleep(backoff)
+	// The operation is safe to repeat because ReserveIdempotency is keyed by
+	// writer and the store rejects a divergent replay. Keep retry ownership in
+	// this caller rather than hiding it in the SQLite adapter.
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(writer))
+	jitter := fixedJitterSource{value: uint64(hash.Sum32() % 37)}
+	report, runErr := retry.Do(
+		context.Background(),
+		retry.Policy{
+			MaxAttempts: boundedContentionMaxAttempts,
+			BaseDelay:   boundedContentionBaseBackoff,
+			MaxDelay:    120 * time.Millisecond,
+			MaxJitter:   36 * time.Millisecond,
+		},
+		retry.SystemSleeper{},
+		jitter,
+		func(err error) (string, bool) {
+			switch {
+			case errors.Is(err, port.ErrConflict):
+				return "conflict", true
+			case isSQLiteBusy(err), errors.Is(err, context.DeadlineExceeded):
+				return "busy", true
+			default:
+				return "fatal", false
+			}
+		},
+		func(_ context.Context, _ int) error {
+			ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+			defer cancel()
+			return store.Update(ctx, reserveIdempotency(writer))
+		},
+	)
+	result := boundedContentionResult{
+		Writer:        writer,
+		Attempts:      report.Attempts,
+		Busy:          report.Classes["busy"],
+		Conflicts:     report.Classes["conflict"],
+		BackoffMillis: report.SleepTotal.Milliseconds(),
+		Succeeded:     runErr == nil,
 	}
-	if !result.Succeeded && result.Error == "" {
-		result.Error = "retry budget exhausted"
+	if runErr != nil {
+		result.Error = runErr.Error()
 	}
 	body, err := json.Marshal(result)
 	if err != nil {
@@ -205,6 +216,14 @@ func runSQLiteBoundedContentionHelper(t *testing.T, mode string) {
 	if err := os.WriteFile(resultPath, append(body, '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+type fixedJitterSource struct {
+	value uint64
+}
+
+func (source fixedJitterSource) Uint64() (uint64, error) {
+	return source.value, nil
 }
 
 func writeSignalFile(t *testing.T, path string) {
