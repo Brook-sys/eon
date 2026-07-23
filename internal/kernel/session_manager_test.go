@@ -220,6 +220,9 @@ func TestLocalSessionManager_RollbackSpawnCompensatesPendingOnly(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	if err := manager.ReleaseTerminal(ctx, idSecond, 0); err != nil {
+		t.Fatal(err)
+	}
 
 	// Spawn a third session and move it to RUNNING.
 	id3, err := manager.Spawn(ctx, kernel.SubagentSpec{

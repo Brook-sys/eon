@@ -184,6 +184,99 @@ func TestSupervisorRetriesTerminalReleaseAfterPostCommitFailure(t *testing.T) {
 	}
 }
 
+func TestSupervisorTransportTerminalHoldsCapacityUntilCanonicalCommit(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		observation kernel.SubagentObservation
+		wantState   domain.SubagentState
+		wantResult  string
+		wantError   string
+	}{
+		{
+			name:        "complete",
+			observation: kernel.SubagentObservation{State: kernel.SessionStateComplete, Result: "transport result"},
+			wantState:   domain.SubagentStateComplete,
+			wantResult:  "transport result",
+		},
+		{
+			name:        "failed",
+			observation: kernel.SubagentObservation{State: kernel.SessionStateFailed, Failure: "transport_failed"},
+			wantState:   domain.SubagentStateError,
+			wantError:   "transport_failed",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			real := memory.New()
+			clock := &supervisorMockClock{currentTime: time.Date(2026, 7, 23, 13, 20, 0, 0, time.UTC)}
+			local, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			manager, err := kernel.NewPersistentSessionManager(local, real, clock, &supervisorIDs{}, kernel.PersistentSessionPolicy{
+				MissionID: "mission-transport-terminal-capacity", MaxAttempts: 1, Timeout: time.Minute,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := manager.Spawn(ctx, kernel.SubagentSpec{Task: "transport terminal before commit", ContextMode: "isolated", Labels: map[string]string{"task_id": "transport-terminal-" + tc.name}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			observation := tc.observation
+			observation.ID = id
+			observation.Attempt = 0
+			if err := manager.PublishStatus(ctx, observation); err != nil {
+				t.Fatal(err)
+			}
+
+			blocked := kernel.SubagentSpec{Task: "wait for transport terminal commit", ContextMode: "isolated", Labels: map[string]string{"task_id": "transport-terminal-blocked-" + tc.name}}
+			if _, err := manager.Spawn(ctx, blocked); !errors.Is(err, kernel.ErrSessionLimit) {
+				t.Fatalf("spawn before canonical commit = %v, want ErrSessionLimit", err)
+			}
+			failing := &rollbackAfterSupervisorUpdateStore{Store: real, fail: true}
+			supervisor := &kernel.Supervisor{Store: failing, Manager: manager, Clock: clock, IDs: &supervisorIDs{}}
+			if _, err := supervisor.Reconcile(ctx); err == nil {
+				t.Fatal("expected injected transport-terminal commit failure")
+			}
+			if _, err := manager.Spawn(ctx, blocked); !errors.Is(err, kernel.ErrSessionLimit) {
+				t.Fatalf("spawn after rolled-back terminal commit = %v, want ErrSessionLimit", err)
+			}
+			if err := real.View(ctx, func(r port.Reader) error {
+				record, err := r.SubagentRecord(string(id))
+				if err != nil {
+					return err
+				}
+				if record.State != domain.SubagentStatePending {
+					t.Fatalf("rolled-back canonical transport terminal = %+v", record)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			if n, err := supervisor.Reconcile(ctx); err != nil || n != 1 {
+				t.Fatalf("transport terminal recovery=(%d,%v)", n, err)
+			}
+			if err := real.View(ctx, func(r port.Reader) error {
+				record, err := r.SubagentRecord(string(id))
+				if err != nil {
+					return err
+				}
+				if record.State != tc.wantState || record.Result != tc.wantResult || record.ErrorCode != tc.wantError {
+					t.Fatalf("canonical transport terminal = %+v", record)
+				}
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := manager.Spawn(ctx, blocked); err != nil {
+				t.Fatalf("spawn after transport terminal commit: %v", err)
+			}
+		})
+	}
+}
+
 func TestSupervisorRecoveredRetryExpiryHoldsCapacityUntilCanonicalCommit(t *testing.T) {
 	ctx := context.Background()
 	real := memory.New()

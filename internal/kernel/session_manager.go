@@ -75,10 +75,11 @@ type SessionManager interface {
 	RollbackSpawn(ctx context.Context, id SessionID) error
 	Restore(ctx context.Context, status SubagentStatus) error
 	PublishStatus(ctx context.Context, observation SubagentObservation) error
-	// ReleaseTerminal confirms that a supervisor-published deadline/lease
-	// terminal is durable. Until confirmation, the generation continues to
-	// consume admission capacity so a rolled-back canonical commit cannot open
-	// an extra process-local slot.
+	// ReleaseTerminal confirms that a process-observed terminal generation is
+	// durable in the canonical store. Until confirmation, the generation keeps
+	// consuming admission capacity so a rolled-back canonical commit cannot open
+	// an extra process-local slot, regardless of whether the terminal came from
+	// transport completion, transport failure, deadline, or lease expiry.
 	ReleaseTerminal(ctx context.Context, id SessionID, attempt int) error
 	Retry(ctx context.Context, id SessionID) error
 	Status(ctx context.Context, id SessionID) (SubagentStatus, error)
@@ -313,10 +314,11 @@ func (m *localSessionManager) PublishStatus(ctx context.Context, observation Sub
 	if failure != "" {
 		status.Error = errors.New(failure)
 	}
-	if state == SessionStateFailed && (failure == subagentDeadlineExceeded || failure == "lease_expired") {
+	if state == SessionStateComplete || state == SessionStateFailed {
+		// A terminal transport observation is process-local evidence until the
+		// Supervisor commits the matching canonical record. Hold its slot across
+		// that transaction boundary; ReleaseTerminal is the post-commit ack.
 		m.terminalHeld[id] = observation.Attempt
-	} else if state == SessionStateComplete || state == SessionStateFailed {
-		delete(m.terminalHeld, id)
 	}
 	return nil
 }

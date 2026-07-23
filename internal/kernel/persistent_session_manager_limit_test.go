@@ -51,6 +51,12 @@ func TestPersistentSessionManagerDoesNotPersistRejectedAdmissionAndRecovers(t *t
 	if err := manager.PublishStatus(ctx, kernel.SubagentObservation{ID: firstID, Attempt: 0, State: kernel.SessionStateComplete, Result: "done"}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := manager.Spawn(ctx, blockedSpec); !errors.Is(err, kernel.ErrSessionLimit) {
+		t.Fatalf("spawn before terminal durability acknowledgement = %v, want ErrSessionLimit", err)
+	}
+	if err := manager.ReleaseTerminal(ctx, firstID, 0); err != nil {
+		t.Fatal(err)
+	}
 	blockedID, err := manager.Spawn(ctx, blockedSpec)
 	if err != nil {
 		t.Fatalf("spawn after terminal capacity release: %v", err)
