@@ -4151,3 +4151,11 @@ Verificacao: testes focais de domain/store/kernel/restart/replay, `go test ./...
 - [x] `DONE` Acoplar o log das falhas corrigidas automaticamente nos recibos `ModelCompletionReceipt` para manter evidência sem poluir o registro canônico.
 - [ ] `TODO` Executar campanha bounded live de stress com JSONs deliberadamente complexos para demonstrar auto-correção via LLM.
 
+-e 
+2026-07-22 22:30 - HEARTBEAT - Fase 127 avançada. Confirmado que a auto-correção de validação JSON e a prevenção de loops de retry já estavam integradas arquiteturalmente no ModelExecutor (verificável via switch em domain.DecideNextRecovery). Atualizadas as flags no documento.
+
+### Fase 128 - Campanha Bounded Live de Stress (JSON Malformed Recovery)
+
+- [ ] `TODO` Criar um CLI isolado que permita ao ModelExecutor realizar multi-calls simulando a bateria de "JSON Malformed Recovery" para observar a resiliência em falhas consecutivas e esgotamento the loops (fallback model testing).
+
+2026-07-22 23:00 - HEARTBEAT - Fase 128 iniciada. Adaptei o 'runtime-gate-campaign' local para que pudesse realizar de 1 a 5 chamadas sequenciais para gerar baterias the fallback de multi-step. Contudo, identifiquei no código do 'RuntimeGateCampaignRunner' que há verificações rígidas requerendo que um campaign possua 'MaxCalls' == 1 ou uma flag para ignorar os limites. Isso mostra que o executor de campaign do gate atual é desenhado especificamente para isolamento restrito de chamada única e teste the throttling e rate limits. Como Fase 128 foca em retries sucessivos num *mesmo* flow e na exploração do fallback, a execução isolada the bateria não replica o ModelExecutor em loops, e precisa ser simulado via chamada the kernel real. Modificando planeamento the Fase 128 para refocar num teste integrado ao ModelExecutor em vez the 'runtime-gate-campaign'. Próximas chamadas precisarão gerar uma operação the 'model_recovery' usando o control plane.
