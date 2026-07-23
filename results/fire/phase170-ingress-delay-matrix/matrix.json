@@ -1,0 +1,87 @@
+{
+  "schema_version": "motor-autonomo.sustained-ingress-delay-matrix.v1",
+  "hypothesis": "A fixed process-level recovery delay may reduce repeated exhaustion without changing transaction retry policy.",
+  "scenario": "Four SQLite processes, six rotating-leader cycles, one durable winner per cycle.",
+  "bounds": {
+    "delays_millis": [
+      50,
+      100,
+      200
+    ],
+    "runs_per_delay": 1,
+    "workers": 4,
+    "cycles": 6,
+    "max_attempts_per_worker_cycle": 3,
+    "campaign_timeout_seconds": 20
+  },
+  "results": [
+    {
+      "recovery_delay_millis": 50,
+      "attempts": 50,
+      "exhaustions": 3,
+      "exhaustion_rate": 0.125,
+      "convergence_millis": 4799,
+      "processed_by_worker": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "pending_depth": [
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "recovery_delay_millis": 100,
+      "attempts": 53,
+      "exhaustions": 5,
+      "exhaustion_rate": 0.20833333333333334,
+      "convergence_millis": 4981,
+      "processed_by_worker": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "pending_depth": [
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "recovery_delay_millis": 200,
+      "attempts": 52,
+      "exhaustions": 5,
+      "exhaustion_rate": 0.20833333333333334,
+      "convergence_millis": 5601,
+      "processed_by_worker": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "pending_depth": [
+        6,
+        5,
+        4,
+        3,
+        2,
+        1,
+        0
+      ]
+    }
+  ],
+  "decision": "Keep the production delay at 100 ms. All samples converged fairly; the single-sample matrix is insufficient for tuning, and 200 ms increased convergence time without reducing exhaustion versus 100 ms.",
+  "next_experiment": "Repeat each delay with at least five isolated runs before considering a production change."
+}

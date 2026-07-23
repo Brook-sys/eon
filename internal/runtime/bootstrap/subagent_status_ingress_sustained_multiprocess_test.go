@@ -21,6 +21,8 @@ const sustainedIngressMultiprocessMode = "MOTOR_AUTONOMO_SUSTAINED_INGRESS_MULTI
 
 const sustainedIngressRecoveryDelay = 100 * time.Millisecond
 
+const sustainedIngressCampaignReportSchema = "motor-autonomo.sustained-ingress-campaign.v1"
+
 type sustainedIngressProcessReport struct {
 	Cycle          int    `json:"cycle"`
 	Worker         int    `json:"worker"`
@@ -34,6 +36,22 @@ type sustainedIngressProcessReport struct {
 	RecoveryMillis int64  `json:"recovery_millis"`
 	ElapsedMillis  int64  `json:"elapsed_millis"`
 	Error          string `json:"error,omitempty"`
+}
+
+type sustainedIngressCampaignReport struct {
+	SchemaVersion       string  `json:"schema_version"`
+	Workers             int     `json:"workers"`
+	Cycles              int     `json:"cycles"`
+	RetryMaxAttempts    int     `json:"retry_max_attempts"`
+	RecoveryDelayMillis int64   `json:"recovery_delay_millis"`
+	WorkerCycles        int     `json:"worker_cycles"`
+	Attempts            int     `json:"attempts"`
+	Exhaustions         int     `json:"exhaustions"`
+	ExhaustionRate      float64 `json:"exhaustion_rate"`
+	PendingDepth        []int   `json:"pending_depth"`
+	ConvergenceMillis   int64   `json:"convergence_millis"`
+	ProcessedByWorker   []int   `json:"processed_by_worker"`
+	ExhaustionsByWorker []int   `json:"exhaustions_by_worker"`
 }
 
 // TestSubagentStatusIngressSustainedContentionCampaign keeps the production
@@ -51,6 +69,7 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 	seedMixedIngressReceipts(t, dbPath)
 
 	const workers = 4
+	recoveryDelay := sustainedIngressCampaignRecoveryDelay(t)
 	pendingDepth := []int{mixedIngressReceiptCount}
 	processedByWorker := make([]int, workers)
 	exhaustionsByWorker := make([]int, workers)
@@ -109,7 +128,7 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 			if report.Attempts > policy.MaxAttempts || report.Retries > policy.MaxAttempts-1 || report.Exhaustions > 1 {
 				t.Fatalf("cycle %d worker %d exceeded production budget: %+v", cycle, worker, report)
 			}
-			if report.Exhaustions == 1 && report.RecoveryMillis != sustainedIngressRecoveryDelay.Milliseconds() {
+			if report.Exhaustions == 1 && report.RecoveryMillis != recoveryDelay.Milliseconds() {
 				t.Fatalf("cycle %d worker %d recovery pacing mismatch: %+v", cycle, worker, report)
 			}
 			if report.Exhaustions == 0 && report.RecoveryMillis != 0 {
@@ -163,6 +182,14 @@ func TestSubagentStatusIngressSustainedContentionCampaign(t *testing.T) {
 	if pendingDepth[len(pendingDepth)-1] != 0 {
 		t.Fatalf("campaign did not converge: pending trace=%v", pendingDepth)
 	}
+	report := sustainedIngressCampaignReport{
+		SchemaVersion: sustainedIngressCampaignReportSchema, Workers: workers, Cycles: mixedIngressReceiptCount,
+		RetryMaxAttempts: policy.MaxAttempts, RecoveryDelayMillis: recoveryDelay.Milliseconds(),
+		WorkerCycles: workerCycleTotal, Attempts: totalAttempts, Exhaustions: totalExhaustions,
+		ExhaustionRate: exhaustionRate, PendingDepth: pendingDepth, ConvergenceMillis: convergence.Milliseconds(),
+		ProcessedByWorker: processedByWorker, ExhaustionsByWorker: exhaustionsByWorker,
+	}
+	writeSustainedIngressCampaignReport(t, report)
 	t.Logf("sustained ingress: exhaustion_rate=%.3f pending_depth=%v convergence=%s attempts=%d processed_by_worker=%v exhaustions_by_worker=%v", exhaustionRate, pendingDepth, convergence, totalAttempts, processedByWorker, exhaustionsByWorker)
 }
 
@@ -242,8 +269,9 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 		Exhaustions: report.Exhaustions, SleepMillis: report.SleepTotal.Milliseconds(),
 	}
 	if errors.Is(runErr, retry.ErrBudgetExhausted) {
-		time.Sleep(sustainedIngressRecoveryDelay)
-		result.RecoveryMillis = sustainedIngressRecoveryDelay.Milliseconds()
+		recoveryDelay := sustainedIngressCampaignRecoveryDelay(t)
+		time.Sleep(recoveryDelay)
+		result.RecoveryMillis = recoveryDelay.Milliseconds()
 	} else if runErr != nil {
 		result.Error = runErr.Error()
 	}
@@ -253,6 +281,90 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(resultPath, append(body, '\n'), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func sustainedIngressCampaignRecoveryDelay(t *testing.T) time.Duration {
+	t.Helper()
+	text := os.Getenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_RECOVERY_DELAY_MS")
+	if text == "" {
+		return sustainedIngressRecoveryDelay
+	}
+	var milliseconds int64
+	if _, err := fmt.Sscanf(text, "%d", &milliseconds); err != nil || milliseconds < 1 || milliseconds > 1000 {
+		t.Fatalf("invalid sustained ingress recovery delay %q: require integer 1..1000 ms", text)
+	}
+	return time.Duration(milliseconds) * time.Millisecond
+}
+
+func TestSustainedIngressCampaignRecoveryDelay(t *testing.T) {
+	if got := sustainedIngressCampaignRecoveryDelay(t); got != sustainedIngressRecoveryDelay {
+		t.Fatalf("default recovery delay=%s want=%s", got, sustainedIngressRecoveryDelay)
+	}
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_RECOVERY_DELAY_MS", "250")
+	if got := sustainedIngressCampaignRecoveryDelay(t); got != 250*time.Millisecond {
+		t.Fatalf("experimental recovery delay=%s want=250ms", got)
+	}
+}
+
+func TestWriteSustainedIngressCampaignReport(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "campaign.json")
+	t.Setenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_REPORT", path)
+	want := sustainedIngressCampaignReport{
+		SchemaVersion: sustainedIngressCampaignReportSchema, Workers: 4, Cycles: 6,
+		RetryMaxAttempts: 3, RecoveryDelayMillis: 100, WorkerCycles: 24,
+		Attempts: 52, Exhaustions: 4, ExhaustionRate: 4.0 / 24.0,
+		PendingDepth: []int{6, 5, 4, 3, 2, 1, 0}, ProcessedByWorker: []int{2, 2, 1, 1},
+		ExhaustionsByWorker: []int{1, 1, 1, 1}, ConvergenceMillis: 5000,
+	}
+	writeSustainedIngressCampaignReport(t, want)
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got sustainedIngressCampaignReport
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.SchemaVersion != want.SchemaVersion || got.Attempts != want.Attempts || got.ConvergenceMillis != want.ConvergenceMillis || len(got.PendingDepth) != len(want.PendingDepth) {
+		t.Fatalf("round-trip report mismatch: got=%+v want=%+v", got, want)
+	}
+}
+
+func writeSustainedIngressCampaignReport(t *testing.T, report sustainedIngressCampaignReport) {
+	t.Helper()
+	path := os.Getenv("MOTOR_AUTONOMO_SUSTAINED_INGRESS_REPORT")
+	if path == "" {
+		return
+	}
+	body, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = append(body, '\n')
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".sustained-ingress-*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	temporaryPath := temporary.Name()
+	defer os.Remove(temporaryPath)
+	if err := temporary.Chmod(0o600); err != nil {
+		temporary.Close()
+		t.Fatal(err)
+	}
+	if _, err := temporary.Write(body); err != nil {
+		temporary.Close()
+		t.Fatal(err)
+	}
+	if err := temporary.Sync(); err != nil {
+		temporary.Close()
+		t.Fatal(err)
+	}
+	if err := temporary.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(temporaryPath, path); err != nil {
 		t.Fatal(err)
 	}
 }
