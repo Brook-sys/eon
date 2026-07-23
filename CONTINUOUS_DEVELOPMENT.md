@@ -4311,4 +4311,9 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 2026-07-23 08:42 — HEARTBEAT — Fase 144 concluída. Implementados os testes de conflito no `SubagentStatusIngressWorker`. A bateria focada (`TestSubagentStatusIngressWorkerLimitsConflictsConcurrently` e `TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState`) prova que recibos com status incompatíveis (p. ex., RUNNING e COMPLETE divergentes que chegam atrasados na mesma janela de lease) recebem corretamente o código de rejeição (`TERMINAL_CONFLICT` ou `ATTEMPT_MISMATCH`) sem poluir a máquina de estado ou gerar pânico nas instâncias já completadas de `SessionManager`. 
 
 ### Fase 145 - Otimização de Crash matrix
-- [ ] `READY` Implementar análise de "Crash intent classifier" para detectar fallbacks explícitos no SQLite Store: Garantir que instabilidades controladas não vazem context leakage para fora das rotinas transacionais na suite de testes `motor-autonomo/internal/storage/spike`.
+- [x] `DONE` Implementar análise de "Crash intent classifier" para detectar fallbacks explícitos no SQLite Store (`TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage` em `motor-autonomo/internal/storage/spike`). Garantiu que fallbacks instáveis não causem context leakage e mantenham a WAL limpa.
+
+2026-07-23 08:44 — HEARTBEAT — Fase 145 concluída. Adicionado o teste `TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage` no pacote `spike`, confirmando que quando o isolamento excede o timeout por via de uma simulação de "fallback intent" (limite de conectividade ou boundary durability fake fail), a reversão transacional não propaga o context leakage (ou erro nativo de cancelamento) silencioso, registrando adequadamente o `OutcomeNotApplied` preservando integridade da engine e do `EventLog`.
+
+### Fase 146 - Refatorar persistência de Cursor em Transport Syncs 
+- [ ] `READY` Elaborar caso de teste verificando concorrência otimista (optimistic concurrency) ao persistir `ChannelCursor`. Um erro conflitivo (stale revision) deve impedir que ponteiros remotos antigos desfaçam observações de polling mais avançadas geradas por outras threads.
