@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -72,6 +74,46 @@ type walCheckpointScaleMatrix struct {
 	Cells         []walCheckpointScaleCell `json:"cells"`
 }
 
+type walCheckpointIntDistribution struct {
+	Values []int64 `json:"values"`
+	P50    int64   `json:"p50"`
+	P95    int64   `json:"p95"`
+	Min    int64   `json:"min"`
+	Max    int64   `json:"max"`
+}
+
+type walCheckpointFloatDistribution struct {
+	Values []float64 `json:"values"`
+	P50    float64   `json:"p50"`
+	P95    float64   `json:"p95"`
+	Min    float64   `json:"min"`
+	Max    float64   `json:"max"`
+}
+
+type walCheckpointAggregatePair struct {
+	Synchronous       string                         `json:"synchronous"`
+	WalAutoCheckpoint int                            `json:"wal_auto_checkpoint"`
+	NumCommits        int                            `json:"num_commits"`
+	SampleCount       int                            `json:"sample_count"`
+	PassiveReopenMs   walCheckpointIntDistribution   `json:"passive_reopen_ms"`
+	TruncateReopenMs  walCheckpointIntDistribution   `json:"truncate_reopen_ms"`
+	Speedup           walCheckpointFloatDistribution `json:"speedup"`
+}
+
+type walCheckpointAggregateReport struct {
+	SchemaVersion string                       `json:"schema_version"`
+	RepeatCount   int                          `json:"repeat_count"`
+	Pairs         []walCheckpointAggregatePair `json:"pairs"`
+}
+
+type walCheckpointPairKey struct {
+	sync string
+	auto int
+	n    int
+}
+
+type walCheckpointSamples struct{ passive, truncate []int64 }
+
 func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 	ctx := context.Background()
 
@@ -110,25 +152,37 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 		}
 	}
 
-	// Randomize execution order if requested (phase 182: paired randomized rerun).
-	// Uses a deterministic seed for reproducibility; the env var selects the mode.
-	if os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_RANDOMIZE") == "1" {
-		rng := rand.New(rand.NewSource(42))
-		rng.Shuffle(len(descs), func(i, j int) { descs[i], descs[j] = descs[j], descs[i] })
-	}
-
 	matrix := walCheckpointScaleMatrix{
 		SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-reopen.v3",
 	}
-
-	for _, d := range descs {
-		cell := runWalCheckpointScaleCell(t, ctx, d.sync, d.autoChk, d.n, d.closeMode)
-		matrix.Cells = append(matrix.Cells, cell)
-		t.Logf("sync=%s autochk=%d n=%d close=%s commit=%dms trunc=%dms reopen=%dms wal_before=%dB wal_after_trunc=%dB wal_after=%dB visible=%v busy=%v",
-			d.sync, d.autoChk, d.n, d.closeMode,
-			cell.CommitDurationMs, cell.TruncateDurationMs, cell.ReopenDurationMs,
-			cell.WalSizeBeforeClose, cell.WalSizeAfterTruncate, cell.WalSizeAfterReopen,
-			cell.RecordsVisible, cell.TruncateBusy)
+	repeats := envBoundedInt(t, "MOTOR_AUTONOMO_SQLITE_WAL_SCALE_REPEATS", 1, 1, 100)
+	samples := make(map[walCheckpointPairKey]*walCheckpointSamples)
+	for run := 0; run < repeats; run++ {
+		runDescs := append([]cellDesc(nil), descs...)
+		if os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_RANDOMIZE") == "1" {
+			rng := rand.New(rand.NewSource(42 + int64(run)))
+			rng.Shuffle(len(runDescs), func(i, j int) { runDescs[i], runDescs[j] = runDescs[j], runDescs[i] })
+		}
+		for _, d := range runDescs {
+			cell := runWalCheckpointScaleCell(t, ctx, d.sync, d.autoChk, d.n, d.closeMode)
+			if run == 0 {
+				matrix.Cells = append(matrix.Cells, cell)
+			}
+			key := walCheckpointPairKey{d.sync, d.autoChk, d.n}
+			if samples[key] == nil {
+				samples[key] = &walCheckpointSamples{}
+			}
+			if d.closeMode == "passive" {
+				samples[key].passive = append(samples[key].passive, cell.ReopenDurationMs)
+			} else {
+				samples[key].truncate = append(samples[key].truncate, cell.TruncateDurationMs+cell.ReopenDurationMs)
+			}
+			t.Logf("run=%d sync=%s autochk=%d n=%d close=%s commit=%dms trunc=%dms reopen=%dms wal_before=%dB wal_after_trunc=%dB wal_after=%dB visible=%v busy=%v",
+				run+1, d.sync, d.autoChk, d.n, d.closeMode,
+				cell.CommitDurationMs, cell.TruncateDurationMs, cell.ReopenDurationMs,
+				cell.WalSizeBeforeClose, cell.WalSizeAfterTruncate, cell.WalSizeAfterReopen,
+				cell.RecordsVisible, cell.TruncateBusy)
+		}
 	}
 
 	// Assert all cells preserved all records.
@@ -192,6 +246,19 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(reportPath, append(body, '\n'), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if aggregatePath := os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_AGGREGATE_REPORT"); aggregatePath != "" {
+		report := buildWalCheckpointAggregate(repeats, samples)
+		body, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(aggregatePath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(aggregatePath, append(body, '\n'), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -294,4 +361,178 @@ func fileStatSize(path string) int64 {
 		return info.Size()
 	}
 	return 0
+}
+
+func envBoundedInt(t *testing.T, key string, defVal, minVal, maxVal int) int {
+	t.Helper()
+	v := defVal
+	if raw := os.Getenv(key); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			t.Fatalf("%s: not an integer: %q", key, raw)
+		}
+		v = parsed
+	}
+	if v < minVal || v > maxVal {
+		t.Fatalf("%s: value %d out of [%d, %d]", key, v, minVal, maxVal)
+	}
+	return v
+}
+
+// intPercentile returns the p-th percentile (0–100) of a sorted copy of vals.
+// Uses nearest-rank: p=50 → median, p=95 → 95th percentile.
+func intPercentile(vals []int64, p float64) int64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	sorted := append([]int64(nil), vals...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	idx := int(math.Ceil((p/100.0)*float64(len(sorted)))) - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return sorted[idx]
+}
+
+// intDistribution builds a walCheckpointIntDistribution from a slice of int64 samples.
+func intDistribution(vals []int64) walCheckpointIntDistribution {
+	sorted := append([]int64(nil), vals...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	return walCheckpointIntDistribution{
+		Values: sorted,
+		P50:    intPercentile(vals, 50),
+		P95:    intPercentile(vals, 95),
+		Min:    minInt64(vals),
+		Max:    maxInt64(vals),
+	}
+}
+
+// floatPercentile returns the p-th percentile of a sorted copy of vals.
+func floatPercentile(vals []float64, p float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	sorted := append([]float64(nil), vals...)
+	sort.Float64s(sorted)
+	idx := int(math.Ceil((p/100.0)*float64(len(sorted)))) - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return sorted[idx]
+}
+
+func floatDistribution(vals []float64) walCheckpointFloatDistribution {
+	sorted := append([]float64(nil), vals...)
+	sort.Float64s(sorted)
+	return walCheckpointFloatDistribution{
+		Values: sorted,
+		P50:    floatPercentile(vals, 50),
+		P95:    floatPercentile(vals, 95),
+		Min:    minFloat64(vals),
+		Max:    maxFloat64(vals),
+	}
+}
+
+func buildWalCheckpointAggregate(repeats int, samples map[walCheckpointPairKey]*walCheckpointSamples) walCheckpointAggregateReport {
+	var keys []walCheckpointPairKey
+	for k := range samples {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].sync != keys[j].sync {
+			return keys[i].sync < keys[j].sync
+		}
+		if keys[i].auto != keys[j].auto {
+			return keys[i].auto < keys[j].auto
+		}
+		return keys[i].n < keys[j].n
+	})
+	var pairs []walCheckpointAggregatePair
+	for _, k := range keys {
+		s := samples[k]
+		var speedups []float64
+		minLen := len(s.passive)
+		if len(s.truncate) < minLen {
+			minLen = len(s.truncate)
+		}
+		for i := 0; i < minLen; i++ {
+			if s.truncate[i] > 0 {
+				speedups = append(speedups, float64(s.passive[i])/float64(s.truncate[i]))
+			} else {
+				speedups = append(speedups, 0)
+			}
+		}
+		pairs = append(pairs, walCheckpointAggregatePair{
+			Synchronous:       k.sync,
+			WalAutoCheckpoint: k.auto,
+			NumCommits:        k.n,
+			SampleCount:       minLen,
+			PassiveReopenMs:   intDistribution(s.passive),
+			TruncateReopenMs:  intDistribution(s.truncate),
+			Speedup:           floatDistribution(speedups),
+		})
+	}
+	return walCheckpointAggregateReport{
+		SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-aggregate.v1",
+		RepeatCount:   repeats,
+		Pairs:         pairs,
+	}
+}
+
+func minInt64(vals []int64) int64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v < m {
+			m = v
+		}
+	}
+	return m
+}
+
+func maxInt64(vals []int64) int64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v > m {
+			m = v
+		}
+	}
+	return m
+}
+
+func minFloat64(vals []float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v < m {
+			m = v
+		}
+	}
+	return m
+}
+
+func maxFloat64(vals []float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	m := vals[0]
+	for _, v := range vals[1:] {
+		if v > m {
+			m = v
+		}
+	}
+	return m
 }

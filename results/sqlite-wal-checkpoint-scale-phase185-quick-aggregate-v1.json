@@ -1,0 +1,318 @@
+{
+  "schema_version": "motor-autonomo.sqlite-wal-checkpoint-aggregate.v1",
+  "repeat_count": 3,
+  "pairs": [
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          39,
+          40,
+          44
+        ],
+        "p50": 40,
+        "p95": 44,
+        "min": 39,
+        "max": 44
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          40,
+          42
+        ],
+        "p50": 40,
+        "p95": 42,
+        "min": 39,
+        "max": 42
+      },
+      "speedup": {
+        "values": [
+          0.9523809523809523,
+          0.975,
+          1.1282051282051282
+        ],
+        "p50": 0.975,
+        "p95": 1.1282051282051282,
+        "min": 0.9523809523809523,
+        "max": 1.1282051282051282
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 20,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          39,
+          39,
+          44
+        ],
+        "p50": 39,
+        "p95": 44,
+        "min": 39,
+        "max": 44
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          40,
+          71
+        ],
+        "p50": 40,
+        "p95": 71,
+        "min": 39,
+        "max": 71
+      },
+      "speedup": {
+        "values": [
+          0.5492957746478874,
+          0.975,
+          1.1282051282051282
+        ],
+        "p50": 0.975,
+        "p95": 1.1282051282051282,
+        "min": 0.5492957746478874,
+        "max": 1.1282051282051282
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          39,
+          41,
+          46
+        ],
+        "p50": 41,
+        "p95": 46,
+        "min": 39,
+        "max": 46
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          39,
+          40
+        ],
+        "p50": 39,
+        "p95": 40,
+        "min": 39,
+        "max": 40
+      },
+      "speedup": {
+        "values": [
+          1,
+          1.0512820512820513,
+          1.15
+        ],
+        "p50": 1.0512820512820513,
+        "p95": 1.15,
+        "min": 1,
+        "max": 1.15
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 20,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          41,
+          41,
+          47
+        ],
+        "p50": 41,
+        "p95": 47,
+        "min": 41,
+        "max": 47
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          40,
+          41
+        ],
+        "p50": 40,
+        "p95": 41,
+        "min": 39,
+        "max": 41
+      },
+      "speedup": {
+        "values": [
+          1,
+          1.0512820512820513,
+          1.175
+        ],
+        "p50": 1.0512820512820513,
+        "p95": 1.175,
+        "min": 1,
+        "max": 1.175
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          29,
+          30,
+          31
+        ],
+        "p50": 30,
+        "p95": 31,
+        "min": 29,
+        "max": 31
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          28,
+          28,
+          29
+        ],
+        "p50": 28,
+        "p95": 29,
+        "min": 28,
+        "max": 29
+      },
+      "speedup": {
+        "values": [
+          1,
+          1.0714285714285714,
+          1.1071428571428572
+        ],
+        "p50": 1.0714285714285714,
+        "p95": 1.1071428571428572,
+        "min": 1,
+        "max": 1.1071428571428572
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 20,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          30,
+          30,
+          32
+        ],
+        "p50": 30,
+        "p95": 32,
+        "min": 30,
+        "max": 32
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          31,
+          32,
+          35
+        ],
+        "p50": 32,
+        "p95": 35,
+        "min": 31,
+        "max": 35
+      },
+      "speedup": {
+        "values": [
+          0.9142857142857143,
+          0.9375,
+          0.967741935483871
+        ],
+        "p50": 0.9375,
+        "p95": 0.967741935483871,
+        "min": 0.9142857142857143,
+        "max": 0.967741935483871
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          28,
+          29,
+          29
+        ],
+        "p50": 29,
+        "p95": 29,
+        "min": 28,
+        "max": 29
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          28,
+          29,
+          30
+        ],
+        "p50": 29,
+        "p95": 30,
+        "min": 28,
+        "max": 30
+      },
+      "speedup": {
+        "values": [
+          0.9333333333333333,
+          1,
+          1.0357142857142858
+        ],
+        "p50": 1,
+        "p95": 1.0357142857142858,
+        "min": 0.9333333333333333,
+        "max": 1.0357142857142858
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 20,
+      "sample_count": 3,
+      "passive_reopen_ms": {
+        "values": [
+          31,
+          31,
+          32
+        ],
+        "p50": 31,
+        "p95": 32,
+        "min": 31,
+        "max": 32
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          30,
+          32,
+          63
+        ],
+        "p50": 32,
+        "p95": 63,
+        "min": 30,
+        "max": 63
+      },
+      "speedup": {
+        "values": [
+          0.49206349206349204,
+          1,
+          1.0333333333333334
+        ],
+        "p50": 1,
+        "p95": 1.0333333333333334,
+        "min": 0.49206349206349204,
+        "max": 1.0333333333333334
+      }
+    }
+  ]
+}
