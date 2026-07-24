@@ -1,0 +1,104 @@
+=== RUN   TestSQLiteWalCheckpointScaleCampaign
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=-1 n=500 close=passive commit=2046ms trunc=0ms reopen=274ms wal_before=27365072B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=-1 n=2000 close=truncate commit=74393ms trunc=68ms reopen=33ms wal_before=285524272B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=1000 n=2000 close=truncate commit=25163ms trunc=31ms reopen=17ms wal_before=4350752B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=-1 n=2000 close=truncate commit=21080ms trunc=1408ms reopen=79ms wal_before=285524272B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=1000 n=500 close=truncate commit=29753ms trunc=14ms reopen=28ms wal_before=4181832B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=-1 n=2000 close=passive commit=70200ms trunc=0ms reopen=190ms wal_before=285520152B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=1000 n=2000 close=passive commit=34357ms trunc=0ms reopen=49ms wal_before=4350752B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=1000 n=500 close=truncate commit=2379ms trunc=32ms reopen=12ms wal_before=4181832B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=1000 n=2000 close=truncate commit=72264ms trunc=15ms reopen=107ms wal_before=4350752B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=-1 n=500 close=truncate commit=2127ms trunc=182ms reopen=87ms wal_before=27365072B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=-1 n=500 close=passive commit=11352ms trunc=0ms reopen=46ms wal_before=27365072B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=-1 n=2000 close=passive commit=21768ms trunc=0ms reopen=1476ms wal_before=285524272B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=1000 n=2000 close=passive commit=119335ms trunc=0ms reopen=48ms wal_before=4350752B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=NORMAL autochk=1000 n=500 close=passive commit=2441ms trunc=0ms reopen=50ms wal_before=4181832B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=1000 n=500 close=passive commit=8003ms trunc=0ms reopen=43ms wal_before=4181832B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:180: run=1 sync=FULL autochk=-1 n=500 close=truncate commit=9465ms trunc=17ms reopen=29ms wal_before=27360952B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+panic: test timed out after 10m0s
+	running tests:
+		TestSQLiteWalCheckpointScaleCampaign (10m0s)
+
+goroutine 21455 [running]:
+testing.(*M).startAlarm.func1()
+	/usr/local/go/src/testing/testing.go:2802 +0x354
+created by time.goFunc
+	/usr/local/go/src/time/sleep.go:215 +0x2d
+
+goroutine 1 [chan receive, 9 minutes]:
+testing.(*T).Run(0x2c9c658a908, {0x9f15a0?, 0x0?}, 0xa12e30)
+	/usr/local/go/src/testing/testing.go:2109 +0x4e5
+testing.runTests.func1(0x2c9c658a908)
+	/usr/local/go/src/testing/testing.go:2585 +0x3e
+testing.tRunner(0x2c9c658a908, 0x2c9c646fc58)
+	/usr/local/go/src/testing/testing.go:2036 +0xea
+testing.runTests({0x9e3a44, 0xe}, {0x9f2fdd, 0x26}, 0x2c9c6452408, {0xe305a0, 0x40, 0x40}, {0xc290eedd3146400e, 0x8bb2d5c38f, ...})
+	/usr/local/go/src/testing/testing.go:2583 +0x505
+testing.(*M).Run(0x2c9c65a41e0)
+	/usr/local/go/src/testing/testing.go:2443 +0x6ac
+main.main()
+	_testmain.go:174 +0x9b
+
+goroutine 7 [syscall]:
+syscall.Syscall6(0x4a, 0x6, 0x0, 0x0, 0x0, 0x0, 0x0)
+	/usr/local/go/src/syscall/syscall_linux.go:96 +0x39
+modernc.org/libc.___syscall_cp(0x7fc15401a028?, 0x1000?, 0x7fc1545200e8?, 0x1000c6623f60?, 0x7fc15401a028?, 0x14af10?, 0x2c9c6623fe0?, 0x6c9883?)
+	/home/node/go/pkg/mod/modernc.org/libc@v1.66.10/syscall_musl.go:15 +0x35
+modernc.org/libc.Xfsync(0x2c9c69140b0, 0xc6624758?)
+	/home/node/go/pkg/mod/modernc.org/libc@v1.66.10/ccgo_linux_amd64.go:150845 +0x2e
+modernc.org/sqlite/lib._full_fsync(0x2c9c69140b0?, 0x54553034?, 0x7fc1?, 0x54553030?)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:22819 +0x13
+modernc.org/sqlite/lib._unixSync(0x2c9c69140b0, 0x7fc1545200c8, 0x2)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:22918 +0x8e
+modernc.org/sqlite/lib._sqlite3OsSync(0x2c9c69140b0?, 0x7fc154640620?, 0x5401b060?)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:12247 +0x25
+modernc.org/sqlite/lib._walFrames(0x2c9c69140b0, 0x7fc154520028, 0x1000, 0x7fc154599060, 0x6a, 0x1, 0xa)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:40138 +0xab8
+modernc.org/sqlite/lib._sqlite3WalFrames(...)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:40208
+modernc.org/sqlite/lib._pagerWalFrames(0x2c9c69140b0, 0x7fc1545a0428, 0x7fc154599060, 0x6a, 0x1)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:32427 +0x116
+modernc.org/sqlite/lib._sqlite3PagerCommitPhaseOne(0x2c9c69140b0, 0x7fc1545a0428, 0x0, 0x0)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:35474 +0x175
+modernc.org/sqlite/lib._sqlite3BtreeCommitPhaseOne(0x2c9c69140b0, 0x7fc1545c01a8, 0x0)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:45173 +0xe5
+modernc.org/sqlite/lib._vdbeCommit(0x2c9c69140b0, 0x7fc1545a0028, 0x7fc154546bf8)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:57359 +0xcff
+modernc.org/sqlite/lib._sqlite3VdbeHalt(0x2c9c69140b0, 0x7fc154546bf8)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:57765 +0x2ae
+modernc.org/sqlite/lib._sqlite3VdbeExec(0x2c9c69140b0, 0x7fc154546bf8)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:66263 +0xaab
+modernc.org/sqlite/lib._sqlite3Step(0x2c9c69140b0, 0x7fc154546bf8)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:60518 +0x6c
+modernc.org/sqlite/lib.Xsqlite3_step(0x2c9c69140b0, 0x7fc154546bf8)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:60581 +0xab
+modernc.org/sqlite/lib.Xsqlite3_exec(0x2c9c69140b0, 0x7fc1545a0028, 0x7fc1546684b0, 0x0, 0x0, 0x0)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/lib/sqlite_linux_amd64.go:107242 +0x28a
+modernc.org/sqlite.(*tx).exec(0x2c9c6a00008, {0xa1be28, 0xe57d40}, {0x9e045e?, 0x0?})
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/sqlite.go:791 +0x13a
+modernc.org/sqlite.(*tx).Commit(0x0?)
+	/home/node/go/pkg/mod/modernc.org/sqlite@v1.39.1/sqlite.go:770 +0x2d
+database/sql.(*Tx).Commit.func1()
+	/usr/local/go/src/database/sql/sql.go:2313 +0x29
+database/sql.withLock({0xa1b538, 0x2c9c6836180}, 0x2c9c6624e38)
+	/usr/local/go/src/database/sql/sql.go:3572 +0x71
+database/sql.(*Tx).Commit(0x2c9c659a000)
+	/usr/local/go/src/database/sql/sql.go:2312 +0xea
+motor-autonomo/internal/storage/sqlite.(*Store).Update(0x2c9c675e120, {0xa1be28, 0xe57d40}, 0x2c9c66252c8)
+	/home/node/.openclaw/workspace/motor-autonomo/internal/storage/sqlite/store.go:261 +0x6ca
+motor-autonomo/internal/storage/sqlite_test.runWalCheckpointScaleCell(0x2c9c658ab48, {0xa1be28, 0xe57d40}, {0x9dfe3e, 0x4}, 0x3e8, 0x7d0, {0x9e0dc6, 0x8})
+	/home/node/.openclaw/workspace/motor-autonomo/internal/storage/sqlite/wal_checkpoint_scale_test.go:289 +0x3ee
+motor-autonomo/internal/storage/sqlite_test.TestSQLiteWalCheckpointScaleCampaign(0x2c9c658ab48)
+	/home/node/.openclaw/workspace/motor-autonomo/internal/storage/sqlite/wal_checkpoint_scale_test.go:167 +0x88f
+testing.tRunner(0x2c9c658ab48, 0xa12e30)
+	/usr/local/go/src/testing/testing.go:2036 +0xea
+created by testing.(*T).Run in goroutine 1
+	/usr/local/go/src/testing/testing.go:2101 +0x4c5
+
+goroutine 20080 [select, 1 minutes]:
+database/sql.(*DB).connectionOpener(0x2c9c64e4ea0, {0xa1bf08, 0x2c9c66d9630})
+	/usr/local/go/src/database/sql/sql.go:1261 +0x89
+created by database/sql.OpenDB in goroutine 7
+	/usr/local/go/src/database/sql/sql.go:841 +0x130
+FAIL	motor-autonomo/internal/storage/sqlite	600.041s
+FAIL
