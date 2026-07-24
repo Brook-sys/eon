@@ -1,0 +1,11 @@
+=== RUN   TestSQLiteWalCheckpointScaleCampaign
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=500 close=passive commit=2032ms trunc=0ms reopen=176ms wal_before=27365072B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=2000 close=truncate commit=39859ms trunc=59ms reopen=33ms wal_before=285520152B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=2000 close=truncate commit=34426ms trunc=322ms reopen=131ms wal_before=4350752B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=2000 close=truncate commit=20724ms trunc=1577ms reopen=76ms wal_before=285520152B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=1000 n=500 close=truncate commit=7067ms trunc=13ms reopen=30ms wal_before=4181832B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=2000 close=passive commit=39711ms trunc=0ms reopen=93ms wal_before=285524272B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:236: campaign paused after 2 new cells: 6/32 durable cells complete
+--- PASS: TestSQLiteWalCheckpointScaleCampaign (47.14s)
+PASS
+ok  	motor-autonomo/internal/storage/sqlite	47.143s

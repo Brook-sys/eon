@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "name": "phase190-wal-progress-groq-llama33-70b",
+  "started_at": "2026-07-24T12:43:12.881338719Z",
+  "completed_at": "2026-07-24T12:43:13.345784396Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-seeded-open",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-llama33-70b",
+  "route_rejected": {
+    "nim-seeded-open": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 273407994,
+  "observed_input_tokens": 125,
+  "observed_output_tokens": 7,
+  "finish_reason": "stop",
+  "response_bytes": 18,
+  "response_sha256": "60e7eab2eb8244dc292ef6adc0c04ea5a2a1497cfb1d5ac6f3ec4339a6754f58",
+  "expected_response_set": true,
+  "expected_response_match": true,
+  "response_json_valid": true,
+  "response_framing_class": "exact",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-24T12:44:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-llama33-70b",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T12:43:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T12:43:00Z",
+      "token_minute_count": 132,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:nim-seeded-open",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-24T12:43:13.881338719Z",
+      "last_failure_at": "2026-07-24T12:43:12.881338719Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T12:43:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T12:43:00Z",
+      "token_minute_count": 132,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
