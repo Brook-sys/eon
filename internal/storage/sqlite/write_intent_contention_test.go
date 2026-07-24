@@ -17,7 +17,10 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
-const writeIntentHelperEnv = "MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_HELPER"
+const (
+	writeIntentHelperEnv      = "MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_HELPER"
+	writeIntentSynchronousEnv = "MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_SYNCHRONOUS"
+)
 
 type writeIntentAttemptReport struct {
 	Mode                  string `json:"mode"`
@@ -65,6 +68,7 @@ type writeIntentCampaignReport struct {
 	SchemaVersion  string                   `json:"schema_version"`
 	PayloadVariant string                   `json:"payload_variant"`
 	PreSeedRecords int                      `json:"pre_seed_records"`
+	Synchronous    string                   `json:"synchronous"`
 	Workers        int                      `json:"workers"`
 	CyclesPerMode  int                      `json:"cycles_per_mode"`
 	HoldMillis     int64                    `json:"leader_hold_millis"`
@@ -90,29 +94,39 @@ func TestSQLiteWriteIntentContentionCampaign(t *testing.T) {
 		{label: "baseline", records: 0},
 		{label: "augmented", records: 50},
 	}
+	synchronousVariants := []struct {
+		label string
+		value string
+	}{
+		{label: "FULL", value: "FULL"},
+		{label: "NORMAL", value: "NORMAL"},
+	}
 	for _, variant := range preSeedVariants {
-		report := writeIntentCampaignReport{
-			SchemaVersion: "motor-autonomo.sqlite-write-intent-campaign.v2",
-			Workers:       workers, CyclesPerMode: cycles, HoldMillis: hold.Milliseconds(),
-			PreSeedRecords: variant.records, PayloadVariant: variant.label,
-		}
-		for _, mode := range []string{"deferred", "immediate_before_callback"} {
-			attempts := make([]writeIntentAttemptReport, 0, workers*cycles)
-			for cycle := 0; cycle < cycles; cycle++ {
-				attempts = append(attempts, runWriteIntentCycle(t, mode, cycle, cycle%workers, workers, hold, variant.records)...)
+		for _, sync := range synchronousVariants {
+			report := writeIntentCampaignReport{
+				SchemaVersion: "motor-autonomo.sqlite-write-intent-campaign.v3",
+				Workers:       workers, CyclesPerMode: cycles, HoldMillis: hold.Milliseconds(),
+				PreSeedRecords: variant.records, PayloadVariant: variant.label,
+				Synchronous: sync.value,
 			}
-			report.Modes = append(report.Modes, summarizeWriteIntentMode(t, mode, workers, cycles, attempts))
-		}
-		writeWriteIntentCampaignReport(t, report)
-		for _, summary := range report.Modes {
-			t.Logf("write intent variant=%s mode=%s attempts=%d conflicts=%d payload_p50=%dB commit_p95=%dus begin_conflict_p50=%dus write_conflict_p50=%dus lock_held_p95=%dus wins=%v",
-				variant.label, summary.Mode, summary.Attempts, summary.Conflicts, summary.PayloadBytes.P50, summary.Commit.P95,
-				summary.ConflictBegin.P50, summary.ConflictWrite.P50, summary.TransactionOpen.P95, summary.WinsByWorker)
+			for _, mode := range []string{"deferred", "immediate_before_callback"} {
+				attempts := make([]writeIntentAttemptReport, 0, workers*cycles)
+				for cycle := 0; cycle < cycles; cycle++ {
+					attempts = append(attempts, runWriteIntentCycle(t, mode, cycle, cycle%workers, workers, hold, variant.records, sync.value)...)
+				}
+				report.Modes = append(report.Modes, summarizeWriteIntentMode(t, mode, workers, cycles, attempts))
+			}
+			writeWriteIntentCampaignReport(t, report)
+			for _, summary := range report.Modes {
+				t.Logf("write intent variant=%s sync=%s mode=%s attempts=%d conflicts=%d payload_p50=%dB commit_p95=%dus begin_conflict_p50=%dus write_conflict_p50=%dus lock_held_p95=%dus wins=%v",
+					variant.label, sync.label, summary.Mode, summary.Attempts, summary.Conflicts, summary.PayloadBytes.P50, summary.Commit.P95,
+					summary.ConflictBegin.P50, summary.ConflictWrite.P50, summary.TransactionOpen.P95, summary.WinsByWorker)
+			}
 		}
 	}
 }
 
-func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, hold time.Duration, preSeedRecords int) []writeIntentAttemptReport {
+func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, hold time.Duration, preSeedRecords int, synchronous string) []writeIntentAttemptReport {
 	t.Helper()
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "runtime.sqlite")
@@ -149,7 +163,7 @@ func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, 
 		ready[worker] = filepath.Join(dir, fmt.Sprintf("ready-%d", worker))
 		start[worker] = filepath.Join(dir, fmt.Sprintf("start-%d", worker))
 		result[worker] = filepath.Join(dir, fmt.Sprintf("result-%d.json", worker))
-		commands[worker] = writeIntentHelperCommand(mode, cycle, worker, leader, hold, dbPath, ready[worker], start[worker], result[worker], lockHeld)
+		commands[worker] = writeIntentHelperCommand(mode, cycle, worker, leader, hold, dbPath, ready[worker], start[worker], result[worker], lockHeld, synchronous)
 		if err := commands[worker].Start(); err != nil {
 			t.Fatalf("mode %s cycle %d start worker %d: %v", mode, cycle, worker, err)
 		}
@@ -202,6 +216,10 @@ func runWriteIntentHelper(t *testing.T) {
 	if _, err := fmt.Sscanf(os.Getenv("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_HOLD_MS"), "%d", &holdMillis); err != nil {
 		t.Fatal(err)
 	}
+	synchronous := os.Getenv(writeIntentSynchronousEnv)
+	if synchronous != "FULL" && synchronous != "NORMAL" {
+		t.Fatalf("unknown synchronous mode %q", synchronous)
+	}
 	dbPath := os.Getenv("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_DB")
 	readyPath := os.Getenv("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_READY")
 	startPath := os.Getenv("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_START")
@@ -218,7 +236,7 @@ func runWriteIntentHelper(t *testing.T) {
 		t.Fatalf("unknown write-intent mode %q", mode)
 	}
 	var observed UpdateTiming
-	options := Options{ObserveUpdate: func(timing UpdateTiming) { observed = timing }}
+	options := Options{Synchronous: synchronous, ObserveUpdate: func(timing UpdateTiming) { observed = timing }}
 	if worker == leader {
 		options.Failpoint = func(point Failpoint) {
 			if point != FailpointBeforeDurableCommit {
@@ -470,10 +488,11 @@ func writeWriteIntentCampaignReport(t *testing.T, report writeIntentCampaignRepo
 	}
 }
 
-func writeIntentHelperCommand(mode string, cycle, worker, leader int, hold time.Duration, dbPath, readyPath, startPath, resultPath, lockHeldPath string) *exec.Cmd {
+func writeIntentHelperCommand(mode string, cycle, worker, leader int, hold time.Duration, dbPath, readyPath, startPath, resultPath, lockHeldPath, synchronous string) *exec.Cmd {
 	cmd := exec.Command(os.Args[0], "-test.run", "^TestSQLiteWriteIntentContentionCampaign$")
 	cmd.Env = append(os.Environ(),
 		writeIntentHelperEnv+"="+mode,
+		writeIntentSynchronousEnv+"="+synchronous,
 		fmt.Sprintf("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_CYCLE=%d", cycle),
 		fmt.Sprintf("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_WORKER=%d", worker),
 		fmt.Sprintf("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_LEADER=%d", leader),

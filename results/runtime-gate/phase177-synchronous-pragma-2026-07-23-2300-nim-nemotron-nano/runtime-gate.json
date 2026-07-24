@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "name": "phase177-heartbeat-nim-nemotron-nano",
+  "started_at": "2026-07-24T02:09:21.98925124Z",
+  "completed_at": "2026-07-24T02:09:22.514185867Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-unused",
+  "selected_provider_id": "nim",
+  "selected_binding_id": "nim-nemotron-nano",
+  "route_rejected": {
+    "groq-unused": "circuit_open"
+  },
+  "provider_succeeded": false,
+  "provider_latency": 383931894,
+  "provider_error_class": "http",
+  "provider_http_status": 401,
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "second_acquire_reason": "model_route_unavailable",
+  "operation_state": "READY",
+  "usages": [
+    {
+      "resource": "model-binding:groq-unused",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-24T02:09:22.98925124Z",
+      "last_failure_at": "2026-07-24T02:09:21.98925124Z"
+    },
+    {
+      "resource": "model-binding:nim-nemotron-nano",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T02:09:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T02:09:00Z",
+      "token_minute_count": 32,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-24T02:10:22.47711743Z",
+      "last_failure_at": "2026-07-24T02:09:22.47711743Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T02:09:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T02:09:00Z",
+      "token_minute_count": 32,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

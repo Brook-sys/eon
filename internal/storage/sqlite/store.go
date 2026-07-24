@@ -34,6 +34,7 @@ const (
 type Options struct {
 	Failpoint     func(Failpoint)
 	BusyTimeout   time.Duration
+	Synchronous   string // "FULL" (default) or "NORMAL"
 	ObserveUpdate func(UpdateTiming)
 }
 
@@ -68,7 +69,7 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 	db.SetMaxOpenConns(1)
-	if err := configure(db, options.BusyTimeout); err != nil {
+	if err := configure(db, options.BusyTimeout, options.Synchronous); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint, observeUpdate: options.ObserveUpdate}, nil
 }
 
-func configure(db *sql.DB, busyTimeout time.Duration) error {
+func configure(db *sql.DB, busyTimeout time.Duration, synchronous string) error {
 	if busyTimeout <= 0 {
 		busyTimeout = 5 * time.Second
 	}
@@ -88,9 +89,12 @@ func configure(db *sql.DB, busyTimeout time.Duration) error {
 	if busyMilliseconds < 1 {
 		busyMilliseconds = 1
 	}
+	if synchronous == "" {
+		synchronous = "FULL"
+	}
 	for _, statement := range []string{
 		`PRAGMA journal_mode=WAL`,
-		`PRAGMA synchronous=FULL`,
+		fmt.Sprintf(`PRAGMA synchronous=%s`, synchronous),
 		fmt.Sprintf(`PRAGMA busy_timeout=%d`, busyMilliseconds),
 		`PRAGMA foreign_keys=ON`,
 		fmt.Sprintf(`PRAGMA application_id=%d`, runtimeApplicationID),
