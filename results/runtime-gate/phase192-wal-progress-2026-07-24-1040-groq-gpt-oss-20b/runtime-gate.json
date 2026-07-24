@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "name": "phase192-wal-progress-groq-gpt-oss-20b",
+  "started_at": "2026-07-24T13:42:18.362833493Z",
+  "completed_at": "2026-07-24T13:42:18.786686938Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-seeded-open",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-gpt-oss-20b",
+  "route_rejected": {
+    "nim-seeded-open": "circuit_open"
+  },
+  "provider_succeeded": false,
+  "provider_latency": 297387530,
+  "provider_error_class": "http",
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "second_acquire_reason": "model_route_unavailable",
+  "operation_state": "READY",
+  "usages": [
+    {
+      "resource": "model-binding:groq-gpt-oss-20b",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T13:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T13:42:00Z",
+      "token_minute_count": 32,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-24T13:43:18.752510932Z",
+      "last_failure_at": "2026-07-24T13:42:18.752510932Z"
+    },
+    {
+      "resource": "model-binding:nim-seeded-open",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-24T13:42:19.362833493Z",
+      "last_failure_at": "2026-07-24T13:42:18.362833493Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-24T13:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-24T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-24T13:42:00Z",
+      "token_minute_count": 32,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
