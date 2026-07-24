@@ -335,6 +335,39 @@
         "wal_size_after_reopen_bytes": 8272,
         "records_visible": true
       }
+    },
+    {
+      "run": 2,
+      "cell": {
+        "synchronous": "NORMAL",
+        "wal_auto_checkpoint": -1,
+        "num_commits": 2000,
+        "close_mode": "truncate",
+        "commit_duration_ms": 20861,
+        "wal_size_before_close_bytes": 285524272,
+        "truncate_duration_ms": 1156,
+        "truncate_log_pages": 0,
+        "truncate_checkpointed_pages": 0,
+        "reopen_duration_ms": 16,
+        "wal_size_after_reopen_bytes": 8272,
+        "records_visible": true
+      }
+    },
+    {
+      "run": 2,
+      "cell": {
+        "synchronous": "NORMAL",
+        "wal_auto_checkpoint": 1000,
+        "num_commits": 500,
+        "close_mode": "passive",
+        "commit_duration_ms": 2410,
+        "wal_size_before_close_bytes": 4181832,
+        "truncate_log_pages": 0,
+        "truncate_checkpointed_pages": 0,
+        "reopen_duration_ms": 44,
+        "wal_size_after_reopen_bytes": 8272,
+        "records_visible": true
+      }
     }
   ]
 }
