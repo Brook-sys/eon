@@ -1,0 +1,8 @@
+=== RUN   TestSQLiteWalCheckpointScaleCampaign
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=5 close=passive commit=14ms trunc=0ms reopen=28ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=20 close=truncate commit=220ms trunc=12ms reopen=29ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=20 close=truncate commit=49ms trunc=21ms reopen=11ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:236: campaign paused after 3 new cells: 3/32 durable cells complete
+--- PASS: TestSQLiteWalCheckpointScaleCampaign (0.62s)
+PASS
+ok  	motor-autonomo/internal/storage/sqlite	0.624s

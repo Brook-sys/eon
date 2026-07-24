@@ -1,0 +1,294 @@
+{
+  "schema_version": "motor-autonomo.sqlite-wal-checkpoint-aggregate.v1",
+  "repeat_count": 2,
+  "pairs": [
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          38,
+          39
+        ],
+        "p50": 38,
+        "p95": 39,
+        "min": 38,
+        "max": 39
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          42
+        ],
+        "p50": 39,
+        "p95": 42,
+        "min": 39,
+        "max": 42
+      },
+      "speedup": {
+        "values": [
+          0.9047619047619048,
+          1
+        ],
+        "p50": 0.9047619047619048,
+        "p95": 1,
+        "min": 0.9047619047619048,
+        "max": 1
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 20,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          41,
+          45
+        ],
+        "p50": 41,
+        "p95": 45,
+        "min": 41,
+        "max": 45
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          40,
+          41
+        ],
+        "p50": 40,
+        "p95": 41,
+        "min": 40,
+        "max": 41
+      },
+      "speedup": {
+        "values": [
+          1,
+          1.125
+        ],
+        "p50": 1,
+        "p95": 1.125,
+        "min": 1,
+        "max": 1.125
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          42,
+          43
+        ],
+        "p50": 42,
+        "p95": 43,
+        "min": 42,
+        "max": 43
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          39
+        ],
+        "p50": 39,
+        "p95": 39,
+        "min": 39,
+        "max": 39
+      },
+      "speedup": {
+        "values": [
+          1.0769230769230769,
+          1.1025641025641026
+        ],
+        "p50": 1.0769230769230769,
+        "p95": 1.1025641025641026,
+        "min": 1.0769230769230769,
+        "max": 1.1025641025641026
+      }
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 20,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          40,
+          42
+        ],
+        "p50": 40,
+        "p95": 42,
+        "min": 40,
+        "max": 42
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          39,
+          47
+        ],
+        "p50": 39,
+        "p95": 47,
+        "min": 39,
+        "max": 47
+      },
+      "speedup": {
+        "values": [
+          0.8936170212765957,
+          1.0256410256410255
+        ],
+        "p50": 0.8936170212765957,
+        "p95": 1.0256410256410255,
+        "min": 0.8936170212765957,
+        "max": 1.0256410256410255
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          28,
+          28
+        ],
+        "p50": 28,
+        "p95": 28,
+        "min": 28,
+        "max": 28
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          29,
+          29
+        ],
+        "p50": 29,
+        "p95": 29,
+        "min": 29,
+        "max": 29
+      },
+      "speedup": {
+        "values": [
+          0.9655172413793104,
+          0.9655172413793104
+        ],
+        "p50": 0.9655172413793104,
+        "p95": 0.9655172413793104,
+        "min": 0.9655172413793104,
+        "max": 0.9655172413793104
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 20,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          31,
+          31
+        ],
+        "p50": 31,
+        "p95": 31,
+        "min": 31,
+        "max": 31
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          37,
+          61
+        ],
+        "p50": 37,
+        "p95": 61,
+        "min": 37,
+        "max": 61
+      },
+      "speedup": {
+        "values": [
+          0.5081967213114754,
+          0.8378378378378378
+        ],
+        "p50": 0.5081967213114754,
+        "p95": 0.8378378378378378,
+        "min": 0.5081967213114754,
+        "max": 0.8378378378378378
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          29,
+          29
+        ],
+        "p50": 29,
+        "p95": 29,
+        "min": 29,
+        "max": 29
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          27,
+          28
+        ],
+        "p50": 27,
+        "p95": 28,
+        "min": 27,
+        "max": 28
+      },
+      "speedup": {
+        "values": [
+          1.0357142857142858,
+          1.0740740740740742
+        ],
+        "p50": 1.0357142857142858,
+        "p95": 1.0740740740740742,
+        "min": 1.0357142857142858,
+        "max": 1.0740740740740742
+      }
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 20,
+      "sample_count": 2,
+      "passive_reopen_ms": {
+        "values": [
+          31,
+          31
+        ],
+        "p50": 31,
+        "p95": 31,
+        "min": 31,
+        "max": 31
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          31,
+          32
+        ],
+        "p50": 31,
+        "p95": 32,
+        "min": 31,
+        "max": 32
+      },
+      "speedup": {
+        "values": [
+          0.96875,
+          1
+        ],
+        "p50": 0.96875,
+        "p95": 1,
+        "min": 0.96875,
+        "max": 1
+      }
+    }
+  ]
+}

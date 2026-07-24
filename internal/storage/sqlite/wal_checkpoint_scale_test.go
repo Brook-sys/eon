@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,6 +73,19 @@ type walCheckpointScaleCell struct {
 type walCheckpointScaleMatrix struct {
 	SchemaVersion string                   `json:"schema_version"`
 	Cells         []walCheckpointScaleCell `json:"cells"`
+}
+
+type walCheckpointProgress struct {
+	SchemaVersion string                      `json:"schema_version"`
+	Quick         bool                        `json:"quick"`
+	RepeatCount   int                         `json:"repeat_count"`
+	Randomized    bool                        `json:"randomized"`
+	Cells         []walCheckpointProgressCell `json:"cells"`
+}
+
+type walCheckpointProgressCell struct {
+	Run  int                    `json:"run"`
+	Cell walCheckpointScaleCell `json:"cell"`
 }
 
 type walCheckpointIntDistribution struct {
@@ -156,15 +170,48 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 		SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-reopen.v3",
 	}
 	repeats := envBoundedInt(t, "MOTOR_AUTONOMO_SQLITE_WAL_SCALE_REPEATS", 1, 1, 100)
+	quick := os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_QUICK") == "1"
+	randomized := os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_RANDOMIZE") == "1"
+	progressPath := os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_PROGRESS")
+	progress := walCheckpointProgress{SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-progress.v1", Quick: quick, RepeatCount: repeats, Randomized: randomized}
+	if progressPath != "" {
+		var err error
+		progress, err = loadWalCheckpointProgress(progressPath, progress)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	completed := make(map[string]walCheckpointScaleCell)
+	for _, saved := range progress.Cells {
+		completed[walCheckpointProgressKey(saved.Run, saved.Cell)] = saved.Cell
+	}
+	maxNewCells := envBoundedInt(t, "MOTOR_AUTONOMO_SQLITE_WAL_SCALE_MAX_NEW_CELLS", len(descs)*repeats, 1, len(descs)*repeats)
+	newCells := 0
 	samples := make(map[walCheckpointPairKey]*walCheckpointSamples)
 	for run := 0; run < repeats; run++ {
 		runDescs := append([]cellDesc(nil), descs...)
-		if os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_RANDOMIZE") == "1" {
+		if randomized {
 			rng := rand.New(rand.NewSource(42 + int64(run)))
 			rng.Shuffle(len(runDescs), func(i, j int) { runDescs[i], runDescs[j] = runDescs[j], runDescs[i] })
 		}
 		for _, d := range runDescs {
-			cell := runWalCheckpointScaleCell(t, ctx, d.sync, d.autoChk, d.n, d.closeMode)
+			identity := walCheckpointScaleCell{Synchronous: d.sync, WalAutoCheckpoint: d.autoChk, NumCommits: d.n, CloseMode: d.closeMode}
+			keyString := walCheckpointProgressKey(run+1, identity)
+			cell, ok := completed[keyString]
+			if !ok {
+				if newCells >= maxNewCells {
+					continue
+				}
+				cell = runWalCheckpointScaleCell(t, ctx, d.sync, d.autoChk, d.n, d.closeMode)
+				newCells++
+				progress.Cells = append(progress.Cells, walCheckpointProgressCell{Run: run + 1, Cell: cell})
+				completed[keyString] = cell
+				if progressPath != "" {
+					if err := writeJSONAtomic(progressPath, progress); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
 			if run == 0 {
 				matrix.Cells = append(matrix.Cells, cell)
 			}
@@ -183,6 +230,11 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 				cell.WalSizeBeforeClose, cell.WalSizeAfterTruncate, cell.WalSizeAfterReopen,
 				cell.RecordsVisible, cell.TruncateBusy)
 		}
+	}
+
+	if len(completed) < len(descs)*repeats {
+		t.Logf("campaign paused after %d new cells: %d/%d durable cells complete", newCells, len(completed), len(descs)*repeats)
+		return
 	}
 
 	// Assert all cells preserved all records.
@@ -262,6 +314,76 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func walCheckpointProgressKey(run int, cell walCheckpointScaleCell) string {
+	return fmt.Sprintf("%d|%s|%d|%d|%s", run, cell.Synchronous, cell.WalAutoCheckpoint, cell.NumCommits, cell.CloseMode)
+}
+
+func loadWalCheckpointProgress(path string, expected walCheckpointProgress) (walCheckpointProgress, error) {
+	body, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return expected, nil
+	}
+	if err != nil {
+		return walCheckpointProgress{}, err
+	}
+	dec := json.NewDecoder(strings.NewReader(string(body)))
+	dec.DisallowUnknownFields()
+	var got walCheckpointProgress
+	if err := dec.Decode(&got); err != nil {
+		return walCheckpointProgress{}, fmt.Errorf("decode WAL progress: %w", err)
+	}
+	if dec.Decode(&struct{}{}) == nil {
+		return walCheckpointProgress{}, fmt.Errorf("decode WAL progress: trailing JSON")
+	}
+	if got.SchemaVersion != expected.SchemaVersion || got.Quick != expected.Quick || got.RepeatCount != expected.RepeatCount || got.Randomized != expected.Randomized {
+		return walCheckpointProgress{}, fmt.Errorf("WAL progress configuration mismatch")
+	}
+	seen := map[string]bool{}
+	for _, saved := range got.Cells {
+		if saved.Run < 1 || saved.Run > got.RepeatCount || !saved.Cell.RecordsVisible {
+			return walCheckpointProgress{}, fmt.Errorf("invalid WAL progress cell")
+		}
+		key := walCheckpointProgressKey(saved.Run, saved.Cell)
+		if seen[key] {
+			return walCheckpointProgress{}, fmt.Errorf("duplicate WAL progress cell %s", key)
+		}
+		seen[key] = true
+	}
+	return got, nil
+}
+
+func writeJSONAtomic(path string, value any) error {
+	body, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".wal-progress-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(append(body, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func runWalCheckpointScaleCell(t *testing.T, ctx context.Context, synchronous string, walAutoCheckpoint, numCommits int, closeMode string) walCheckpointScaleCell {

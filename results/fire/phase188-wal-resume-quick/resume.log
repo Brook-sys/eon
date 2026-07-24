@@ -1,0 +1,45 @@
+=== RUN   TestSQLiteWalCheckpointScaleCampaign
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=5 close=passive commit=14ms trunc=0ms reopen=28ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=20 close=truncate commit=220ms trunc=12ms reopen=29ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=20 close=truncate commit=49ms trunc=21ms reopen=11ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=20 close=truncate commit=54ms trunc=51ms reopen=10ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=1000 n=5 close=truncate commit=53ms trunc=12ms reopen=27ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=20 close=passive commit=223ms trunc=0ms reopen=41ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=20 close=passive commit=51ms trunc=0ms reopen=31ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=5 close=truncate commit=12ms trunc=17ms reopen=10ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=1000 n=20 close=truncate commit=218ms trunc=14ms reopen=33ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=5 close=truncate commit=12ms trunc=18ms reopen=11ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=5 close=passive commit=60ms trunc=0ms reopen=39ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=-1 n=20 close=passive commit=50ms trunc=0ms reopen=31ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=1000 n=20 close=passive commit=228ms trunc=0ms reopen=42ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=NORMAL autochk=1000 n=5 close=passive commit=12ms trunc=0ms reopen=29ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=1000 n=5 close=passive commit=55ms trunc=0ms reopen=43ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=1 sync=FULL autochk=-1 n=5 close=truncate commit=53ms trunc=12ms reopen=27ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=1000 n=20 close=truncate commit=621ms trunc=12ms reopen=27ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=-1 n=5 close=truncate commit=55ms trunc=14ms reopen=28ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=1000 n=20 close=truncate commit=48ms trunc=20ms reopen=11ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=1000 n=5 close=truncate commit=11ms trunc=18ms reopen=10ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=-1 n=20 close=truncate commit=48ms trunc=21ms reopen=16ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=1000 n=5 close=passive commit=12ms trunc=0ms reopen=29ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=1000 n=20 close=passive commit=225ms trunc=0ms reopen=40ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=-1 n=20 close=passive commit=48ms trunc=0ms reopen=31ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=1000 n=20 close=passive commit=49ms trunc=0ms reopen=31ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=1000 n=5 close=truncate commit=59ms trunc=12ms reopen=27ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=-1 n=5 close=truncate commit=11ms trunc=18ms reopen=11ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=NORMAL autochk=-1 n=5 close=passive commit=12ms trunc=0ms reopen=28ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=-1 n=5 close=passive commit=59ms trunc=0ms reopen=38ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=-1 n=20 close=passive commit=216ms trunc=0ms reopen=45ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=-1 n=20 close=truncate commit=217ms trunc=12ms reopen=28ms wal_before=589192B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:227: run=2 sync=FULL autochk=1000 n=5 close=passive commit=55ms trunc=0ms reopen=42ms wal_before=156592B wal_after_trunc=0B wal_after=8272B visible=true busy=false
+    wal_checkpoint_scale_test.go:265: paired comparison (reopen-only passive vs truncate+reopen):
+    wal_checkpoint_scale_test.go:286:   sync=FULL autochk=-1 n=5: passive_reopen=39ms truncate+reopen=39ms speedup=1.00x
+    wal_checkpoint_scale_test.go:286:   sync=FULL autochk=-1 n=20: passive_reopen=41ms truncate+reopen=41ms speedup=1.00x
+    wal_checkpoint_scale_test.go:286:   sync=FULL autochk=1000 n=5: passive_reopen=43ms truncate+reopen=39ms speedup=1.10x
+    wal_checkpoint_scale_test.go:286:   sync=FULL autochk=1000 n=20: passive_reopen=42ms truncate+reopen=47ms speedup=0.89x
+    wal_checkpoint_scale_test.go:286:   sync=NORMAL autochk=-1 n=5: passive_reopen=28ms truncate+reopen=29ms speedup=0.97x
+    wal_checkpoint_scale_test.go:286:   sync=NORMAL autochk=-1 n=20: passive_reopen=31ms truncate+reopen=61ms speedup=0.51x
+    wal_checkpoint_scale_test.go:286:   sync=NORMAL autochk=1000 n=5: passive_reopen=29ms truncate+reopen=27ms speedup=1.07x
+    wal_checkpoint_scale_test.go:286:   sync=NORMAL autochk=1000 n=20: passive_reopen=31ms truncate+reopen=32ms speedup=0.97x
+--- PASS: TestSQLiteWalCheckpointScaleCampaign (6.10s)
+PASS
+ok  	motor-autonomo/internal/storage/sqlite	6.107s
