@@ -47,6 +47,7 @@ type UpdateTiming struct {
 	WriteCAS       time.Duration
 	Commit         time.Duration
 	ConflictReload time.Duration
+	PayloadBytes   int
 }
 
 type Store struct {
@@ -203,6 +204,7 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 	}
 	defer tx.Rollback()
 	started = time.Now()
+	timing.PayloadBytes = len(payload)
 	result, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
 		VALUES(?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload

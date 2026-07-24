@@ -32,6 +32,7 @@ type writeIntentAttemptReport struct {
 	CommitMicros          int64  `json:"commit_micros"`
 	ConflictReloadMicros  int64  `json:"conflict_reload_micros"`
 	TransactionOpenMicros int64  `json:"transaction_open_micros"`
+	PayloadBytes          int    `json:"payload_bytes"`
 	Error                 string `json:"error,omitempty"`
 }
 
@@ -51,19 +52,23 @@ type writeIntentModeSummary struct {
 	Elapsed         writeIntentDistribution    `json:"elapsed"`
 	Begin           writeIntentDistribution    `json:"begin"`
 	WriteCAS        writeIntentDistribution    `json:"write_cas"`
+	Commit          writeIntentDistribution    `json:"commit"`
 	TransactionOpen writeIntentDistribution    `json:"transaction_open"`
 	ConflictBegin   writeIntentDistribution    `json:"conflict_begin"`
 	ConflictWrite   writeIntentDistribution    `json:"conflict_write_cas"`
 	ConflictReload  writeIntentDistribution    `json:"conflict_reload"`
+	PayloadBytes    writeIntentDistribution    `json:"payload_bytes"`
 	Raw             []writeIntentAttemptReport `json:"attempts_raw"`
 }
 
 type writeIntentCampaignReport struct {
-	SchemaVersion string                   `json:"schema_version"`
-	Workers       int                      `json:"workers"`
-	CyclesPerMode int                      `json:"cycles_per_mode"`
-	HoldMillis    int64                    `json:"leader_hold_millis"`
-	Modes         []writeIntentModeSummary `json:"modes"`
+	SchemaVersion  string                   `json:"schema_version"`
+	PayloadVariant string                   `json:"payload_variant"`
+	PreSeedRecords int                      `json:"pre_seed_records"`
+	Workers        int                      `json:"workers"`
+	CyclesPerMode  int                      `json:"cycles_per_mode"`
+	HoldMillis     int64                    `json:"leader_hold_millis"`
+	Modes          []writeIntentModeSummary `json:"modes"`
 }
 
 // TestSQLiteWriteIntentContentionCampaign is an isolated experiment. It does
@@ -78,32 +83,58 @@ func TestSQLiteWriteIntentContentionCampaign(t *testing.T) {
 	const workers = 4
 	const cycles = 6
 	const hold = 300 * time.Millisecond
-	report := writeIntentCampaignReport{
-		SchemaVersion: "motor-autonomo.sqlite-write-intent-campaign.v1",
-		Workers:       workers, CyclesPerMode: cycles, HoldMillis: hold.Milliseconds(),
+	preSeedVariants := []struct {
+		label   string
+		records int
+	}{
+		{label: "baseline", records: 0},
+		{label: "augmented", records: 50},
 	}
-	for _, mode := range []string{"deferred", "immediate_before_callback"} {
-		attempts := make([]writeIntentAttemptReport, 0, workers*cycles)
-		for cycle := 0; cycle < cycles; cycle++ {
-			attempts = append(attempts, runWriteIntentCycle(t, mode, cycle, cycle%workers, workers, hold)...)
+	for _, variant := range preSeedVariants {
+		report := writeIntentCampaignReport{
+			SchemaVersion: "motor-autonomo.sqlite-write-intent-campaign.v2",
+			Workers:       workers, CyclesPerMode: cycles, HoldMillis: hold.Milliseconds(),
+			PreSeedRecords: variant.records, PayloadVariant: variant.label,
 		}
-		report.Modes = append(report.Modes, summarizeWriteIntentMode(t, mode, workers, cycles, attempts))
-	}
-	writeWriteIntentCampaignReport(t, report)
-	for _, summary := range report.Modes {
-		t.Logf("write intent mode=%s attempts=%d conflicts=%d begin_conflict_p50=%dus write_conflict_p50=%dus lock_held_p95=%dus wins=%v",
-			summary.Mode, summary.Attempts, summary.Conflicts, summary.ConflictBegin.P50,
-			summary.ConflictWrite.P50, summary.TransactionOpen.P95, summary.WinsByWorker)
+		for _, mode := range []string{"deferred", "immediate_before_callback"} {
+			attempts := make([]writeIntentAttemptReport, 0, workers*cycles)
+			for cycle := 0; cycle < cycles; cycle++ {
+				attempts = append(attempts, runWriteIntentCycle(t, mode, cycle, cycle%workers, workers, hold, variant.records)...)
+			}
+			report.Modes = append(report.Modes, summarizeWriteIntentMode(t, mode, workers, cycles, attempts))
+		}
+		writeWriteIntentCampaignReport(t, report)
+		for _, summary := range report.Modes {
+			t.Logf("write intent variant=%s mode=%s attempts=%d conflicts=%d payload_p50=%dB commit_p95=%dus begin_conflict_p50=%dus write_conflict_p50=%dus lock_held_p95=%dus wins=%v",
+				variant.label, summary.Mode, summary.Attempts, summary.Conflicts, summary.PayloadBytes.P50, summary.Commit.P95,
+				summary.ConflictBegin.P50, summary.ConflictWrite.P50, summary.TransactionOpen.P95, summary.WinsByWorker)
+		}
 	}
 }
 
-func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, hold time.Duration) []writeIntentAttemptReport {
+func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, hold time.Duration, preSeedRecords int) []writeIntentAttemptReport {
 	t.Helper()
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "runtime.sqlite")
 	seed, err := Open(dbPath)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if preSeedRecords > 0 {
+		for i := 0; i < preSeedRecords; i++ {
+			key := domain.IdempotencyKey(fmt.Sprintf("pre-seed-%d-%d", cycle, i))
+			err = seed.Update(context.Background(), func(tx port.Transaction) error {
+				_, err := tx.ReserveIdempotency(domain.IdempotencyRecord{
+					SchemaVersion: 1, Key: key, OperationID: domain.OperationID("pre-seed-op-" + string(key)),
+					Intent: "pre-seed", Status: domain.IdempotencyReserved,
+					ReservedAt: time.Date(2026, 7, 23, 20, 40, 0, 0, time.UTC),
+				})
+				return err
+			})
+			if err != nil {
+				t.Fatalf("pre-seed %d: %v", i, err)
+			}
+		}
 	}
 	if err := seed.Close(); err != nil {
 		t.Fatal(err)
@@ -231,6 +262,7 @@ func runWriteIntentHelper(t *testing.T) {
 		BeginMicros: observed.Begin.Microseconds(), WriteCASMicros: observed.WriteCAS.Microseconds(),
 		CommitMicros: observed.Commit.Microseconds(), ConflictReloadMicros: observed.ConflictReload.Microseconds(),
 		TransactionOpenMicros: transactionOpen.Microseconds(),
+		PayloadBytes:          observed.PayloadBytes,
 	}
 	if updateErr != nil && !errors.Is(updateErr, port.ErrConflict) {
 		attempt.Error = updateErr.Error()
@@ -282,6 +314,7 @@ func updateImmediateBeforeCallback(ctx context.Context, s *Store, fn func(port.T
 		return err, timing, time.Since(lockStarted)
 	}
 	started = time.Now()
+	timing.PayloadBytes = len(payload)
 	result, err := tx.ExecContext(ctx, `INSERT INTO runtime_checkpoint(id, format_version, payload)
 		VALUES(?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET format_version=excluded.format_version, payload=excluded.payload
@@ -345,7 +378,7 @@ func reserveWriteIntentKey(cycle, worker int) func(port.Transaction) error {
 func summarizeWriteIntentMode(t *testing.T, mode string, workers, cycles int, attempts []writeIntentAttemptReport) writeIntentModeSummary {
 	t.Helper()
 	summary := writeIntentModeSummary{Mode: mode, Attempts: len(attempts), WinsByWorker: make([]int, workers), Raw: attempts}
-	var elapsed, begin, writeCAS, transactionOpen, conflictBegin, conflictWrite, conflictReload []int64
+	var elapsed, begin, writeCAS, commit, transactionOpen, conflictBegin, conflictWrite, conflictReload, payloadBytes []int64
 	winsByCycle := make([]int, cycles)
 	for _, attempt := range attempts {
 		if attempt.Mode != mode || attempt.Cycle < 0 || attempt.Cycle >= cycles || attempt.Worker < 0 || attempt.Worker >= workers {
@@ -354,7 +387,9 @@ func summarizeWriteIntentMode(t *testing.T, mode string, workers, cycles int, at
 		elapsed = append(elapsed, attempt.ElapsedMicros)
 		begin = append(begin, attempt.BeginMicros)
 		writeCAS = append(writeCAS, attempt.WriteCASMicros)
+		commit = append(commit, attempt.CommitMicros)
 		transactionOpen = append(transactionOpen, attempt.TransactionOpenMicros)
+		payloadBytes = append(payloadBytes, int64(attempt.PayloadBytes))
 		switch attempt.Outcome {
 		case "success":
 			summary.Successes++
@@ -395,10 +430,12 @@ func summarizeWriteIntentMode(t *testing.T, mode string, workers, cycles int, at
 	summary.Elapsed = distribution(elapsed)
 	summary.Begin = distribution(begin)
 	summary.WriteCAS = distribution(writeCAS)
+	summary.Commit = distribution(commit)
 	summary.TransactionOpen = distribution(transactionOpen)
 	summary.ConflictBegin = distribution(conflictBegin)
 	summary.ConflictWrite = distribution(conflictWrite)
 	summary.ConflictReload = distribution(conflictReload)
+	summary.PayloadBytes = distribution(payloadBytes)
 	return summary
 }
 
