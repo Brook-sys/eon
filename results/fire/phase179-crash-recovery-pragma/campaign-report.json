@@ -1,0 +1,53 @@
+{
+  "schema_version": "motor-autonomo.sqlite-crash-recovery-pragma.v1",
+  "results": [
+    {
+      "synchronous": "FULL",
+      "phase": "pre_commit_crash",
+      "crashed_key": "crash-pre-commit-FULL",
+      "contender_key": "after-pre-crash-FULL",
+      "pre_commit_survived": true,
+      "post_commit_survived": false,
+      "contender_conflict": false,
+      "contender_retry": false,
+      "reopen_clean": true,
+      "uncommitted_lost": true
+    },
+    {
+      "synchronous": "FULL",
+      "phase": "post_commit_crash",
+      "crashed_key": "crash-post-commit-FULL",
+      "contender_key": "after-post-crash-FULL",
+      "pre_commit_survived": false,
+      "post_commit_survived": true,
+      "contender_conflict": true,
+      "contender_retry": true,
+      "reopen_clean": true,
+      "uncommitted_lost": false
+    },
+    {
+      "synchronous": "NORMAL",
+      "phase": "pre_commit_crash",
+      "crashed_key": "crash-pre-commit-NORMAL",
+      "contender_key": "after-pre-crash-NORMAL",
+      "pre_commit_survived": true,
+      "post_commit_survived": false,
+      "contender_conflict": false,
+      "contender_retry": false,
+      "reopen_clean": true,
+      "uncommitted_lost": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "phase": "post_commit_crash",
+      "crashed_key": "crash-post-commit-NORMAL",
+      "contender_key": "after-post-crash-NORMAL",
+      "pre_commit_survived": false,
+      "post_commit_survived": true,
+      "contender_conflict": true,
+      "contender_retry": true,
+      "reopen_clean": true,
+      "uncommitted_lost": false
+    }
+  ]
+}
