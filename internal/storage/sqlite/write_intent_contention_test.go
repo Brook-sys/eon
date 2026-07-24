@@ -75,6 +75,11 @@ type writeIntentCampaignReport struct {
 	Modes          []writeIntentModeSummary `json:"modes"`
 }
 
+type writeIntentCampaignMatrix struct {
+	SchemaVersion string                      `json:"schema_version"`
+	Cells         []writeIntentCampaignReport `json:"cells"`
+}
+
 // TestSQLiteWriteIntentContentionCampaign is an isolated experiment. It does
 // not change Store.Update: it compares the current deferred transaction with a
 // test-only path that acquires BEGIN IMMEDIATE before cloning/callback work.
@@ -101,6 +106,7 @@ func TestSQLiteWriteIntentContentionCampaign(t *testing.T) {
 		{label: "FULL", value: "FULL"},
 		{label: "NORMAL", value: "NORMAL"},
 	}
+	matrix := writeIntentCampaignMatrix{SchemaVersion: "motor-autonomo.sqlite-write-intent-campaign-matrix.v1"}
 	for _, variant := range preSeedVariants {
 		for _, sync := range synchronousVariants {
 			report := writeIntentCampaignReport{
@@ -116,7 +122,7 @@ func TestSQLiteWriteIntentContentionCampaign(t *testing.T) {
 				}
 				report.Modes = append(report.Modes, summarizeWriteIntentMode(t, mode, workers, cycles, attempts))
 			}
-			writeWriteIntentCampaignReport(t, report)
+			matrix.Cells = append(matrix.Cells, report)
 			for _, summary := range report.Modes {
 				t.Logf("write intent variant=%s sync=%s mode=%s attempts=%d conflicts=%d payload_p50=%dB commit_p95=%dus begin_conflict_p50=%dus write_conflict_p50=%dus lock_held_p95=%dus wins=%v",
 					variant.label, sync.label, summary.Mode, summary.Attempts, summary.Conflicts, summary.PayloadBytes.P50, summary.Commit.P95,
@@ -124,6 +130,7 @@ func TestSQLiteWriteIntentContentionCampaign(t *testing.T) {
 			}
 		}
 	}
+	writeWriteIntentCampaignReport(t, matrix)
 }
 
 func runWriteIntentCycle(t *testing.T, mode string, cycle, leader, workers int, hold time.Duration, preSeedRecords int, synchronous string) []writeIntentAttemptReport {
@@ -470,7 +477,7 @@ func distribution(values []int64) writeIntentDistribution {
 	return writeIntentDistribution{Count: len(values), P50: percentile(0.50), P95: percentile(0.95), Max: values[len(values)-1]}
 }
 
-func writeWriteIntentCampaignReport(t *testing.T, report writeIntentCampaignReport) {
+func writeWriteIntentCampaignReport(t *testing.T, report any) {
 	t.Helper()
 	path := os.Getenv("MOTOR_AUTONOMO_SQLITE_WRITE_INTENT_REPORT")
 	if path == "" {
