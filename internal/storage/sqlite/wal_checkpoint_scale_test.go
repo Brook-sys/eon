@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -45,6 +47,8 @@ import (
 //   5. Time to close and reopen the store.
 //   6. Whether all N idempotency records are visible after reopen.
 //   7. WAL file size after reopen (should be the initial empty WAL or absent).
+//   8. Total cost = truncate_ms + reopen_ms (for truncate mode) or reopen_ms
+//      (for passive mode), used for paired comparison.
 
 type walCheckpointScaleCell struct {
 	Synchronous          string `json:"synchronous"`
@@ -54,11 +58,13 @@ type walCheckpointScaleCell struct {
 	CommitDurationMs     int64  `json:"commit_duration_ms"`
 	WalSizeBeforeClose   int64  `json:"wal_size_before_close_bytes"`
 	TruncateDurationMs   int64  `json:"truncate_duration_ms,omitempty"`
+	TruncateBusy         bool   `json:"truncate_busy,omitempty"`
+	TruncateLogPages     int    `json:"truncate_log_pages"`
+	TruncateCheckpointed int    `json:"truncate_checkpointed_pages"`
 	WalSizeAfterTruncate int64  `json:"wal_size_after_truncate_bytes,omitempty"`
 	ReopenDurationMs     int64  `json:"reopen_duration_ms"`
 	WalSizeAfterReopen   int64  `json:"wal_size_after_reopen_bytes"`
 	RecordsVisible       bool   `json:"records_visible"`
-	TruncateBusy         bool   `json:"truncate_busy,omitempty"`
 }
 
 type walCheckpointScaleMatrix struct {
@@ -81,26 +87,48 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 	syncVariants := []string{"FULL", "NORMAL"}
 	autoCheckpoints := []int{1000, -1}
 	commitCounts := []int{500, 2000}
+	if os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_QUICK") == "1" {
+		commitCounts = []int{5, 20}
+	}
 	closeModes := []string{"passive", "truncate"}
 
-	matrix := walCheckpointScaleMatrix{
-		SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-reopen.v2",
+	// Build the full matrix of cell descriptors.
+	type cellDesc struct {
+		sync      string
+		autoChk   int
+		n         int
+		closeMode string
 	}
-
+	var descs []cellDesc
 	for _, sync := range syncVariants {
 		for _, autoChk := range autoCheckpoints {
 			for _, n := range commitCounts {
 				for _, closeMode := range closeModes {
-					cell := runWalCheckpointScaleCell(t, ctx, sync, autoChk, n, closeMode)
-					matrix.Cells = append(matrix.Cells, cell)
-					t.Logf("sync=%s autochk=%d n=%d close=%s commit=%dms reopen=%dms wal_before=%dB wal_after=%dB visible=%v",
-						sync, autoChk, n, closeMode,
-						cell.CommitDurationMs, cell.ReopenDurationMs,
-						cell.WalSizeBeforeClose, cell.WalSizeAfterReopen,
-						cell.RecordsVisible)
+					descs = append(descs, cellDesc{sync, autoChk, n, closeMode})
 				}
 			}
 		}
+	}
+
+	// Randomize execution order if requested (phase 182: paired randomized rerun).
+	// Uses a deterministic seed for reproducibility; the env var selects the mode.
+	if os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_RANDOMIZE") == "1" {
+		rng := rand.New(rand.NewSource(42))
+		rng.Shuffle(len(descs), func(i, j int) { descs[i], descs[j] = descs[j], descs[i] })
+	}
+
+	matrix := walCheckpointScaleMatrix{
+		SchemaVersion: "motor-autonomo.sqlite-wal-checkpoint-reopen.v3",
+	}
+
+	for _, d := range descs {
+		cell := runWalCheckpointScaleCell(t, ctx, d.sync, d.autoChk, d.n, d.closeMode)
+		matrix.Cells = append(matrix.Cells, cell)
+		t.Logf("sync=%s autochk=%d n=%d close=%s commit=%dms trunc=%dms reopen=%dms wal_before=%dB wal_after_trunc=%dB wal_after=%dB visible=%v busy=%v",
+			d.sync, d.autoChk, d.n, d.closeMode,
+			cell.CommitDurationMs, cell.TruncateDurationMs, cell.ReopenDurationMs,
+			cell.WalSizeBeforeClose, cell.WalSizeAfterTruncate, cell.WalSizeAfterReopen,
+			cell.RecordsVisible, cell.TruncateBusy)
 	}
 
 	// Assert all cells preserved all records.
@@ -109,6 +137,48 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 			t.Fatalf("records not visible: sync=%s autochk=%d n=%d close=%s",
 				c.Synchronous, c.WalAutoCheckpoint, c.NumCommits, c.CloseMode)
 		}
+	}
+
+	// Paired comparison: for each (sync, autoChk, n), compare passive vs truncate total cost.
+	// Group cells by their shared dimensions.
+	type pairKey struct {
+		sync    string
+		autoChk int
+		n       int
+	}
+	passiveTotal := make(map[pairKey]int64)
+	truncateTotal := make(map[pairKey]int64)
+	for _, c := range matrix.Cells {
+		key := pairKey{c.Synchronous, c.WalAutoCheckpoint, c.NumCommits}
+		if c.CloseMode == "passive" {
+			passiveTotal[key] = c.ReopenDurationMs
+		} else {
+			truncateTotal[key] = c.TruncateDurationMs + c.ReopenDurationMs
+		}
+	}
+	t.Logf("paired comparison (reopen-only passive vs truncate+reopen):")
+	var pairKeys []pairKey
+	for k := range passiveTotal {
+		pairKeys = append(pairKeys, k)
+	}
+	sort.Slice(pairKeys, func(i, j int) bool {
+		if pairKeys[i].sync != pairKeys[j].sync {
+			return pairKeys[i].sync < pairKeys[j].sync
+		}
+		if pairKeys[i].autoChk != pairKeys[j].autoChk {
+			return pairKeys[i].autoChk < pairKeys[j].autoChk
+		}
+		return pairKeys[i].n < pairKeys[j].n
+	})
+	for _, k := range pairKeys {
+		passiveMs := passiveTotal[k]
+		truncMs := truncateTotal[k]
+		ratio := "N/A"
+		if truncMs > 0 {
+			ratio = fmt.Sprintf("%.2fx", float64(passiveMs)/float64(truncMs))
+		}
+		t.Logf("  sync=%s autochk=%d n=%d: passive_reopen=%dms truncate+reopen=%dms speedup=%s",
+			k.sync, k.autoChk, k.n, passiveMs, truncMs, ratio)
 	}
 
 	// Write versioned report if requested.
@@ -179,6 +249,8 @@ func runWalCheckpointScaleCell(t *testing.T, ctx context.Context, synchronous st
 		}
 		cell.TruncateDurationMs = truncDuration.Milliseconds()
 		cell.TruncateBusy = result.Busy
+		cell.TruncateLogPages = result.LogPages
+		cell.TruncateCheckpointed = result.CheckpointedPages
 		cell.WalSizeAfterTruncate = fileStatSize(walPath)
 	}
 
