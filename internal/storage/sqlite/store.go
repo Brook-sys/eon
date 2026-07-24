@@ -32,10 +32,11 @@ const (
 )
 
 type Options struct {
-	Failpoint     func(Failpoint)
-	BusyTimeout   time.Duration
-	Synchronous   string // "FULL" (default) or "NORMAL"
-	ObserveUpdate func(UpdateTiming)
+	Failpoint         func(Failpoint)
+	BusyTimeout       time.Duration
+	Synchronous       string // "FULL" (default) or "NORMAL"
+	ObserveUpdate     func(UpdateTiming)
+	WalAutoCheckpoint int // pages per WAL autocheckpoint; 0 = SQLite default (1000), -1 = disable
 }
 
 // UpdateTiming separates work performed by the in-memory transaction callback
@@ -69,7 +70,7 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 	db.SetMaxOpenConns(1)
-	if err := configure(db, options.BusyTimeout, options.Synchronous); err != nil {
+	if err := configure(db, options.BusyTimeout, options.Synchronous, options.WalAutoCheckpoint); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -81,7 +82,10 @@ func OpenWithOptions(path string, options Options) (*Store, error) {
 	return &Store{db: db, core: core, persistedFormat: format, persistedPayload: payload, failpoint: options.Failpoint, observeUpdate: options.ObserveUpdate}, nil
 }
 
-func configure(db *sql.DB, busyTimeout time.Duration, synchronous string) error {
+func configure(db *sql.DB, busyTimeout time.Duration, synchronous string, walAutoCheckpoint int) error {
+	if walAutoCheckpoint < -1 {
+		return fmt.Errorf("configure sqlite: wal autocheckpoint must be -1, 0, or a positive page count")
+	}
 	if busyTimeout <= 0 {
 		busyTimeout = 5 * time.Second
 	}
@@ -92,19 +96,32 @@ func configure(db *sql.DB, busyTimeout time.Duration, synchronous string) error 
 	if synchronous == "" {
 		synchronous = "FULL"
 	}
-	for _, statement := range []string{
+	// WalAutoCheckpoint controls when SQLite automatically checkpoints the WAL
+	// back into the main database. Zero leaves SQLite's connection default
+	// unchanged (currently 1000 pages); -1 disables autocheckpoint entirely.
+	var walAutoStmt string
+	if walAutoCheckpoint == -1 {
+		walAutoStmt = `PRAGMA wal_autocheckpoint=0`
+	} else if walAutoCheckpoint > 0 {
+		walAutoStmt = fmt.Sprintf(`PRAGMA wal_autocheckpoint=%d`, walAutoCheckpoint)
+	}
+	statements := []string{
 		`PRAGMA journal_mode=WAL`,
 		fmt.Sprintf(`PRAGMA synchronous=%s`, synchronous),
 		fmt.Sprintf(`PRAGMA busy_timeout=%d`, busyMilliseconds),
 		`PRAGMA foreign_keys=ON`,
 		fmt.Sprintf(`PRAGMA application_id=%d`, runtimeApplicationID),
 		fmt.Sprintf(`PRAGMA user_version=%d`, runtimeUserVersion),
-		`CREATE TABLE IF NOT EXISTS runtime_checkpoint (
-			id INTEGER PRIMARY KEY CHECK (id = 1),
-			format_version INTEGER NOT NULL,
-			payload BLOB NOT NULL
-		) STRICT`,
-	} {
+	}
+	if walAutoStmt != "" {
+		statements = append(statements, walAutoStmt)
+	}
+	statements = append(statements, `CREATE TABLE IF NOT EXISTS runtime_checkpoint (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		format_version INTEGER NOT NULL,
+		payload BLOB NOT NULL
+	) STRICT`)
+	for _, statement := range statements {
 		if _, err := db.Exec(statement); err != nil {
 			return fmt.Errorf("configure sqlite with %q: %w", statement, err)
 		}

@@ -1,0 +1,113 @@
+{
+  "schema_version": "motor-autonomo.sqlite-wal-checkpoint-reopen.v1",
+  "cells": [
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 100,
+      "num_commits": 5,
+      "commit_duration_ms": 56,
+      "reopen_duration_ms": 45,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 100,
+      "num_commits": 50,
+      "commit_duration_ms": 639,
+      "reopen_duration_ms": 46,
+      "wal_size_bytes": 428512,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "commit_duration_ms": 58,
+      "reopen_duration_ms": 40,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 50,
+      "commit_duration_ms": 560,
+      "reopen_duration_ms": 73,
+      "wal_size_bytes": 1582112,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "commit_duration_ms": 54,
+      "reopen_duration_ms": 40,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 50,
+      "commit_duration_ms": 560,
+      "reopen_duration_ms": 45,
+      "wal_size_bytes": 1569752,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 100,
+      "num_commits": 5,
+      "commit_duration_ms": 11,
+      "reopen_duration_ms": 29,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 100,
+      "num_commits": 50,
+      "commit_duration_ms": 215,
+      "reopen_duration_ms": 30,
+      "wal_size_bytes": 432632,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 5,
+      "commit_duration_ms": 11,
+      "reopen_duration_ms": 30,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 50,
+      "commit_duration_ms": 132,
+      "reopen_duration_ms": 36,
+      "wal_size_bytes": 1594472,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 5,
+      "commit_duration_ms": 11,
+      "reopen_duration_ms": 29,
+      "wal_size_bytes": 156592,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 50,
+      "commit_duration_ms": 129,
+      "reopen_duration_ms": 36,
+      "wal_size_bytes": 1582112,
+      "records_visible": true
+    }
+  ]
+}
