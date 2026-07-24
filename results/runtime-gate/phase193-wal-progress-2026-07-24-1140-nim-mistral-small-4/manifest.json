@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase193-wal-progress-nim-mistral-small-4",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "output_schema": "exact_json",
+  "probe_prompt": "Bounded live control for resumable WAL campaign progress. Evidence only; deterministic kernel retains durability authority. Return exactly {\"wal_resume_batch\":\"OK\"}. Raw JSON only, no Markdown or explanation.",
+  "expected_response": "{\"wal_resume_batch\":\"OK\"}",
+  "seed_primary_circuit_seconds": 1,
+  "bindings": [
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-seeded-open",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-mistral-small-4",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}
