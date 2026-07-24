@@ -1,0 +1,181 @@
+{
+  "schema_version": "motor-autonomo.sqlite-wal-checkpoint-reopen.v2",
+  "cells": [
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 500,
+      "close_mode": "passive",
+      "commit_duration_ms": 7521,
+      "wal_size_before_close_bytes": 4181832,
+      "reopen_duration_ms": 41,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 500,
+      "close_mode": "truncate",
+      "commit_duration_ms": 6955,
+      "wal_size_before_close_bytes": 4181832,
+      "reopen_duration_ms": 30,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 2000,
+      "close_mode": "passive",
+      "commit_duration_ms": 77131,
+      "wal_size_before_close_bytes": 4350752,
+      "reopen_duration_ms": 53,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 2000,
+      "close_mode": "truncate",
+      "commit_duration_ms": 60935,
+      "wal_size_before_close_bytes": 4350752,
+      "reopen_duration_ms": 34,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 500,
+      "close_mode": "passive",
+      "commit_duration_ms": 7716,
+      "wal_size_before_close_bytes": 27360952,
+      "reopen_duration_ms": 47,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 500,
+      "close_mode": "truncate",
+      "commit_duration_ms": 6599,
+      "wal_size_before_close_bytes": 27365072,
+      "reopen_duration_ms": 57,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 2000,
+      "close_mode": "passive",
+      "commit_duration_ms": 41003,
+      "wal_size_before_close_bytes": 285516032,
+      "reopen_duration_ms": 95,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 2000,
+      "close_mode": "truncate",
+      "commit_duration_ms": 83369,
+      "wal_size_before_close_bytes": 285520152,
+      "reopen_duration_ms": 33,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 500,
+      "close_mode": "passive",
+      "commit_duration_ms": 2396,
+      "wal_size_before_close_bytes": 4181832,
+      "reopen_duration_ms": 93,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 500,
+      "close_mode": "truncate",
+      "commit_duration_ms": 2356,
+      "wal_size_before_close_bytes": 4181832,
+      "reopen_duration_ms": 18,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 2000,
+      "close_mode": "passive",
+      "commit_duration_ms": 32585,
+      "wal_size_before_close_bytes": 4350752,
+      "reopen_duration_ms": 431,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 2000,
+      "close_mode": "truncate",
+      "commit_duration_ms": 38416,
+      "wal_size_before_close_bytes": 4350752,
+      "reopen_duration_ms": 127,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 500,
+      "close_mode": "passive",
+      "commit_duration_ms": 2162,
+      "wal_size_before_close_bytes": 27365072,
+      "reopen_duration_ms": 282,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 500,
+      "close_mode": "truncate",
+      "commit_duration_ms": 2168,
+      "wal_size_before_close_bytes": 27365072,
+      "reopen_duration_ms": 118,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 2000,
+      "close_mode": "passive",
+      "commit_duration_ms": 21341,
+      "wal_size_before_close_bytes": 285520152,
+      "reopen_duration_ms": 1376,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    },
+    {
+      "synchronous": "NORMAL",
+      "wal_auto_checkpoint": -1,
+      "num_commits": 2000,
+      "close_mode": "truncate",
+      "commit_duration_ms": 21901,
+      "wal_size_before_close_bytes": 285524272,
+      "reopen_duration_ms": 58,
+      "wal_size_after_reopen_bytes": 8272,
+      "records_visible": true
+    }
+  ]
+}

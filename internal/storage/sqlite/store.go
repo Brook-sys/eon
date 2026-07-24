@@ -272,6 +272,38 @@ func (s *Store) Update(ctx context.Context, fn func(port.Transaction) error) err
 	return nil
 }
 
+// CheckpointResult captures the outcome of PRAGMA wal_checkpoint(TRUNCATE).
+// Busy indicates whether the checkpoint could not complete because another
+// connection held a lock; LogPages is the number of frames in the WAL before
+// the checkpoint ran; CheckpointedPages is how many frames were written back
+// to the main database. When the WAL is truncated to zero, LogPages should
+// equal CheckpointedPages and the WAL file is reset.
+type CheckpointResult struct {
+	Busy              bool `json:"busy"`
+	LogPages          int  `json:"log_pages"`
+	CheckpointedPages int  `json:"checkpointed_pages"`
+}
+
+// Checkpoint issues PRAGMA wal_checkpoint(TRUNCATE) and returns the result.
+// The caller must hold no transaction; this method acquires the store mutex
+// to prevent concurrent Update/View during the checkpoint.
+func (s *Store) Checkpoint() (CheckpointResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return CheckpointResult{}, fmt.Errorf("store: already closed")
+	}
+	var busy, logPages, checkpointedPages int
+	if err := s.db.QueryRow(`PRAGMA wal_checkpoint(TRUNCATE)`).Scan(&busy, &logPages, &checkpointedPages); err != nil {
+		return CheckpointResult{}, fmt.Errorf("store: wal checkpoint truncate: %w", err)
+	}
+	return CheckpointResult{
+		Busy:              busy != 0,
+		LogPages:          logPages,
+		CheckpointedPages: checkpointedPages,
+	}, nil
+}
+
 func (s *Store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
