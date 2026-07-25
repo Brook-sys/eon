@@ -15,28 +15,29 @@ const MaxRuntimeGateBatchTrials = 5
 // the existing fail-closed ResourceGate and durable-reopen proof; the batch
 // adds distribution and repeatability evidence without sharing quota state.
 type RuntimeGateBatchReport struct {
-	SchemaVersion        int            `json:"schema_version"`
-	Name                 string         `json:"name"`
-	Trials               int            `json:"trials"`
-	ExternalCalls        int            `json:"external_calls"`
-	ProviderSuccesses    int            `json:"provider_successes"`
-	ExecutionFailures    int            `json:"execution_failures"`
-	DurableReopens       int            `json:"durable_reopens"`
-	ExpectedMatches      int            `json:"expected_matches"`
-	JSONValid            int            `json:"json_valid"`
-	SchemaEvaluated      int            `json:"schema_evaluated"`
-	SchemaAdherent       int            `json:"schema_adherent"`
-	ChangesValid         int            `json:"changes_valid"`
-	InputTokens          int            `json:"input_tokens"`
-	OutputTokens         int            `json:"output_tokens"`
-	LatencyP50           time.Duration  `json:"latency_p50"`
-	LatencyP95           time.Duration  `json:"latency_p95"`
-	LatencyMax           time.Duration  `json:"latency_max"`
-	SelectedBindings     map[string]int `json:"selected_bindings"`
-	FinishReasons        map[string]int `json:"finish_reasons"`
-	FramingClasses       map[string]int `json:"framing_classes,omitempty"`
-	ProviderHTTPStatuses map[string]int `json:"provider_http_statuses,omitempty"`
-	SecondAcquireReasons map[string]int `json:"second_acquire_reasons"`
+	SchemaVersion         int            `json:"schema_version"`
+	Name                  string         `json:"name"`
+	Trials                int            `json:"trials"`
+	ExternalCalls         int            `json:"external_calls"`
+	ProviderSuccesses     int            `json:"provider_successes"`
+	ExecutionFailures     int            `json:"execution_failures"`
+	DurableReopens        int            `json:"durable_reopens"`
+	ExpectedMatches       int            `json:"expected_matches"`
+	JSONValid             int            `json:"json_valid"`
+	SchemaEvaluated       int            `json:"schema_evaluated"`
+	SchemaAdherent        int            `json:"schema_adherent"`
+	SchemaContentComplete int            `json:"schema_content_complete"`
+	ChangesValid          int            `json:"changes_valid"`
+	InputTokens           int            `json:"input_tokens"`
+	OutputTokens          int            `json:"output_tokens"`
+	LatencyP50            time.Duration  `json:"latency_p50"`
+	LatencyP95            time.Duration  `json:"latency_p95"`
+	LatencyMax            time.Duration  `json:"latency_max"`
+	SelectedBindings      map[string]int `json:"selected_bindings"`
+	FinishReasons         map[string]int `json:"finish_reasons"`
+	FramingClasses        map[string]int `json:"framing_classes,omitempty"`
+	ProviderHTTPStatuses  map[string]int `json:"provider_http_statuses,omitempty"`
+	SecondAcquireReasons  map[string]int `json:"second_acquire_reasons"`
 }
 
 func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignReport) (RuntimeGateBatchReport, error) {
@@ -78,6 +79,11 @@ func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignRepor
 				report.SchemaAdherence.FieldsCorrectType == report.SchemaAdherence.FieldsChecked {
 				batch.SchemaAdherent++
 			}
+			// ProposedChangeSet has ten fields whose content must be non-empty.
+			// schema_version is numeric and preconditions may legitimately be [].
+			if report.SchemaAdherence.FieldsNonEmpty == 10 {
+				batch.SchemaContentComplete++
+			}
 			if report.SchemaAdherence.ChangesValid {
 				batch.ChangesValid++
 			}
@@ -113,7 +119,7 @@ func WriteRuntimeGateBatchArtifacts(directory string, report RuntimeGateBatchRep
 	if err := atomicWrite(directory+"/runtime-gate-batch.json", append(body, '\n')); err != nil {
 		return err
 	}
-	markdown := fmt.Sprintf("# Runtime provider gate batch\n\n- Name: `%s`\n- Trials/calls: %d/%d\n- Provider successes: %d\n- Execution failures: %d\n- Durable reopens: %d\n- Expected matches: %d\n- JSON valid: %d\n- Schema evaluated/adherent: %d/%d\n- Changes valid: %d\n- Tokens input/output: %d/%d\n- Provider latency p50/p95/max: `%s` / `%s` / `%s`\n- Selected bindings: `%v`\n- Finish reasons: `%v`\n- Framing classes: `%v`\n- Second acquire reasons: `%v`\n\nEach trial used a fresh SQLite store and retained the one-external-call ceiling. The aggregate has no authority to alter model routing.\n", report.Name, report.Trials, report.ExternalCalls, report.ProviderSuccesses, report.ExecutionFailures, report.DurableReopens, report.ExpectedMatches, report.JSONValid, report.SchemaEvaluated, report.SchemaAdherent, report.ChangesValid, report.InputTokens, report.OutputTokens, report.LatencyP50, report.LatencyP95, report.LatencyMax, report.SelectedBindings, report.FinishReasons, report.FramingClasses, report.SecondAcquireReasons)
+	markdown := fmt.Sprintf("# Runtime provider gate batch\n\n- Name: `%s`\n- Trials/calls: %d/%d\n- Provider successes: %d\n- Execution failures: %d\n- Durable reopens: %d\n- Expected matches: %d\n- JSON valid: %d\n- Schema evaluated/adherent/content-complete: %d/%d/%d\n- Changes valid: %d\n- Tokens input/output: %d/%d\n- Provider latency p50/p95/max: `%s` / `%s` / `%s`\n- Selected bindings: `%v`\n- Finish reasons: `%v`\n- Framing classes: `%v`\n- Second acquire reasons: `%v`\n\nEach trial used a fresh SQLite store and retained the one-external-call ceiling. The aggregate has no authority to alter model routing.\n", report.Name, report.Trials, report.ExternalCalls, report.ProviderSuccesses, report.ExecutionFailures, report.DurableReopens, report.ExpectedMatches, report.JSONValid, report.SchemaEvaluated, report.SchemaAdherent, report.SchemaContentComplete, report.ChangesValid, report.InputTokens, report.OutputTokens, report.LatencyP50, report.LatencyP95, report.LatencyMax, report.SelectedBindings, report.FinishReasons, report.FramingClasses, report.SecondAcquireReasons)
 	return atomicWrite(directory+"/runtime-gate-batch.md", []byte(markdown))
 }
 
