@@ -20,6 +20,7 @@ type RuntimeGateBatchReport struct {
 	Trials               int            `json:"trials"`
 	ExternalCalls        int            `json:"external_calls"`
 	ProviderSuccesses    int            `json:"provider_successes"`
+	ExecutionFailures    int            `json:"execution_failures"`
 	DurableReopens       int            `json:"durable_reopens"`
 	ExpectedMatches      int            `json:"expected_matches"`
 	JSONValid            int            `json:"json_valid"`
@@ -55,6 +56,9 @@ func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignRepor
 		batch.ExternalCalls += report.ExternalCalls
 		if report.ProviderSucceeded {
 			batch.ProviderSuccesses++
+		}
+		if report.ExecutionError != "" {
+			batch.ExecutionFailures++
 		}
 		if report.DurableReopen {
 			batch.DurableReopens++
@@ -96,7 +100,7 @@ func WriteRuntimeGateBatchArtifacts(directory string, report RuntimeGateBatchRep
 	if err := atomicWrite(directory+"/runtime-gate-batch.json", append(body, '\n')); err != nil {
 		return err
 	}
-	markdown := fmt.Sprintf("# Runtime provider gate batch\n\n- Name: `%s`\n- Trials/calls: %d/%d\n- Provider successes: %d\n- Durable reopens: %d\n- Expected matches: %d\n- JSON valid: %d\n- Tokens input/output: %d/%d\n- Provider latency p50/p95/max: `%s` / `%s` / `%s`\n- Selected bindings: `%v`\n- Finish reasons: `%v`\n- Framing classes: `%v`\n- Second acquire reasons: `%v`\n\nEach trial used a fresh SQLite store and retained the one-external-call ceiling. The aggregate has no authority to alter model routing.\n", report.Name, report.Trials, report.ExternalCalls, report.ProviderSuccesses, report.DurableReopens, report.ExpectedMatches, report.JSONValid, report.InputTokens, report.OutputTokens, report.LatencyP50, report.LatencyP95, report.LatencyMax, report.SelectedBindings, report.FinishReasons, report.FramingClasses, report.SecondAcquireReasons)
+	markdown := fmt.Sprintf("# Runtime provider gate batch\n\n- Name: `%s`\n- Trials/calls: %d/%d\n- Provider successes: %d\n- Execution failures: %d\n- Durable reopens: %d\n- Expected matches: %d\n- JSON valid: %d\n- Tokens input/output: %d/%d\n- Provider latency p50/p95/max: `%s` / `%s` / `%s`\n- Selected bindings: `%v`\n- Finish reasons: `%v`\n- Framing classes: `%v`\n- Second acquire reasons: `%v`\n\nEach trial used a fresh SQLite store and retained the one-external-call ceiling. The aggregate has no authority to alter model routing.\n", report.Name, report.Trials, report.ExternalCalls, report.ProviderSuccesses, report.ExecutionFailures, report.DurableReopens, report.ExpectedMatches, report.JSONValid, report.InputTokens, report.OutputTokens, report.LatencyP50, report.LatencyP95, report.LatencyMax, report.SelectedBindings, report.FinishReasons, report.FramingClasses, report.SecondAcquireReasons)
 	return atomicWrite(directory+"/runtime-gate-batch.md", []byte(markdown))
 }
 

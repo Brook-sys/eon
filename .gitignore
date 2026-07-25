@@ -1,1 +1,4 @@
 .provider-secrets.env
+/runtime
+/runtime-gate-campaign
+/cmd/runtime-gate-campaign/runtime-gate-campaign

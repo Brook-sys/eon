@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "phase217-mixed-batch-success-failure",
+  "trials": 2,
+  "external_calls": 2,
+  "provider_successes": 2,
+  "execution_failures": 2,
+  "durable_reopens": 2,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "input_tokens": 1206,
+  "output_tokens": 768,
+  "latency_p50": 1064717533,
+  "latency_p95": 1115632743,
+  "latency_max": 1115632743,
+  "selected_bindings": {
+    "groq-qwen36-27b": 2
+  },
+  "finish_reasons": {
+    "length": 2
+  },
+  "framing_classes": {
+    "invalid_json": 2
+  },
+  "second_acquire_reasons": {
+    "": 2
+  }
+}

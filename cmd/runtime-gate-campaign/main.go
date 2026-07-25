@@ -79,10 +79,13 @@ func run() error {
 			}
 		}
 		report, err := runTrial(manifest, providers, trialDirectory)
-		if err != nil {
+		if err != nil && report.SchemaVersion == 0 {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
 		reports = append(reports, report)
+		if err != nil && *trials == 1 {
+			return fmt.Errorf("trial %d: %w", trial, err)
+		}
 	}
 	if *trials > 1 {
 		batch, err := gatecampaign.BuildRuntimeGateBatchReport(manifest.Name, reports)
@@ -116,12 +119,7 @@ func runTrial(manifest gatecampaign.RuntimeGateCampaignManifest, providers map[s
 	if closeErr != nil {
 		return gatecampaign.RuntimeGateCampaignReport{}, closeErr
 	}
-	if runErr != nil {
-		if report.SchemaVersion != 0 {
-			if writeErr := gatecampaign.WriteRuntimeGateCampaignArtifacts(outputDirectory, report); writeErr != nil {
-				return gatecampaign.RuntimeGateCampaignReport{}, fmt.Errorf("write failed trial artifacts: %w", writeErr)
-			}
-		}
+	if runErr != nil && report.SchemaVersion == 0 {
 		return report, runErr
 	}
 	reopened, err := sqlite.Open(databasePath)
@@ -139,5 +137,5 @@ func runTrial(manifest gatecampaign.RuntimeGateCampaignManifest, providers map[s
 	if err := gatecampaign.WriteRuntimeGateCampaignArtifacts(outputDirectory, report); err != nil {
 		return gatecampaign.RuntimeGateCampaignReport{}, err
 	}
-	return report, nil
+	return report, runErr
 }

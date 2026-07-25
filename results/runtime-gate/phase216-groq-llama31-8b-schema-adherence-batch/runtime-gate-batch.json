@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "phase216-groq-llama31-8b-schema-adherence-batch",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 0,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 3,
+  "input_tokens": 1857,
+  "output_tokens": 399,
+  "latency_p50": 481665531,
+  "latency_p95": 622793654,
+  "latency_max": 622793654,
+  "selected_bindings": {
+    "groq-llama31-8b": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "valid_json_mismatch": 3
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 3
+  }
+}

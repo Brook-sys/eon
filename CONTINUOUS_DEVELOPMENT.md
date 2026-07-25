@@ -5216,3 +5216,22 @@ O CLI `runtime-gate-campaign` agora persiste artefatos mesmo quando `Run` retorn
 Campanha live negativa: Groq `qwen/qwen3.6-27b` (reasoning), NIM Mistral Small 4 semeado circuit-open. Exatamente 1 chamada, teto 384, timeout 45 s, zero retries. Resultado: provider sucedeu em 1.057 s, 603 input + 384 output tokens, `finish_reason=length`, 1.380 bytes, `response_json_valid=false`, `response_framing_class=invalid_json`, `schema_adherence=null` (JSON inválido, corretamente não avaliado), `execution_error="model recovery exhausted: validate proposed changeset JSON shape: invalid character '<' looking for beginning of value"`, sem commit, sem entidade canônica. Evidência: `results/runtime-gate/phase215-groq-qwen36-schema-adherence-negative/`.
 
 Verificação: `go test ./internal/gatecampaign/...` passou (novo teste `TestRunProposedChangeSetFailureReturnsStructuredReport` + suíte integral); `go test ./...` passou; `go vet ./...` limpo; `gofmt` limpo; `git diff --check` limpo. Decodificação do relatório JSON do phase 215 confirmou provider_succeeded=true, json_valid=false, framing=invalid_json, execution_error preenchido e ausência de commit/entidade.
+
+### Fase 216–217 — Continuação de batch em trial falho e contagem de execution_failures
+
+- [x] `DONE` Corrigir o caminho `-trials > 1` no CLI `runtime-gate-campaign`: antes, a primeira rejeição do changeset abortava todo o batch, impedindo que trials subsequent executassem e perdendo a evidência de distribuição.
+- [x] `DONE` Adicionar `ExecutionFailures` ao `RuntimeGateBatchReport` e contá-lo no agregador.
+- [x] `DONE` Adicionar teste `TestBuildRuntimeGateBatchReportAggregatesMixedSuccessAndFailure` cobrindo batch com 1 sucesso e 1 falha de execução.
+- [x] `DONE` Gitignorar binários de build locais (`/runtime`, `/runtime-gate-campaign`) que estavam sendo rastreados sem intenção.
+- [x] `DONE` Executar campanha live bounded batch (3 trials) no Groq Llama 3.1 8B com schema adherence 12/12 em todos os trials.
+- [x] `DONE` Executar campanha live bounded batch (2 trials) no Groq Qwen 3.6 27B (reasoning) validando continuação do batch em falha e relatório agregado com `execution_failures=2`.
+
+2026-07-25 11:40 — HEARTBEAT — O caminho `-trials > 1` no CLI `runtime-gate-campaign` abortava todo o batch na primeira rejeição do changeset, impedindo que trials subsequent executassem. Agora, quando `runTrial` retorna erro e o relatório tem `SchemaVersion != 0`, o loop acrescenta o relatório e continua; somente retorna erro imediato quando o relatório está vazio (falha antes do provider) ou quando `-trials == 1` (comportamento de tentativa única preservado). O `RuntimeGateBatchReport` ganhou `ExecutionFailures` e o agregador conta trials com `ExecutionError != ""`.
+
+Campanha live batch 1 (Phase 216, Groq Llama 3.1 8B): 3 trials isolados, NIM Mistral Small 4 semeado circuit-open, roteou para Groq `llama-3.1-8b-instant` em todos. Resultados: latências 449/481/622 ms, 619 input + 133 output tokens cada, `finish_reason=stop`, JSON válido, schema adherence 12/12 em todos, changeset cometido, reopen durável. Batch agregado: 3/3 calls, 3/3 successes, 0 execution failures, 3/3 durable reopens, p50=481 ms, p95=622 ms. Evidência: `results/runtime-gate/phase216-groq-llama31-8b-schema-adherence-batch/`.
+
+Campanha live batch 2 (Phase 217, Groq Qwen 3.6 27B reasoning, controle negativo): 2 trials isolados, mesmo manifesto Qwen 3.6 da Phase 215. Ambos trials falharam no decoder (`invalid_json`, `finish_reason=length`, `execution_error` preenchido), mas o batch continuou, persistiu artefatos de cada trial e produzindo relatório agregado com `execution_failures=2`, `json_valid=0`, `provider_successes=2`. Evidência: `results/runtime-gate/phase217-mixed-batch-success-failure/`.
+
+Rotação de provider: Phase 216 usou Groq `llama-3.1-8b-instant` (não-reasoning,familia Llama, ja testado). Phase 217 usou Groq `qwen/qwen3.6-27b` (reasoning, familia Qwen, ja classificado como incompatível). A rotacao entre familias e portes foi mantida; o objetivo destes lotes foi validar o caminho de batch, nao qualificar novos modelos.
+
+Verificação: `go test ./internal/gatecampaign/...` passou (novos testes `TestBuildRuntimeGateBatchReportAggregatesMixedSuccessAndFailure` + existentes); `go test ./...` suite integral passou; `go vet ./...` limpo; `gofmt` limpo; `git diff --check` limpo. Decodificação dos relatórios JSON confirmou contagens, latências, aderência e reopen durável em cada trial.
