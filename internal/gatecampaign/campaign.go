@@ -211,6 +211,7 @@ type SchemaAdherenceReport struct {
 	FieldsChecked        int                 `json:"fields_checked"`
 	FieldsPresent        int                 `json:"fields_present"`
 	FieldsCorrectType    int                 `json:"fields_correct_type"`
+	FieldsNonEmpty       int                 `json:"fields_non_empty"`
 	FieldResults         []SchemaFieldResult `json:"field_results"`
 	ChangesValid         bool                `json:"changes_valid,omitempty"`
 	ChangesChecked       int                 `json:"changes_checked,omitempty"`
@@ -221,6 +222,7 @@ type SchemaFieldResult struct {
 	Field        string `json:"field"`
 	Present      bool   `json:"present"`
 	CorrectType  bool   `json:"correct_type"`
+	NonEmpty     bool   `json:"non_empty"`
 	ObservedType string `json:"observed_type,omitempty"`
 	ExpectedType string `json:"expected_type"`
 }
@@ -581,6 +583,10 @@ func evaluateProposedChangeSetAdherence(responseText string) SchemaAdherenceRepo
 					if json.Unmarshal([]byte(trimmed), &arr) == nil {
 						result.CorrectType = true
 						result.ObservedType = "array"
+						// Mark non-empty if array has at least one element
+						if len(arr) > 0 {
+							result.NonEmpty = true
+						}
 					} else {
 						result.ObservedType = "invalid_array"
 					}
@@ -595,6 +601,10 @@ func evaluateProposedChangeSetAdherence(responseText string) SchemaAdherenceRepo
 					if json.Unmarshal([]byte(trimmed), &s) == nil {
 						result.CorrectType = true
 						result.ObservedType = "string"
+						// Mark non-empty if string has content after trimming
+						if len(strings.TrimSpace(s)) > 0 {
+							result.NonEmpty = true
+						}
 					} else {
 						result.ObservedType = "invalid_string"
 					}
@@ -623,6 +633,9 @@ func evaluateProposedChangeSetAdherence(responseText string) SchemaAdherenceRepo
 			}
 			if result.CorrectType {
 				report.FieldsCorrectType++
+			}
+			if result.NonEmpty {
+				report.FieldsNonEmpty++
 			}
 		} else {
 			result.ObservedType = "missing"
