@@ -5318,6 +5318,18 @@ A Fase 227 rotacionou para NVIDIA NIM `mistralai/mistral-small-4-119b-2603` com 
 
 Evidência: `results/runtime-gate/phase226-groq-llama31-8b-provenance-correction/` e manifesto adjacente; tentativa NIM registrada no estado de desenvolvimento, sem promover o SQLite parcial sem relatório. Verificação: teste focal do prompt, testes gatecampaign, decode independente dos três trials Groq, inspeção de `fields_non_empty`, suíte integral aplicável, vet e `git diff --check` executados no ciclo.
 
+### Fase 228 — Rerun do controle NVIDIA NIM após correção de provenance
+
+- [x] `DONE` Repetir o controle bounded no NVIDIA NIM Mistral Small 4 com o mesmo manifesto adversarial e a instrução de provenance corrigida.
+- [x] `DONE` Confirmar aderência estrutural, completude de conteúdo, aplicação canônica e reopen durável sem retry nem segunda chamada externa.
+- [x] `DONE` Comparar o rerun com a tentativa inconclusiva da Fase 227 e fechar a hipótese antes de alterar o harness de relatório parcial.
+
+2026-07-25 18:10 — HEARTBEAT — O mesmo manifesto da Fase 227 foi reexecutado em store SQLite novo, com Groq `llama-3.1-8b-instant` semeado circuit-open e NVIDIA NIM `mistralai/mistral-small-4-119b-2603` como rota selecionada. Limites: uma chamada externa, zero retries, timeout 45 s e teto 384 output tokens. O provider concluiu em 2,254 s, com 699 input + 154 output tokens, `finish_reason=stop`, 528 bytes e JSON válido. O oracle mediu 12/12 campos presentes e tipados, `fields_non_empty=10`, `changes_valid=true`; o kernel aplicou o changeset, persistiu `commit_0000000000000004` e a entidade canônica, e o reopen foi verificado. A segunda operação foi estacionada localmente por `resource_resource_rate_limit`, sem chamada adicional.
+
+Interpretação: o rerun converteu a tentativa inconclusiva da Fase 227 em controle positivo e reproduziu no NIM a correção observada no Groq da Fase 226. Como a falha anterior não deixou completion estruturada, não é possível atribuí-la retrospectivamente; ela permanece uma observação isolada de fail-closed, não evidência contra o deployment. A lacuna de relatório parcial para recovery que encontra o teto externo continua relevante, mas deixa de ser bloqueadora deste experimento e deve ser exercitada primeiro por teste determinístico específico, sem inventar uma correção baseada em um evento não reproduzido.
+
+Evidência: `results/runtime-gate/phase228-nim-mistral-small-4-provenance-control/` (o campo `name` interno permanece `phase227-...` porque o manifesto foi reutilizado byte a byte para comparabilidade; o diretório e timestamps identificam o rerun). Verificação: decode independente confirmou 1/1 chamada, provider success, schema 12/12, conteúdo 10/10, commit, entidade, throttle local e reopen; testes focais kernel/gatecampaign, vet focal e `git diff --check` passaram antes do rerun; suíte integral aplicável e validação final executadas após integrar a evidência.
+
 ## Direcionamento do operador — 2026-07-25 18:02
 
 Instruções do operador para os próximos heartbeats:
