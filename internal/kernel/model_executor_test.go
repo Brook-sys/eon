@@ -162,6 +162,7 @@ func TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys(t *testing.T
 	for _, required := range []string{
 		"top-level object may contain only", "idempotency_key", "Each changes item may contain only", "every other top-level field is a JSON string", "Do not wrap the object", "do not add input_refs",
 		"MUST each be one JSON string", "expected_delta: \"one observation\"",
+		"read_set and preconditions MUST each be a JSON array of strings", "read_set: [\"manifest\"]", "preconditions: []",
 	} {
 		if !strings.Contains(compiled.Request.Prompt, required) {
 			t.Fatalf("changeset prompt lacks %q:\n%s", required, compiled.Request.Prompt)

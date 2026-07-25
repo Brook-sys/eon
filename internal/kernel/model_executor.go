@@ -1350,6 +1350,7 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			"The top-level object may contain only: schema_version, id, mission_revision_id, operation_id, base_commit_id, read_set, preconditions, changes, expected_delta, validator_ids, provenance, idempotency_key.",
 			"Each changes item may contain only: kind, entity_type, entity_id, payload_ref.",
 			"schema_version is an integer; read_set, preconditions, changes, and validator_ids are arrays; every other top-level field is a JSON string.",
+			"read_set and preconditions MUST each be a JSON array of strings, never a single string. Use read_set: [\"manifest\"] and preconditions: [].",
 			"expected_delta, provenance, id, mission_revision_id, operation_id, base_commit_id, and idempotency_key MUST each be one JSON string, never an array or object. Use expected_delta: \"one observation\".",
 			"Do not wrap the object and do not add input_refs, spec_id, task, facts, or commentary as JSON fields.",
 			"Do not invent authority: only propose ADD/REPLACE/DEPRECATE changes.",

@@ -5159,3 +5159,26 @@ Decisao: o fortalecimento do prompt e uma melhoria defensiva queopera na origem 
 Artefatos: `results/runtime-gate/phase208-nim-deepseek-v4-flash-explicit-types/`. Manifesto adjacente.
 
 Verificacao: `go test ./internal/kernel/` passou (testes focais e suuite); `go vet ./internal/kernel/` passou; `gofmt -w` aplicado; `git diff --check` passou; `go test ./...` suite integral passou; decode do relatorio confirmou 1 chamada externa, `finish_reason=stop`, JSON valido, changeset cometido, quotas contabilizadas e reopen duravel.
+
+### Fase 209 — Controle de framing JSON exato no Groq Llama 3.3 70B
+
+- [x] `DONE` Executar uma chamada bounded com oracle byte-a-byte e binding NIM primário semeado em circuito aberto.
+- [x] `DONE` Confirmar framing exato, quota local e reopen SQLite durável sem promover preferência de modelo.
+
+2026-07-25 07:30 — HEARTBEAT — O controle live Groq `llama-3.3-70b-versatile` executou exatamente uma chamada, timeout 45 s, teto 64 tokens e zero retries. O modelo retornou exatamente `{"schema_version":1,"status":"ok","model_adheres":true}`: 400 ms, 114 input + 18 output tokens, `finish_reason=stop`, 55 bytes, JSON válido, `expected_response_match=true` e `response_framing_class=exact`. A segunda aquisição foi estacionada pelo rate limit local e o SQLite reabriu duravelmente. Evidência: `results/runtime-gate/phase209-groq-llama33-70b-exact-json/`. O resultado qualifica este caso simples de framing, mas não autoriza preferência automática nem demonstra aderência a schemas compostos.
+
+### Fase 210–212 — Tipagem explícita de arrays em ProposedChangeSet
+
+- [x] `DONE` Testar o Groq Llama 3.1 8B com o prompt anterior e classificar fail-closed a divergência `read_set` string versus `[]string`.
+- [x] `DONE` Fortalecer o prompt do kernel com tipos e exemplos explícitos para `read_set` e `preconditions`, adicionando regressão sobre o prompt compilado.
+- [x] `DONE` Repetir o changeset no Groq Llama 3.1 8B e em controle rotacionado NVIDIA NIM Mistral Small 4, exigindo commit canônico e reopen durável.
+
+2026-07-25 08:00 — HEARTBEAT — O baseline `phase210-groq-llama31-8b-proposed-changeset` alcançou o Groq em exatamente uma chamada, mas foi rejeitado antes de qualquer commit: `json: cannot unmarshal string into Go struct field ProposedChangeSet.read_set of type []string`. A evidência negativa mostrou que a frase genérica "read_set ... are arrays" não bastou para o deployment pequeno, apesar de as strings escalares já terem restrição forte. O SQLite parcial foi mantido fora do conjunto promovido; nenhuma saída inválida ganhou autoridade.
+
+O prompt de produção agora declara: `read_set and preconditions MUST each be a JSON array of strings, never a single string`, com exemplos `read_set: ["manifest"]` e `preconditions: []`. O teste `TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys` impede regressão dessa instrução.
+
+Repetição Groq `llama-3.1-8b-instant` (`phase211`): exatamente 1 chamada, teto 384, timeout 45 s, zero retries; sucesso em 502 ms, 586 input + 133 output tokens, `finish_reason=stop`, JSON válido, commit `commit_0000000000000004`, entidade canônica armazenada e reopen durável. A correção converteu a falha de tipo em changeset aceito sem normalização permissiva.
+
+Controle rotacionado NVIDIA NIM `mistralai/mistral-small-4-119b-2603` (`phase212`): exatamente 1 chamada sob as mesmas cotas, sucesso em 2,989 s, 581 input + 153 output tokens, `finish_reason=stop`, JSON válido, o mesmo commit ordinal e entidade canônica armazenada após reopen. Ambos registraram `valid_json_mismatch`, esperado sem `expected_response` byte-a-byte para o objeto variável, e a segunda aquisição foi bloqueada por quota local.
+
+Decisão: manter a validação estrita e corrigir a instrução na origem; não coagir string para array no parser. O 8B foi ~6× mais rápido que o NIM Mistral neste par, mas uma amostra não altera preferência. Próximo teste de fogo: usar um oracle semântico estruturado para comparar aderência campo a campo e distinguir JSON válido de schema integral sem depender de igualdade byte-a-byte.
