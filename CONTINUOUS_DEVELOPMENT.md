@@ -5317,3 +5317,13 @@ A Fase 226 repetiu o cenário adversarial no Groq `llama-3.1-8b-instant`: três 
 A Fase 227 rotacionou para NVIDIA NIM `mistralai/mistral-small-4-119b-2603` com manifesto idêntico, Groq circuit-open e o mesmo teto de uma chamada. O provider foi alcançado uma vez; a primeira completion foi rejeitada e o executor tentou a escada de recuperação, mas o gate bloqueou a segunda chamada com `runtime gate external call budget exhausted`. Portanto o controle terminou fail-closed, sem promover changeset e sem ampliar consumo. Este caminho de erro ocorre depois de uma completion conhecida mas antes do relatório estruturado atualmente emitido para falha direta do decoder; por isso não há métricas seguras suficientes para atribuir a causa a schema, framing ou conteúdo. Não se fez retry cerimonial nem inferência de preferência. Próximo experimento: fazer `RuntimeGateCampaign.Run` produzir relatório parcial também quando a recuperação encontra o orçamento externo após a primeira completion, preservando hash/usage/framing do primeiro recibo, e só então repetir o controle bounded.
 
 Evidência: `results/runtime-gate/phase226-groq-llama31-8b-provenance-correction/` e manifesto adjacente; tentativa NIM registrada no estado de desenvolvimento, sem promover o SQLite parcial sem relatório. Verificação: teste focal do prompt, testes gatecampaign, decode independente dos três trials Groq, inspeção de `fields_non_empty`, suíte integral aplicável, vet e `git diff --check` executados no ciclo.
+
+## Direcionamento do operador — 2026-07-25 18:02
+
+Instruções do operador para os próximos heartbeats:
+
+1. **Commit e push já realizados** — branch `chore/fase-108-storage-engine-dolt` sincronizada com remote.
+2. **Intensificar campanhas Groq:** aumentar número de trials (5–10 por modelo/caso quando houver hipótese e quota), cobrir mais modelos Groq disponíveis em `/v1/models` (não só Llama 3.1 8B), e manter matriz rastreável modelo × tarefa × formato × contexto. Priorizar descoberta e qualificação de modelos Groq ainda não testados.
+3. **NVIDIA NIM:** manter ritmo atual como controle cross-provider.
+4. **Testes mais completos no geral:** combinar qualidade, schema/conteúdo, concorrência bounded, cauda de latência, throttling natural, fallback e crash/replay. Aumentar n quando houver hipótese de cauda e budget permitir.
+5. **Limites preservados:** teto explícito por campanha, interromper cedo em erro repetitivo/429/custo sem ganho epistemológico. Nunca transformar aumento de ritmo em carga aberta.
