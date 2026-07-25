@@ -1,0 +1,51 @@
+{
+  "schema_version": "motor-autonomo.sqlite-wal-checkpoint-aggregate.v1",
+  "repeat_count": 5,
+  "pairs": [
+    {
+      "synchronous": "FULL",
+      "wal_auto_checkpoint": 1000,
+      "num_commits": 2000,
+      "sample_count": 5,
+      "passive_reopen_ms": {
+        "values": [
+          48,
+          48,
+          49,
+          49,
+          89
+        ],
+        "p50": 49,
+        "p95": 89,
+        "min": 48,
+        "max": 89
+      },
+      "truncate_reopen_ms": {
+        "values": [
+          47,
+          48,
+          48,
+          49,
+          56
+        ],
+        "p50": 48,
+        "p95": 56,
+        "min": 47,
+        "max": 56
+      },
+      "speedup": {
+        "values": [
+          0.8571428571428571,
+          0.9795918367346939,
+          1.0208333333333333,
+          1.0208333333333333,
+          1.8936170212765957
+        ],
+        "p50": 1.0208333333333333,
+        "p95": 1.8936170212765957,
+        "min": 0.8571428571428571,
+        "max": 1.8936170212765957
+      }
+    }
+  ]
+}
