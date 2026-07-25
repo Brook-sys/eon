@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase206-qwen36-minimal-json-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return exactly {\"qwen36_json\":\"OK\"}. Raw JSON only; no reasoning, tags, Markdown, or explanation.",
+  "expected_response": "{\"qwen36_json\":\"OK\"}",
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-mistral-small-4-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-qwen36-27b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
