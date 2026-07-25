@@ -128,6 +128,15 @@ type walCheckpointPairKey struct {
 
 type walCheckpointSamples struct{ passive, truncate []int64 }
 
+func containsFocusCell(filter, cellID string) bool {
+	for _, candidate := range strings.Split(filter, ",") {
+		if strings.TrimSpace(candidate) == cellID {
+			return true
+		}
+	}
+	return false
+}
+
 func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 	ctx := context.Background()
 
@@ -148,6 +157,13 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 	}
 	closeModes := []string{"passive", "truncate"}
 
+	// Optional focus filter: restrict the matrix to a subset of cells for
+	// targeted soak campaigns (e.g. only FULL/1000/2000).  The filter is a
+	// comma-separated list of "SYNC/AUTOCHK/N/CLOSE_MODE" tuples.  When set,
+	// only matching cells are included in the matrix.  This lets us run more
+	// repetitions on a single pair without executing all 16 cells.
+	focusFilter := os.Getenv("MOTOR_AUTONOMO_SQLITE_WAL_SCALE_FOCUS")
+
 	// Build the full matrix of cell descriptors.
 	type cellDesc struct {
 		sync      string
@@ -160,10 +176,17 @@ func TestSQLiteWalCheckpointScaleCampaign(t *testing.T) {
 		for _, autoChk := range autoCheckpoints {
 			for _, n := range commitCounts {
 				for _, closeMode := range closeModes {
+					cellID := fmt.Sprintf("%s/%d/%d/%s", sync, autoChk, n, closeMode)
+					if focusFilter != "" && !containsFocusCell(focusFilter, cellID) {
+						continue
+					}
 					descs = append(descs, cellDesc{sync, autoChk, n, closeMode})
 				}
 			}
 		}
+	}
+	if focusFilter != "" && len(descs) == 0 {
+		t.Fatalf("focus filter %q matched no cells", focusFilter)
 	}
 
 	matrix := walCheckpointScaleMatrix{
@@ -657,4 +680,24 @@ func maxFloat64(vals []float64) float64 {
 		}
 	}
 	return m
+}
+
+func TestContainsFocusCell(t *testing.T) {
+	const target = "FULL/1000/2000/passive"
+	for _, tc := range []struct {
+		name   string
+		filter string
+		want   bool
+	}{
+		{name: "exact", filter: target, want: true},
+		{name: "list with whitespace", filter: "NORMAL/1000/500/passive, " + target, want: true},
+		{name: "absent", filter: "FULL/1000/2000/truncate", want: false},
+		{name: "no partial match", filter: "FULL/1000/2000", want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := containsFocusCell(tc.filter, target); got != tc.want {
+				t.Fatalf("containsFocusCell(%q, %q) = %v, want %v", tc.filter, target, got, tc.want)
+			}
+		})
+	}
 }
