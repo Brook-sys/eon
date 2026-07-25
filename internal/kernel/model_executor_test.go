@@ -161,6 +161,7 @@ func TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys(t *testing.T
 	}
 	for _, required := range []string{
 		"top-level object may contain only", "idempotency_key", "Each changes item may contain only", "every other top-level field is a JSON string", "Do not wrap the object", "do not add input_refs",
+		"MUST each be one JSON string", "expected_delta: \"one observation\"",
 	} {
 		if !strings.Contains(compiled.Request.Prompt, required) {
 			t.Fatalf("changeset prompt lacks %q:\n%s", required, compiled.Request.Prompt)
@@ -1785,7 +1786,7 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	
+
 	spec := modelTestSpec()
 	spec.Budget.ModelCalls = 2
 	spec.Budget.Attempts = 2
@@ -1802,7 +1803,7 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 		if err := tx.SaveOperation(op); err != nil {
 			return err
 		}
-		
+
 		// Attempt 1 exhausted the lifetime call budget (2 calls).
 		// Neither has a receipt (simulating crash before receipt, or rejected output).
 		if err := tx.AppendModelCallReservation(domain.ModelCallReservation{
@@ -1847,7 +1848,7 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 	if err != nil {
 		t.Fatalf("execute redispatch: %v", err)
 	}
-	
+
 	if !result.Exhausted {
 		t.Errorf("expected result to be Exhausted when lifetime budget is gone")
 	}
@@ -1857,7 +1858,7 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 	if len(server.Requests()) != 0 {
 		t.Errorf("expected 0 HTTP requests, got %d", len(server.Requests()))
 	}
-	
+
 	if err := store.View(ctx, func(r port.Reader) error {
 		op, err := r.Operation("operation_model")
 		if err != nil {

@@ -5141,3 +5141,21 @@ Decisão: confirmar que o modo reasoning de Qwen 3.6 27B era a causa raiz da inc
 Próximo experimento: testar `llama-3.3-70b-versatile` com o prompt original (sem restrição de tipos), mas com `response_format: json_object` ativado via adaptation plan, para verificar se o modo JSON do provider previne a divergência de tipagem. Evidência: `results/runtime-gate/phase207-llama33-70b-explicit-types/`, manifesto adjacente.
 
 Verificação: `go test ./internal/modeltext ./internal/gatecampaign` passou; `go vet ./internal/modeltext ./internal/gatecampaign` passou; `git diff --check` passou; decode do relatório confirmou uma chamada externa, `finish_reason=stop`, JSON válido, changeset cometido, quotas contabilizadas e reopen durável.
+
+### Fase 208 - Prompt de tipagem explicita no kernel + DeepSeek v4 Flash
+
+- [x] `DONE` Fortalecer o prompt do kernel `buildProposedChangeSetPrompt` com restricao de tipagem explicita para campos string (`expected_delta`, `provenance`, `id`, etc.), propagando o achado da Fase 207 para o codigo do kernel.
+- [x] `DONE` Adicionar teste de regressao (`TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys`) verificando presenca de "MUST each be one JSON string" e exemplo `expected_delta: "one observation"` no prompt compilado.
+- [x] `DONE` Executar campanha live rotacionada com NIM DeepSeek v4 Flash (`deepseek-ai/deepseek-v4-flash`) — familia e provider nunca testados antes neste projeto — com Groq Llama 3.3 70B como binding primario semeado em circuito aberto.
+
+2026-07-25 06:30 - HEARTBEAT - Fase 208 concluida. O achado da Fase 207 (Llama 3.3 70B divergiu `expected_delta` para array sem restricao de tipo explicita) foi propagado para o prompt do kernel. `internal/kernel/model_executor.go` `buildProposedChangeSetPrompt` agora inclui: "expected_delta, provenance, id, mission_revision_id, operation_id, base_commit_id, and idempotency_key MUST each be one JSON string, never an array or object. Use expected_delta: \"one observation\"." O teste de regressao `TestBuildPromptInputConstrainsProposedChangeSetToCanonicalKeys` verifica a presenca da nova restricao e do exemplo.
+
+Campanha live bounded e rotacionada: NIM `deepseek-ai/deepseek-v4-flash` (familia DeepSeek, nunca testada neste projeto) como binding ativo; Groq `llama-3.3-70b-versatile` semeado em circuito aberto. Exatamente 1 chamada, timeout 45 s, teto 384 tokens de saida, zero retries. Resultado: HTTP sucesso, `finish_reason=stop`, JSON sintaticamente valido, 478 bytes de resposta, 554 input + 568 output tokens, latencia 11.37 s, changeset cometido (`commit_0000000000000004`), entidade canonica armazenada, reopen SQLite duravel verificado. Segunda admissao estacionada por `resource_resource_rate_limit`. `response_framing_class=valid_json_mismatch` (JSON valido sem `expected_response` configurado, comportamento esperado).
+
+Hipotese: o prompt fortalecido produziria aderencia de tipagem mesmo sem `expected_response` configurado, mas `response_bytes=478` com 568 output tokens sugere que o modelo gerou instrucoes extras ou decoracao. O框架 `valid_json_mismatch` nao captura aderencia semantica ao schema exato — proximo experimento deve configurar `expected_response` com um changeset valido completo para verificar aderencia byte-a-byte.
+
+Decisao: o fortalecimento do prompt e uma melhoria defensiva queopera na origem (antes do modelo divergir) e nao depende de pos-processamento. Nao altera preferencia de binding. O modelo DeepSeek v4 Flash e viavel para contratos JSON (`finish_reason=stop`, JSON valido, sem truncamento), mas a latencia de 11.37 s e 3.3x mais lenta que Groq Llama 3.3 70B na Fase 207 (345 ms) e 13.5x mais lenta que NIM Mistral Small 4 na Fase 128 (1.09 s).
+
+Artefatos: `results/runtime-gate/phase208-nim-deepseek-v4-flash-explicit-types/`. Manifesto adjacente.
+
+Verificacao: `go test ./internal/kernel/` passou (testes focais e suuite); `go vet ./internal/kernel/` passou; `gofmt -w` aplicado; `git diff --check` passou; `go test ./...` suite integral passou; decode do relatorio confirmou 1 chamada externa, `finish_reason=stop`, JSON valido, changeset cometido, quotas contabilizadas e reopen duravel.
