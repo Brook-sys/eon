@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "phase226-groq-llama31-8b-provenance-correction",
+  "trials": 5,
+  "external_calls": 5,
+  "provider_successes": 5,
+  "execution_failures": 0,
+  "durable_reopens": 5,
+  "expected_matches": 0,
+  "json_valid": 5,
+  "schema_evaluated": 5,
+  "schema_adherent": 5,
+  "schema_content_complete": 5,
+  "changes_valid": 5,
+  "input_tokens": 3490,
+  "output_tokens": 740,
+  "latency_p50": 446157232,
+  "latency_p95": 563132817,
+  "latency_max": 563132817,
+  "selected_bindings": {
+    "groq-llama31-8b": 5
+  },
+  "finish_reasons": {
+    "stop": 5
+  },
+  "framing_classes": {
+    "valid_json_mismatch": 5
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 5
+  }
+}

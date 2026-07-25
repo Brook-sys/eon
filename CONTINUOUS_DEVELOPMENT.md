@@ -5339,3 +5339,15 @@ Instruções do operador para os próximos heartbeats:
 3. **NVIDIA NIM:** manter ritmo atual como controle cross-provider.
 4. **Testes mais completos no geral:** combinar qualidade, schema/conteúdo, concorrência bounded, cauda de latência, throttling natural, fallback e crash/replay. Aumentar n quando houver hipótese de cauda e budget permitir.
 5. **Limites preservados:** teto explícito por campanha, interromper cedo em erro repetitivo/429/custo sem ganho epistemológico. Nunca transformar aumento de ritmo em carga aberta.
+
+### Fase 229 — Campanha Groq intensificada da correção de provenance
+
+- [x] `DONE` Ampliar de três para cinco trials isolados o cenário adversarial de `ProposedChangeSet` no Groq Llama 3.1 8B, preservando uma chamada por trial, zero retries e tetos explícitos.
+- [x] `DONE` Confirmar em batch aderência de tipo, completude de conteúdo, aplicação canônica, throttling local e reopen durável.
+- [x] `DONE` Comparar a distribuição de latência e tokens com a Fase 226 sem alterar preferência automática.
+
+2026-07-25 18:40 — HEARTBEAT — Em cumprimento à orientação de intensificar evidência Groq, o manifesto adversarial corrigido da Fase 226 foi repetido em cinco stores SQLite isolados no Groq `llama-3.1-8b-instant`. Limites prévios: exatamente uma chamada por trial (cinco no total), zero retries externos, timeout de 45 s e teto de 384 output tokens; NVIDIA NIM Mistral Small 4 permaneceu como binding primário semeado circuit-open. Resultado: 5/5 provider successes, zero falhas de execução, 5/5 JSON válidos, `schema_adherent=5`, `schema_content_complete=5`, `changes_valid=5`, cinco commits/reopens duráveis e cinco segundas aquisições estacionadas localmente por `resource_resource_rate_limit`. Todos terminaram com `finish_reason=stop`; consumo agregado 3.490 input + 740 output tokens. Latências p50/p95/max: 446/563/563 ms.
+
+Interpretação: a correção concreta de `provenance` reproduziu 5/5 sob amostra ampliada, sem coerção do parser e sem retries. Frente à Fase 226 (n=3, p50/p95 435/449 ms), a mediana permaneceu próxima (+2,5%) e a cauda observada subiu para 563 ms, ainda bounded e sem falha; oito execuções Groq acumuladas do mesmo contrato estão aderentes. Isso fortalece a conclusão local para este deployment/caso, mas não autoriza preferência geral. Próximo experimento: descobrir e qualificar outro modelo Groq disponível com o mesmo contrato em 5 trials, priorizando diversidade de família/porte; interromper cedo em erro repetitivo ou 429 persistente.
+
+Evidência: `results/runtime-gate/phase229-groq-llama31-8b-provenance-intensified/`. Verificação: decode independente do batch e dos cinco relatórios; 5 chamadas/5 sucessos/5 reopens/5 aderências integrais; `go test ./internal/gatecampaign/... ./internal/kernel/...`, `go vet ./internal/gatecampaign/... ./internal/kernel/...` e `git diff --check` passaram.
