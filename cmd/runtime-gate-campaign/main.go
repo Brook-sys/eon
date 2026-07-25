@@ -113,11 +113,16 @@ func runTrial(manifest gatecampaign.RuntimeGateCampaignManifest, providers map[s
 	defer cancel()
 	report, runErr := (gatecampaign.RuntimeGateCampaignRunner{Store: store, Clock: clock, Providers: providers}).Run(ctx, manifest)
 	closeErr := store.Close()
-	if runErr != nil {
-		return gatecampaign.RuntimeGateCampaignReport{}, runErr
-	}
 	if closeErr != nil {
 		return gatecampaign.RuntimeGateCampaignReport{}, closeErr
+	}
+	if runErr != nil {
+		if report.SchemaVersion != 0 {
+			if writeErr := gatecampaign.WriteRuntimeGateCampaignArtifacts(outputDirectory, report); writeErr != nil {
+				return gatecampaign.RuntimeGateCampaignReport{}, fmt.Errorf("write failed trial artifacts: %w", writeErr)
+			}
+		}
+		return report, runErr
 	}
 	reopened, err := sqlite.Open(databasePath)
 	if err != nil {

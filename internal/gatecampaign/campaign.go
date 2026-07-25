@@ -196,6 +196,7 @@ type RuntimeGateCampaignReport struct {
 	CommitID              domain.CommitID             `json:"commit_id,omitempty"`
 	CanonicalEntityStored bool                        `json:"canonical_entity_stored,omitempty"`
 	SchemaAdherence       *SchemaAdherenceReport      `json:"schema_adherence,omitempty"`
+	ExecutionError        string                      `json:"execution_error,omitempty"`
 	Usages                []RuntimeGateUsage          `json:"usages"`
 	DurableReopen         bool                        `json:"durable_reopen"`
 }
@@ -297,10 +298,10 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	if recorder.calls != manifest.MaxCalls {
 		return RuntimeGateCampaignReport{}, fmt.Errorf("runtime gate executor made %d external calls, want %d", recorder.calls, manifest.MaxCalls)
 	}
+	if manifest.OutputSchema == "proposed_changeset" && executionErr != nil {
+		return r.buildFailedTrialReport(ctx, config, manifest, started, recorder, primary, executionErr)
+	}
 	if manifest.OutputSchema == "proposed_changeset" {
-		if executionErr != nil {
-			return RuntimeGateCampaignReport{}, fmt.Errorf("execute epistemic changeset probe: %w", executionErr)
-		}
 		if !execution.Completed || execution.CommitID == "" {
 			return RuntimeGateCampaignReport{}, fmt.Errorf("epistemic changeset probe did not commit: %+v", execution)
 		}
@@ -378,6 +379,80 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	}
 	report.CompletedAt = r.Clock.Now().UTC()
 	return report, nil
+}
+
+// buildFailedTrialReport constructs a report when the changeset executor rejects
+// the model output. The provider call succeeded (recorder.err == nil) but the
+// decoder found the response was not a valid ProposedChangeSet. The report
+// captures response metadata, framing, JSON validity, schema adherence, and
+// the execution error so that failed trials produce structured evidence
+// without requiring a successful commit.
+func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
+	ctx context.Context,
+	config domain.ModelsConfig,
+	manifest RuntimeGateCampaignManifest,
+	started time.Time,
+	recorder *boundedCallRecorder,
+	primary RuntimeGateBinding,
+	executionErr error,
+) (RuntimeGateCampaignReport, error) {
+	selected := config.Bindings[0]
+	for _, binding := range config.Bindings {
+		if binding.ID == recorder.bindingID {
+			selected = binding
+			break
+		}
+	}
+	report := RuntimeGateCampaignReport{
+		SchemaVersion:      RuntimeGateCampaignSchemaVersion,
+		Name:               manifest.Name,
+		StartedAt:          started,
+		MaxCalls:           manifest.MaxCalls,
+		ExternalCalls:      recorder.calls,
+		SeededCircuit:      domain.ModelBindingResource(primary.BindingID),
+		SelectedProviderID: selected.ProviderRef,
+		SelectedBindingID:  selected.ID,
+		RouteRejected:      map[string]string{primary.BindingID: "circuit_open"},
+		ProviderLatency:    recorder.latency,
+		ExecutionError:     executionErr.Error(),
+	}
+	if recorder.err == nil {
+		report.ProviderSucceeded = true
+		report.ObservedInputTokens = recorder.result.InputTokens
+		report.ObservedOutputTokens = recorder.result.OutputTokens
+		report.FinishReason = recorder.result.FinishReason
+		report.ResponseBytes = len(recorder.result.Text)
+		digest := sha256.Sum256([]byte(recorder.result.Text))
+		report.ResponseSHA256 = fmt.Sprintf("%x", digest[:])
+		report.ResponseFramingClass = classifyJSONFraming(recorder.result.Text, manifest.ExpectedResponse)
+		var object map[string]json.RawMessage
+		candidate := recorder.result.Text
+		if manifest.OutputSchema == "proposed_changeset" {
+			candidate = modeltext.BestJSONCandidate(candidate)
+		}
+		report.ResponseJSONValid = json.Unmarshal([]byte(candidate), &object) == nil && object != nil
+		if manifest.OutputSchema == "proposed_changeset" && report.ResponseJSONValid {
+			adherence := evaluateProposedChangeSetAdherence(recorder.result.Text)
+			report.SchemaAdherence = &adherence
+		}
+	} else {
+		report.ProviderErrorClass = "transport"
+		var providerErr port.ProviderError
+		if errors.As(recorder.err, &providerErr) {
+			report.ProviderErrorClass = "provider"
+			report.ProviderRetryAfter = providerErr.RetryAfterDelay()
+		}
+		var httpErr port.ProviderHTTPError
+		if errors.As(recorder.err, &httpErr) {
+			report.ProviderErrorClass = "http"
+			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
+		}
+	}
+	if err := runtimeGateSnapshot(ctx, r.Store, config, manifest.OutputSchema, &report); err != nil {
+		return RuntimeGateCampaignReport{}, err
+	}
+	report.CompletedAt = r.Clock.Now().UTC()
+	return report, fmt.Errorf("execute epistemic changeset probe: %w", executionErr)
 }
 
 // classifyJSONFraming records only an allowlisted diagnosis. It deliberately
@@ -675,7 +750,7 @@ func runtimeGateSnapshot(ctx context.Context, store port.Store, config domain.Mo
 		}
 		report.OperationState = op.State
 		report.SecondAcquireWait = op.Reevaluation.NotBefore
-		if outputSchema == "proposed_changeset" {
+		if outputSchema == "proposed_changeset" && report.ExecutionError == "" {
 			entity, err := r.CanonicalEntity("observation", "observation_runtime_gate")
 			if err != nil {
 				return fmt.Errorf("read epistemic probe entity: %w", err)

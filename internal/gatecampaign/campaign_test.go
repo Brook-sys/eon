@@ -129,6 +129,50 @@ func TestRunProposedChangeSetCommitsCanonicalEvidence(t *testing.T) {
 	}
 }
 
+func TestRunProposedChangeSetFailureReturnsStructuredReport(t *testing.T) {
+	now := time.Date(2026, 7, 25, 10, 0, 0, 0, time.UTC)
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "proposed_changeset"
+	manifest.MaxOutputTokens = 256
+	manifest.ExpectedResponse = ""
+	manifest.ProbePrompt = "Return one ProposedChangeSet JSON object."
+	fallback := &recordingProvider{result: port.CompletionResult{
+		Text:         `<think>reasoning without a JSON object</think>`,
+		InputTokens:  20,
+		OutputTokens: 40,
+		Model:        "fallback",
+	}}
+	store := memory.New()
+	report, err := (RuntimeGateCampaignRunner{
+		Store: store, Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": fallback,
+		},
+	}).Run(context.Background(), manifest)
+	if err == nil || !strings.Contains(err.Error(), "execute epistemic changeset probe") {
+		t.Fatalf("failed changeset must return executor error, got %v", err)
+	}
+	if report.ExecutionError == "" || !report.ProviderSucceeded {
+		t.Fatalf("failed trial report must capture execution error and provider success: %+v", report)
+	}
+	if report.ResponseJSONValid || report.ResponseFramingClass != "invalid_json" {
+		t.Fatalf("failed trial framing=%+v", report)
+	}
+	if report.SchemaAdherence != nil {
+		t.Fatalf("invalid JSON must not have schema adherence report: %+v", report.SchemaAdherence)
+	}
+	if report.ResponseBytes == 0 || len(report.ResponseSHA256) != 64 {
+		t.Fatalf("failed trial response evidence missing: %+v", report)
+	}
+	if report.CanonicalEntityStored || report.CommitID != "" {
+		t.Fatalf("failed trial must not promote canonical state: %+v", report)
+	}
+	if fallback.calls != 1 || report.ExternalCalls != 1 {
+		t.Fatalf("failed trial calls=%d report=%+v", fallback.calls, report)
+	}
+}
+
 func TestManifestRejectsUnknownOutputSchema(t *testing.T) {
 	manifest := runtimeGateTestManifest()
 	manifest.OutputSchema = "freeform"
