@@ -5064,3 +5064,23 @@ Preflight live (executado antes da campanha): NVIDIA NIM `mistralai/mistral-smal
 Controle live (executado após o commit da campanha): rotacionado de NIM para Groq `llama-3.3-70b-versatile`, exatamente 1 chamada, teto 32 output tokens, timeout 45 s, zero retries, NIM `meta/llama-3.1-8b-instruct` lógico semeado circuit-open. Resultado: sucesso em 397 ms, 130 input + 9 output tokens, 24 bytes, `finish_reason=stop`, JSON exato `{"wal_soak_commit":"OK"}`, `durable_reopen=true`, segunda aquisição bloqueada por quota local. Evidência: `results/runtime-gate/phase204-wal-soak-commit-groq-llama33-70b/`.
 
 Verificação: `TestContainsFocusCell` passou (4 subcasas); `go vet ./internal/storage/sqlite` passou; `git diff --check` passou; campanha focused soak com filtro passou em 47,3 s (célula única via filtro); decode do progresso confirmou 10 células únicas; decode do agregado confirmou 5 amostras por par; decode dos artefatos live confirmou framing exato e reopen durável. Arremate: `go test ./internal/storage/sqlite` integral (incluindo `TestSQLiteWalCheckpointScaleCampaign`) executa em timeout > 60 s porque a matriz full tem 32 células; o uso do filtro confirma seletividade correta.
+
+### Fase 205 — WAL focused soak n=10 do recorte FULL/1000/2000
+
+- [x] `DONE` Ampliar o recorte FULL/1000/2000 para 10 repetições pareadas (passive vs truncate) sob filtro focado, com publicação atômica de progresso, matriz e agregado.
+- [x] `DONE` Interpretar o agregado n=10: comparar p50/p95, dispersão e outliers sem alterar política com base em amostras ainda descritivas.
+- [x] `DONE` Executar controle live bounded no NVIDIA NIM Mistral Small 4, com framing exato, quota local e reopen durável.
+
+2026-07-25 00:40 — HEARTBEAT — A campanha focused soak n=10 completou 20/20 células (10 repetições × 2 modos de fechamento) sob `MOTOR_AUTONOMO_SQLITE_WAL_SCALE_FOCUS=FULL/1000/2000/passive,FULL/1000/2000/truncate`. O progresso publicou 20 identidades únicas e visíveis; `matrix.json` contém as 2 células canônicas; `aggregate.json` contém o par FULL/1000/2000 com 10 amostras cada.
+
+Resultados do agregado (n=10):
+
+- Passive reopen: p50=49 ms, p95=160 ms, range 48–160 ms
+- Truncate+reopen: p50=48 ms, p95=61 ms, range 47–61 ms
+- Speedup p50=1,0×, speedup p95=3,33× (drivado por um outlier passive de 160 ms)
+
+O p50 está empatado (49 vs 48 ms). O caminho truncate tem dispersão mais estreita (47–61 ms vs 48–160 ms), mas o p95 de 3,33× é inteiramente explicado por uma única amostra passive de 160 ms; sem esse outlier, o p95 passive cairia para ~53 ms e o speedup p95 para ~1,1×. Com n=10, os percentis continuam descritivos e não constituem estimativa estável de cauda. A evidência reforça a decisão de manter produção em `synchronous=FULL`, `wal_autocheckpoint=1000` e sem `TRUNCATE` automático. Próximo teste de fogo: ampliar para n≥30 ou conduzir soak sob contenção (múltiplos writers concorrentes) para estabilizar a estimativa de cauda, com teto explícito.
+
+Controle live obrigatório: NVIDIA NIM `mistralai/mistral-small-4-119b-2603`, exatamente 1 chamada externa, teto 32 output tokens, timeout 45 s, zero retries, Groq `llama-3.3-70b-versatile` lógico semeado circuit-open. Resultado: sucesso em 803 ms, 116 input + 12 output tokens, 21 bytes, `finish_reason=stop`, JSON válido e igualdade exata com `{"wal_soak_n10":"OK"}`. A segunda aquisição foi bloqueada localmente por `resource_resource_rate_limit`, a operação ficou `WAITING_TIME`, foram contabilizados 128 tokens e `durable_reopen=true`. Evidência: `results/runtime-gate/phase205-wal-soak-n10-control-nim-mistral-small-4/`.
+
+Verificação: `TestContainsFocusCell` passou (4 subcasas); `go vet ./internal/storage/sqlite` passou; `git diff --check` passou; decode do progresso confirmou 20 células únicas e visíveis; decode do agregado confirmou 10 amostras por par; decode do controle live confirmou chamada única, framing exato, quota local e reopen durável. A campanha focused soak com filtro (`MOTOR_AUTONOMO_SQLITE_WAL_SCALE_FOCUS`) executa em tempo bounded; a suíte integral de `./internal/storage/sqlite` requer timeout > 300 s para a matriz full de 32 células, o que excede o budget do ciclo de heartbeat — o filtro focado fornece verificação proporcional ao risco.
