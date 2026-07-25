@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "phase218a-nim-llama31-70b-schema-adherence",
+  "trials": 2,
+  "external_calls": 2,
+  "provider_successes": 2,
+  "execution_failures": 0,
+  "durable_reopens": 2,
+  "expected_matches": 0,
+  "json_valid": 2,
+  "input_tokens": 1198,
+  "output_tokens": 324,
+  "latency_p50": 8853307220,
+  "latency_p95": 17089986987,
+  "latency_max": 17089986987,
+  "selected_bindings": {
+    "nim-meta-llama31-70b": 2
+  },
+  "finish_reasons": {
+    "stop": 2
+  },
+  "framing_classes": {
+    "valid_json_mismatch": 2
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 2
+  }
+}
