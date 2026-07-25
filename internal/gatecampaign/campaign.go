@@ -195,8 +195,33 @@ type RuntimeGateCampaignReport struct {
 	OperationState        domain.OperationalState     `json:"operation_state"`
 	CommitID              domain.CommitID             `json:"commit_id,omitempty"`
 	CanonicalEntityStored bool                        `json:"canonical_entity_stored,omitempty"`
+	SchemaAdherence       *SchemaAdherenceReport      `json:"schema_adherence,omitempty"`
 	Usages                []RuntimeGateUsage          `json:"usages"`
 	DurableReopen         bool                        `json:"durable_reopen"`
+}
+
+// SchemaAdherenceReport evaluates ProposedChangeSet JSON at the field level,
+// distinguishing "valid JSON" from "schema-compliant" without requiring
+// byte-for-byte equality. Each expected field is checked for presence and
+// correct Go type, arrays are distinguished from scalars, and nested
+// changes[] entries are validated for required keys.
+type SchemaAdherenceReport struct {
+	SchemaValid          bool                `json:"schema_valid"`
+	FieldsChecked        int                 `json:"fields_checked"`
+	FieldsPresent        int                 `json:"fields_present"`
+	FieldsCorrectType    int                 `json:"fields_correct_type"`
+	FieldResults         []SchemaFieldResult `json:"field_results"`
+	ChangesValid         bool                `json:"changes_valid,omitempty"`
+	ChangesChecked       int                 `json:"changes_checked,omitempty"`
+	ChangesWithAllFields int                 `json:"changes_with_all_fields,omitempty"`
+}
+
+type SchemaFieldResult struct {
+	Field        string `json:"field"`
+	Present      bool   `json:"present"`
+	CorrectType  bool   `json:"correct_type"`
+	ObservedType string `json:"observed_type,omitempty"`
+	ExpectedType string `json:"expected_type"`
 }
 
 // RuntimeGateCampaignRunner executes the bounded probe against an already-open
@@ -330,6 +355,10 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			}
 			report.ResponseJSONValid = json.Unmarshal([]byte(candidate), &object) == nil && object != nil
 			report.ResponseFramingClass = classifyJSONFraming(recorder.result.Text, manifest.ExpectedResponse)
+			if manifest.OutputSchema == "proposed_changeset" && report.ResponseJSONValid {
+				adherence := evaluateProposedChangeSetAdherence(recorder.result.Text)
+				report.SchemaAdherence = &adherence
+			}
 		}
 	} else {
 		report.ProviderErrorClass = "transport"
@@ -424,6 +453,129 @@ func hasLeadingTextThenJSON(text string) bool {
 		}
 	}
 	return false
+}
+
+// evaluateProposedChangeSetAdherence parses the model output as JSON and checks
+// each required field of ProposedChangeSet for presence and correct Go type
+// without requiring byte-for-byte equality. It uses encoding/json into
+// map[string]json.RawMessage and reflect-like type inspection to remain
+// independent of domain.ProposedChangeSet.Validate (which requires full
+// referential integrity). The oracle classifies per-field adherence and
+// validates each changes[] entry for required sub-fields.
+func evaluateProposedChangeSetAdherence(responseText string) SchemaAdherenceReport {
+	report := SchemaAdherenceReport{}
+	candidate := modeltext.BestJSONCandidate(responseText)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(candidate), &raw); err != nil || raw == nil {
+		report.SchemaValid = false
+		return report
+	}
+	report.SchemaValid = true
+	type fieldSpec struct {
+		name         string
+		expectedType string
+		isString     bool
+		isArray      bool
+	}
+	specs := []fieldSpec{
+		{"schema_version", "number", false, false},
+		{"id", "string", true, false},
+		{"mission_revision_id", "string", true, false},
+		{"operation_id", "string", true, false},
+		{"base_commit_id", "string", true, false},
+		{"read_set", "array", false, true},
+		{"preconditions", "array", false, true},
+		{"changes", "array", false, true},
+		{"expected_delta", "string", true, false},
+		{"validator_ids", "array", false, true},
+		{"provenance", "string", true, false},
+		{"idempotency_key", "string", true, false},
+	}
+	report.FieldsChecked = len(specs)
+	for _, spec := range specs {
+		result := SchemaFieldResult{Field: spec.name, ExpectedType: spec.expectedType}
+		rawVal, present := raw[spec.name]
+		result.Present = present
+		if present {
+			report.FieldsPresent++
+			trimmed := strings.TrimSpace(string(rawVal))
+			switch {
+			case spec.isArray:
+				if len(trimmed) >= 2 && trimmed[0] == '[' && trimmed[len(trimmed)-1] == ']' {
+					var arr []json.RawMessage
+					if json.Unmarshal([]byte(trimmed), &arr) == nil {
+						result.CorrectType = true
+						result.ObservedType = "array"
+					} else {
+						result.ObservedType = "invalid_array"
+					}
+				} else if len(trimmed) >= 2 && trimmed[0] == '"' && trimmed[len(trimmed)-1] == '"' {
+					result.ObservedType = "string"
+				} else {
+					result.ObservedType = "other"
+				}
+			case spec.isString:
+				if len(trimmed) >= 2 && trimmed[0] == '"' && trimmed[len(trimmed)-1] == '"' {
+					var s string
+					if json.Unmarshal([]byte(trimmed), &s) == nil {
+						result.CorrectType = true
+						result.ObservedType = "string"
+					} else {
+						result.ObservedType = "invalid_string"
+					}
+				} else if trimmed == "null" {
+					result.ObservedType = "null"
+				} else if trimmed == "true" || trimmed == "false" {
+					result.ObservedType = "bool"
+				} else {
+					var num json.Number
+					if json.Unmarshal([]byte(trimmed), &num) == nil {
+						result.ObservedType = "number"
+					} else {
+						result.ObservedType = "other"
+					}
+				}
+			default:
+				if spec.name == "schema_version" {
+					var num json.Number
+					if json.Unmarshal([]byte(trimmed), &num) == nil {
+						result.CorrectType = true
+						result.ObservedType = "number"
+					} else {
+						result.ObservedType = "other"
+					}
+				}
+			}
+			if result.CorrectType {
+				report.FieldsCorrectType++
+			}
+		} else {
+			result.ObservedType = "missing"
+		}
+		report.FieldResults = append(report.FieldResults, result)
+	}
+	// Validate changes[] entries for required sub-fields
+	if rawChanges, present := raw["changes"]; present {
+		var changes []map[string]json.RawMessage
+		if json.Unmarshal([]byte(strings.TrimSpace(string(rawChanges))), &changes) == nil && len(changes) > 0 {
+			report.ChangesChecked = len(changes)
+			requiredChangeFields := []string{"kind", "entity_type", "entity_id", "payload_ref"}
+			allValid := true
+			for _, change := range changes {
+				for _, req := range requiredChangeFields {
+					if _, ok := change[req]; !ok {
+						allValid = false
+						break
+					}
+				}
+			}
+			if allValid {
+				report.ChangesWithAllFields = len(changes)
+				report.ChangesValid = true
+			}
+		}
+	}
+	return report
 }
 
 func runtimeGateSeed(store port.Store, manifest RuntimeGateCampaignManifest, now time.Time) (domain.ModelsConfig, domain.OperationSpec, domain.Operation, error) {
