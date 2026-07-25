@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase201-wal-progress-groq-llama33-70b",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "output_schema": "exact_json",
+  "probe_prompt": "Bounded live control for the resumable WAL campaign at 28 of 32 durable cells. Evidence only; deterministic kernel retains durability authority. Return exactly {\"wal_progress_28_of_32\":\"OK\"}. Raw JSON only, no Markdown or explanation.",
+  "expected_response": "{\"wal_progress_28_of_32\":\"OK\"}",
+  "seed_primary_circuit_seconds": 1,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-seeded-open",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-70b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

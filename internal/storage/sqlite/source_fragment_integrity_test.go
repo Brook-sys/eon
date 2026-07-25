@@ -24,7 +24,7 @@ func TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic(t *testing.T
 	defer store.Close()
 
 	now := time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC)
-	
+
 	source := domain.Source{
 		SchemaVersion: domain.SchemaVersionV1,
 		ID:            "source_1",
@@ -37,12 +37,12 @@ func TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic(t *testing.T
 	hash := "sha256:" + hex.EncodeToString(func(b [32]byte) []byte { return b[:] }(sha256.Sum256(content)))
 
 	version := domain.SourceVersion{
-		SchemaVersion:   domain.SchemaVersionV1,
-		ID:              "version_1",
-		SourceID:        source.ID,
-		ContentHash:     hash,
-		ContentRef:      hash,
-		ObservedAt:      now,
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            "version_1",
+		SourceID:      source.ID,
+		ContentHash:   hash,
+		ContentRef:    hash,
+		ObservedAt:    now,
 	}
 
 	snapshot := domain.SourceSnapshot{
@@ -84,7 +84,7 @@ func TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic(t *testing.T
 	err = store.Update(ctx, func(tx port.Transaction) error {
 		return tx.AppendSourceFragments(version.ID, []domain.SourceFragment{validFrag, corruptFrag})
 	})
-	
+
 	if err == nil {
 		t.Fatalf("expected error when appending a batch with a corrupt fragment, got nil")
 	}
@@ -117,7 +117,7 @@ func TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic(t *testing.T
 	err = store.Update(ctx, func(tx port.Transaction) error {
 		return tx.AppendSourceFragments(version.ID, []domain.SourceFragment{validFrag, validFrag2})
 	})
-	
+
 	if err != nil {
 		t.Fatalf("failed to insert valid batch: %v", err)
 	}

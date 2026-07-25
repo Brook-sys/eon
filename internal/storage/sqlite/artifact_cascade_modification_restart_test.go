@@ -22,7 +22,7 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart(t *t
 		t.Fatal(err)
 	}
 	defer store.Close()
-	
+
 	now := time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC)
 
 	parentContentV1 := []byte("v1_content")
@@ -130,7 +130,7 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart(t *t
 		if err := tx.AppendKnowledgeArtifact(derivedPlan); err != nil {
 			return err
 		}
-		
+
 		raw0 := domain.RawModelOutput{
 			SchemaVersion: domain.SchemaVersionV1, ID: "raw_0", OperationID: operationID1,
 			Model: "fixture", Content: "{}", ContentHash: "hash0", CreatedAt: now,
@@ -152,7 +152,7 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart(t *t
 		if err := tx.AppendProposedChangeSet(priorProposal); err != nil {
 			return err
 		}
-		
+
 		val0 := domain.ValidationReceipt{
 			SchemaVersion: domain.SchemaVersionV1, ID: "receipt_val_0", OperationID: operationID1,
 			ChangeSetID: priorProposal.ID, ValidatorID: "schema", Passed: true, ArtifactRef: raw0.ID, ProducedAt: now,
@@ -226,9 +226,9 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacementSurvivesRestart(t *t
 	}); err != nil {
 		t.Fatalf("apply commit: %v", err)
 	}
-	
+
 	store.Close()
-	
+
 	// Restart store
 	store2, err := sqlite.Open(dbPath)
 	if err != nil {
