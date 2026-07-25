@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "name": "phase219-nim-llama31-8b-schema-adherence-batch",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 0,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 3,
+  "input_tokens": 1854,
+  "output_tokens": 306,
+  "latency_p50": 1400260508,
+  "latency_p95": 1523516681,
+  "latency_max": 1523516681,
+  "selected_bindings": {
+    "nim-meta-llama31-8b": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "valid_json_mismatch": 3
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 3
+  }
+}
