@@ -5098,3 +5098,46 @@ Um controle JSON mínimo reproduziu o comportamento e separou incompatibilidade 
 Decisão: classificar `qwen/qwen3.6-27b` como incompatível, nesta rota/configuração, com contratos strict/exact e `proposed_changeset` bounded; não alterar preferência de binding e não criar parser para tags incompletas. O próximo experimento cognitivo deve comparar um deployment não-reasoning ou um parâmetro provider-native documentado que desative reasoning, mantendo o mesmo oracle determinístico. Resultados: `results/runtime-gate/phase206-qwen36-minimal-json-control/`, `phase206-qwen36-json-ceiling-128/` e `phase206-qwen36-json-ceiling-256/`, com manifestos adjacentes.
 
 Verificação: decode dos três relatórios confirmou uma chamada por trial, `finish_reason=length`, quotas contabilizadas e reopen durável; `go test ./internal/modeltext ./internal/gatecampaign` passou; `go vet ./internal/modeltext ./internal/gatecampaign` passou; `git diff --check` passou. A falha do changeset foi aceita somente como evidência negativa fail-closed, nunca como commit ou autoridade.
+
+### Fase 207 — Teste de fogo cognitivo do Groq Llama 3.3 70B (non-reasoning)
+
+- [x] `DONE` Consultar catálogos livedos providers Groq e NVIDIA NIM e rotacionar para um deployment non-reasoning ainda não testado com `proposed_changeset`: Groq `llama-3.3-70b-versatile`.
+- [x] `DONE` Executar o caminho epistemológico `proposed_changeset` com uma chamada bounded e registrar o resultado: JSON válido, changeset cometido e reopen durável.
+- [x] `DONE` Diagnosticar a falha inicial de tipagem (`expected_delta` como array) e corrigir o prompt com restrição explícita de tipos, confirmando sucesso na segunda chamada.
+
+2026-07-25 05:12 — HEARTBEAT — Após a Fase 206 classificar `qwen/qwen3.6-27b` como incompatível comContratos strict/exact JSON devido ao modo reasoning que envolve JSON em tags, a hipótese era que um deployment non-reasoning da mesma classe de porte produziria JSON válido e completaria o changeset dentro do teto. O catálogo Groq listou `llama-3.3-70b-versatile` (Meta Llama 3.3 70B Instruct, json_mode, sem reasoning) como candidato ideal: mesmo porte (~70B), diferente família, não-reasoning.
+
+Primeira execução: manifest `phase207-llama33-70b-proposed-changeset`, teto 384 output tokens, timeout 45 s, zero retries, NIM Mistral Small 4 semeado circuit-open. O transporte alcançou o Groq e o modelo retornou JSON bem-formado, porém o decoder rejeitou: `json: cannot unmarshal array into Go struct field ProposedChangeSet.expected_delta of type string`. O modelo produziu `expected_delta` como um array em vez de string. Isto é uma incompatibilidade de schema, não de framing — o modelo seguiu o prompt mas interpretou `expected_delta` como coleção. Nenhum commit foi promovido; nenhum diretório parcial foi versionado.
+
+Diagnóstico e correção: o prompt do `proposed_changeset` no kernel já declarava que "every other top-level field is a JSON string", mas não tipificava `expected_delta` explicitamente com um valor de exemplo. O manifest foi refinado com restrição de tipo explícita: `expected_delta, provenance, id, mission_revision_id, operation_id, base_commit_id, and idempotency_key MUST each be one JSON string, never an array or object. Use expected_delta: "one observation".`
+
+Segunda execução: manifest `phase207-llama33-70b-explicit-types`, mesmas cotas. Resultado: sucesso completo.
+
+- Provider: Groq `llama-3.3-70b-versatile` (non-reasoning)
+- Latência: 634 ms
+- Tokens: 503 input + 133 output
+- `finish_reason`: `stop` (não truncado — modelo completou dentro do teto)
+- Response bytes: 514
+- JSON válido: `true`
+- Response framing class: `valid_json_mismatch` (JSON válido, sem match exato — esperado, pois nenhum `expected_response` foi configurado)
+- Changeset cometido: `true` (commit `commit_0000000000000004`)
+- Canonical entity stored: `true`
+- Durable reopen: `true`
+- Segunda aquisição: bloqueada por `resource_resource_rate_limit` (quota local de 1 chamada/min)
+
+Comparação com Qwen 3.6 27B (Fase 206):
+
+| Métrica | Qwen 3.6 27B (reasoning) | Llama 3.3 70B (non-reasoning) |
+| --- | --- | --- |
+| JSON válido | false (sempre tags) | true |
+| finish_reason | length (sempre) | stop |
+| Output tokens | 64/128/256 (sempre no teto) | 133 (bem dentro de 384) |
+| Changeset cometido | false | true |
+| Durable reopen | true | true |
+| Framing | expected_with_prefix_and_suffix | valid_json_mismatch |
+
+Decisão: confirmar que o modo reasoning de Qwen 3.6 27B era a causa raiz da incompatibilidade com contratos strict JSON. O deployment non-reasoning Llama 3.3 70B produz JSON válido, completa dentro do teto e comete changesets. Nenhuma alteração de preferência de binding; o sistema já roteia corretamente para o binding disponível. O achado de tipagem (`expected_delta` como array) é evidência de que modelos non-reasoning ainda podem divergir do schema esperado quando o prompt não tipifica campos explicitamente — o prompt do kernel será avaliado para fortalecimento futuro.
+
+Próximo experimento: testar `llama-3.3-70b-versatile` com o prompt original (sem restrição de tipos), mas com `response_format: json_object` ativado via adaptation plan, para verificar se o modo JSON do provider previne a divergência de tipagem. Evidência: `results/runtime-gate/phase207-llama33-70b-explicit-types/`, manifesto adjacente.
+
+Verificação: `go test ./internal/modeltext ./internal/gatecampaign` passou; `go vet ./internal/modeltext ./internal/gatecampaign` passou; `git diff --check` passou; decode do relatório confirmou uma chamada externa, `finish_reason=stop`, JSON válido, changeset cometido, quotas contabilizadas e reopen durável.
