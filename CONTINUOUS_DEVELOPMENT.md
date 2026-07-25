@@ -4267,8 +4267,8 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 
 ### Fase 137 - Cumulativo do Budget Inter-Attempt
 
-- [ ] `READY` Fechar a lacuna anotada na Fase 132: refatorar `ModelExecutor` para reconstruir `ModelCallsUsed` cumulativamente através de todos os attempts passados que possuem \`ModelCallReservation\`, em vez de iniciar zerado em cada redispatch.
-- [ ] `READY` Teste focal confirmando que o esgotamento lifetime impede redispatch mesmo se \`Operation.Attempt\` for incrementado e o budget \`maxCalls\` permanecer inalterado.
+- [x] `DONE` Fechar a lacuna anotada na Fase 132: refatorar `ModelExecutor` para reconstruir `ModelCallsUsed` cumulativamente através de todos os attempts passados que possuem \`ModelCallReservation\`, em vez de iniciar zerado em cada redispatch.
+- [x] `DONE` Teste focal confirmando que o esgotamento lifetime impede redispatch mesmo se \`Operation.Attempt\` for incrementado e o budget \`maxCalls\` permanecer inalterado.
 
 2026-07-23 06:10 - HEARTBEAT - Fase 137 concluída. A contabilização cumulativa de budget já estava integrada na Fase 133 pelo `ModelRecoveryBudget.ModelCallsUsed` inicializado via reservas. O novo teste `TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted` provou o behavior faltante: um segundo attempt que encontra o orçamento maxCalls totalmente esgotado por tentativas falhas (sem recibo e rejeitadas) terminará em `EXHAUSTED` e abortará antes da chamada de rede.
 
@@ -4862,8 +4862,8 @@ Controle live rotacionado para NVIDIA NIM `mistralai/mistral-small-4-119b-2603`:
 ### Fase 187 — Preparação verificada da campanha WAL de escala real
 
 - [x] `DONE` Validar novamente o gate live imediatamente antes da campanha longa, sem reutilizar resultado anterior.
-- [ ] `READY` Executar a matriz randomizada 500/2000 com repetições suficientes e agregar variância por par.
-- [ ] `READY` Interpretar custo total TRUNCATE+reopen e manter produção congelada até evidência robusta.
+- [x] `DONE` Executar a matriz randomizada 500/2000 com repetições suficientes e agregar variância por par (concluído nas Fases 188–202).
+- [x] `DONE` Interpretar custo total TRUNCATE+reopen e manter produção congelada até evidência robusta (decisão registrada na Fase 202).
 
 2026-07-24 07:00 — HEARTBEAT — O controle live novo rotacionou do NIM 8B para Groq `llama-3.3-70b-versatile`: exatamente uma chamada externa, teto 32 output tokens, timeout 45 s e zero retries. O provider retornou sucesso, JSON exato `{"wal_scale_confidence":"OK"}`, a segunda aquisição foi bloqueada localmente e o banco reabriu duravelmente. Evidência allowlisted: `results/runtime-gate/phase187-wal-confidence-control-2026-07-24-0700-groq/`. A campanha WAL real não foi iniciada neste ciclo porque uma única matriz já levou aproximadamente sete minutos na medição anterior; iniciar múltiplas repetições às 07:00 excederia o repouso bounded do heartbeat. O artefato e o runner estão prontos para o próximo ciclo com janela suficiente; nenhuma configuração de produção foi alterada.
 
