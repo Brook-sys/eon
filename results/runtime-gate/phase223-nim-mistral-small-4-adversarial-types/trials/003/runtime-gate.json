@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "name": "phase223-nim-mistral-small-4-adversarial-types",
+  "started_at": "2026-07-25T19:31:24.584435047Z",
+  "completed_at": "2026-07-25T19:31:27.624997659Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-llama31-8b-seeded",
+  "selected_provider_id": "nim",
+  "selected_binding_id": "nim-mistral-small-4",
+  "route_rejected": {
+    "groq-llama31-8b-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 2813863145,
+  "observed_input_tokens": 651,
+  "observed_output_tokens": 153,
+  "finish_reason": "stop",
+  "response_bytes": 521,
+  "response_sha256": "bcb06eb8aa262518774f4dc1f1a64ea4153646d75cb79cca4f88d7bbb0b327ad",
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-25T19:32:00Z",
+  "operation_state": "WAITING_TIME",
+  "commit_id": "commit_0000000000000004",
+  "canonical_entity_stored": true,
+  "schema_adherence": {
+    "schema_valid": true,
+    "fields_checked": 12,
+    "fields_present": 12,
+    "fields_correct_type": 12,
+    "fields_non_empty": 10,
+    "field_results": [
+      {
+        "field": "schema_version",
+        "present": true,
+        "correct_type": true,
+        "non_empty": false,
+        "observed_type": "number",
+        "expected_type": "number"
+      },
+      {
+        "field": "id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "mission_revision_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "operation_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "base_commit_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "read_set",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "preconditions",
+        "present": true,
+        "correct_type": true,
+        "non_empty": false,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "changes",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "expected_delta",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "validator_ids",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "provenance",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "idempotency_key",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      }
+    ],
+    "changes_valid": true,
+    "changes_checked": 1,
+    "changes_with_all_fields": 1
+  },
+  "usages": [
+    {
+      "resource": "model-binding:groq-llama31-8b-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-25T19:32:24.584435047Z",
+      "last_failure_at": "2026-07-25T19:31:24.584435047Z"
+    },
+    {
+      "resource": "model-binding:nim-mistral-small-4",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-25T19:31:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-25T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-25T19:31:00Z",
+      "token_minute_count": 804,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-25T19:31:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-25T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-25T19:31:00Z",
+      "token_minute_count": 804,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
