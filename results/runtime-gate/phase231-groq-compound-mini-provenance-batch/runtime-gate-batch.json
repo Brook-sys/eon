@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "name": "phase231-groq-compound-mini-provenance",
+  "trials": 5,
+  "external_calls": 5,
+  "provider_successes": 4,
+  "execution_failures": 1,
+  "durable_reopens": 5,
+  "expected_matches": 0,
+  "json_valid": 4,
+  "schema_evaluated": 4,
+  "schema_adherent": 4,
+  "schema_content_complete": 4,
+  "changes_valid": 4,
+  "input_tokens": 8230,
+  "output_tokens": 2438,
+  "latency_p50": 2860000314,
+  "latency_p95": 3131355057,
+  "latency_max": 3131355057,
+  "selected_bindings": {
+    "groq-compound-mini": 5
+  },
+  "finish_reasons": {
+    "": 1,
+    "stop": 4
+  },
+  "framing_classes": {
+    "valid_json_mismatch": 4
+  },
+  "provider_http_statuses": {
+    "429": 1
+  },
+  "second_acquire_reasons": {
+    "": 1,
+    "resource_resource_rate_limit": 4
+  }
+}

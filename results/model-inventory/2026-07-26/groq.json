@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-07-26T20:24:00-03:00",
+  "provider": "groq",
+  "endpoint_kind": "openai-compatible-models",
+  "model_count": 15,
+  "models": [
+    "allam-2-7b",
+    "canopylabs/orpheus-arabic-saudi",
+    "canopylabs/orpheus-v1-english",
+    "groq/compound",
+    "groq/compound-mini",
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-prompt-guard-2-22m",
+    "meta-llama/llama-prompt-guard-2-86m",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-safeguard-20b",
+    "qwen/qwen3.6-27b",
+    "whisper-large-v3",
+    "whisper-large-v3-turbo"
+  ],
+  "selection": {
+    "model": "groq/compound-mini",
+    "reason": "chat-capable family not previously exercised in the runtime gate; excludes audio, TTS, prompt-guard, safeguard and already-covered deployments",
+    "authority": "evidence-only; no routing change"
+  }
+}

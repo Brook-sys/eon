@@ -1,0 +1,43 @@
+{
+  "schema": "motor-autonomo.runtime-gate-manifest.v1",
+  "phase": 230,
+  "objective": "Discover available Groq models via /v1/models and qualify a new model with ProposedChangeSet contract in 5 trials",
+  "hypothesis": "Groq hosts multiple non-reasoning models beyond Llama 3.1 8B; at least one new family/port will pass the provenance-corrected contract",
+  "provider": "groq",
+  "primary_binding": {
+    "base_url": "https://api.groq.com/openai/v1",
+    "model_env": "GROQ_MODEL",
+    "api_key_env": "GROQ_API_KEY"
+  },
+  "fallback_binding": {
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "model": "mistralai/mistral-small-4-119b-2603",
+    "api_key_env": "NVIDIA_API_KEY",
+    "seed": true
+  },
+  "circuit_state": "fallback_seeded_open",
+  "trials": 5,
+  "max_output_tokens": 384,
+  "timeout_seconds": 45,
+  "external_call_limit": 5,
+  "store_isolation": "per_trial",
+  "throttle_policy": "resource_resource_rate_limit",
+  "prompt_family": "proposed_changeset.v1",
+  "prompt_overrides": {
+    "provenance_hint": "model:proposed_changeset"
+  },
+  "validation": {
+    "require_commit": true,
+    "require_reopen": true,
+    "require_schema_adherence": true,
+    "require_content_complete": true,
+    "expected_fields_non_empty": 10
+  },
+  "discovery": {
+    "enabled": true,
+    "endpoint": "/v1/models",
+    "max_models": 20,
+    "exclude_models": ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "qwen/qwen3.6-27b"],
+    "prefer_non_reasoning": true
+  }
+}
