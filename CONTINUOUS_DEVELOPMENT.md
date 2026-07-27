@@ -5882,3 +5882,15 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Decision.** Require both authenticated durable signals before the kernel can reconcile or defer through this policy. Models remain evidence extractors only; their output cannot assert that either durable record exists and cannot choose RETRY/DEFER. Keep both deployments evidence-only and routing unchanged.
 
 **Evidence.** `results/runtime-gate/phase275-groq-compound-mini-evidence-contract/`.
+
+## Phase 276 — incomplete-evidence extraction preserves semantics but fails strict framing (2026-07-27 15:45 -03)
+
+**Hypothesis.** After the kernel was tightened to require both authenticated signals, a rotated Groq deployment should be tested on the asymmetric case where only `delivery_receipt` exists. The extractor must report only the available signal, explicitly mark the pair incomplete, and make zero canonical writes; the kernel must still reject the incomplete pair independently of model output.
+
+**Scenario and bounds.** Rotated from Compound Mini to Groq `llama-3.1-8b-instant`; one isolated OpenAI-compatible call maximum; 45 s timeout; 64 output-token ceiling; zero retries/fallback; seeded primary circuit; strict `exact_json`; structural oracle over `risk`, the singleton available-evidence set, `complete_pair=false`, and `canonical_writes=0`. No provider throttling was induced.
+
+**Result.** The provider succeeded in 339.7 ms with 190 input + 41 output tokens and `stop`. The redaction-safe structural oracle matched all 4/4 declared fields, showing that the completion did not invent `remote_status` and correctly marked the pair incomplete. However, the 139-byte response used a Markdown fence: exact bytes did not match and the strict executor rejected it (`invalid character '`' looking for beginning of value`). The operation remained `READY`, no second acquisition/retry occurred, no canonical entity or commit was promoted, and SQLite reopened durably.
+
+**Interpretation and decision.** Semantic extraction success does not compensate for contract/framing failure. Preserve strict fail-closed parsing and do not add fence stripping or retry: accepting wrappers would weaken the executable contract, while the kernel already rejects a singleton evidence signal through `UnknownEffectEvidence.Validate`. Keep Llama 3.1 8B evidence-only. A useful follow-up is a bounded 3–5 trial replay to determine whether fenced framing is stable for this asymmetric prompt, or a cross-model control under the identical oracle; neither result may grant disposition authority.
+
+**Evidence and verification.** `results/runtime-gate/phase276-groq-llama31-incomplete-evidence-control/live/`. Independent report inspection confirmed one external call, provider success, 4/4 structural fields, Markdown framing, executor rejection, no retry, 231 total tokens, and durable reopen. JSON decoding, manifest/live-manifest identity, secret scan, focused and full Go tests, vet, and `git diff --check` were run before commit.
