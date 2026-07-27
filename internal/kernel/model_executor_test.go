@@ -1891,3 +1891,30 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 		t.Fatal(err)
 	}
 }
+
+func TestValidateAuthorityFreeCompletionExactJSON(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		text    string
+		wantErr string
+	}{
+		{name: "object", text: `{"status":"READY"}`},
+		{name: "array", text: `[]`, wantErr: "must be one JSON object"},
+		{name: "trailing value", text: `{"status":"READY"} {"extra":true}`, wantErr: "trailing JSON value"},
+		{name: "invalid", text: `{`, wantErr: "decode exact_json completion"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateAuthorityFreeCompletion("exact_json", tc.text)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error = %v, want substring %q", err, tc.wantErr)
+			}
+		})
+	}
+}

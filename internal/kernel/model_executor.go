@@ -1494,18 +1494,20 @@ func validateAuthorityFreeCompletion(outputSchema, text string) error {
 		}
 		return nil
 	case "exact_json":
-		candidate := modeltext.BestJSONCandidate(text)
-		var value map[string]json.RawMessage
-		decoder := json.NewDecoder(strings.NewReader(candidate))
-		if err := decoder.Decode(&value); err != nil {
+		// Validate the completion itself. Candidate extraction would silently
+		// discard trailing values or prose, weakening the exact-JSON contract.
+		decoder := json.NewDecoder(strings.NewReader(strings.TrimSpace(text)))
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
 			return fmt.Errorf("decode exact_json completion: %w", err)
-		}
-		if value == nil {
-			return errors.New("exact_json completion must be one JSON object")
 		}
 		var trailing any
 		if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 			return errors.New("exact_json completion has trailing JSON value")
+		}
+		var value map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &value); err != nil || value == nil {
+			return errors.New("exact_json completion must be one JSON object")
 		}
 		return nil
 	default:
