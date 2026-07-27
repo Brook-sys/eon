@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "phase249-groq-qwen36-27b-exact-json-128",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Reply with exactly one raw JSON object: {\"status\":\"READY\",\"metadata\":{\"provider\":\"GROQ\"}}. Whitespace is allowed, but no markdown or trailing text.",
+  "expected_response": "{\"status\":\"READY\",\"metadata\":{\"provider\":\"GROQ\"}}",
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-medium-3.5-128b",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-qwen36-27b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
