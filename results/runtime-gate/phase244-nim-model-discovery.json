@@ -1,0 +1,12 @@
+{
+  "schema": "motor-autonomo.model-discovery-evidence.v1",
+  "provider": "nvidia_nim",
+  "endpoint": "/v1/models",
+  "http_status": 200,
+  "discovered_model_count": 102,
+  "retired_model_present": false,
+  "selected_model": "mistralai/mistral-medium-3.5-128b",
+  "selected_model_present": true,
+  "observed_at": "2026-07-27T01:20:00-03:00",
+  "authority": "evidence_only"
+}

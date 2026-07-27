@@ -1,0 +1,26 @@
+{
+  "schema": "motor-autonomo.live-observation.v1",
+  "provider": "nvidia_nim",
+  "model": "mistralai/mistral-medium-3.5-128b",
+  "case": "exact_json_nested_object",
+  "max_output_tokens": 32,
+  "timeout_seconds": 45,
+  "retries": 0,
+  "calls_attempted": 2,
+  "integrated_campaign": {
+    "result": "timeout_before_structured_report",
+    "durable_store_present": true,
+    "operation_state_after_reopen": "READY",
+    "runner_terminal_error": "durable quota operation mismatch"
+  },
+  "diagnostic_probe": {
+    "result": "timeout",
+    "latency_ms": 45294,
+    "error_class": "TimeoutError",
+    "completion_observed": false,
+    "usage_observed": false
+  },
+  "analysis": "The model was explicitly listed by /v1/models but did not complete either bounded request within 45 seconds. This is availability/latency evidence, not cognitive evidence. No routing or parsing change is authorized.",
+  "decision": "Keep the deployment evidence-only; preserve fail-closed behavior and investigate the campaign timeout reporting path offline before another live probe.",
+  "next_experiment": "Add a deterministic timeout regression that always emits a structured partial report and reconciles durable READY state, then probe a smaller currently listed NIM instruction model once."
+}
