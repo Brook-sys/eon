@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "phase238-groq-compound-provenance-batch",
+  "trials": 5,
+  "external_calls": 5,
+  "provider_successes": 0,
+  "execution_failures": 5,
+  "durable_reopens": 5,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "latency_p50": 7573034003,
+  "latency_p95": 15032659188,
+  "latency_max": 15032659188,
+  "selected_bindings": {
+    "groq-compound": 5
+  },
+  "finish_reasons": {
+    "": 5
+  },
+  "provider_http_statuses": {
+    "413": 5
+  },
+  "second_acquire_reasons": {
+    "": 5
+  }
+}

@@ -21,7 +21,7 @@
 
 The name captures the project's central idea: a node designed to preserve state, coordinate bounded work, survive interruptions, and keep advancing an operator-defined mission across execution cycles.
 
-“Eternal” does **not** mean uncontrolled, immortal, or endlessly busy. It means that continuity is a first-class runtime property: while a mission is active, EON does not silently forget accepted work or treat an empty short-term queue as global completion. It either finds the next legitimate increment, waits locally on a persisted condition, or reports an explicit continuity blocker.
+“Eternal” means that indefinite operation and evolution are first-class runtime requirements—not uncontrolled action or a busy loop. While a mission is active, EON has no implicit global completion: it must preserve state, keep generating legitimate bounded work, learn from verified outcomes, improve its harness under versioned controls, and survive waits, failures, restarts, and resource limits. Only an authorized pause, cancellation, or explicit terminal mission condition may stop that lifecycle.
 
 ## What is EON?
 
@@ -30,6 +30,8 @@ EON is a Go runtime for studying **durable, supervised autonomy under real opera
 The project explores a practical question:
 
 > How much reliable, continuous progress can a deterministic orchestration system obtain from small, old, inexpensive, rate-limited, or otherwise constrained language models?
+
+EON is and will remain an **experimental epistemic runtime**. Its long-term direction is not to replace that identity with a generic agent architecture, but to progressively widen the tools, utilities, and authorized actions connected to its epistemic core. With enough validated capabilities, it should be able to perform useful functions comparable to agent systems such as OpenClaw or Hermes while still grounding work in persistent knowledge, evidence, verification, and continuous learning. Its distinguishing research challenge is to reach that practical breadth and increasing autonomy with weak language models: capability must come from the orchestration system—persistent memory, decomposition, verification, typed tools, recovery, evaluation, and controlled harness evolution—rather than assuming a powerful model.
 
 Instead of treating an LLM as an all-powerful agent, EON treats the model as a limited text solver. The kernel retains authority over scheduling, state transitions, capabilities, budgets, validation, and commits.
 
@@ -42,6 +44,8 @@ The architecture and contracts are still evolving. Interfaces, schemas, flags, a
 ## Core goals
 
 - **Continuous mission-driven progress:** keep a renewable work frontier while a mission is active.
+- **Perpetual controlled evolution:** continuously convert verified operational evidence into versioned improvements without self-authorizing changes.
+- **Progressive agent utility:** widen the experimental epistemic runtime with explicit, tested tools and utilities until it can perform increasingly broad agent-like functions.
 - **Durable execution:** persist accepted work, waits, retries, leases, receipts, and recovery conditions.
 - **Deterministic authority:** keep official decisions and effects under kernel and policy control.
 - **Weak-model resilience:** operate through a minimal `text → text` contract and degrade safely.
@@ -56,7 +60,7 @@ The architecture and contracts are still evolving. Interfaces, schemas, flags, a
 
 EON is not intended to be:
 
-- an unrestricted general-purpose automation agent;
+- a replacement for its epistemic core by a generic agent abstraction, or an unrestricted and unsupervised automation agent; broader utility remains grounded in evidence and bounded by operator-defined mission, policies, budgets, and capabilities;
 - a shell controlled directly by model output;
 - a system that invents its own mission, authority, or economic goals;
 - a wrapper that depends on native tool calling or one specific model provider;

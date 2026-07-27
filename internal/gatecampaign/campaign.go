@@ -38,6 +38,7 @@ type RuntimeGateCampaignManifest struct {
 	ProbePrompt               string               `json:"probe_prompt"`
 	ExpectedResponse          string               `json:"expected_response,omitempty"`
 	SeedPrimaryCircuitSeconds int                  `json:"seed_primary_circuit_seconds"`
+	EarlyStopRepeatedFailures int                  `json:"early_stop_repeated_failures,omitempty"`
 	Bindings                  []RuntimeGateBinding `json:"bindings"`
 }
 
@@ -106,6 +107,9 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	}
 	if m.SeedPrimaryCircuitSeconds <= 0 || m.SeedPrimaryCircuitSeconds > 300 {
 		return errors.New("seed_primary_circuit_seconds must be between 1 and 300")
+	}
+	if m.EarlyStopRepeatedFailures < 0 || m.EarlyStopRepeatedFailures > MaxRuntimeGateBatchTrials || m.EarlyStopRepeatedFailures == 1 {
+		return errors.New("early_stop_repeated_failures must be zero or between 2 and 5")
 	}
 	if len(m.Bindings) != 2 {
 		return errors.New("runtime gate campaign requires exactly two bindings")
@@ -301,8 +305,12 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 	if recorder.calls != manifest.MaxCalls {
 		return RuntimeGateCampaignReport{}, fmt.Errorf("runtime gate executor made %d external calls, want %d", recorder.calls, manifest.MaxCalls)
 	}
-	if manifest.OutputSchema == "proposed_changeset" && executionErr != nil {
-		return r.buildFailedTrialReport(ctx, config, manifest, started, recorder, primary, executionErr)
+	if executionErr != nil && manifest.OutputSchema != "" {
+		report, reportErr := r.buildFailedTrialReport(ctx, config, manifest, started, recorder, primary, executionErr)
+		if manifest.OutputSchema == "proposed_changeset" {
+			return report, reportErr
+		}
+		return report, nil
 	}
 	if manifest.OutputSchema == "proposed_changeset" {
 		if !execution.Completed || execution.CommitID == "" {

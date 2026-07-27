@@ -21,7 +21,7 @@
 
 O nome resume a ideia central do projeto: um nó projetado para preservar estado, coordenar trabalho limitado, sobreviver a interrupções e continuar avançando uma missão definida pelo operador ao longo de sucessivos ciclos de execução.
 
-“Eternal” não significa descontrolado, imortal ou eternamente ocupado. Significa que continuidade é uma propriedade de primeira classe do runtime: enquanto uma missão estiver ativa, o EON não esquece silenciosamente o trabalho aceito nem interpreta uma fila de curto prazo vazia como conclusão global. Ele encontra o próximo incremento legítimo, aguarda localmente uma condição persistida ou registra um bloqueio explícito de continuidade.
+“Eternal” significa que operação e evolução indefinidas são requisitos de primeira classe do runtime — não ação descontrolada nem busy loop. Enquanto uma missão estiver ativa, o EON não possui conclusão global implícita: deve preservar estado, continuar gerando trabalho legítimo e limitado, aprender com resultados verificados, melhorar seu harness sob controles versionados e sobreviver a esperas, falhas, reinícios e limites de recursos. Somente pausa ou cancelamento autorizado, ou uma condição terminal explícita da missão, pode encerrar esse ciclo de vida.
 
 ## O que é o EON?
 
@@ -30,6 +30,8 @@ O EON é um runtime em Go para estudar **autonomia durável e supervisionada sob
 O projeto investiga uma pergunta prática:
 
 > Quanto progresso confiável e contínuo um sistema determinístico de orquestração consegue extrair de modelos de linguagem pequenos, antigos, baratos, limitados por cota ou restritos de outras formas?
+
+O EON é e continuará sendo um **motor epistemológico experimental**. Sua direção de longo prazo não é trocar essa identidade por uma arquitetura genérica de agente, mas ampliar progressivamente as ferramentas, utilidades e ações autorizadas conectadas ao núcleo epistemológico. Com capabilities validadas suficientes, ele deverá conseguir desempenhar funções úteis comparáveis às de sistemas de agentes como OpenClaw ou Hermes, ainda fundamentando o trabalho em conhecimento persistente, evidência, verificação e aprendizado contínuo. Seu diferencial experimental é alcançar essa amplitude prática e autonomia crescente com modelos de linguagem fracos: a competência deve vir do sistema de orquestração — memória persistente, decomposição, verificação, ferramentas tipadas, recuperação, avaliação e evolução controlada do harness — e não da suposição de um modelo poderoso.
 
 Em vez de tratar um LLM como um agente todo-poderoso, o EON trata o modelo como um resolvedor textual limitado. O kernel mantém autoridade sobre agendamento, transições de estado, capabilities, budgets, validação e commits.
 
@@ -42,6 +44,8 @@ A arquitetura e os contratos ainda estão evoluindo. Interfaces, schemas, flags 
 ## Objetivos centrais
 
 - **Progresso contínuo orientado por missão:** manter uma fronteira renovável de trabalho enquanto a missão estiver ativa.
+- **Evolução controlada perpétua:** converter continuamente evidência operacional verificada em melhorias versionadas, sem autoautorizar mudanças.
+- **Utilidade agêntica progressiva:** ampliar o motor epistemológico experimental com ferramentas e utilidades explícitas e testadas até que desempenhe funções agênticas cada vez mais amplas.
 - **Execução durável:** persistir trabalho aceito, esperas, retries, leases, recibos e condições de recuperação.
 - **Autoridade determinística:** manter decisões e efeitos oficiais sob controle do kernel e das políticas.
 - **Resiliência com modelos fracos:** operar por um contrato mínimo `texto → texto` e degradar com segurança.
@@ -56,7 +60,7 @@ A arquitetura e os contratos ainda estão evoluindo. Interfaces, schemas, flags 
 
 O EON não pretende ser:
 
-- um agente irrestrito de automação geral;
+- a substituição de seu núcleo epistemológico por uma abstração genérica de agente, nem um agente de automação irrestrito e não supervisionado; a utilidade ampliada continua fundamentada em evidência e limitada pela missão, políticas, budgets e capabilities definidos pelo operador;
 - um shell controlado diretamente pela saída do modelo;
 - um sistema que inventa sua própria missão, autoridade ou objetivos econômicos;
 - um wrapper dependente de tool calling nativo ou de um único provider;

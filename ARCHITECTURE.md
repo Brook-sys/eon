@@ -15,6 +15,12 @@ O runtime é neutro quanto à finalidade concreta configurada pelo operador. Pod
 
 Seu propósito principal é **continuidade progressiva permanente**: permanecer vivo, preservar estado, sempre ultrapassar o horizonte atual e produzir a próxima frente útil de trabalho. Enquanto a missão estiver ativa e o armazenamento operacional, o motor não possui conclusão global implícita; objetivos, investigações e operações individuais são finitos, mas seu término retorna ao ciclo de manutenção, melhoria e replenishment.
 
+“Permanente” é requisito literal de projeto: o runtime deve ser capaz de operar e evoluir indefinidamente, atravessando reinícios, esperas, falhas, limites e substituições de modelo sem depender de uma sessão ou contexto efêmero. Isso não exige ocupação contínua nem recursos ilimitados; exige que toda espera seja persistida, todo trabalho seja bounded e o ciclo global permaneça retomável e renovável até intervenção autorizada ou condição terminal explícita.
+
+A identidade permanente do projeto é um **motor epistemológico experimental de operação contínua**. Sua direção de longo prazo é ampliar gradualmente o escopo de ferramentas, utilidades e ações autorizadas ao redor desse núcleo, até conseguir desempenhar funções comparáveis às de agentes amplos como OpenClaw ou Hermes. O que se expande é a capacidade operacional; memória, evidência, investigação, verificação e aprendizado continuam sendo o fundamento arquitetural. A expansão deve ser gradual, testada e reversível, sem missão própria, autoridade irrestrita, execução direta de saídas do modelo ou liberdade para ampliar capabilities e budgets.
+
+O alvo deliberado continua sendo modelos de linguagem fracos. Competência geral deve emergir principalmente do harness — decomposição persistente, memória externa, seleção de contexto, verificadores, ferramentas, retries, comparação de modelos e aprendizado controlado a partir de evidência — em vez de depender de um único modelo forte. Evolução do harness significa propostas versionadas, avaliação e promoção autorizada; nunca reescrita autônoma silenciosa dos próprios controles.
+
 Continuidade significa atividade útil permanente enquanto a missão estiver `ACTIVE`. O runtime nunca depende de comandos, respostas do usuário ou eventos externos para procurar avanço: ao esgotar uma frente, ele identifica lacunas, manutenção, verificação, síntese, melhoria do harness ou outra família legítima de trabalho e executa a melhor `Operation` permitida. Eventos externos — inclusive respostas do usuário — alteram fatos, desbloqueiam linhas e repriorizam o trabalho, mas silêncio ou ausência de eventos bloqueiam apenas as unidades dependentes, nunca o motor inteiro.
 
 ## Princípios
@@ -593,7 +599,7 @@ Operation = Contract + Context Policy + Decision Strategy + Capability + Verifie
 
 Isso permite trocar o modelo, executor ou verificador sem reescrever o fluxo inteiro.
 
-## MVP recomendado
+## Primeiro vertical slice operacional
 
 Escopo: construção e manutenção contínua de uma base de conhecimento orientada por missão.
 
@@ -612,9 +618,9 @@ Inclui:
 - dashboard web para configuração, timeline, chamadas, aprovações e interação;
 - event log e observabilidade estruturada.
 
-Não inclui inicialmente:
+Não inclui **neste primeiro slice**:
 
-- automação geral de computador;
+- automação ampla de computador — pode ser incorporada gradualmente como utilidade do motor epistemológico, somente por capabilities explícitas, autorizadas e testadas;
 - shell ou execução arbitrária de código;
 - múltiplos agentes conversando livremente;
 - banco vetorial como fonte canônica;

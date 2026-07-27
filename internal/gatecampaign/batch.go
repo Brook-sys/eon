@@ -38,6 +38,36 @@ type RuntimeGateBatchReport struct {
 	FramingClasses        map[string]int `json:"framing_classes,omitempty"`
 	ProviderHTTPStatuses  map[string]int `json:"provider_http_statuses,omitempty"`
 	SecondAcquireReasons  map[string]int `json:"second_acquire_reasons"`
+	PlannedTrials         int            `json:"planned_trials"`
+	EarlyStopped          bool           `json:"early_stopped"`
+	EarlyStopReason       string         `json:"early_stop_reason,omitempty"`
+}
+
+// RepeatedFailureEarlyStop returns a stable, sanitized reason only when the
+// latest consecutive failures have the same observed HTTP status or provider
+// diagnostic. Successful completions and unclassified errors reset the run.
+func RepeatedFailureEarlyStop(reports []RuntimeGateCampaignReport, threshold int) (bool, string) {
+	if threshold < 2 || len(reports) < threshold {
+		return false, ""
+	}
+	tail := reports[len(reports)-threshold:]
+	key := ""
+	for _, report := range tail {
+		if report.ProviderSucceeded || report.ExecutionError == "" {
+			return false, ""
+		}
+		candidate := ""
+		if report.ProviderHTTPStatus > 0 {
+			candidate = fmt.Sprintf("http_status:%d", report.ProviderHTTPStatus)
+		} else if report.ProviderErrorReason != "" {
+			candidate = "provider_reason:" + report.ProviderErrorReason
+		}
+		if candidate == "" || (key != "" && candidate != key) {
+			return false, ""
+		}
+		key = candidate
+	}
+	return true, key
 }
 
 func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignReport) (RuntimeGateBatchReport, error) {
@@ -51,6 +81,7 @@ func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignRepor
 		SelectedBindings: map[string]int{}, FinishReasons: map[string]int{},
 		FramingClasses: map[string]int{}, ProviderHTTPStatuses: map[string]int{},
 		SecondAcquireReasons: map[string]int{},
+		PlannedTrials:        len(reports),
 	}
 	latencies := make([]time.Duration, 0, len(reports))
 	for index, report := range reports {
@@ -106,6 +137,15 @@ func BuildRuntimeGateBatchReport(name string, reports []RuntimeGateCampaignRepor
 	batch.LatencyP95 = batchPercentile(latencies, 95)
 	batch.LatencyMax = latencies[len(latencies)-1]
 	return batch, nil
+}
+
+func AnnotateRuntimeGateBatchStop(report RuntimeGateBatchReport, planned int, reason string) RuntimeGateBatchReport {
+	report.PlannedTrials = planned
+	report.EarlyStopped = report.Trials < planned
+	if report.EarlyStopped {
+		report.EarlyStopReason = reason
+	}
+	return report
 }
 
 func WriteRuntimeGateBatchArtifacts(directory string, report RuntimeGateBatchReport) error {

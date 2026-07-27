@@ -75,3 +75,20 @@ func TestBuildRuntimeGateBatchReportRejectsIncompleteOrUnboundedInput(t *testing
 		t.Fatal("over-budget trial must fail")
 	}
 }
+
+func TestRepeatedFailureEarlyStopRequiresConsecutiveMatchingClass(t *testing.T) {
+	httpFailure := RuntimeGateCampaignReport{ExecutionError: "failed", ProviderHTTPStatus: 413}
+	stop, reason := RepeatedFailureEarlyStop([]RuntimeGateCampaignReport{httpFailure, httpFailure}, 2)
+	if !stop || reason != "http_status:413" {
+		t.Fatalf("stop=%v reason=%q", stop, reason)
+	}
+	different := httpFailure
+	different.ProviderHTTPStatus = 429
+	if stop, _ := RepeatedFailureEarlyStop([]RuntimeGateCampaignReport{httpFailure, different}, 2); stop {
+		t.Fatal("different statuses must not stop")
+	}
+	diagnostic := RuntimeGateCampaignReport{ExecutionError: "failed", ProviderErrorReason: "empty_content"}
+	if stop, reason := RepeatedFailureEarlyStop([]RuntimeGateCampaignReport{diagnostic, diagnostic}, 2); !stop || reason != "provider_reason:empty_content" {
+		t.Fatalf("diagnostic stop=%v reason=%q", stop, reason)
+	}
+}

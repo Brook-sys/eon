@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "name": "phase239-groq-compound-exact-text-early-stop",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 1,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 1090,
+  "output_tokens": 154,
+  "latency_p50": 607925854,
+  "latency_p95": 1030443300,
+  "latency_max": 1030443300,
+  "selected_bindings": {
+    "groq-compound": 3
+  },
+  "finish_reasons": {
+    "": 2,
+    "stop": 1
+  },
+  "framing_classes": {
+    "exact": 1
+  },
+  "provider_http_statuses": {
+    "429": 2
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 5,
+  "early_stopped": true,
+  "early_stop_reason": "http_status:429"
+}

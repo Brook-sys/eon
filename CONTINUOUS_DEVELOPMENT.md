@@ -6,6 +6,8 @@ Status: ativo
 
 Transformar incrementalmente os documentos de pesquisa em um runtime epistemológico executável, testável e recuperável em Go, sem antecipar decisões ainda não validadas.
 
+Esta missão preserva a identidade permanente do projeto: um **motor epistemológico experimental** que possa operar e evoluir indefinidamente enquanto uma missão estiver ativa. O escopo de ferramentas, utilidades e ações autorizadas deve crescer incrementalmente ao redor desse núcleo, elevando sua autonomia prática até que consiga desempenhar funções comparáveis às de agentes amplos como OpenClaw ou Hermes. Essa utilidade agêntica deve continuar compatível com modelos fracos e resultar do kernel, memória, decomposição, validação, ferramentas, recuperação e evolução controlada do harness — nunca da substituição do núcleo epistemológico ou de autoridade entregue ao modelo.
+
 Cada heartbeat executa normalmente um lote de 2 a 4 melhorias relacionadas. Um único item pode ocupar o ciclo apenas quando for substancial — por exemplo, implementação acompanhada de testes, investigação comparativa ou correção estrutural ampla. O estado deste arquivo é a coordenação persistente entre ciclos.
 
 ## Restrições aceitas
@@ -19,7 +21,8 @@ Cada heartbeat executa normalmente um lote de 2 a 4 melhorias relacionadas. Um �
 - conhecimento rastreável por fontes, observações, claims e evidências;
 - alterações oficiais somente por `ProposedChangeSet` validado;
 - Dolt condicionado a spike comparativo;
-- automação geral fora do MVP.
+- automação ampla fora do primeiro MVP, mas incorporável gradualmente como utilidade do motor epistemológico por capabilities explícitas, autorizadas e testadas;
+- operação e evolução indefinidas sem busy loop, autoautorização ou consumo sem ganho verificável.
 
 ## Definição de lote concluído
 
@@ -5431,3 +5434,39 @@ Evidência: `results/runtime-gate/phase235-groq-gpt-oss-20b-empty-content-batch/
 Interpretação: a troca isolada do campo de limite não corrigiu o wire e, portanto, não explica as cinco respostas vazias anteriores. Não há ganho em ampliar este cenário. GPT-OSS 20B continua evidence-only para `ProposedChangeSet`; o próximo teste com ganho epistemológico deve usar uma operação texto simples em harness que não exija schema, ou uma extensão explicitamente documentada pela fonte primária, sem aceitar campo alternativo às cegas.
 
 Evidência: `results/runtime-gate/phase236-groq-gpt-oss-20b-max-completion-tokens/`. Verificação: decode independente confirmou uma chamada, `empty_content`, ausência de commit e reopen durável; testes focais do adapter/gatecampaign, vet focal, decode JSON e `git diff --check` executados no ciclo.
+
+### Fase 237 — Probe texto simples e evidência estruturada de falha
+
+- [x] `DONE` Exercitar o Groq GPT-OSS 20B com uma operação `exact_text`, sem schema de changeset, em uma única chamada bounded.
+- [x] `DONE` Generalizar o relatório parcial para falhas de operações `exact_text`/`exact_json`, preservando a compatibilidade histórica quando o schema está omitido.
+- [x] `DONE` Provar fail-closed, diagnóstico sanitizado e reopen SQLite também fora do caminho `proposed_changeset`.
+
+2026-07-26 22:48 — HEARTBEAT — O experimento indicado pela Fase 236 removeu o contrato adversarial e pediu somente `Hello`, com Groq `openai/gpt-oss-20b`, `max_completion_tokens`, teto 64, timeout 45 s, uma chamada e zero retry/fallback. A resposta voltou em 402 ms e repetiu `provider_error_reason=empty_content`, sem status HTTP, completion textual ou usage confiável. A operação permaneceu `READY`, nenhum commit/entidade foi promovido e o SQLite reabriu duravelmente. Isso separa a falha do schema `ProposedChangeSet`: o deployment não forneceu `message.content` nem para texto trivial no wire atualmente suportado.
+
+O probe revelou que o runner só materializava relatório parcial de erro quando `output_schema=proposed_changeset`. O caminho foi generalizado para schemas explícitos `exact_text` e `exact_json`; schemas omitidos preservam o comportamento legado. Regressão determinística comprova uma chamada, `empty_content`, erro de execução auditável e ausência de mutação canônica. Decisão: GPT-OSS 20B permanece incompatível/evidence-only nesse adapter; qualquer extensão futura deve partir de documentação primária/fixture explícita para campo alternativo, não inferência sobre o body descartado.
+
+Evidência: `results/runtime-gate/phase237-gpt-oss-20b-plain-text-probe/`. Verificação: teste focal gatecampaign, decode do receipt, reopen pelo runner, suíte integral, vet, gofmt e `git diff --check`.
+
+### Fase 238 — Qualificação inicial do Groq Compound e limite HTTP 413
+
+- [x] `DONE` Exercitar `groq/compound`, família ainda não coberta, no contrato adversarial corrigido de provenance em cinco stores isolados.
+- [x] `DONE` Classificar provider/wire versus cognição, registrar cauda de latência e preservar fail-closed/reopen em todos os trials.
+- [x] `DONE` Impedir promoção ou preferência automática diante de erro HTTP repetido.
+
+2026-07-26 22:49 — HEARTBEAT — Campanha Groq intensificada declarada com cinco trials isolados, uma chamada por trial, zero retries, timeout 45 s, teto 384 output tokens e NIM Mistral Small 4 semeado circuit-open. O `groq/compound` retornou HTTP 413 em 5/5 chamadas, sem completion ou usage confiável, com latências de 5,880–15,033 s (p50 7,573 s; p95/max 15,033 s). Houve cinco execution failures, zero schemas avaliáveis, zero commits e cinco reopens duráveis. Nenhum fallback ou segunda chamada ocorreu dentro de cada trial.
+
+Interpretação: o erro é de aceitação HTTP do wire, não evidência de incapacidade cognitiva. A repetição isolada expôs estabilidade do 413 e cauda alta; após 2/2 a causa já estava caracterizada, portanto os três trials finais não adicionaram diversidade e o harness deve ganhar interrupção antecipada de batch por erro HTTP idêntico repetido antes de nova campanha ampliada. Decisão: não habilitar Compound para este contrato. Próximo recorte: adicionar política declarativa de early-stop ao runner batch (por status/reason repetido), testá-la offline e somente então fazer um probe reduzido que varie deliberadamente tamanho/contrato.
+
+Evidência: `results/runtime-gate/phase238-groq-compound-provenance-batch/`. Verificação: decode do agregado e cinco receipts, reopen durável por trial, suíte integral, vet, gofmt e `git diff --check`.
+
+### Fase 239 — Early-stop declarativo e probe reduzido do Groq Compound
+
+- [x] `DONE` Adicionar interrupção antecipada opt-in por falha HTTP ou diagnóstico sanitizado idêntico e consecutivo, sem confundir sucessos ou classes divergentes.
+- [x] `DONE` Registrar no agregado trials planejados/executados, decisão de interrupção e razão allowlisted.
+- [x] `DONE` Variar o Compound para contrato `exact_text` pequeno e comprovar a política em chamada live bounded.
+
+2026-07-26 23:00 — HEARTBEAT — O manifesto do runtime gate ganhou `early_stop_repeated_failures`, desabilitado por padrão e validado entre 2 e 5. O batch interrompe somente quando as últimas N observações são falhas consecutivas com o mesmo status HTTP positivo ou o mesmo `provider_error_reason` sanitizado; sucesso, erro sem classe ou classe divergente não satisfazem a política. O agregado agora distingue `planned_trials`, `trials`, `early_stopped` e `early_stop_reason`, preservando a contabilidade real das chamadas executadas.
+
+O probe live variou deliberadamente o Groq `groq/compound` do changeset grande da Fase 238 para `exact_text` (`READY`), teto 32 output tokens, timeout 45 s, zero retries, até cinco trials e early-stop após duas falhas repetidas. O primeiro trial alcançou completion em 1,030 s (1.090 input + 154 output tokens, `finish_reason=stop`, framing exato), mas não correspondeu ao texto esperado e o executor terminou em falha de validação sem commit. Os trials 2 e 3 retornaram HTTP 429 em 608/551 ms; a repetição consecutiva acionou `http_status:429` e evitou os trials 4–5. Resultado agregado: 3/5 chamadas planejadas, uma completion, três falhas de execução, dois 429, três reopens duráveis, p50 608 ms e p95/max 1,030 s. A redução do contrato removeu o 413, mostrando que ele dependia do request/carga anterior, mas revelou throttling natural e não qualificou aderência exata. Nenhum routing foi alterado.
+
+Evidência: `results/runtime-gate/phase239-groq-compound-exact-text-early-stop/`. Verificação: regressões de matching HTTP/diagnóstico, teste focal e vet do gatecampaign/CLI, decode independente do agregado e receipts, três reopens pelo harness, gofmt e `git diff --check`. Próximo experimento: após cooldown, usar pacing explícito em um deployment Groq diferente ou medir a completion Compound sem ampliar carga; manter early-stop ativo em batches exploratórios.

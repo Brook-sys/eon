@@ -340,6 +340,32 @@ func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
 	}
 }
 
+func TestRunExactTextFailureReturnsStructuredReport(t *testing.T) {
+	now := time.Date(2026, 7, 26, 22, 40, 0, 0, time.UTC)
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "exact_text"
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": wrappedProvider{err: providerDiagnosticError{reason: "empty_content"}},
+		},
+	}
+	report, err := runner.Run(context.Background(), manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.SchemaVersion != RuntimeGateCampaignSchemaVersion || report.ExecutionError == "" {
+		t.Fatalf("exact-text failure must return structured evidence: %+v", report)
+	}
+	if report.ProviderErrorClass != "provider" || report.ProviderErrorReason != "empty_content" {
+		t.Fatalf("exact-text provider evidence=%+v", report)
+	}
+	if report.ExternalCalls != 1 || report.CommitID != "" || report.CanonicalEntityStored {
+		t.Fatalf("exact-text failure accounting=%+v", report)
+	}
+}
+
 func TestRunDoesNotClassifyZeroStatusAsHTTP(t *testing.T) {
 	now := time.Date(2026, 7, 26, 21, 0, 0, 0, time.UTC)
 	runner := RuntimeGateCampaignRunner{

@@ -86,12 +86,17 @@ func run() error {
 		if err != nil && *trials == 1 {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
+		if stop, _ := gatecampaign.RepeatedFailureEarlyStop(reports, manifest.EarlyStopRepeatedFailures); stop {
+			break
+		}
 	}
 	if *trials > 1 {
 		batch, err := gatecampaign.BuildRuntimeGateBatchReport(manifest.Name, reports)
 		if err != nil {
 			return err
 		}
+		_, stopReason := gatecampaign.RepeatedFailureEarlyStop(reports, manifest.EarlyStopRepeatedFailures)
+		batch = gatecampaign.AnnotateRuntimeGateBatchStop(batch, *trials, stopReason)
 		if err := gatecampaign.WriteRuntimeGateBatchArtifacts(*outputDirectory, batch); err != nil {
 			return err
 		}
