@@ -19,6 +19,26 @@ import (
 	"motor-autonomo/internal/storage/memory"
 )
 
+func TestEnsureProposalLineageDoesNotRepairPartialProtectedLineage(t *testing.T) {
+	operation := domain.Operation{
+		ID:              "operation_test",
+		MissionRevision: "mission_revision_test",
+		IdempotencyKey:  "operation_key_test",
+	}
+	partial := `{"schema_version":1,"id":"changeset_model","mission_revision_id":"wrong_revision","operation_id":"operation_test","base_commit_id":"wrong_base","read_set":[],"preconditions":[],"changes":[{"kind":"ADD","entity_type":"claim","entity_id":"claim_test","payload_ref":"artifact_test"}],"expected_delta":"test","validator_ids":["schema"],"provenance":"model:test"}`
+
+	got, err := ensureProposalLineage(partial, operation, "commit_test", source.NewSequenceIDGenerator(1), "test-model")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != partial {
+		t.Fatalf("partial protected lineage must remain unmodified for strict rejection\ngot:  %s\nwant: %s", got, partial)
+	}
+	if _, err := changeset.DecodeStrict(got, 1<<20); err == nil || !strings.Contains(err.Error(), "proposed changeset") {
+		t.Fatalf("missing protected field must fail schema validation before application, got %v", err)
+	}
+}
+
 type crashAfterReservedProvider struct{ calls int }
 
 func (p *crashAfterReservedProvider) ID() string { return "crash-after-reserved" }

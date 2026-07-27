@@ -1403,14 +1403,15 @@ func ensureProposalLineage(text string, operation domain.Operation, baseCommit d
 	if err := json.Unmarshal([]byte(trimmed), &fields); err != nil {
 		return text, nil
 	}
-	// If core lineage is already present, do not rewrite. Return the original
-	// provider text so RawModelOutput keeps exact bytes; DecodeStrict will
-	// re-apply local normalization when parsing the typed proposal.
-	if _, ok := fields["operation_id"]; ok {
-		if _, ok := fields["idempotency_key"]; ok {
-			if _, ok := fields["mission_revision_id"]; ok {
-				return text, nil
-			}
+	// Protected lineage is all-or-nothing. A true changeset skeleton supplies
+	// none of these fields and may receive deterministic kernel lineage. If the
+	// model supplied even one protected field, preserve its output unchanged so
+	// DecodeStrict/Validate rejects omissions before any application attempt.
+	// Repairing a partially supplied lineage would hide a schema failure and can
+	// misclassify it later as a storage/lineage conflict.
+	for _, name := range []string{"operation_id", "idempotency_key", "mission_revision_id", "base_commit_id"} {
+		if _, ok := fields[name]; ok {
+			return text, nil
 		}
 	}
 	// Partial object: inject deterministic lineage for vertical-slice harnesses
