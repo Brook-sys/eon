@@ -334,6 +334,24 @@ func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
 	}
 }
 
+func TestRunDoesNotClassifyZeroStatusAsHTTP(t *testing.T) {
+	now := time.Date(2026, 7, 26, 21, 0, 0, 0, time.UTC)
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": wrappedProvider{err: providerHTTPError{status: 0}},
+		},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ProviderErrorClass != "provider" || report.ProviderHTTPStatus != 0 {
+		t.Fatalf("zero-status provider evidence=%+v", report)
+	}
+}
+
 func TestRunRecordsExactExpectedResponseWithoutPersistingRawText(t *testing.T) {
 	now := time.Date(2026, 7, 22, 12, 20, 0, 0, time.UTC)
 	runner := RuntimeGateCampaignRunner{

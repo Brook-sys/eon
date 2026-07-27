@@ -371,7 +371,7 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			report.ProviderRetryAfter = providerErr.RetryAfterDelay()
 		}
 		var httpErr port.ProviderHTTPError
-		if errors.As(recorder.err, &httpErr) {
+		if errors.As(recorder.err, &httpErr) && httpErr.HTTPStatusCode() > 0 {
 			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
@@ -445,7 +445,7 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 			report.ProviderRetryAfter = providerErr.RetryAfterDelay()
 		}
 		var httpErr port.ProviderHTTPError
-		if errors.As(recorder.err, &httpErr) {
+		if errors.As(recorder.err, &httpErr) && httpErr.HTTPStatusCode() > 0 {
 			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
