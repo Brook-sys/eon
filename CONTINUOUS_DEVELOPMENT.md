@@ -5722,3 +5722,17 @@ O endpoint respondeu HTTP 413 após 22,685 s, sem completion ou usage cognitivo 
 Interpretação: o Compound maior repete a classe HTTP 413 já observada na Fase 238 sob contrato grande, enquanto Compound Mini aceitou e aplicou o mesmo prompt/teto na Fase 258. Como o erro ocorre antes de completion, ele não mede aderência cognitiva e não autoriza relaxar parsing, aumentar limites ou preferir automaticamente o Mini. Decisão: manter `groq/compound` fora deste routing e preservar fail-closed. Próximo experimento com ganho deve reduzir deliberadamente o tamanho do request/contrato ou consultar documentação primária sobre limites específicos do deployment; não repetir a carga idêntica.
 
 Evidência: `results/runtime-gate/phase259-groq-compound-proposed-changeset/`. Verificação: decode independente confirmou uma chamada, HTTP 413, latência, circuito, operação `READY`, zero promoção e reopen durável; validação JSON, suíte Go integral, vet integral, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
+
+### Fase 260 — Isolamento do HTTP 413 do Groq Compound por redução do contrato
+
+- [x] `DONE` Reduzir deliberadamente o request de `ProposedChangeSet` para um contrato `exact_json` mínimo, preservando deployment, dialeto, timeout, uma chamada e zero retries/fallback.
+- [x] `DONE` Distinguir indisponibilidade geral do deployment de rejeição dependente do tamanho/complexidade do request.
+- [x] `DONE` Confirmar framing exato, controle de quota local e reopen durável sem promoção canônica.
+
+2026-07-27 10:03 — HEARTBEAT — O probe variou o contrato do Groq `groq/compound` de `ProposedChangeSet` para `exact_json` mínimo (`{"status":"READY"}`), reduziu o teto de 768 para 64 output tokens e preservou `max_completion_tokens`, timeout 45 s, uma chamada, zero retries/fallback e NIM semeado circuit-open. A hipótese era que o HTTP 413 das Fases 238/259 dependia do request/contrato grande, em vez de indisponibilidade geral do deployment.
+
+O provider respondeu com sucesso em 2,141 s, `finish_reason=stop`, 1.128 input + 187 output tokens contabilizados e 18 bytes de resposta. A completion foi exatamente o objeto esperado, JSON integral e framing `exact`; a operação authority-free não criou commit nem entidade canônica. A segunda aquisição foi bloqueada pela quota local, deixando a operação em `WAITING_TIME`, e o SQLite reabriu duravelmente.
+
+Interpretação: o Compound está acessível e consegue cumprir o contrato mínimo; portanto, o 413 anterior é sensível ao request/contrato ou ao processamento associado, não uma retirada geral do deployment. O custo observado de 187 output tokens para apenas 18 bytes úteis também reforça overhead elevado. O experimento não localiza ainda o limiar nem autoriza preferência/routing. Próximo passo: uma escada bounded de tamanho/complexidade, alterando uma dimensão por vez entre `exact_json` e `ProposedChangeSet`, com early-stop imediato no primeiro 413 repetível; não repetir os extremos já caracterizados.
+
+Evidência: `results/runtime-gate/phase260-groq-compound-reduced-exact-json/`. Verificação: decode independente confirmou uma chamada, provider success, 2,141 s, 1.128+187 tokens, 18 bytes, match/framing exatos, quota local e reopen durável; validação JSON, suíte Go integral, vet integral, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
