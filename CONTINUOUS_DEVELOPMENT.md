@@ -5736,3 +5736,17 @@ O provider respondeu com sucesso em 2,141 s, `finish_reason=stop`, 1.128 input +
 Interpretação: o Compound está acessível e consegue cumprir o contrato mínimo; portanto, o 413 anterior é sensível ao request/contrato ou ao processamento associado, não uma retirada geral do deployment. O custo observado de 187 output tokens para apenas 18 bytes úteis também reforça overhead elevado. O experimento não localiza ainda o limiar nem autoriza preferência/routing. Próximo passo: uma escada bounded de tamanho/complexidade, alterando uma dimensão por vez entre `exact_json` e `ProposedChangeSet`, com early-stop imediato no primeiro 413 repetível; não repetir os extremos já caracterizados.
 
 Evidência: `results/runtime-gate/phase260-groq-compound-reduced-exact-json/`. Verificação: decode independente confirmou uma chamada, provider success, 2,141 s, 1.128+187 tokens, 18 bytes, match/framing exatos, quota local e reopen durável; validação JSON, suíte Go integral, vet integral, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
+
+### Fase 261 — Degrau intermediário do Groq Compound
+
+- [x] `DONE` Introduzir um contrato `exact_json` intermediário entre o objeto mínimo e o `ProposedChangeSet`, alterando somente complexidade/tamanho e teto de saída.
+- [x] `DONE` Executar uma chamada bounded no `groq/compound`, sem retry/fallback, com early-stop implícito após o único trial.
+- [x] `DONE` Medir framing, tokens, latência, quota local e reopen durável antes de aproximar o limiar do HTTP 413.
+
+2026-07-27 10:23 — HEARTBEAT — A escada bounded indicada pela Fase 260 acrescentou um único degrau intermediário no Groq `groq/compound`: objeto `exact_json` aninhado de 146 bytes, prompt de 200 bytes e teto de 256 output tokens. Deployment, `max_completion_tokens`, timeout 45 s, exatamente uma chamada, zero retries/fallback e NIM semeado circuit-open foram preservados. A hipótese era que esse request moderado continuaria abaixo da condição que rejeitou o `ProposedChangeSet` com HTTP 413.
+
+O provider respondeu com sucesso em 2,056 s, `finish_reason=stop`, 1.298 input + 194 output tokens e exatamente 146 bytes de completion. O JSON coincidiu byte a byte com o oracle e recebeu framing `exact`. A operação authority-free não criou commit nem entidade canônica; a segunda aquisição foi bloqueada localmente por quota, deixando-a em `WAITING_TIME`, e o SQLite reabriu duravelmente.
+
+Interpretação: aumentar o payload útil de 18 para 146 bytes e o prompt de 72 para 200 bytes ainda não reproduziu o 413; a latência permaneceu próxima da Fase 260 (2,056 s versus 2,141 s) e o overhead de saída continuou alto (194 tokens para 146 bytes). Isso desloca o limiar para além deste contrato moderado, mas não separa tamanho bruto de complexidade/instruções do `ProposedChangeSet`. Decisão: preservar routing e parser; o próximo degrau deve aumentar apenas o tamanho do `exact_json` mantendo a mesma forma, ou reduzir o prompt `ProposedChangeSet`, sem saltar diretamente aos extremos já medidos.
+
+Evidência: `results/runtime-gate/phase261-groq-compound-medium-exact-json/`. Verificação: decode independente confirmou uma chamada, provider success, 2,056 s, 1.298+194 tokens, 146 bytes, match/framing exatos, quota local e reopen durável; validação JSON, suíte Go integral, vet integral, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
