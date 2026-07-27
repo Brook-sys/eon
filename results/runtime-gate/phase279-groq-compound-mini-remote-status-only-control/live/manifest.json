@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "name": "phase279-groq-compound-mini-remote-status-only-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch. An authenticated remote_status record exists. No delivery_receipt exists. Extract available durable evidence only. Return exactly one raw JSON object with keys risk, available_evidence, complete_pair, canonical_writes. risk must be unknown_effect; available_evidence must contain only remote_status; complete_pair must be false; canonical_writes must be 0. Do not invent missing evidence or choose RETRY, RECONCILE, or DEFER. No markdown or extra text.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"remote_status\"],\"complete_pair\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "available_evidence": [
+        "remote_status"
+      ],
+      "canonical_writes": 0,
+      "complete_pair": false,
+      "risk": "unknown_effect"
+    },
+    "array_set_equality": true
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
