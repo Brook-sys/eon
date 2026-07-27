@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "name": "phase254-groq-allam2-7b-proposed-changeset-768",
+  "started_at": "2026-07-27T10:42:40.362886058Z",
+  "completed_at": "2026-07-27T10:42:41.063840525Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-allam2-7b",
+  "route_rejected": {
+    "nim-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 558344004,
+  "observed_input_tokens": 799,
+  "observed_output_tokens": 223,
+  "finish_reason": "stop",
+  "response_bytes": 542,
+  "response_sha256": "ec60738f90455d6f0411a34dc3fdf0846aa6658d07b79819dac056f4db141049",
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "",
+  "operation_state": "READY",
+  "schema_adherence": {
+    "schema_valid": true,
+    "fields_checked": 12,
+    "fields_present": 11,
+    "fields_correct_type": 11,
+    "fields_non_empty": 9,
+    "field_results": [
+      {
+        "field": "schema_version",
+        "present": true,
+        "correct_type": true,
+        "non_empty": false,
+        "observed_type": "number",
+        "expected_type": "number"
+      },
+      {
+        "field": "id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "mission_revision_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "operation_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "base_commit_id",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "read_set",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "preconditions",
+        "present": true,
+        "correct_type": true,
+        "non_empty": false,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "changes",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "expected_delta",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "validator_ids",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "array",
+        "expected_type": "array"
+      },
+      {
+        "field": "provenance",
+        "present": true,
+        "correct_type": true,
+        "non_empty": true,
+        "observed_type": "string",
+        "expected_type": "string"
+      },
+      {
+        "field": "idempotency_key",
+        "present": false,
+        "correct_type": false,
+        "non_empty": false,
+        "observed_type": "missing",
+        "expected_type": "string"
+      }
+    ],
+    "changes_valid": true,
+    "changes_checked": 1,
+    "changes_with_all_fields": 1
+  },
+  "execution_error": "model recovery exhausted: apply proposed changeset: storage conflict: stale base commit or non-sequential version",
+  "usages": [
+    {
+      "resource": "model-binding:groq-allam2-7b",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-27T10:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-27T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-27T10:42:00Z",
+      "token_minute_count": 1022,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:nim-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-27T10:43:40.362886058Z",
+      "last_failure_at": "2026-07-27T10:42:40.362886058Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-27T10:42:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-27T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-27T10:42:00Z",
+      "token_minute_count": 1022,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
