@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase243-nim-mistral-small-4-nested-json-whitespace",
+  "trials": 2,
+  "external_calls": 2,
+  "provider_successes": 0,
+  "execution_failures": 2,
+  "durable_reopens": 2,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "latency_p50": 121650541,
+  "latency_p95": 382115309,
+  "latency_max": 382115309,
+  "selected_bindings": {
+    "nim-mistral-small-4": 2
+  },
+  "finish_reasons": {
+    "": 2
+  },
+  "provider_http_statuses": {
+    "410": 2
+  },
+  "second_acquire_reasons": {
+    "": 2
+  },
+  "planned_trials": 3,
+  "early_stopped": true,
+  "early_stop_reason": "http_status:410"
+}
