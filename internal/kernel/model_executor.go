@@ -721,11 +721,15 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			budget.ModelCallsUsed++
 		}
 		if callErr != nil {
+			// Provider cancellation may also cancel the request context. Durable
+			// accounting and permit release are local reconciliation and must still
+			// complete after that boundary; they do not authorize another call.
+			reconcileCtx := context.WithoutCancel(ctx)
 			// A provider attempt is audit-relevant even when transport or HTTP
 			// validation fails before a completion can enter VERIFYING. Persist the
 			// invocation while the operation still owns its RUNNING lease so live
 			// failure campaigns and crash/reopen inspection do not undercount calls.
-			if auditErr := e.Store.Update(ctx, func(tx port.Transaction) error {
+			if auditErr := e.Store.Update(reconcileCtx, func(tx port.Transaction) error {
 				op, err := tx.Operation(operationID)
 				if err != nil {
 					return err
@@ -762,11 +766,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				budget.Decisions = append(budget.Decisions, decision)
 				if activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest {
 					budget.ContextPressure = domain.RecordContextPressure(budget.ContextPressure)
-					_ = e.saveContextPressure(ctx, activeBindingID, budget.ContextPressure)
+					_ = e.saveContextPressure(reconcileCtx, activeBindingID, budget.ContextPressure)
 				}
-				_ = e.appendModelFailurePolicyEvent(ctx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed, rateLimitMetadata(callErr))
+				_ = e.appendModelFailurePolicyEvent(reconcileCtx, operation, leaseRef, decision, activeProviderID, activeBindingID, budget.ModelCallsUsed, rateLimitMetadata(callErr))
 			}
-			e.releaseFailedResourcePermits(ctx, operation, permits, decision, classified, lastRetryAfter)
+			e.releaseFailedResourcePermits(reconcileCtx, operation, permits, decision, classified, lastRetryAfter)
 			lastErr = fmt.Errorf("model complete: %w", callErr)
 
 			// NEW FALLBACK LOGIC FOR TOOL CALL VALIDATION ERRORS

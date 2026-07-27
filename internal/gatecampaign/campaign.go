@@ -471,7 +471,11 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 			report.ProviderErrorReason = diagErr.DiagnosticReason()
 		}
 	}
-	if err := runtimeGateSnapshot(ctx, r.Store, config, manifest.OutputSchema, &report); err != nil {
+	// A provider timeout cancels the request context, but the executor has already
+	// persisted its fail-closed outcome. Reconciliation is local read-only work and
+	// must still snapshot that durable state so the CLI can verify reopen and emit
+	// structured evidence instead of losing the report at the timeout boundary.
+	if err := runtimeGateSnapshot(context.WithoutCancel(ctx), r.Store, config, manifest.OutputSchema, &report); err != nil {
 		return RuntimeGateCampaignReport{}, err
 	}
 	report.CompletedAt = r.Clock.Now().UTC()

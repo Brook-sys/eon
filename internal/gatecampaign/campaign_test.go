@@ -25,6 +25,15 @@ func (p *recordingProvider) Complete(context.Context, port.CompletionRequest) (p
 	return p.result, p.err
 }
 
+type cancelingProvider struct {
+	cancel context.CancelFunc
+}
+
+func (p cancelingProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	p.cancel()
+	return port.CompletionResult{}, context.DeadlineExceeded
+}
+
 func TestBoundedCallRecorderIsSharedAndFailClosed(t *testing.T) {
 	recorder := &boundedCallRecorder{max: 1}
 	primary := &recordingProvider{}
@@ -265,6 +274,35 @@ func TestRunRoutesAroundSeededCircuitThenThrottlesWithoutSecondCall(t *testing.T
 	}
 	if selected.DayCount != 1 || selected.TokenMinuteCount != 8 || selected.MinuteWindowStart.IsZero() || selected.DayWindowStart.IsZero() || selected.TokenMinuteWindowStart.IsZero() {
 		t.Fatalf("complete quota accounting missing from report: %+v", selected)
+	}
+}
+
+func TestRunSnapshotsDurableFailureAfterProviderDeadline(t *testing.T) {
+	now := time.Date(2026, 7, 27, 1, 30, 0, 0, time.UTC)
+	ctx, cancel := context.WithCancel(context.Background())
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": cancelingProvider{cancel: cancel},
+		},
+	}
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "exact_json"
+	manifest.ExpectedResponse = `{"status":"READY"}`
+	manifest.MaxOutputTokens = 32
+	report, err := runner.Run(ctx, manifest)
+	if err != nil {
+		t.Fatalf("deadline failure must retain a structured report: %v", err)
+	}
+	if report.SchemaVersion == 0 || report.ExecutionError == "" || report.ProviderErrorClass != "transport" || report.ExternalCalls != 1 {
+		t.Fatalf("partial deadline evidence=%+v", report)
+	}
+	if report.OperationState != domain.StateReady || report.DurableReopen {
+		t.Fatalf("fail-closed snapshot=%+v", report)
+	}
+	if err := VerifyRuntimeGateDurability(context.Background(), runner.Store, report); err != nil {
+		t.Fatalf("durable timeout reconciliation: %v", err)
 	}
 }
 
