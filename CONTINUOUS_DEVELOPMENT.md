@@ -5806,3 +5806,17 @@ O provider respondeu em 258 ms, consumiu 117 input + 20 output tokens, terminou 
 Interpretação: o deployment aderiu 1/1 ao contrato curto e estruturalmente heterogêneo, com latência inferior às amostras recentes de modelos maiores. A amostra isola capacidade de framing, não qualidade de `ProposedChangeSet`, resistência sob concorrência nem decisão geral de routing. Decisão: manter evidence-only; o próximo teste com ganho deve aumentar repetições bounded para medir variância/cauda ou elevar a complexidade semântica, não promover automaticamente o modelo.
 
 Evidência: `results/runtime-gate/phase265-groq-llama31-8b-nested-json/`. Verificação: decode independente confirmou uma chamada, 258 ms, 117+20 tokens, `stop`, 82 bytes/hash coincidente com o oracle, match/framing exatos, ausência de promoção, quota local e reopen durável; validação JSON, inspeção de ausência de segredos, suíte Go integral, vet integral e `git diff --check` executados no ciclo. Uma execução diagnóstica anterior no mesmo ciclo omitiu `expected_response` do manifesto; ela fez uma chamada adicional bem-sucedida de 280 ms com o mesmo hash exato, mas o relatório classificou corretamente apenas `valid_json_mismatch` por ausência de oracle configurado. Os artefatos finais foram regenerados com oracle explícito; as duas chamadas totais permaneceram bounded e sem retry automático.
+
+### Fase 266 — Variância e cauda bounded do Groq Llama 3.1 8B
+
+- [x] `DONE` Ampliar o caso JSON aninhado da Fase 265 para cinco trials isolados, sem alterar prompt, oracle, modelo ou limites por chamada.
+- [x] `DONE` Medir aderência, variância de latência, tokens, framing e `finish_reason` sob carga sequencial bounded.
+- [x] `DONE` Confirmar quota local e reopen durável em todos os trials sem retry, fallback ou promoção canônica.
+
+2026-07-27 12:20 — HEARTBEAT — A campanha ampliou o probe Groq `llama-3.1-8b-instant` da Fase 265 para cinco trials isolados, preservando literalmente o contrato `exact_json` aninhado, oracle de 82 bytes, `max_completion_tokens`, teto 64, timeout 45 s, uma chamada por trial, zero retries/fallback e NIM semeado circuit-open. A hipótese era medir variância e cauda curta depois da qualificação funcional 1/1, sem aumentar complexidade ou autoridade.
+
+Resultado: 5/5 completions coincidiram byte a byte com o oracle, foram JSON integral, framing `exact` e `finish_reason=stop`. Cada trial consumiu 117 input + 20 output tokens; o agregado registrou 585 + 100 tokens. As latências ficaram com p50 280,9 ms e p95/máxima 301,8 ms. Não houve erro de provider, falha de execução, retry, fallback, commit ou entidade canônica. A segunda aquisição foi bloqueada localmente por `resource_resource_rate_limit` em 5/5 e os cinco stores SQLite reabriram duravelmente.
+
+Interpretação: somando a amostra válida da Fase 265, o deployment preservou o contrato em 6/6 trials auditáveis, e o batch atual mostrou cauda estreita (máxima apenas 7,5% acima do p50) na cadência sequencial medida. Isso qualifica estabilidade curta de framing para este caso, não concorrência, `ProposedChangeSet` ou preferência geral de routing. Decisão: manter evidence-only e não repetir o mesmo caso; o próximo experimento deve elevar complexidade semântica ou testar concorrência bounded com hipótese explícita.
+
+Evidência: `results/runtime-gate/phase266-groq-llama31-8b-nested-json-variance/`. Verificação: decode independente do agregado e dos cinco receipts, validação JSON, inspeção de ausência de segredos, suíte Go integral, vet integral e `git diff --check` executados no ciclo.
