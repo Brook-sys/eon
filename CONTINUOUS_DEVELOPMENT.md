@@ -5552,3 +5552,17 @@ Evidência: `results/runtime-gate/phase245-nim-mistral-medium-35-timeout-report/
 Interpretação: a falha rápida difere do timeout de 44,960 s do Medium 3.5, mas ambos os deployments NIM atualmente testados são indisponíveis no endpoint configurado por razões distintas. O 410 é evidência de deployment retirado/inacessível, não falha cognitiva, e não autoriza retry nem mudança de parser/routing. Próximo experimento: redescobrir `/v1/models` antes de selecionar outro NIM; no Groq, carregar explicitamente o ambiente autorizado no subprocesso e qualificar um deployment disponível após respeitar cooldown, sem repetir estes NIMs sem hipótese nova.
 
 Evidência: `results/runtime-gate/phase246-nim-mistral-small4-exact-json/`. Verificação: decode e asserts independentes de manifesto/relatório, inspeção de ausência de segredos, reopen registrado pelo harness, suíte Go integral, vet focal e `git diff --check` executados neste ciclo.
+
+### Fase 247 — Qualificação Groq Qwen 3.6 27B sob teto curto
+
+- [x] `DONE` Rotacionar para o Groq `qwen/qwen3.6-27b`, deployment ainda não coberto no runtime gate, com três trials isolados e uma chamada por trial.
+- [x] `DONE` Medir a aderência ao contrato `exact_json` aninhado sob teto explícito de 32 output tokens, sem retry ou fallback.
+- [x] `DONE` Confirmar fail-closed e reopen durável diante de truncamento determinístico.
+
+2026-07-27 03:42 — HEARTBEAT — A campanha rotacionou do controle NIM indisponível para Groq `qwen/qwen3.6-27b`, listado no inventário autenticado de 2026-07-26 e ainda não exercitado pelo runtime gate. Hipótese: o deployment produziria o objeto JSON aninhado integral sob teto curto. Cenário e limites: três stores SQLite isolados, exatamente uma chamada por trial, zero retries, timeout 45 s, teto 32 output tokens, NIM semeado circuit-open e early-stop configurado para duas falhas provider idênticas.
+
+As três chamadas alcançaram completions em 259–639 ms (p50 342 ms; p95/max 639 ms), com 98 input + 32 output tokens por trial. Todas terminaram em `finish_reason=length`, produziram exatamente os mesmos 112 bytes/hash e falharam como `invalid_json`; o decoder integral encontrou `<` no primeiro byte, sem extrair candidato tolerante. O provider transportou 3/3 respostas, mas o kernel rejeitou 3/3, manteve as operações `READY`, promoveu zero estado canônico e reabriu os três stores duravelmente. O early-stop de falha provider não se aplica porque o provider respondeu com sucesso; a repetição cognitiva/formato ficou limitada aos três trials pré-declarados.
+
+Interpretação: sob 32 tokens, este deployment usa todo o teto antes de entregar JSON e reproduz deterministicamente framing incompatível; a evidência local não distingue preâmbulo especial de raciocínio de outra saída iniciada por `<`, pois o relatório preserva hash/bytes-count e classe, não o conteúdo bruto. Decisão: não relaxar o parser nem alterar routing. Próximo experimento comparável: variar somente o teto para 64 ou 128 tokens em um probe único, preservando prompt/dialeto, para separar truncamento de incompatibilidade estrutural antes de ampliar n.
+
+Evidência: `results/runtime-gate/phase247-groq-qwen36-27b-exact-json/`. Verificação: decode e asserts independentes dos três relatórios e agregado, 3 chamadas/3 reopens, inspeção de ausência de segredos, `go test ./...`, `go vet ./internal/gatecampaign/... ./internal/kernel/...` e `git diff --check`.
