@@ -5988,3 +5988,27 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Interpretation and decision.** The responsive NIM Llama 3.1 deployment remained available and structurally stable across the bounded replay, while provider latency improved from the 3.484 s Phase 284 observation to a 1.800–2.413 s range. The sample is still small and does not authorize a routing preference; it does strengthen the diagnosis that the Phase 283 Llama 3.3 timeout was deployment-specific rather than provider-wide. Preserve strict parsing, array typing, zero retry, evidence-only routing, and kernel-owned disposition. The next useful experiment should rotate back to Groq with a new semantic stressor or compare controlled concurrency, rather than repeat this now-stable case.
 
 **Evidence and verification.** `results/runtime-gate/phase285-nim-llama31-70b-complete-evidence-pair-variance/live/` records three calls, three provider successes, 648 observed tokens, three 4/4 structural matches, quota enforcement, zero promotion, and three durable reopens. Independent receipt inspection, manifest identity, JSON decoding, secret scan, focused/full Go tests, full vet, and `git diff --check` were executed before commit.
+
+## Phase 286 — Groq Llama 3.3 reconciliation-safety semantic stressor (2026-07-27 20:07 -03)
+
+**Hypothesis.** After qualifying complete-pair evidence extraction without disposition authority, a stronger authority-free stressor should test whether Groq Llama 3.3 70B can preserve the complete authenticated pair and assess `reconcile_safe=true` when both durable signals agree, while still making zero canonical writes. The result remains a model proposal; the kernel owns any actual `RECONCILE` transition.
+
+**Scenario and bounds.** Groq `llama-3.3-70b-versatile`; one isolated external call maximum; 45 s timeout; 128 output-token ceiling; zero retries/fallback; NVIDIA NIM primary deliberately circuit-open; strict integral JSON; order-insensitive structural oracle over five protected fields (`risk`, evidence pair, completeness, reconciliation safety, and zero writes).
+
+**Result.** The provider completed in 482.1 ms with `finish_reason=stop`, 221 input + 43 output tokens, and a 157-byte integral JSON response. Byte equality differed from the canonical serialization, but the structural oracle matched all 5/5 protected fields, including the evidence array type and `reconcile_safe=true`. The local one-call quota parked the second acquisition, the operation remained authority-free in `WAITING_TIME`, no canonical state was promoted, and SQLite reopened durably.
+
+**Interpretation and decision.** Llama 3.3 preserved the stronger reconciliation-safety semantics; serialization variance alone is not failure. This does not grant disposition authority or justify a routing preference. Preserve strict parsing, authenticated-store validation, zero retry, and kernel-owned reconciliation. A materially different Groq architecture is the useful immediate control.
+
+**Evidence.** `results/runtime-gate/phase286-groq-llama33-reconcile-safe-disposition/live/`.
+
+## Phase 287 — Compound Mini reconciliation-safety cross-model control (2026-07-27 20:08 -03)
+
+**Hypothesis.** Rotating the unchanged Phase 286 stressor to Groq Compound Mini should test whether the five-field reconciliation-safety proposal survives a materially different deployment without granting model authority.
+
+**Scenario and bounds.** Groq `groq/compound-mini`; unchanged prompt, exact response, structural expectation, 45 s timeout and 128-token ceiling; one external call maximum; zero retries/fallback; seeded NIM circuit; strict integral JSON; zero canonical writes.
+
+**Result.** Compound Mini completed in 1.207 s with `finish_reason=stop`, 809 input + 249 output tokens, and a 147-byte response. It matched the byte oracle exactly and all 5/5 structural fields. The second acquisition was blocked locally, the operation parked in `WAITING_TIME`, no canonical state was promoted, and SQLite reopened durably.
+
+**Interpretation and decision.** The reconciliation-safety proposal held across both Groq deployments. Compound Mini used 1,058 observed tokens versus Llama 3.3's 264 and was about 2.5 times slower, consistent with earlier token-overhead observations; this paired sample remains evidence-only and does not authorize automatic preference. Keep disposition kernel-owned. The next useful step is a cross-provider control or an adversarial inconsistent-pair case, not repetition of the positive case.
+
+**Evidence and verification.** `results/runtime-gate/phase287-groq-compound-mini-reconcile-safe-control/live/`. Independent JSON inspection confirmed one call per phase, two provider successes, 5/5 structural matches in both, exact quota enforcement, zero promotion, and durable reopen. Manifest/report decoding, manifest identity, secret scan, focused/full Go tests, full vet, and `git diff --check` are executed before commit.

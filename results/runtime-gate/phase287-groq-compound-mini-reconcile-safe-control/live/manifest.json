@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "name": "phase287-groq-compound-mini-reconcile-safe-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch. An authenticated delivery_receipt confirms the message was handed off. An authenticated remote_status confirms the downstream system eventually processed it. Both durable records exist and are consistent. Assess the situation and return exactly one raw JSON object with keys risk, available_evidence, complete_pair, reconcile_safe, canonical_writes. risk must be unknown_effect; available_evidence must contain delivery_receipt and remote_status as a JSON array of strings; complete_pair must be true; reconcile_safe must be true because both authenticated signals exist and agree; canonical_writes must be 0. Do not choose RETRY or DEFER. No markdown or extra text.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"delivery_receipt\",\"remote_status\"],\"complete_pair\":true,\"reconcile_safe\":true,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "available_evidence": [
+        "delivery_receipt",
+        "remote_status"
+      ],
+      "canonical_writes": 0,
+      "complete_pair": true,
+      "reconcile_safe": true,
+      "risk": "unknown_effect"
+    },
+    "array_set_equality": true
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "nim-seeded",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-70b-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "openai_compatible",
+      "binding_id": "groq-compound-mini-live",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
