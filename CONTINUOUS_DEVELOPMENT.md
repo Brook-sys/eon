@@ -5618,3 +5618,17 @@ Resultado: 3/3 completions provider em 1,100–1,190 s (p50 1,100 s; p95/max 1,1
 Decisão: não relaxar parser, não promover estado e não generalizar a qualificação authority-free da Fase 250 para `ProposedChangeSet`. Próximo experimento comparável: elevar somente o teto para 768 tokens em um probe único, sem ampliar n, para separar truncamento de divergência estrutural; interromper se ainda consumir todo o teto ou mantiver framing inválido.
 
 Evidência: `results/runtime-gate/phase251-groq-gpt-oss-120b-proposed-changeset/`. Verificação: decode independente do agregado e dos três receipts confirmou três chamadas/completions, hash idêntico, `length`, 384 tokens, JSON inválido, operação `READY`, zero promoção e três reopens; suíte Go integral, vet focal, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
+
+### Fase 252 — GPT-OSS 120B ProposedChangeSet sem truncamento
+
+- [x] `DONE` Ampliar de modo bounded o teto experimental do gatecampaign de 512 para 1024 output tokens, preservando uma única chamada externa.
+- [x] `DONE` Executar o probe comparável Groq `openai/gpt-oss-120b` com teto 768 e separar truncamento de divergência estrutural.
+- [x] `DONE` Verificar schema, conteúdo, promoção canônica e reopen durável do resultado integral.
+
+2026-07-27 06:48 — HEARTBEAT — O experimento indicado pela Fase 251 exigia 768 output tokens, mas o harness recusava localmente qualquer teto acima de 512 antes de contatar provider. O limite diagnóstico de `RuntimeGateCampaignManifest` foi ampliado para 1024, ainda bounded, mantendo `max_calls=1`, timeout máximo de 300 s e batch máximo de cinco stores isolados. Regressão aceita 768 para `proposed_changeset` e rejeita 1025; nenhum limite dos recovery campaigns foi alterado.
+
+O probe live variou somente `max_output_tokens` de 384 para 768 no Groq `openai/gpt-oss-120b`; prompt adversarial, `max_completion_tokens`, timeout 45 s, uma chamada, zero retries/fallback e NIM semeado circuit-open permaneceram iguais. A completion chegou em 1,524 s, consumiu 679 input + 476 output tokens e terminou em `finish_reason=stop`, abaixo do novo teto. O payload integral de 575 bytes foi JSON válido; o relatório confirmou 12/12 campos presentes e com tipo correto, 10/10 campos sujeitos à política de conteúdo não vazios e change ADD válido. O kernel criou `commit_0000000000000004`, armazenou a entidade canônica esperada, estacionou a segunda aquisição localmente por quota e reabriu o SQLite duravelmente.
+
+Interpretação: a falha determinística 3/3 da Fase 251 era truncamento por teto de 384, não divergência estrutural do deployment. Para este prompt e contrato, 476 output tokens foram suficientes; 768 oferece margem bounded sem justificar elevar defaults ou habilitar routing. Não repetir imediatamente o caso feliz: o próximo experimento com ganho deve variar modelo Groq ou aumentar complexidade semântica, mantendo oracle determinístico e teto explícito.
+
+Evidência: `results/runtime-gate/phase252-groq-gpt-oss-120b-proposed-changeset-768/`. Verificação: decode independente do relatório e SQLite confirmou uma chamada, `stop`, 679+476 tokens, JSON/schema/conteúdo/change válidos, commit e entidade canônica, segunda aquisição bloqueada e reopen durável; teste focal, suíte Go integral, vet integral, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.

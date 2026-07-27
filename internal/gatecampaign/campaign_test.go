@@ -74,6 +74,19 @@ func TestManifestStrictAndBounded(t *testing.T) {
 	}
 }
 
+func TestManifestAllowsBoundedLargeOutputProbe(t *testing.T) {
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "proposed_changeset"
+	manifest.MaxOutputTokens = 768
+	if err := manifest.Validate(); err != nil {
+		t.Fatalf("768-token diagnostic probe must remain bounded: %v", err)
+	}
+	manifest.MaxOutputTokens = 1025
+	if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "between 1 and 1024") {
+		t.Fatalf("unbounded diagnostic probe error=%v", err)
+	}
+}
+
 func TestRuntimeGateSeedUsesDeclaredProbeContract(t *testing.T) {
 	for _, outputSchema := range []string{"", "exact_json", "proposed_changeset"} {
 		manifest := runtimeGateTestManifest()

@@ -90,8 +90,8 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	if m.MaxCalls != 1 {
 		return errors.New("runtime gate campaign requires exactly one external call")
 	}
-	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 512 {
-		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 512")
+	if m.MaxOutputTokens <= 0 || m.MaxOutputTokens > 1024 {
+		return errors.New("runtime gate campaign max_output_tokens must be between 1 and 1024")
 	}
 	if m.OutputSchema == "proposed_changeset" && m.MaxOutputTokens < 192 {
 		return errors.New("proposed_changeset campaign requires at least 192 max_output_tokens")
