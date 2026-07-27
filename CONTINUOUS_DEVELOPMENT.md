@@ -5694,3 +5694,17 @@ Evidência: `results/runtime-gate/phase256-groq-gpt-oss-safeguard-proposed-chang
 Interpretação: o identificador não está disponível no endpoint/conta atual e a observação não mede capacidade cognitiva. A campanha terminou após a primeira falha, sem retry nem tentativa de contornar disponibilidade. Decisão: manter o deployment fora do routing e exigir nova descoberta autenticada de `/v1/models` antes de selecionar outro modelo, em vez de inferir disponibilidade a partir do inventário histórico. Próximo experimento: redescobrir o catálogo Groq sanitizado e qualificar um deployment explicitamente presente, preferindo família ainda não coberta.
 
 Evidência: `results/runtime-gate/phase257-groq-llama4-scout-proposed-changeset/`. Verificação: decode independente confirmou uma chamada, HTTP 404, operação fail-closed e reopen durável; suíte Go integral, vet integral, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
+
+### Fase 258 — Qualificação Groq Compound Mini em `ProposedChangeSet`
+
+- [x] `DONE` Redescobrir o catálogo Groq autenticado após o 404 da Fase 257 e selecionar somente deployment presente.
+- [x] `DONE` Qualificar `groq/compound-mini` com uma chamada bounded, sem retry/fallback, usando o contrato adversarial atual.
+- [x] `DONE` Verificar framing, schema, conteúdo, aplicação canônica, throttling local e reopen durável.
+
+2026-07-27 09:25 — HEARTBEAT — A descoberta autenticada de `/v1/models` retornou 15 IDs Groq e confirmou que o Llama 4 Scout da Fase 257 não está disponível. A campanha rotacionou para o deployment presente e ainda não coberto `groq/compound-mini`, mantendo NIM semeado circuit-open, uma chamada, zero retries/fallback, timeout 45 s, teto 768 e o prompt adversarial `ProposedChangeSet` com tipos escalares/arrays explícitos.
+
+A completion terminou em `stop` após 2,195 s, com 1.663 input + 714 output tokens e 481 bytes. O JSON foi válido; os 12/12 campos estavam presentes e com tipo correto; a única mudança tinha todos os campos exigidos; o kernel aceitou o changeset, criou `commit_0000000000000004`, armazenou a entidade canônica, bloqueou a segunda aquisição pela quota local e confirmou reopen durável. Não houve erro HTTP, 429 ou `Retry-After` natural.
+
+Interpretação: Compound Mini aderiu integralmente ao contrato neste caso, mas consumiu 714 tokens de saída e foi aproximadamente 2,7× mais lento que o Llama 3.3 70B da Fase 253 (138 tokens; 804 ms). O resultado n=1 qualifica compatibilidade básica, não autoriza preferência, habilitação ou repetição do caso feliz. Decisão: manter routing inalterado e usar Compound Mini somente como candidato experimental; próximo experimento deve variar complexidade semântica ou testar `groq/compound` maior com hipótese comparativa explícita, não apenas repetir o mesmo prompt.
+
+Evidência: `results/runtime-gate/phase258-groq-compound-mini-proposed-changeset/`. Verificação: descoberta autenticada sanitizada, campanha live real, decode independente do relatório, aplicação/reopen durável, validação JSON, suíte Go integral, vet integral, gofmt e `git diff --check` executados no ciclo.
