@@ -5419,3 +5419,15 @@ Evidência: `results/runtime-gate/phase234-groq-gpt-oss-20b-invalid-response-dia
 Interpretação: `empty_content` foi estável em 3/3 repetições e, somado às Fases 232–234, caracteriza cinco respostas inválidas consecutivas do deployment para este contrato. O problema está antes do decoder de `ProposedChangeSet`: o envelope HTTP foi aceito pelo adapter, mas `choices[0].message.content` chegou vazio. A evidência não autoriza preencher conteúdo, aceitar reasoning alternativo ou promover fallback silencioso. Decisão: manter rejeição fail-closed e não habilitar GPT-OSS 20B para esta operação. Próximo experimento com ganho epistemológico deve variar deliberadamente o wire (`max_completion_tokens`) ou executar um prompt texto simples para separar incompatibilidade de parâmetro de incompatibilidade específica do contrato; não repetir o mesmo cenário novamente.
 
 Evidência: `results/runtime-gate/phase235-groq-gpt-oss-20b-empty-content-batch/`, incluindo manifesto reproduzível, agregado e receipts por trial. Verificação: decode independente confirmou 3 chamadas, 3 motivos `empty_content`, ausência de HTTP status/usage/commit e 3 reopens; `go test ./internal/provider/openai/... ./internal/gatecampaign/...`, `go vet` focal e `git diff --check` passaram.
+
+### Fase 236 — Dialeto `max_completion_tokens` no Groq GPT-OSS 20B
+
+- [x] `DONE` Variar deliberadamente o wire de `max_tokens` para `max_completion_tokens` mantendo o mesmo contrato, modelo e teto.
+- [x] `DONE` Executar uma única chamada bounded, sem retry/fallback, e preservar diagnóstico sanitizado e reopen SQLite.
+- [x] `DONE` Decidir por evidência se o dialeto explica o `empty_content` antes de ampliar carga.
+
+2026-07-26 22:24 — HEARTBEAT — O próximo experimento indicado pela Fase 235 variou somente o dialeto de limite do binding Groq `openai/gpt-oss-20b`, de `max_tokens` para `max_completion_tokens`; prompt adversarial, teto de 384 tokens, timeout 45 s, store SQLite isolado, NIM circuit-open e zero retries permaneceram iguais. A única chamada externa concluiu em 778 ms e reproduziu `provider_error_class=provider` + `provider_error_reason=empty_content`, sem status HTTP, completion textual, usage confiável, commit ou fallback. A operação permaneceu `READY`, o circuito abriu fail-closed e o store reabriu duravelmente.
+
+Interpretação: a troca isolada do campo de limite não corrigiu o wire e, portanto, não explica as cinco respostas vazias anteriores. Não há ganho em ampliar este cenário. GPT-OSS 20B continua evidence-only para `ProposedChangeSet`; o próximo teste com ganho epistemológico deve usar uma operação texto simples em harness que não exija schema, ou uma extensão explicitamente documentada pela fonte primária, sem aceitar campo alternativo às cegas.
+
+Evidência: `results/runtime-gate/phase236-groq-gpt-oss-20b-max-completion-tokens/`. Verificação: decode independente confirmou uma chamada, `empty_content`, ausência de commit e reopen durável; testes focais do adapter/gatecampaign, vet focal, decode JSON e `git diff --check` executados no ciclo.
