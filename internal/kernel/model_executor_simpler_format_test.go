@@ -23,7 +23,7 @@ func TestModelExecutorSimplerFormatThenSucceeds(t *testing.T) {
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	
+
 	// Spec with 3 model calls so step 6 can run after step 5 fails.
 	err := store.Update(ctx, func(tx port.Transaction) error {
 		revision := domain.MissionRevision{

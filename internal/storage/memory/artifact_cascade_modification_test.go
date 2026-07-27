@@ -122,7 +122,7 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacement(t *testing.T) {
 		if err := tx.AppendKnowledgeArtifact(derivedPlan); err != nil {
 			return err
 		}
-		
+
 		raw0 := domain.RawModelOutput{
 			SchemaVersion: domain.SchemaVersionV1, ID: "raw_0", OperationID: operationID1,
 			Model: "fixture", Content: "{}", ContentHash: "hash0", CreatedAt: now,
@@ -144,7 +144,7 @@ func TestApplyCommitCascadesStaleOnParentArtifactReplacement(t *testing.T) {
 		if err := tx.AppendProposedChangeSet(priorProposal); err != nil {
 			return err
 		}
-		
+
 		val0 := domain.ValidationReceipt{
 			SchemaVersion: domain.SchemaVersionV1, ID: "receipt_val_0", OperationID: operationID1,
 			ChangeSetID: priorProposal.ID, ValidatorID: "schema", Passed: true, ArtifactRef: raw0.ID, ProducedAt: now,

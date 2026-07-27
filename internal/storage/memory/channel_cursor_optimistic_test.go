@@ -14,7 +14,7 @@ func TestSaveChannelCursorRejectsStaleRevisionAndPreservesNewerValue(t *testing.
 	t.Parallel()
 	ctx := context.Background()
 	store := memory.New()
-	
+
 	now := time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC)
 
 	// Setup initial cursor via transaction
@@ -46,7 +46,7 @@ func TestSaveChannelCursorRejectsStaleRevisionAndPreservesNewerValue(t *testing.
 	}
 
 	// Thread B simulates an older advance based on the SAME initial cursor (Thread B was slower)
-	advancedB, err := domain.AdvanceChannelCursor(cursor1, 1020, now.Add(2 * time.Second))
+	advancedB, err := domain.AdvanceChannelCursor(cursor1, 1020, now.Add(2*time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestSaveChannelCursorRejectsStaleRevisionAndPreservesNewerValue(t *testing.
 	err = store.Update(ctx, func(tx port.Transaction) error {
 		return tx.SaveChannelCursor(advancedB, cursor1.Revision)
 	})
-	
+
 	if err == nil {
 		t.Fatalf("expected conflict error for stale revision update, got nil")
 	}

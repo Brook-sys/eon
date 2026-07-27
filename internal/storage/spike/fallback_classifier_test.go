@@ -17,26 +17,26 @@ import (
 
 func TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage(t *testing.T) {
 	t.Parallel()
-	
+
 	// Ensure we use an isolatable timeout that naturally expires
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
 	defer cancel()
 
 	store := memory.New()
-	
+
 	intent := spike.CrashIntent{
 		Event: domain.Event{
-			SchemaVersion: 1, 
-			ID: "event_fallback_leak", 
-			Kind: "spike.crash_intent.fallback", 
-			OccurredAt: time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC),
+			SchemaVersion: 1,
+			ID:            "event_fallback_leak",
+			Kind:          "spike.crash_intent.fallback",
+			OccurredAt:    time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC),
 		},
 	}
-	
+
 	// Wait for context to expire to simulate a timeout/fallback boundary
 	<-ctx.Done()
-	
-	// Simulating the intent application over an already expired context 
+
+	// Simulating the intent application over an already expired context
 	// must result in a natural rollback and NOT_APPLIED, without panic or leaking context errors.
 	err := spike.ApplyCrashIntent(ctx, store, intent)
 	if err == nil {
@@ -54,7 +54,7 @@ func TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage(t *testing.T)
 	if outcome != spike.OutcomeNotApplied {
 		t.Errorf("expected outcome NOT_APPLIED for fallback-terminated trial, got %v", outcome)
 	}
-	
+
 	// Verify that the event log remains completely clean and atomic
 	err = store.View(freshCtx, func(r port.Reader) error {
 		events, err := r.Events(0, 5)

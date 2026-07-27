@@ -22,7 +22,7 @@ func TestModelExecutorAlwaysInvalidExhaustsWithSimplerFormat(t *testing.T) {
 	clock := source.NewManualClock(now)
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
-	
+
 	err := store.Update(ctx, func(tx port.Transaction) error {
 		revision := domain.MissionRevision{
 			SchemaVersion: 1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
@@ -99,7 +99,7 @@ func TestModelExecutorAlwaysInvalidExhaustsWithSimplerFormat(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected exhaustion error, got nil")
 	}
-	
+
 	if result.Completed {
 		t.Fatalf("want NOT completed after exhaustion, got %+v", result)
 	}

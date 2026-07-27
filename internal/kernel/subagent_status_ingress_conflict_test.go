@@ -22,15 +22,15 @@ func TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState(t
 	t.Parallel()
 	ctx := context.Background()
 	store := memory.New()
-	
+
 	clock := &mockClock{now: time.Date(2026, 7, 23, 14, 0, 0, 0, time.UTC)}
 	ids := &mockIDGenerator{}
-	
+
 	localManager, err := kernel.NewLocalSessionManagerWithPolicy(clock, kernel.SessionPolicy{MaxConcurrent: 4})
 	if err != nil {
 		t.Fatalf("local manager: %v", err)
 	}
-	
+
 	manager, err := kernel.NewPersistentSessionManager(localManager, store, clock, ids, kernel.PersistentSessionPolicy{MissionID: "mission-1"})
 	if err != nil {
 		t.Fatalf("persistent manager: %v", err)
@@ -57,7 +57,7 @@ func TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState(t
 	// Ingress receipts must be after record's start time and within limits
 	now := clock.now.Add(time.Minute)
 
-	// 1. Simulate multiple status receipts arriving concurrently or sequentially 
+	// 1. Simulate multiple status receipts arriving concurrently or sequentially
 	// for the same attempt. One is RUNNING, another is COMPLETE.
 	runningReceipt := domain.SubagentStatusIngressReceipt{
 		SchemaVersion: 1,
@@ -222,7 +222,7 @@ func TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState(t
 	}); err != nil {
 		t.Fatalf("verify mismatch rejection: %v", err)
 	}
-	
+
 	// 4. Verify idempotent apply for identical COMPLETE (manager returns nil, should mark as APPLIED)
 	identicalReceipt := domain.SubagentStatusIngressReceipt{
 		SchemaVersion: 1,
@@ -235,7 +235,7 @@ func TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState(t
 		Status:        domain.SubagentStatusIngressPending,
 		RecordedAt:    clock.now,
 	}
-	
+
 	if err := store.Update(ctx, func(tx port.Transaction) error {
 		return tx.CreateSubagentStatusIngressReceipt(identicalReceipt)
 	}); err != nil {
@@ -251,7 +251,7 @@ func TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState(t
 	if processed != 1 {
 		t.Errorf("expected 1 processed identical receipt, got %d", processed)
 	}
-	
+
 	if err := store.View(ctx, func(r port.Reader) error {
 		r1, err := r.SubagentStatusIngressReceipt("peer-a", "delivery-complete-identical")
 		if err != nil {

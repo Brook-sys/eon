@@ -5682,3 +5682,15 @@ A completion chegou em 1,332 s, consumiu 679 input + 470 output tokens e termino
 Interpretação: neste único caso, o Safeguard 20B aderiu integralmente ao contrato e foi mais verboso/lento que o Llama 3.3 70B da Fase 253 (470 vs 138 output tokens; 1,332 s vs 804 ms), mas n=1 não autoriza preferência nem habilitação automática. O sucesso também confirma que a rejeição all-or-nothing da Fase 255 não impede respostas que fornecem a linhagem protegida completa. Decisão: qualificar apenas como evidência provider/kernel para este contrato, preservar validação estrita e não repetir o caso feliz sem hipótese nova. Próximo experimento: variar complexidade semântica ou redescobrir deployments NIM antes de novo controle cross-provider.
 
 Evidência: `results/runtime-gate/phase256-groq-gpt-oss-safeguard-proposed-changeset/`. Verificação: decode independente confirmou uma chamada, `stop`, 679+470 tokens, JSON/schema/conteúdo/change válidos, commit, entidade canônica, segunda aquisição bloqueada e reopen durável; suíte Go integral, vet integral, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
+
+### Fase 257 — Probe Groq Llama 4 Scout e deployment não encontrado
+
+- [x] `DONE` Rotacionar para um deployment Groq de família distinta com uma chamada bounded, sem retry/fallback.
+- [x] `DONE` Classificar a falha HTTP antes de qualquer inferência cognitiva.
+- [x] `DONE` Preservar operação fail-closed, ausência de promoção e reopen durável.
+
+2026-07-27 08:40 — HEARTBEAT — A campanha tentou rotacionar do GPT-OSS Safeguard 20B para Groq `meta-llama/llama-4-scout-17b-16e-instruct`, preservando o prompt adversarial `ProposedChangeSet`, `max_completion_tokens`, timeout 45 s, teto 768, uma chamada, zero retries/fallback e NIM semeado circuit-open. O endpoint respondeu HTTP 404 antes de produzir completion; o relatório registrou exatamente uma chamada, `provider_error_class=http`, `provider_http_status=404`, operação `READY`, zero commit/entidade e `durable_reopen=true`.
+
+Interpretação: o identificador não está disponível no endpoint/conta atual e a observação não mede capacidade cognitiva. A campanha terminou após a primeira falha, sem retry nem tentativa de contornar disponibilidade. Decisão: manter o deployment fora do routing e exigir nova descoberta autenticada de `/v1/models` antes de selecionar outro modelo, em vez de inferir disponibilidade a partir do inventário histórico. Próximo experimento: redescobrir o catálogo Groq sanitizado e qualificar um deployment explicitamente presente, preferindo família ainda não coberta.
+
+Evidência: `results/runtime-gate/phase257-groq-llama4-scout-proposed-changeset/`. Verificação: decode independente confirmou uma chamada, HTTP 404, operação fail-closed e reopen durável; suíte Go integral, vet integral, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
