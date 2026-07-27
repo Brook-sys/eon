@@ -29,17 +29,18 @@ const RuntimeGateCampaignSchemaVersion = 1
 // call exhausts a one-call local minute quota so a second reservation parks
 // without contacting either provider.
 type RuntimeGateCampaignManifest struct {
-	SchemaVersion             int                  `json:"schema_version"`
-	Name                      string               `json:"name"`
-	TimeoutSeconds            int                  `json:"timeout_seconds"`
-	MaxCalls                  int                  `json:"max_calls"`
-	MaxOutputTokens           int                  `json:"max_output_tokens"`
-	OutputSchema              string               `json:"output_schema,omitempty"`
-	ProbePrompt               string               `json:"probe_prompt"`
-	ExpectedResponse          string               `json:"expected_response,omitempty"`
-	SeedPrimaryCircuitSeconds int                  `json:"seed_primary_circuit_seconds"`
-	EarlyStopRepeatedFailures int                  `json:"early_stop_repeated_failures,omitempty"`
-	Bindings                  []RuntimeGateBinding `json:"bindings"`
+	SchemaVersion             int                    `json:"schema_version"`
+	Name                      string                 `json:"name"`
+	TimeoutSeconds            int                    `json:"timeout_seconds"`
+	MaxCalls                  int                    `json:"max_calls"`
+	MaxOutputTokens           int                    `json:"max_output_tokens"`
+	OutputSchema              string                 `json:"output_schema,omitempty"`
+	ProbePrompt               string                 `json:"probe_prompt"`
+	ExpectedResponse          string                 `json:"expected_response,omitempty"`
+	StructuralExpectation     *StructuralExpectation `json:"structural_expectation,omitempty"`
+	SeedPrimaryCircuitSeconds int                    `json:"seed_primary_circuit_seconds"`
+	EarlyStopRepeatedFailures int                    `json:"early_stop_repeated_failures,omitempty"`
+	Bindings                  []RuntimeGateBinding   `json:"bindings"`
 }
 
 type RuntimeGateBinding struct {
@@ -104,6 +105,9 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	}
 	if len(m.ExpectedResponse) > 1024 {
 		return errors.New("runtime gate campaign expected_response is bounded to 1024 bytes")
+	}
+	if m.StructuralExpectation != nil && len(m.StructuralExpectation.Fields) == 0 {
+		return errors.New("structural_expectation requires at least one field")
 	}
 	if m.SeedPrimaryCircuitSeconds <= 0 || m.SeedPrimaryCircuitSeconds > 300 {
 		return errors.New("seed_primary_circuit_seconds must be between 1 and 300")
@@ -193,6 +197,7 @@ type RuntimeGateCampaignReport struct {
 	ResponseSHA256        string                      `json:"response_sha256,omitempty"`
 	ExpectedResponseSet   bool                        `json:"expected_response_set"`
 	ExpectedResponseMatch bool                        `json:"expected_response_match"`
+	StructuralComparison  *StructuralComparison       `json:"structural_comparison,omitempty"`
 	ResponseJSONValid     bool                        `json:"response_json_valid,omitempty"`
 	ResponseFramingClass  string                      `json:"response_framing_class,omitempty"`
 	SecondAcquireReason   string                      `json:"second_acquire_reason"`
@@ -371,6 +376,11 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 				adherence := evaluateProposedChangeSetAdherence(recorder.result.Text)
 				report.SchemaAdherence = &adherence
 			}
+			if manifest.StructuralExpectation != nil {
+				comparison := compareJSONStructural(recorder.result.Text, *manifest.StructuralExpectation)
+				sortStructuralOutcomes(comparison.FieldOutcomes)
+				report.StructuralComparison = &comparison
+			}
 		}
 	} else {
 		report.ProviderErrorClass = "transport"
@@ -453,6 +463,11 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 		if manifest.OutputSchema == "proposed_changeset" && report.ResponseJSONValid {
 			adherence := evaluateProposedChangeSetAdherence(recorder.result.Text)
 			report.SchemaAdherence = &adherence
+		}
+		if manifest.StructuralExpectation != nil {
+			comparison := compareJSONStructural(recorder.result.Text, *manifest.StructuralExpectation)
+			sortStructuralOutcomes(comparison.FieldOutcomes)
+			report.StructuralComparison = &comparison
 		}
 	} else {
 		report.ProviderErrorClass = "transport"
@@ -965,7 +980,16 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider error reason: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderErrorReason, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
+	structuralConfigured, structuralMatch := false, false
+	structuralMatched, structuralMismatched, structuralAbsent := 0, 0, 0
+	if report.StructuralComparison != nil {
+		structuralConfigured = report.StructuralComparison.Configured
+		structuralMatch = report.StructuralComparison.OverallMatch
+		structuralMatched = report.StructuralComparison.FieldsMatched
+		structuralMismatched = report.StructuralComparison.FieldsMismatched
+		structuralAbsent = report.StructuralComparison.FieldsAbsent
+	}
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider error reason: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Structural comparison configured: `%t`\n- Structural overall match: `%t`\n- Structural fields matched/mismatched/absent: %d/%d/%d\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderErrorReason, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, structuralConfigured, structuralMatch, structuralMatched, structuralMismatched, structuralAbsent, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
