@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "phase285-nim-llama31-70b-complete-evidence-pair-variance",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch. An authenticated delivery_receipt and an authenticated remote_status record both exist. Extract available durable evidence only. Return exactly one raw JSON object with keys risk, available_evidence, complete_pair, canonical_writes. risk must be unknown_effect; available_evidence must contain delivery_receipt and remote_status; complete_pair must be true; canonical_writes must be 0. Do not choose RETRY, RECONCILE, or DEFER. No markdown or extra text.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"delivery_receipt\",\"remote_status\"],\"complete_pair\":true,\"canonical_writes\":0}",
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "nim-seeded",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-70b-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-70b-live",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ],
+  "structural_expectation": {
+    "fields": {
+      "risk": "unknown_effect",
+      "available_evidence": [
+        "delivery_receipt",
+        "remote_status"
+      ],
+      "complete_pair": true,
+      "canonical_writes": 0
+    },
+    "array_set_equality": true
+  }
+}
