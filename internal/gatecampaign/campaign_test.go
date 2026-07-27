@@ -340,7 +340,7 @@ func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
 	}
 }
 
-func TestRunExactTextValidationFailurePreservesExpectedMatch(t *testing.T) {
+func TestRunExactTextCompletionSucceedsWithoutCanonicalCommit(t *testing.T) {
 	now := time.Date(2026, 7, 26, 23, 20, 0, 0, time.UTC)
 	manifest := runtimeGateTestManifest()
 	manifest.OutputSchema = "exact_text"
@@ -353,11 +353,14 @@ func TestRunExactTextValidationFailurePreservesExpectedMatch(t *testing.T) {
 		},
 	}
 	report, err := runner.Run(context.Background(), manifest)
-	if err != nil || report.ExecutionError == "" {
-		t.Fatalf("exact-text rejection must remain structured rather than aborting the campaign: report=%+v err=%v", report, err)
+	if err != nil || report.ExecutionError != "" {
+		t.Fatalf("exact-text completion must succeed without changeset processing: report=%+v err=%v", report, err)
 	}
-	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch || report.ResponseFramingClass != "exact" {
-		t.Fatalf("successful provider output must retain exact-match evidence despite downstream rejection: %+v", report)
+	if report.CommitID != "" || report.CanonicalEntityStored {
+		t.Fatalf("authority-free completion crossed canonical boundary: %+v", report)
+	}
+	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch {
+		t.Fatalf("successful provider output must retain exact-match evidence: %+v", report)
 	}
 }
 

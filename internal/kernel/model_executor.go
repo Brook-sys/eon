@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -1016,15 +1017,16 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 
 		lastRaw = completion.Text
-		// Preserve exact provider text for Process raw artifact; work on a copy for lineage.
 		working := completion
-		working.Text, err = ensureProposalLineage(completion.Text, operation, baseCommit, e.IDs, completion.Model)
-		if err != nil {
-			lastErr = fmt.Errorf("prepare proposal lineage: %w", err)
-			break
+		// Lineage injection applies only to proposed_changeset; exact_text and
+		// exact_json must not be rewritten before deterministic validation.
+		if spec.OutputSchema != "exact_text" && spec.OutputSchema != "exact_json" {
+			working.Text, err = ensureProposalLineage(completion.Text, operation, baseCommit, e.IDs, completion.Model)
+			if err != nil {
+				lastErr = fmt.Errorf("prepare proposal lineage: %w", err)
+				break
+			}
 		}
-		// Raw preservation: Process must see original bytes when lineage was not rewritten.
-		// ensureProposalLineage returns original text when it does not rewrite.
 		lastCompletion = working
 
 		// Transition RUNNING → VERIFYING once before first Process; stay VERIFYING on retries.
@@ -1091,7 +1093,14 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			})
 		}
 
-		commit, processErr := e.Changes.Process(ctx, operationID, lastCompletion)
+		var commit domain.Commit
+		var processErr error
+		switch spec.OutputSchema {
+		case "exact_text", "exact_json":
+			processErr = validateAuthorityFreeCompletion(spec.OutputSchema, lastCompletion.Text)
+		default:
+			commit, processErr = e.Changes.Process(ctx, operationID, lastCompletion)
+		}
 		if processErr == nil {
 			result.CommitID = commit.ID
 			lastErr = nil
@@ -1132,7 +1141,10 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					}
 				}
 				now = e.Clock.Now().UTC()
-				payload := leaseRef + ";commit=" + string(commit.ID)
+				payload := leaseRef + ";output_schema=" + spec.OutputSchema
+				if commit.ID != "" {
+					payload += ";commit=" + string(commit.ID)
+				}
 				for _, event := range []domain.Event{
 					{
 						SchemaVersion: domain.SchemaVersionV1,
@@ -1472,6 +1484,33 @@ func ensureProposalLineage(text string, operation domain.Operation, baseCommit d
 		return "", err
 	}
 	return string(encoded), nil
+}
+
+func validateAuthorityFreeCompletion(outputSchema, text string) error {
+	switch outputSchema {
+	case "exact_text":
+		if strings.TrimSpace(text) == "" {
+			return errors.New("exact_text completion is empty")
+		}
+		return nil
+	case "exact_json":
+		candidate := modeltext.BestJSONCandidate(text)
+		var value map[string]json.RawMessage
+		decoder := json.NewDecoder(strings.NewReader(candidate))
+		if err := decoder.Decode(&value); err != nil {
+			return fmt.Errorf("decode exact_json completion: %w", err)
+		}
+		if value == nil {
+			return errors.New("exact_json completion must be one JSON object")
+		}
+		var trailing any
+		if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+			return errors.New("exact_json completion has trailing JSON value")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported authority-free output schema %q", outputSchema)
+	}
 }
 
 func (e ModelExecutor) failRunning(ctx context.Context, operation domain.Operation, leaseRef string, cause error) error {
