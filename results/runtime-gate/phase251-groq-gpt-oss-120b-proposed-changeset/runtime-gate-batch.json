@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase251-groq-gpt-oss-120b-proposed-changeset",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 2037,
+  "output_tokens": 1152,
+  "latency_p50": 1100097616,
+  "latency_p95": 1189776866,
+  "latency_max": 1189776866,
+  "selected_bindings": {
+    "groq-gpt-oss-120b": 3
+  },
+  "finish_reasons": {
+    "length": 3
+  },
+  "framing_classes": {
+    "invalid_json": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}

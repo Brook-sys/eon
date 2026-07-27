@@ -5604,3 +5604,17 @@ Resultado: 3/3 completions provider, 3/3 execuções bem-sucedidas, 3/3 JSON vá
 Decisão: qualificar o deployment no nível provider/kernel para este contrato authority-free e preservar o parser estrito. A diferença entre GPT-OSS 120B e 20B mostra que a incompatibilidade anterior não deve ser generalizada à família inteira. Próximo experimento: ampliar para cinco trials somente se houver hipótese de variância/cauda ou testar um contrato `ProposedChangeSet` comparável; manter rotação e evitar repetir o caso feliz sem ganho.
 
 Evidência: `results/runtime-gate/phase250-groq-gpt-oss-120b-exact-json/`. Verificação: decode independente do agregado e receipts confirmou três chamadas, três matches/JSON válidos, `stop`, framing exato, ausência de commits e três reopens; suíte Go integral, vet focal, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo. Uma invocação inicial falhou localmente por variáveis não exportadas antes de iniciar o runner ou contatar provider e não conta como observação live.
+
+### Fase 251 — GPT-OSS 120B sob contrato ProposedChangeSet
+
+- [x] `DONE` Variar do caso authority-free para o contrato `proposed_changeset` já verificado, mantendo o mesmo deployment Groq e stores isolados.
+- [x] `DONE` Medir aderência, truncamento e repetibilidade sob três chamadas, zero retries/fallback, timeout 45 s e teto 384 tokens.
+- [x] `DONE` Confirmar rejeição fail-closed e reopen durável sem commit ou promoção canônica.
+
+2026-07-27 06:02 — HEARTBEAT — A campanha manteve Groq `openai/gpt-oss-120b`, mas substituiu o objeto JSON mínimo da Fase 250 pelo manifesto `ProposedChangeSet` adversarial já exercitado no Llama 3.1 8B. Hipótese: a aderência integral observada em `exact_json` se manteria no contrato maior sob 384 output tokens. Limites: três stores SQLite isolados, uma chamada por trial, zero retries/fallback, timeout 45 s, teto 384 tokens, NIM semeado circuit-open e early-stop para falhas provider repetidas.
+
+Resultado: 3/3 completions provider em 1,100–1,190 s (p50 1,100 s; p95/max 1,190 s), cada uma consumindo 679 input + 384 output tokens e terminando em `finish_reason=length`. As três respostas foram byte a byte idênticas (244 bytes, mesmo SHA-256), JSON incompleto e rejeitadas com `unexpected EOF`; portanto não houve avaliação de schema/conteúdo, commit ou entidade canônica. As operações permaneceram `READY` e os três stores reabriram duravelmente. A repetição determinística mostra que o teto, suficiente para o JSON mínimo, não basta para este contrato; early-stop de provider não se aplica porque o transporte respondeu com sucesso.
+
+Decisão: não relaxar parser, não promover estado e não generalizar a qualificação authority-free da Fase 250 para `ProposedChangeSet`. Próximo experimento comparável: elevar somente o teto para 768 tokens em um probe único, sem ampliar n, para separar truncamento de divergência estrutural; interromper se ainda consumir todo o teto ou mantiver framing inválido.
+
+Evidência: `results/runtime-gate/phase251-groq-gpt-oss-120b-proposed-changeset/`. Verificação: decode independente do agregado e dos três receipts confirmou três chamadas/completions, hash idêntico, `length`, 384 tokens, JSON inválido, operação `READY`, zero promoção e três reopens; suíte Go integral, vet focal, validação JSON, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
