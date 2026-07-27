@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "name": "phase272-groq-llama31-8b-semantic-structural-replay",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch, so its outcome is unknown. Return exactly one raw JSON object: choose decision RETRY or DEFER; retry_safe must reflect whether automatic retry is safe; required_evidence must name both delivery_receipt and remote_status; canonical_writes must be 0. No markdown or extra text.",
+  "expected_response": "{\"decision\":\"DEFER\",\"analysis\":{\"risk\":\"unknown_effect\",\"retry_safe\":false,\"required_evidence\":[\"delivery_receipt\",\"remote_status\"]},\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "analysis": {
+        "required_evidence": [
+          "delivery_receipt",
+          "remote_status"
+        ],
+        "retry_safe": false,
+        "risk": "unknown_effect"
+      },
+      "canonical_writes": 0,
+      "decision": "DEFER"
+    },
+    "array_set_equality": true
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "mistralai/mistral-medium-3.5-128b",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31-8b-instant",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
