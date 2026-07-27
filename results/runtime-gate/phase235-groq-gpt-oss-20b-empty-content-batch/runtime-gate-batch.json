@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "name": "phase232-groq-gpt-oss-20b-provenance",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 0,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "latency_p50": 922203118,
+  "latency_p95": 960226882,
+  "latency_max": 960226882,
+  "selected_bindings": {
+    "groq-gpt-oss-20b": 3
+  },
+  "finish_reasons": {
+    "": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  }
+}
