@@ -136,6 +136,12 @@ type Error struct {
 	Kind       ErrorKind
 	StatusCode int
 	Retryable  bool
+	// Reason is a short, non-sensitive diagnostic label that distinguishes
+	// which validation condition triggered INVALID_RESPONSE (e.g.
+	// "json_unmarshal_failed", "choices_count", "role_not_assistant",
+	// "empty_content", "negative_usage"). It never contains response body
+	// text or any other potentially sensitive payload.
+	Reason string
 	// RetryAfter is the earliest safe retry delay declared by the provider.
 	// It is parsed only from the standard Retry-After header; response bodies
 	// remain discarded because they may echo prompts or credentials.
@@ -147,7 +153,13 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.StatusCode != 0 {
+		if e.Reason != "" {
+			return fmt.Sprintf("openai-compatible provider: %s (status %d): %s", e.Kind, e.StatusCode, e.Reason)
+		}
 		return fmt.Sprintf("openai-compatible provider: %s (status %d)", e.Kind, e.StatusCode)
+	}
+	if e.Reason != "" {
+		return fmt.Sprintf("openai-compatible provider: %s: %s", e.Kind, e.Reason)
 	}
 	return fmt.Sprintf("openai-compatible provider: %s", e.Kind)
 }
@@ -160,6 +172,11 @@ func (e *Error) RateLimitMetadata() port.RateLimitMetadata { return e.RateLimit 
 
 func (e *Error) HTTPStatusCode() int    { return e.StatusCode }
 func (e *Error) RetryableFailure() bool { return e.Retryable }
+
+// DiagnosticReason returns a short, non-sensitive label that classifies which
+// validation condition triggered the error (e.g. "json_unmarshal_failed",
+// "empty_content"). It never contains response body text.
+func (e *Error) DiagnosticReason() string { return e.Reason }
 
 // New creates an OpenAI-compatible chat completions adapter. Optional Option
 // values configure non-secret profile metadata used by DeclaredProfile/Probe.
@@ -357,8 +374,20 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		return port.CompletionResult{}, &Error{Kind: ErrorResponseTooLarge}
 	}
 	var decoded chatResponse
-	if err := json.Unmarshal(body, &decoded); err != nil || len(decoded.Choices) != 1 || decoded.Choices[0].Message.Role != "assistant" || (decoded.Choices[0].Message.Content == "" && len(decoded.Choices[0].Message.ToolCalls) == 0) || decoded.Usage.PromptTokens < 0 || decoded.Usage.CompletionTokens < 0 {
-		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "json_unmarshal_failed"}
+	}
+	if len(decoded.Choices) != 1 {
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "choices_count"}
+	}
+	if decoded.Choices[0].Message.Role != "assistant" {
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "role_not_assistant"}
+	}
+	if decoded.Choices[0].Message.Content == "" && len(decoded.Choices[0].Message.ToolCalls) == 0 {
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "empty_content"}
+	}
+	if decoded.Usage.PromptTokens < 0 || decoded.Usage.CompletionTokens < 0 {
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "negative_usage"}
 	}
 
 	var toolCalls []port.ToolCall
@@ -572,8 +601,11 @@ func (p *Provider) DiscoverModels(ctx context.Context) ([]string, error) {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil || payload.Data == nil {
-		return nil, &Error{Kind: ErrorInvalidResponse}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, &Error{Kind: ErrorInvalidResponse, Reason: "models_json_unmarshal_failed"}
+	}
+	if payload.Data == nil {
+		return nil, &Error{Kind: ErrorInvalidResponse, Reason: "models_data_nil"}
 	}
 
 	allowset := make(map[string]struct{}, len(p.allowedModels))

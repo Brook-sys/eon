@@ -84,11 +84,12 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 		exchange  fakeserver.Exchange
 		limit     int64
 		kind      openai.ErrorKind
+		reason    string
 		retryable bool
 		retryWait time.Duration
 	}{
 		{name: "rate limit", exchange: fakeserver.Exchange{StatusCode: http.StatusTooManyRequests, RawBody: `{"error":"prompt secret"}`, Headers: map[string]string{"Retry-After": "42", "x-ratelimit-limit-requests": "30", "x-ratelimit-remaining-requests": "0", "x-ratelimit-reset-requests": "2m1.5s", "x-ratelimit-limit-tokens": "6000", "x-ratelimit-remaining-tokens": "1234", "x-ratelimit-reset-tokens": "1.25s", "x-secret-quota": "must-not-project"}}, kind: openai.ErrorHTTP, retryable: true, retryWait: 42 * time.Second},
-		{name: "invalid response", exchange: fakeserver.Exchange{RawBody: `{"choices":[]}`}, kind: openai.ErrorInvalidResponse},
+		{name: "invalid response", exchange: fakeserver.Exchange{RawBody: `{"choices":[]}`}, kind: openai.ErrorInvalidResponse, reason: "choices_count"},
 		{name: "too large", exchange: fakeserver.Exchange{RawBody: strings.Repeat("x", 33)}, limit: 32, kind: openai.ErrorResponseTooLarge},
 	}
 	for _, test := range tests {
@@ -103,6 +104,9 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 			var providerError *openai.Error
 			if !errors.As(err, &providerError) || providerError.Kind != test.kind || providerError.Retryable != test.retryable {
 				t.Fatalf("unexpected error: %#v", err)
+			}
+			if providerError.DiagnosticReason() != test.reason {
+				t.Fatalf("diagnostic reason = %q, want %q", providerError.DiagnosticReason(), test.reason)
 			}
 			if test.retryWait > 0 && providerError.RetryAfter != test.retryWait {
 				t.Fatalf("retry wait = %v, want %v", providerError.RetryAfter, test.retryWait)

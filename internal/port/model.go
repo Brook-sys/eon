@@ -104,6 +104,16 @@ type ProviderHTTPError interface {
 	RetryableFailure() bool
 }
 
+// ProviderDiagnosticError is the optional adapter-neutral projection for
+// structured, non-sensitive diagnostic labels (e.g. which validation
+// condition triggered INVALID_RESPONSE). It never exposes response bodies,
+// headers, or any other potentially sensitive payload — only short labels
+// that classify the failure mode.
+type ProviderDiagnosticError interface {
+	ProviderError
+	DiagnosticReason() string
+}
+
 // RateLimitMetadata is an allowlisted, provider-neutral projection of quota
 // headers. Presence flags distinguish an observed zero (for example no calls
 // remaining) from a header the provider did not send. Raw header names and

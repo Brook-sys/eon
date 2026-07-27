@@ -307,6 +307,12 @@ func (e providerHTTPError) RetryAfterDelay() time.Duration { return 20 * time.Se
 func (e providerHTTPError) HTTPStatusCode() int            { return e.status }
 func (e providerHTTPError) RetryableFailure() bool         { return true }
 
+type providerDiagnosticError struct{ reason string }
+
+func (e providerDiagnosticError) Error() string                  { return "invalid provider response" }
+func (e providerDiagnosticError) RetryAfterDelay() time.Duration { return 0 }
+func (e providerDiagnosticError) DiagnosticReason() string       { return e.reason }
+
 type wrappedProvider struct{ err error }
 
 func (p wrappedProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
@@ -349,6 +355,31 @@ func TestRunDoesNotClassifyZeroStatusAsHTTP(t *testing.T) {
 	}
 	if report.ProviderErrorClass != "provider" || report.ProviderHTTPStatus != 0 {
 		t.Fatalf("zero-status provider evidence=%+v", report)
+	}
+}
+
+func TestRunProjectsNonSensitiveProviderDiagnosticReason(t *testing.T) {
+	now := time.Date(2026, 7, 26, 21, 40, 0, 0, time.UTC)
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": wrappedProvider{err: providerDiagnosticError{reason: "empty_content"}},
+		},
+	}
+	report, err := runner.Run(context.Background(), runtimeGateTestManifest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.ProviderErrorClass != "provider" || report.ProviderErrorReason != "empty_content" {
+		t.Fatalf("provider diagnostic evidence=%+v", report)
+	}
+	body, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"provider_error_reason":"empty_content"`) {
+		t.Fatalf("diagnostic reason missing from JSON: %s", body)
 	}
 }
 

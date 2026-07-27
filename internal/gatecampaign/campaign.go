@@ -181,6 +181,7 @@ type RuntimeGateCampaignReport struct {
 	ProviderErrorClass    string                      `json:"provider_error_class,omitempty"`
 	ProviderHTTPStatus    int                         `json:"provider_http_status,omitempty"`
 	ProviderRetryAfter    time.Duration               `json:"provider_retry_after,omitempty"`
+	ProviderErrorReason   string                      `json:"provider_error_reason,omitempty"`
 	ObservedInputTokens   int                         `json:"observed_input_tokens,omitempty"`
 	ObservedOutputTokens  int                         `json:"observed_output_tokens,omitempty"`
 	FinishReason          port.CompletionFinishReason `json:"finish_reason,omitempty"`
@@ -375,6 +376,10 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
 		}
+		var diagErr port.ProviderDiagnosticError
+		if errors.As(recorder.err, &diagErr) && diagErr.DiagnosticReason() != "" {
+			report.ProviderErrorReason = diagErr.DiagnosticReason()
+		}
 	}
 	if err := runtimeGateSnapshot(ctx, r.Store, config, manifest.OutputSchema, &report); err != nil {
 		return RuntimeGateCampaignReport{}, err
@@ -448,6 +453,10 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 		if errors.As(recorder.err, &httpErr) && httpErr.HTTPStatusCode() > 0 {
 			report.ProviderErrorClass = "http"
 			report.ProviderHTTPStatus = httpErr.HTTPStatusCode()
+		}
+		var diagErr port.ProviderDiagnosticError
+		if errors.As(recorder.err, &diagErr) && diagErr.DiagnosticReason() != "" {
+			report.ProviderErrorReason = diagErr.DiagnosticReason()
 		}
 	}
 	if err := runtimeGateSnapshot(ctx, r.Store, config, manifest.OutputSchema, &report); err != nil {
@@ -940,7 +949,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider error reason: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderErrorReason, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
