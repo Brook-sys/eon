@@ -340,6 +340,27 @@ func TestRunProjectsWrappedProviderHTTPStatus(t *testing.T) {
 	}
 }
 
+func TestRunExactTextValidationFailurePreservesExpectedMatch(t *testing.T) {
+	now := time.Date(2026, 7, 26, 23, 20, 0, 0, time.UTC)
+	manifest := runtimeGateTestManifest()
+	manifest.OutputSchema = "exact_text"
+	manifest.ExpectedResponse = "READY"
+	runner := RuntimeGateCampaignRunner{
+		Store: memory.New(), Clock: source.NewManualClock(now),
+		Providers: map[string]port.ModelProvider{
+			"groq-primary": &recordingProvider{},
+			"nim-fallback": &recordingProvider{result: port.CompletionResult{Text: "READY", InputTokens: 10, OutputTokens: 1, FinishReason: port.CompletionFinishStop}},
+		},
+	}
+	report, err := runner.Run(context.Background(), manifest)
+	if err != nil || report.ExecutionError == "" {
+		t.Fatalf("exact-text rejection must remain structured rather than aborting the campaign: report=%+v err=%v", report, err)
+	}
+	if !report.ExpectedResponseSet || !report.ExpectedResponseMatch || report.ResponseFramingClass != "exact" {
+		t.Fatalf("successful provider output must retain exact-match evidence despite downstream rejection: %+v", report)
+	}
+}
+
 func TestRunExactTextFailureReturnsStructuredReport(t *testing.T) {
 	now := time.Date(2026, 7, 26, 22, 40, 0, 0, time.UTC)
 	manifest := runtimeGateTestManifest()

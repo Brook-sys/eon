@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase240-groq-llama33-70b-exact-text-batch",
+  "trials": 5,
+  "external_calls": 5,
+  "provider_successes": 5,
+  "execution_failures": 5,
+  "durable_reopens": 5,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 470,
+  "output_tokens": 10,
+  "latency_p50": 267755658,
+  "latency_p95": 322614306,
+  "latency_max": 322614306,
+  "selected_bindings": {
+    "groq-llama33-70b": 5
+  },
+  "finish_reasons": {
+    "stop": 5
+  },
+  "framing_classes": {
+    "exact": 5
+  },
+  "second_acquire_reasons": {
+    "": 5
+  },
+  "planned_trials": 5,
+  "early_stopped": false
+}

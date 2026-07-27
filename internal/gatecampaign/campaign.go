@@ -439,6 +439,10 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 		report.ResponseBytes = len(recorder.result.Text)
 		digest := sha256.Sum256([]byte(recorder.result.Text))
 		report.ResponseSHA256 = fmt.Sprintf("%x", digest[:])
+		if manifest.ExpectedResponse != "" {
+			report.ExpectedResponseSet = true
+			report.ExpectedResponseMatch = recorder.result.Text == manifest.ExpectedResponse
+		}
 		report.ResponseFramingClass = classifyJSONFraming(recorder.result.Text, manifest.ExpectedResponse)
 		var object map[string]json.RawMessage
 		candidate := recorder.result.Text
