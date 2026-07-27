@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "phase282-groq-llama31-complete-evidence-pair-variance",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch. An authenticated delivery_receipt and an authenticated remote_status record both exist. Extract available durable evidence only. Return exactly one raw JSON object with keys risk, available_evidence, complete_pair, canonical_writes. risk must be unknown_effect; available_evidence must contain delivery_receipt and remote_status; complete_pair must be true; canonical_writes must be 0. Do not choose RETRY, RECONCILE, or DEFER. No markdown or extra text.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"delivery_receipt\",\"remote_status\"],\"complete_pair\":true,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "available_evidence": [
+        "delivery_receipt",
+        "remote_status"
+      ],
+      "canonical_writes": 0,
+      "complete_pair": true,
+      "risk": "unknown_effect"
+    },
+    "array_set_equality": true
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 3,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31-8b-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31-8b-live",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
