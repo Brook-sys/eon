@@ -5708,3 +5708,17 @@ A completion terminou em `stop` após 2,195 s, com 1.663 input + 714 output toke
 Interpretação: Compound Mini aderiu integralmente ao contrato neste caso, mas consumiu 714 tokens de saída e foi aproximadamente 2,7× mais lento que o Llama 3.3 70B da Fase 253 (138 tokens; 804 ms). O resultado n=1 qualifica compatibilidade básica, não autoriza preferência, habilitação ou repetição do caso feliz. Decisão: manter routing inalterado e usar Compound Mini somente como candidato experimental; próximo experimento deve variar complexidade semântica ou testar `groq/compound` maior com hipótese comparativa explícita, não apenas repetir o mesmo prompt.
 
 Evidência: `results/runtime-gate/phase258-groq-compound-mini-proposed-changeset/`. Verificação: descoberta autenticada sanitizada, campanha live real, decode independente do relatório, aplicação/reopen durável, validação JSON, suíte Go integral, vet integral, gofmt e `git diff --check` executados no ciclo.
+
+### Fase 259 — Comparação Groq Compound maior e rejeição HTTP 413
+
+- [x] `DONE` Variar somente o deployment de `groq/compound-mini` para o `groq/compound` presente no catálogo autenticado, preservando contrato e limites.
+- [x] `DONE` Executar uma chamada bounded, sem retry/fallback, e classificar a falha antes de qualquer inferência cognitiva.
+- [x] `DONE` Confirmar operação fail-closed, circuito aberto, ausência de promoção e reopen durável.
+
+2026-07-27 09:42 — HEARTBEAT — A comparação indicada pela Fase 258 preservou o prompt adversarial `ProposedChangeSet`, `max_completion_tokens`, teto 768, timeout 45 s, uma chamada, zero retries/fallback e NIM semeado circuit-open, variando somente `groq/compound-mini` para o deployment maior `groq/compound`, explicitamente presente na descoberta autenticada da Fase 258.
+
+O endpoint respondeu HTTP 413 após 22,685 s, sem completion ou usage cognitivo confiável. O relatório estruturado registrou `external_calls=1`, `provider_error_class=http`, `provider_http_status=413`, operação `READY`, circuito do binding aberto por 60 s, zero commit/entidade e `durable_reopen=true`. Não houve segunda chamada nem fallback. Uma primeira invocação local não alcançou provider porque as credenciais autorizadas ainda não haviam sido carregadas no subprocesso; ela não conta como observação live e não gerou relatório.
+
+Interpretação: o Compound maior repete a classe HTTP 413 já observada na Fase 238 sob contrato grande, enquanto Compound Mini aceitou e aplicou o mesmo prompt/teto na Fase 258. Como o erro ocorre antes de completion, ele não mede aderência cognitiva e não autoriza relaxar parsing, aumentar limites ou preferir automaticamente o Mini. Decisão: manter `groq/compound` fora deste routing e preservar fail-closed. Próximo experimento com ganho deve reduzir deliberadamente o tamanho do request/contrato ou consultar documentação primária sobre limites específicos do deployment; não repetir a carga idêntica.
+
+Evidência: `results/runtime-gate/phase259-groq-compound-proposed-changeset/`. Verificação: decode independente confirmou uma chamada, HTTP 413, latência, circuito, operação `READY`, zero promoção e reopen durável; validação JSON, suíte Go integral, vet integral, inspeção de ausência de segredos e `git diff --check` executados no ciclo.
