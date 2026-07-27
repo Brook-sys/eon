@@ -5870,3 +5870,15 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Decision.** Reject the hypothesis that the observed unsafe decision is peculiar to Llama 3.1 8B. Two materially different Groq deployments now fail the same protected semantics in 6/6 bounded trials. Unknown-effect disposition must remain a deterministic kernel-owned `DEFER` policy; models may at most extract candidate evidence that the kernel validates, and neither prompt coercion nor model rotation is an adequate safety control. A useful next slice is an executable kernel policy test that consumes validated receipt/status evidence and never delegates the RETRY/DEFER authority.
 
 **Evidence and verification.** `results/runtime-gate/phase273-groq-llama33-70b-semantic-structural-control/live/`. Independent JSON inspection confirmed three calls/successes/reopens, zero exact or structural matches, stable sanitized field outcomes, 462 input + 105 output tokens, bounded latency, and zero promotion. `go test ./internal/gatecampaign`, `go test ./...`, `go vet ./...`, JSON decoding, secret scan, and `git diff --check` were run before commit.
+
+## Phase 275 — fail-closed evidence pair and Compound Mini control (2026-07-27 15:20 -03)
+
+**Hypothesis.** The kernel policy must require the complete authenticated evidence pair (`delivery_receipt` and `remote_status`) before spending reconciliation budget; accepting either signal alone would weaken the evidence-only contract proven in Phase 274. A distinct Groq deployment should also be checked against the same extraction contract without granting disposition authority.
+
+**Implemented.** Tightened `UnknownEffectEvidence.Validate` to reject missing receipt, missing remote status, or both. Expanded the policy regression to cover all three incomplete combinations while preserving deterministic `RECONCILE`/`DEFER`, zero model authority, bounded budget, and rejection of applied effects.
+
+**Live bounded campaign.** Rotated from Llama 3.3 70B to Groq `groq/compound-mini` under the unchanged evidence-only prompt and structural oracle: one call maximum, 45 s timeout, 64 output-token ceiling, zero retry/fallback, seeded primary circuit, and zero canonical writes. The provider succeeded in 1.139 s with 688 input + 199 output tokens and `stop`. The 103-byte completion matched the byte oracle exactly and the structural oracle matched 3/3 fields (`risk`, both required evidence names as a set, and `canonical_writes=0`). Local quota blocked the second acquisition and SQLite reopened durably. Compared with Phase 274 Llama 3.3 70B, Compound Mini was about 2.4x slower and used substantially more tokens (887 versus 190 total), but both satisfied the evidence contract; n=1 does not authorize preference.
+
+**Decision.** Require both authenticated durable signals before the kernel can reconcile or defer through this policy. Models remain evidence extractors only; their output cannot assert that either durable record exists and cannot choose RETRY/DEFER. Keep both deployments evidence-only and routing unchanged.
+
+**Evidence.** `results/runtime-gate/phase275-groq-compound-mini-evidence-contract/`.

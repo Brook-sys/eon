@@ -60,8 +60,8 @@ func (e UnknownEffectEvidence) Validate() error {
 	if e.EffectState != EffectUnknown && e.EffectState != EffectPartial {
 		return errors.New("unknown effect evidence: effect_state must be UNKNOWN or PARTIAL")
 	}
-	if !e.DeliveryReceipt && !e.RemoteStatus {
-		return errors.New("unknown effect evidence: at least one of delivery_receipt or remote_status is required")
+	if !e.DeliveryReceipt || !e.RemoteStatus {
+		return errors.New("unknown effect evidence: delivery_receipt and remote_status are both required")
 	}
 	if e.ReconcileAttempts < 0 {
 		return errors.New("unknown effect evidence: reconcile_attempts must not be negative")

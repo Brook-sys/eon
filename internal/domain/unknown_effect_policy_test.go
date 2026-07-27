@@ -12,6 +12,7 @@ func TestUnknownEffectPolicy_AlwaysDeferWhenBudgetExhausted(t *testing.T) {
 		Source:            "subagent_dispatch:dispatch_001",
 		EffectState:       EffectUnknown,
 		DeliveryReceipt:   true,
+		RemoteStatus:      true,
 		ReconcileAttempts: 1, // budget exhausted (default max=1)
 	}
 	config := DefaultUnknownEffectPolicyConfig() // max=1
@@ -33,6 +34,7 @@ func TestUnknownEffectPolicy_ReconcileWhenBudgetRemains(t *testing.T) {
 		SchemaVersion:     UnknownEffectPolicySchemaVersion,
 		Source:            "model_completion:op_x:1:3",
 		EffectState:       EffectPartial,
+		DeliveryReceipt:   true,
 		RemoteStatus:      true,
 		ReconcileAttempts: 0, // budget remaining
 	}
@@ -58,6 +60,7 @@ func TestUnknownEffectPolicy_ModelOverriddenFlag(t *testing.T) {
 		Source:                 "subagent_dispatch:dispatch_002",
 		EffectState:            EffectUnknown,
 		DeliveryReceipt:        true,
+		RemoteStatus:           true,
 		ReconcileAttempts:      1, // exhausted
 		ModelSuggestedDecision: "RETRY",
 	}
@@ -80,6 +83,7 @@ func TestUnknownEffectPolicy_NoModelSuggestion_NoOverrideFlag(t *testing.T) {
 		SchemaVersion:     UnknownEffectPolicySchemaVersion,
 		Source:            "subagent_dispatch:dispatch_003",
 		EffectState:       EffectUnknown,
+		DeliveryReceipt:   true,
 		RemoteStatus:      true,
 		ReconcileAttempts: 1,
 	}
@@ -107,7 +111,7 @@ func TestUnknownEffectPolicy_NeverReturnsRetry(t *testing.T) {
 			evidence: UnknownEffectEvidence{
 				SchemaVersion: UnknownEffectPolicySchemaVersion,
 				Source:        "s1", EffectState: EffectUnknown,
-				DeliveryReceipt: true, ReconcileAttempts: 0,
+				DeliveryReceipt: true, RemoteStatus: true, ReconcileAttempts: 0,
 			},
 			config: UnknownEffectPolicyConfig{MaxReconcileAttempts: 0},
 		},
@@ -116,7 +120,7 @@ func TestUnknownEffectPolicy_NeverReturnsRetry(t *testing.T) {
 			evidence: UnknownEffectEvidence{
 				SchemaVersion: UnknownEffectPolicySchemaVersion,
 				Source:        "s2", EffectState: EffectPartial,
-				RemoteStatus: true, ReconcileAttempts: 0,
+				DeliveryReceipt: true, RemoteStatus: true, ReconcileAttempts: 0,
 			},
 			config: UnknownEffectPolicyConfig{MaxReconcileAttempts: 3},
 		},
@@ -135,7 +139,7 @@ func TestUnknownEffectPolicy_NeverReturnsRetry(t *testing.T) {
 			evidence: UnknownEffectEvidence{
 				SchemaVersion: UnknownEffectPolicySchemaVersion,
 				Source:        "s4", EffectState: EffectUnknown,
-				DeliveryReceipt: true, ReconcileAttempts: 5,
+				DeliveryReceipt: true, RemoteStatus: true, ReconcileAttempts: 5,
 			},
 			config: UnknownEffectPolicyConfig{MaxReconcileAttempts: 5},
 		},
@@ -163,6 +167,7 @@ func TestUnknownEffectPolicy_RejectsAppliedEffect(t *testing.T) {
 		Source:          "s5",
 		EffectState:     EffectApplied, // invalid for unknown-effect policy
 		DeliveryReceipt: true,
+		RemoteStatus:    true,
 	}
 	config := DefaultUnknownEffectPolicyConfig()
 
@@ -177,6 +182,7 @@ func TestUnknownEffectPolicy_RejectsNoEvidenceSource(t *testing.T) {
 		Source:          "", // missing
 		EffectState:     EffectUnknown,
 		DeliveryReceipt: true,
+		RemoteStatus:    true,
 	}
 	config := DefaultUnknownEffectPolicyConfig()
 
@@ -185,18 +191,31 @@ func TestUnknownEffectPolicy_RejectsNoEvidenceSource(t *testing.T) {
 	}
 }
 
-func TestUnknownEffectPolicy_RejectsNoEvidenceSignal(t *testing.T) {
-	// Must have at least one of delivery_receipt or remote_status
-	evidence := UnknownEffectEvidence{
+func TestUnknownEffectPolicy_RequiresReceiptAndRemoteStatus(t *testing.T) {
+	base := UnknownEffectEvidence{
 		SchemaVersion: UnknownEffectPolicySchemaVersion,
 		Source:        "s6",
 		EffectState:   EffectUnknown,
-		// no signals
 	}
 	config := DefaultUnknownEffectPolicyConfig()
 
-	if _, err := DecideUnknownEffect(evidence, config); err == nil {
-		t.Fatal("expected error for no evidence signal, got nil")
+	for _, tc := range []struct {
+		name   string
+		mutate func(*UnknownEffectEvidence)
+	}{
+		{name: "neither"},
+		{name: "delivery_receipt_only", mutate: func(e *UnknownEffectEvidence) { e.DeliveryReceipt = true }},
+		{name: "remote_status_only", mutate: func(e *UnknownEffectEvidence) { e.RemoteStatus = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			evidence := base
+			if tc.mutate != nil {
+				tc.mutate(&evidence)
+			}
+			if _, err := DecideUnknownEffect(evidence, config); err == nil {
+				t.Fatal("expected error when either required evidence signal is missing")
+			}
+		})
 	}
 }
 
@@ -207,6 +226,7 @@ func TestUnknownEffectPolicy_RejectsInconsistentReconcileFields(t *testing.T) {
 		Source:            "s7",
 		EffectState:       EffectUnknown,
 		DeliveryReceipt:   true,
+		RemoteStatus:      true,
 		ReconcileAttempts: 0,
 		LastReconcileAt:   time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC),
 	}
@@ -223,6 +243,7 @@ func TestUnknownEffectPolicy_RejectsBadSchemaVersion(t *testing.T) {
 		Source:          "s8",
 		EffectState:     EffectUnknown,
 		DeliveryReceipt: true,
+		RemoteStatus:    true,
 	}
 	config := DefaultUnknownEffectPolicyConfig()
 
@@ -237,6 +258,7 @@ func TestUnknownEffectPolicy_RejectsNegativeMaxReconcile(t *testing.T) {
 		Source:          "s9",
 		EffectState:     EffectUnknown,
 		DeliveryReceipt: true,
+		RemoteStatus:    true,
 	}
 	config := UnknownEffectPolicyConfig{MaxReconcileAttempts: -1}
 
@@ -252,6 +274,7 @@ func TestUnknownEffectPolicy_ZeroMaxImmediateDefer(t *testing.T) {
 		Source:            "s10",
 		EffectState:       EffectUnknown,
 		DeliveryReceipt:   true,
+		RemoteStatus:      true,
 		ReconcileAttempts: 0,
 	}
 	config := UnknownEffectPolicyConfig{MaxReconcileAttempts: 0}
@@ -271,6 +294,7 @@ func TestUnknownEffectPolicy_PureDeterministic(t *testing.T) {
 		SchemaVersion:     UnknownEffectPolicySchemaVersion,
 		Source:            "s11",
 		EffectState:       EffectPartial,
+		DeliveryReceipt:   true,
 		RemoteStatus:      true,
 		ReconcileAttempts: 1,
 	}
