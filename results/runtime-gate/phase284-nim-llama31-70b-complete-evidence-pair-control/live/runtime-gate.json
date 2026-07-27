@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "name": "phase284-nim-llama31-70b-complete-evidence-pair-control",
+  "started_at": "2026-07-27T22:25:13.28751164Z",
+  "completed_at": "2026-07-27T22:25:16.942973161Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-llama31-70b-seeded",
+  "selected_provider_id": "nim",
+  "selected_binding_id": "nim-llama31-70b-live",
+  "route_rejected": {
+    "nim-llama31-70b-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 3483566725,
+  "observed_input_tokens": 181,
+  "observed_output_tokens": 35,
+  "finish_reason": "stop",
+  "response_bytes": 133,
+  "response_sha256": "54382d263f86826433526eee9e44450d954f67c165b01feddca79d1c4177503f",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": true,
+    "overall_match": true,
+    "fields_checked": 4,
+    "fields_matched": 4,
+    "fields_mismatched": 0,
+    "fields_absent": 0,
+    "field_outcomes": [
+      {
+        "field": "available_evidence",
+        "status": "matched"
+      },
+      {
+        "field": "canonical_writes",
+        "status": "matched"
+      },
+      {
+        "field": "complete_pair",
+        "status": "matched"
+      },
+      {
+        "field": "risk",
+        "status": "matched"
+      }
+    ]
+  },
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-27T22:26:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:nim-llama31-70b-live",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-27T22:25:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-27T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-27T22:25:00Z",
+      "token_minute_count": 216,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:nim-llama31-70b-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-27T22:26:13.28751164Z",
+      "last_failure_at": "2026-07-27T22:25:13.28751164Z"
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-27T22:25:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-27T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-27T22:25:00Z",
+      "token_minute_count": 216,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
