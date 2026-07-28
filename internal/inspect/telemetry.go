@@ -112,7 +112,7 @@ func (p *Projector) BuildAlerts(ctx context.Context, missionID domain.MissionID)
 	}
 
 	// Unsettled receipt health (read-only; never bypasses settlement).
-	_ = p.Store.View(ctx, func(r port.Reader) error {
+	if err := p.Store.View(ctx, func(r port.Reader) error {
 		unsettled, err := r.UnsettledModelCompletionReceipts(1000)
 		if err != nil {
 			return err
@@ -125,10 +125,12 @@ func (p *Projector) BuildAlerts(ctx context.Context, missionID domain.MissionID)
 					oldest = rcpt.RecordedAt
 				}
 			}
-			in.OldestUnsettledAge = now.Sub(oldest)
+			in.OldestUnsettledAge = max(now.Sub(oldest), 0)
 		}
 		return nil
-	})
+	}); err != nil {
+		return observability.AlertSnapshot{}, err
+	}
 
 	return observability.EvaluateAlerts(in), nil
 }

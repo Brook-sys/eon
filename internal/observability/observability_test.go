@@ -278,6 +278,18 @@ func TestEvaluateAlertsDerivedOnly(t *testing.T) {
 			t.Fatalf("unexpected unsettled receipt alert when count=0: %#v", a)
 		}
 	}
+
+	// Clock skew must not expose a nonsensical negative receipt age.
+	recFutureSnap := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: true, TelemetryEnabled: true, TelemetryHasOTLP: true,
+		UnsettledReceiptCount: 1,
+		OldestUnsettledAge:    -time.Minute,
+	})
+	for _, a := range recFutureSnap.Alerts {
+		if a.Code == observability.AlertCodeUnsettledReceipts && !strings.Contains(a.Detail, "oldest_age=0s") {
+			t.Fatalf("future receipt age was not clamped: %#v", a)
+		}
+	}
 }
 
 type stubCommandProcessor struct {

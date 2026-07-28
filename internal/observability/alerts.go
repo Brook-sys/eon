@@ -219,14 +219,15 @@ func EvaluateAlerts(in AlertInput) AlertSnapshot {
 
 	// Unsettled model completion receipts (resource health, not a kernel decision).
 	if in.UnsettledReceiptCount > 0 {
+		oldestAge := max(in.OldestUnsettledAge, 0)
 		sev := AlertSeverityInfo
-		if in.OldestUnsettledAge > 5*time.Minute {
+		if oldestAge > 5*time.Minute {
 			sev = AlertSeverityWarning
 		}
 		out.Alerts = append(out.Alerts, Alert{
 			Code: AlertCodeUnsettledReceipts, Severity: sev,
 			Summary:   "unsettled model completion receipts are pending",
-			Detail:    fmt.Sprintf("count=%d oldest_age=%s; settlement is kernel-owned and cannot be bypassed", in.UnsettledReceiptCount, in.OldestUnsettledAge.Truncate(time.Second)),
+			Detail:    fmt.Sprintf("count=%d oldest_age=%s; settlement is kernel-owned and cannot be bypassed", in.UnsettledReceiptCount, oldestAge.Truncate(time.Second)),
 			Canonical: false, ObservedAt: now,
 		})
 	}
