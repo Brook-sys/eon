@@ -3,6 +3,7 @@ package inspect_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +15,26 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
 )
+
+type receiptFailReader struct {
+	port.Reader
+	err error
+}
+
+func (r receiptFailReader) UnsettledModelCompletionReceipts(int) ([]domain.ModelCompletionReceipt, error) {
+	return nil, r.err
+}
+
+type receiptFailStore struct {
+	port.ReadStore
+	err error
+}
+
+func (s receiptFailStore) View(ctx context.Context, fn func(port.Reader) error) error {
+	return s.ReadStore.View(ctx, func(r port.Reader) error {
+		return fn(receiptFailReader{Reader: r, err: s.err})
+	})
+}
 
 func TestTelemetryAndAlertsHTTP(t *testing.T) {
 	store := memory.New()
@@ -215,5 +236,33 @@ func TestUnsettledReceiptAlertSurfaces(t *testing.T) {
 	}
 	if found.Canonical {
 		t.Fatalf("unsettled receipt alert must not be canonical")
+	}
+}
+
+func TestBuildAlertsReturnsUnsettledReceiptQueryError(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 28, 17, 0, 0, 0, time.UTC)
+	mission := domain.MissionRevision{
+		SchemaVersion: domain.SchemaVersionV1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+		OriginalText: "receipt query failure", Purpose: "test", Status: domain.MissionActive,
+		Provenance: "fixture", AcceptedAt: now,
+	}
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		return tx.ActivateMissionRevision(mission.MissionID, mission.ID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	want := errors.New("receipt projection unavailable")
+	projector, err := inspect.NewProjector(receiptFailStore{ReadStore: store, err: want}, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+	if _, err := projector.BuildAlerts(context.Background(), mission.MissionID); !errors.Is(err, want) {
+		t.Fatalf("BuildAlerts error = %v, want %v", err, want)
 	}
 }
