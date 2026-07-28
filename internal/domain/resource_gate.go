@@ -419,6 +419,13 @@ func NewResourceBudgetFailure(
 
 func normalizeUsageWindows(u ResourceUsage, resource ResourceID, now time.Time) ResourceUsage {
 	u.Resource = resource
+	// An elapsed circuit deadline is no longer active state. Clear it while
+	// normalizing so an admitted acquire does not persist a stale deadline.
+	// The failure streak remains intact and can still drive the next failure's
+	// escalation; only the time-bounded denial expires here.
+	if u.CircuitOpenUntil != nil && !now.Before(*u.CircuitOpenUntil) {
+		u.CircuitOpenUntil = nil
+	}
 	minuteStart := now.Truncate(time.Minute)
 	dayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	if u.MinuteWindowStart.IsZero() || u.MinuteWindowStart.Before(minuteStart) {

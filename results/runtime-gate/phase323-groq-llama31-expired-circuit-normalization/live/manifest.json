@@ -1,0 +1,40 @@
+{
+  "phase": 323,
+  "provider": "groq",
+  "model": "llama-3.1-8b-instant",
+  "task": "expired_circuit_normalization",
+  "bounds": {
+    "calls": 1,
+    "timeout_seconds": 45,
+    "max_output_tokens": 64,
+    "retries": 0
+  },
+  "expected": {
+    "allowed": true,
+    "circuit_open_until": null,
+    "consecutive_failures": 3
+  },
+  "status": 403,
+  "latency_ms": 139.4,
+  "error_class": "http",
+  "cross_provider_control": {
+    "provider": "nim",
+    "model": "meta/llama-3.1-70b-instruct",
+    "status": 200,
+    "latency_ms": 2435.9,
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 146,
+      "total_tokens": 166,
+      "completion_tokens": 20,
+      "prompt_tokens_details": null
+    },
+    "json_valid": true,
+    "observed": {
+      "allowed": false,
+      "circuit_open_until": null,
+      "consecutive_failures": 0
+    },
+    "structural_match": false
+  }
+}

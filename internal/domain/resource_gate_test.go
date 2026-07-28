@@ -313,6 +313,12 @@ func TestCircuitOpenCloseBoundary(t *testing.T) {
 	if !res.Allowed {
 		t.Fatalf("expected allow at exact circuit boundary, got %+v", res)
 	}
+	if res.Usage.CircuitOpenUntil != nil {
+		t.Fatalf("elapsed circuit deadline should be cleared from projected usage: %v", *res.Usage.CircuitOpenUntil)
+	}
+	if res.Usage.ConsecutiveFailures != reported.ConsecutiveFailures {
+		t.Fatalf("acquire changed failure streak: got %d want %d", res.Usage.ConsecutiveFailures, reported.ConsecutiveFailures)
+	}
 
 	// 1 nanosecond after: allowed.
 	res, err = Acquire(limit, reported, cost, 0, expectedUntil.Add(time.Nanosecond))
@@ -321,6 +327,9 @@ func TestCircuitOpenCloseBoundary(t *testing.T) {
 	}
 	if !res.Allowed {
 		t.Fatal("expected allow after circuit opens")
+	}
+	if res.Usage.CircuitOpenUntil != nil {
+		t.Fatalf("past circuit deadline should be cleared from projected usage: %v", *res.Usage.CircuitOpenUntil)
 	}
 }
 
