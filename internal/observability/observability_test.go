@@ -239,6 +239,45 @@ func TestEvaluateAlertsDerivedOnly(t *testing.T) {
 	if !growthCodes[observability.AlertCodeEventHeadGrowth] || !growthCodes[observability.AlertCodeStaleArtifactsHigh] {
 		t.Fatalf("missing store growth alerts: %#v", growth.Alerts)
 	}
+
+	// Unsettled receipt alert — info when count > 0 but age ≤ 5m.
+	recInfoSnap := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: true, TelemetryEnabled: true, TelemetryHasOTLP: true,
+		UnsettledReceiptCount: 3,
+		OldestUnsettledAge:    2 * time.Minute,
+	})
+	recInfoCodes := map[string]string{}
+	for _, a := range recInfoSnap.Alerts {
+		recInfoCodes[a.Code] = a.Severity
+	}
+	if sev, ok := recInfoCodes[observability.AlertCodeUnsettledReceipts]; !ok || sev != observability.AlertSeverityInfo {
+		t.Fatalf("unsettled receipt info alert: ok=%v sev=%s alerts=%#v", ok, sev, recInfoSnap.Alerts)
+	}
+
+	// Unsettled receipt alert — warning when oldest age > 5m.
+	recWarnSnap := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: true, TelemetryEnabled: true, TelemetryHasOTLP: true,
+		UnsettledReceiptCount: 1,
+		OldestUnsettledAge:    6 * time.Minute,
+	})
+	recWarnCodes := map[string]string{}
+	for _, a := range recWarnSnap.Alerts {
+		recWarnCodes[a.Code] = a.Severity
+	}
+	if sev, ok := recWarnCodes[observability.AlertCodeUnsettledReceipts]; !ok || sev != observability.AlertSeverityWarning {
+		t.Fatalf("unsettled receipt warning alert: ok=%v sev=%s alerts=%#v", ok, sev, recWarnSnap.Alerts)
+	}
+
+	// No unsettled receipt alert when count is zero.
+	recNoneSnap := observability.EvaluateAlerts(observability.AlertInput{
+		ObservedAt: now, StoreReachable: true, TelemetryEnabled: true, TelemetryHasOTLP: true,
+		UnsettledReceiptCount: 0,
+	})
+	for _, a := range recNoneSnap.Alerts {
+		if a.Code == observability.AlertCodeUnsettledReceipts {
+			t.Fatalf("unexpected unsettled receipt alert when count=0: %#v", a)
+		}
+	}
 }
 
 type stubCommandProcessor struct {

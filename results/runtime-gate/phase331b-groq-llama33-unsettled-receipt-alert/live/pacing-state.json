@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase331b-groq-llama33-unsettled-receipt-alert",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-28T19:08:26.172094737Z"
+}

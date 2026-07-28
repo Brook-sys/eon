@@ -129,3 +129,91 @@ func TestTelemetryAndAlertsHTTP(t *testing.T) {
 		t.Fatalf("health telemetry = %#v", health.Telemetry)
 	}
 }
+
+func TestUnsettledReceiptAlertSurfaces(t *testing.T) {
+	store := memory.New()
+	now := time.Date(2026, 7, 28, 16, 0, 0, 0, time.UTC)
+	mission := domain.MissionRevision{
+		SchemaVersion: domain.SchemaVersionV1, ID: "revision_1", MissionID: "mission_1", Revision: 1,
+		OriginalText: "unsettled receipt alert", Purpose: "test", Status: domain.MissionActive,
+		Provenance: "fixture", AcceptedAt: now,
+	}
+
+	// Build a valid receipt that will remain unsettled.
+	result := domain.ModelCompletionResult{
+		Text: "{}", InputTokens: 100, OutputTokens: 50, Model: "test/model", FinishReason: "stop",
+	}
+	hash, err := result.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := domain.ModelCompletionReceipt{
+		SchemaVersion: domain.SchemaVersionV1,
+		OperationID:   "op_1",
+		Attempt:       1,
+		ModelCall:     1,
+		Result:        result,
+		PayloadHash:   hash,
+		RecordedAt:    now.Add(-10 * time.Minute), // 10 minutes ago
+		Permits: []domain.ResourcePermit{{
+			Resource:  "binding:test",
+			Cost:      domain.ResourceCost{Slots: 1, Tokens: 150},
+			GrantedAt: now.Add(-10 * time.Minute),
+		}},
+	}
+
+	if err := store.Update(context.Background(), func(tx port.Transaction) error {
+		if err := tx.AppendMissionRevision(mission); err != nil {
+			return err
+		}
+		if err := tx.ActivateMissionRevision(mission.MissionID, mission.ID); err != nil {
+			return err
+		}
+		return tx.AppendModelCompletionReceipt(receipt)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	projector, err := inspect.NewProjector(store, inspect.RuntimeIdentity{Name: "motor-autonomo", Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	projector.Clock = func() time.Time { return now }
+
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api.Handler())
+	t.Cleanup(server.Close)
+
+	alResp, err := http.Get(server.URL + "/alerts?mission_id=mission_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer alResp.Body.Close()
+	if alResp.StatusCode != http.StatusOK {
+		t.Fatalf("alerts status = %d", alResp.StatusCode)
+	}
+	var snap observability.AlertSnapshot
+	if err := json.NewDecoder(alResp.Body).Decode(&snap); err != nil {
+		t.Fatal(err)
+	}
+
+	var found *observability.Alert
+	for i, a := range snap.Alerts {
+		if a.Code == observability.AlertCodeUnsettledReceipts {
+			found = &snap.Alerts[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("expected unsettled receipt alert; got codes: %v", snap.Alerts)
+	}
+	if found.Severity != observability.AlertSeverityWarning {
+		t.Fatalf("expected warning severity for 10m-old receipt, got %s", found.Severity)
+	}
+	if found.Canonical {
+		t.Fatalf("unsettled receipt alert must not be canonical")
+	}
+}

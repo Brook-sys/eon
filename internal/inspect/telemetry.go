@@ -110,6 +110,26 @@ func (p *Projector) BuildAlerts(ctx context.Context, missionID domain.MissionID)
 	if catalog, err := p.KnowledgeCatalog(ctx); err == nil {
 		in.StaleArtifactCount = catalog.StaleArtifacts
 	}
+
+	// Unsettled receipt health (read-only; never bypasses settlement).
+	_ = p.Store.View(ctx, func(r port.Reader) error {
+		unsettled, err := r.UnsettledModelCompletionReceipts(1000)
+		if err != nil {
+			return err
+		}
+		in.UnsettledReceiptCount = len(unsettled)
+		if len(unsettled) > 0 {
+			oldest := unsettled[0].RecordedAt
+			for _, rcpt := range unsettled[1:] {
+				if rcpt.RecordedAt.Before(oldest) {
+					oldest = rcpt.RecordedAt
+				}
+			}
+			in.OldestUnsettledAge = now.Sub(oldest)
+		}
+		return nil
+	})
+
 	return observability.EvaluateAlerts(in), nil
 }
 

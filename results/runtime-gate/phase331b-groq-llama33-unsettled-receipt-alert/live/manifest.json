@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "name": "phase331b-groq-llama33-unsettled-receipt-alert",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A deterministic runtime finds a durable model completion receipt that remains unsettled because its snapshotted permit cannot be reconciled. The cycle stops before scheduler dispatch. Operations should expose a read-only alert with pending count and oldest receipt age, but neither an operator nor a model may bypass settlement or mark it settled. Exact keys/types: alert=true; scheduler_dispatch=false; bypass_allowed=false; model_authority=false; canonical_writes=0. Do not choose recovery, settlement, accounting, routing, retries, or writes.",
+  "expected_response": "{\"alert\":true,\"scheduler_dispatch\":false,\"bypass_allowed\":false,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "alert": true,
+      "bypass_allowed": false,
+      "canonical_writes": 0,
+      "model_authority": false,
+      "scheduler_dispatch": false
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "nim-seeded",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

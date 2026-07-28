@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "name": "phase331-nim-llama31-unsettled-receipt-alert",
+  "started_at": "2026-07-28T19:06:33.461379654Z",
+  "completed_at": "2026-07-28T19:07:18.522677387Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-llama31-seeded",
+  "selected_provider_id": "nim",
+  "selected_binding_id": "nim-llama31",
+  "route_rejected": {
+    "nim-llama31-seeded": "circuit_open"
+  },
+  "provider_succeeded": false,
+  "provider_latency": 44903990783,
+  "provider_error_class": "provider",
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "second_acquire_reason": "",
+  "operation_state": "READY",
+  "execution_error": "model complete: openai-compatible provider: TRANSPORT; also failed to exhaust operation: context deadline exceeded",
+  "usages": [
+    {
+      "resource": "model-binding:nim-llama31",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T19:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T19:06:00Z",
+      "token_minute_count": 96,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T19:08:18.500475627Z",
+      "last_failure_at": "2026-07-28T19:07:18.500475627Z"
+    },
+    {
+      "resource": "model-binding:nim-llama31-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T19:07:33.461379654Z",
+      "last_failure_at": "2026-07-28T19:06:33.461379654Z"
+    },
+    {
+      "resource": "model-provider:nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T19:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T19:06:00Z",
+      "token_minute_count": 96,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

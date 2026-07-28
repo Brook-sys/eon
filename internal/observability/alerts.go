@@ -31,6 +31,7 @@ const (
 	AlertCodeContinuityFindingsStale = "continuity.findings_stale"
 	AlertCodeEventHeadGrowth         = "store.event_head_growth"
 	AlertCodeStaleArtifactsHigh      = "store.stale_artifacts_high"
+	AlertCodeUnsettledReceipts       = "resource.unsettled_receipts"
 )
 
 // Default soft thresholds for control backlog pressure (presentation only).
@@ -84,6 +85,10 @@ type AlertInput struct {
 	ContinuityBlocked       bool
 	ContinuityBlockedDetail string
 	ContinuityFindingsStale bool
+
+	// Unsettled model completion receipts (read-only resource health).
+	UnsettledReceiptCount int
+	OldestUnsettledAge    time.Duration
 
 	// Soft store growth signals (append-only log / derived stale views).
 	// Never authorize GC; presentation and operator hygiene only.
@@ -208,6 +213,20 @@ func EvaluateAlerts(in AlertInput) AlertSnapshot {
 			Code: AlertCodeContinuityFindingsStale, Severity: AlertSeverityInfo,
 			Summary:   "latest continuity audit findings are marked stale",
 			Detail:    "re-run continuity audit families for a fresh artifact",
+			Canonical: false, ObservedAt: now,
+		})
+	}
+
+	// Unsettled model completion receipts (resource health, not a kernel decision).
+	if in.UnsettledReceiptCount > 0 {
+		sev := AlertSeverityInfo
+		if in.OldestUnsettledAge > 5*time.Minute {
+			sev = AlertSeverityWarning
+		}
+		out.Alerts = append(out.Alerts, Alert{
+			Code: AlertCodeUnsettledReceipts, Severity: sev,
+			Summary:   "unsettled model completion receipts are pending",
+			Detail:    fmt.Sprintf("count=%d oldest_age=%s; settlement is kernel-owned and cannot be bypassed", in.UnsettledReceiptCount, in.OldestUnsettledAge.Truncate(time.Second)),
 			Canonical: false, ObservedAt: now,
 		})
 	}
