@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase304-groq-allam2-raw-json-framing-control",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T05:02:41.088102127Z"
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase304-groq-allam2-raw-json-framing-control",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 954,
+  "output_tokens": 192,
+  "latency_p50": 370790956,
+  "latency_p95": 440690534,
+  "latency_max": 440690534,
+  "selected_bindings": {
+    "groq-allam2": 3
+  },
+  "finish_reasons": {
+    "length": 3
+  },
+  "framing_classes": {
+    "invalid_json": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}
