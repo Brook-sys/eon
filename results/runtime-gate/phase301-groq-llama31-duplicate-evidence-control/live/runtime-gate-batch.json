@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase301-groq-llama31-duplicate-evidence-control",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 753,
+  "output_tokens": 147,
+  "latency_p50": 331037970,
+  "latency_p95": 381297857,
+  "latency_max": 381297857,
+  "selected_bindings": {
+    "groq-llama31": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "markdown_fence": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}
