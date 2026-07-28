@@ -407,7 +407,7 @@ func TestReportFailureIgnoresExpiredRetryAfter(t *testing.T) {
 	}
 }
 
-func TestReportFailureDoesNotShortenExistingCircuit(t *testing.T) {
+func TestReportFailurePreservesMaximumCircuitDeadline(t *testing.T) {
 	now := time.Date(2026, 7, 28, 10, 0, 0, 0, time.UTC)
 	existingUntil := now.Add(2 * time.Minute)
 	limit := ResourceLimit{
@@ -415,23 +415,36 @@ func TestReportFailureDoesNotShortenExistingCircuit(t *testing.T) {
 		MaxConcurrent:    4,
 		FailureThreshold: 2,
 		CooldownBase:     10 * time.Second,
-		CooldownMax:      time.Minute,
+		CooldownMax:      5 * time.Minute,
 	}
-	usage := ResourceUsage{
-		Resource:            "model:test",
-		InFlight:            1,
-		ConsecutiveFailures: 1,
-		CircuitOpenUntil:    &existingUntil,
+	tests := []struct {
+		name          string
+		failures      int
+		retryAfter    *time.Time
+		wantOpenUntil time.Time
+	}{
+		{name: "existing deadline wins", failures: 1, wantOpenUntil: existingUntil},
+		{name: "computed cooldown extends", failures: 5, wantOpenUntil: now.Add(2*time.Minute + 40*time.Second)},
+		{name: "retry after extends", failures: 1, retryAfter: timePointer(now.Add(4 * time.Minute)), wantOpenUntil: now.Add(4 * time.Minute)},
 	}
-
-	reported, err := ReportFailure(usage, limit, ResourceCost{Slots: 1}, nil, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reported.CircuitOpenUntil == nil || !reported.CircuitOpenUntil.Equal(existingUntil) {
-		t.Fatalf("failure shortened existing circuit: got %v want %v", reported.CircuitOpenUntil, existingUntil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usage := ResourceUsage{Resource: "model:test", InFlight: 1, ConsecutiveFailures: tt.failures, CircuitOpenUntil: &existingUntil}
+			reported, err := ReportFailure(usage, limit, ResourceCost{Slots: 1}, tt.retryAfter, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reported.CircuitOpenUntil == nil || !reported.CircuitOpenUntil.Equal(tt.wantOpenUntil) {
+				t.Fatalf("circuit deadline = %v, want %v", reported.CircuitOpenUntil, tt.wantOpenUntil)
+			}
+			if reported.ConsecutiveFailures != tt.failures+1 || reported.InFlight != 0 {
+				t.Fatalf("failure accounting = %+v", reported)
+			}
+		})
 	}
 }
+
+func timePointer(value time.Time) *time.Time { return &value }
 
 func TestWindowRoll(t *testing.T) {
 	now := time.Date(2026, 7, 16, 15, 1, 0, 0, time.UTC)

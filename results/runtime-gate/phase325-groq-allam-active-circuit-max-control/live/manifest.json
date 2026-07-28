@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "name": "phase325-groq-allam-active-circuit-max-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A trusted clock is 10:00:00 and a provider circuit is already open until 10:02:00. Classify three repeated-failure cases independently: trial 1 computes cooldown until 10:00:10 with no Retry-After; trial 2 computes cooldown until 10:03:00; trial 3 computes cooldown until 10:00:20 but has authenticated Retry-After until 10:04:00. An active deadline is a safety lower bound and may only stay equal or move later. Exact keys/types: resulting_deadlines=[\"10:02:00\",\"10:03:00\",\"10:04:00\"]; shortened_trials=[]; canonical_writes=0. Preserve array order. Do not choose routing, retry, sleeps, or writes.",
+  "expected_response": "{\"resulting_deadlines\":[\"10:02:00\",\"10:03:00\",\"10:04:00\"],\"shortened_trials\":[],\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "canonical_writes": 0,
+      "resulting_deadlines": [
+        "10:02:00",
+        "10:03:00",
+        "10:04:00"
+      ],
+      "shortened_trials": []
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
