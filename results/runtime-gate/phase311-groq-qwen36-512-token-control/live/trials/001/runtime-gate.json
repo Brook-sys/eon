@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "name": "phase311-groq-qwen36-512-token-control",
+  "started_at": "2026-07-28T07:06:09.948167037Z",
+  "completed_at": "2026-07-28T07:06:12.980477894Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-qwen36-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-qwen36",
+  "route_rejected": {
+    "groq-qwen36-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 2895471928,
+  "observed_input_tokens": 143,
+  "observed_output_tokens": 512,
+  "finish_reason": "length",
+  "response_bytes": 1988,
+  "response_sha256": "3b70441ec75122b2553ec2b333b53127366eac197665ecd2cb0889d6ad043877",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": false,
+    "overall_match": false,
+    "fields_checked": 0,
+    "fields_matched": 0,
+    "fields_mismatched": 0,
+    "fields_absent": 0,
+    "field_outcomes": null
+  },
+  "response_framing_class": "invalid_json",
+  "second_acquire_reason": "",
+  "operation_state": "READY",
+  "execution_error": "model recovery exhausted: decode exact_json completion: invalid character '\u003c' looking for beginning of value",
+  "usages": [
+    {
+      "resource": "model-binding:groq-qwen36",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T07:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T07:06:00Z",
+      "token_minute_count": 655,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:groq-qwen36-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T07:07:09.948167037Z",
+      "last_failure_at": "2026-07-28T07:06:09.948167037Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T07:06:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T07:06:00Z",
+      "token_minute_count": 655,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

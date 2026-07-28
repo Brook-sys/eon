@@ -6242,3 +6242,33 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Interpretation and decision.** The configured `qwen/qwen3-32b` deployment is not available through the current Groq endpoint/account, so no cognitive or framing conclusion is possible. The runner correctly distinguished deployment failure from semantic mismatch, opened the per-binding circuit, and ceased bounded work after the repeated 404. Do not retry this identifier blindly or enable it. Before another Qwen qualification, refresh the bounded `/v1/models` catalog and select an identifier actually advertised to this account; meanwhile rotate to another advertised Groq model/task.
 
 **Evidence and verification.** `results/runtime-gate/phase309-groq-qwen3-duplicate-evidence/live/` records two authenticated calls, two HTTP 404 failures, early stop, two durable reopens, and zero promotion. Manifest/report JSON decoding, artifact inspection, secret scan, focused/full tests, vet, and `git diff --check` are executed before commit.
+
+## Phase 310 — advertised Groq Qwen 3.6 enters runaway reasoning at 128 tokens (2026-07-28 04:05 -03)
+
+**Hypothesis and bounds.** Refreshing the authenticated Groq `/v1/models` catalog after Phase 309 exposed `qwen/qwen3.6-27b` as the available Qwen deployment, replacing the unavailable `qwen/qwen3-32b` assumption. The Phase 303 raw-JSON duplicate-evidence contract ran in three isolated SQLite trials, one external call each, 45 s timeout, 128 output-token ceiling, 5 s pacing, zero retries/fallback, seeded first binding circuit, strict integral JSON, order-sensitive structural oracle, zero canonical writes, and durable reopen.
+
+**Observed evidence.** All 3/3 authenticated provider calls completed, but each consumed the full 128 output tokens and ended `finish_reason=length`. Every completion began with non-JSON reasoning markup (`<`), so strict decoding rejected it before structural scoring; operations remained `READY`, all stores reopened durably, and no canonical state was promoted. Provider latency ranged from 584 ms to 2.194 s (p95/max 2.194 s), with 143 input + 128 output tokens per trial.
+
+**Interpretation and decision.** The refreshed identifier resolves the catalog/deployment failure from Phase 309, but not executable adherence: this Qwen deployment ignores the raw-JSON boundary while spending the complete budget on exposed reasoning. Preserve strict integral parsing, zero retry, and kernel-owned evidence validation. Do not strip reasoning markup, enable the model, or infer semantic failure before an integral object exists. A ceiling-only control is required to distinguish ordinary truncation from unbounded reasoning behavior.
+
+**Evidence.** `results/runtime-gate/phase310-groq-qwen36-27b-duplicate-evidence/live/` records three authenticated calls, three length/invalid-JSON failures, 813 observed tokens, three durable reopens, and zero promotion.
+
+## Phase 311 — 512-token ceiling does not bound Qwen 3.6 reasoning to an executable object (2026-07-28 04:10 -03)
+
+**Hypothesis and bounds.** Change only `max_output_tokens` from 128 to 512 for the advertised Groq `qwen/qwen3.6-27b`, preserving the Phase 310 prompt, oracle, three isolated trials, 45 s timeout, 5 s pacing, zero retries/fallback, seeded circuit, strict parsing, zero writes, and durable reopen.
+
+**Observed evidence.** All 3/3 calls again exhausted the ceiling with `finish_reason=length`, now at 512 output tokens plus 143 input tokens each. Every response remained non-integral JSON beginning with reasoning markup; no structural field could be credited. Provider latency was 1.252–2.895 s (p95/max 2.895 s). Every operation failed closed in `READY`, every SQLite store reopened, and canonical writes remained zero.
+
+**Interpretation and decision.** A 4× ceiling increase produced 4× output consumption without an executable object, unlike Allam 2's Phase 304→305 transition at 83 tokens. This rejects a simple small-budget explanation within 512 tokens and makes further batch expansion low-value. Preserve bounded ceilings and do not pay or wait through unconstrained reasoning merely to recover a short object. One final single-trial boundary at 1,024 tokens can characterize whether a correct object appears only after a long prefix; stop afterward regardless.
+
+**Evidence.** `results/runtime-gate/phase311-groq-qwen36-512-token-control/live/` records three authenticated completions, three 512-token length failures, three durable reopens, and zero promotion.
+
+## Phase 312 — 1,024-token Qwen boundary still fails strict framing (2026-07-28 04:15 -03)
+
+**Hypothesis and bounds.** Run one final ceiling-only boundary control at 1,024 output tokens on the unchanged Groq Qwen 3.6 duplicate-evidence contract. Exactly one isolated SQLite trial, one external call, 45 s timeout, zero retries/fallback, seeded circuit, strict integral parsing, zero canonical writes, and durable reopen bounded the additional exposure.
+
+**Observed evidence.** The authenticated call consumed 143 input + the full 1,024 output tokens, ended `finish_reason=length`, and returned 4,131 bytes. The sanitized framing classifier found the expected object only with forbidden prefix/suffix (`expected_with_prefix_and_suffix`); strict execution correctly rejected the leading `<`. Provider latency was 2.381 s. The operation remained `READY`, SQLite reopened durably, and no canonical state was promoted.
+
+**Interpretation and decision.** Even at 8× Phase 310's ceiling, this deployment did not produce an integral executable response. The embedded expected object shows semantic recognition but cannot substitute for protocol adherence; accepting it would require unsafe extraction/coercion from model reasoning. Classify `qwen/qwen3.6-27b` as incompatible with this strict contract under the measured interface, keep it disabled/evidence-only, and stop increasing the ceiling. Rotate model/provider and task next. The catalog refresh and live qualification together replace Phase 309's stale identifier assumption without granting routing preference.
+
+**Evidence and verification.** `results/runtime-gate/phase312-groq-qwen36-1024-token-boundary/live/` records one authenticated call, one bounded length/framing failure, durable reopen, and zero promotion. JSON decoding, artifact identity, focused/full tests, vet, secret scan, and `git diff --check` are executed before commit.

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase310-groq-qwen36-27b-duplicate-evidence",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T07:05:06.367968565Z"
+}

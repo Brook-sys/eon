@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase312-groq-qwen36-1024-token-boundary",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-28T07:06:57.383402532Z"
+}
