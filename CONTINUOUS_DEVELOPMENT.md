@@ -6068,3 +6068,15 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Decision and next experiment.** Keep disposition kernel-owned and use the persisted checkpoint for the next deliberate multi-trial crash/restart test. Add subprocess fault injection immediately after state publication, then prove restart neither repeats the completed call nor starts the next call before the durable deadline.
 
 **Evidence and verification.** `results/runtime-gate/phase292-groq-llama31-resumable-pacing-smoke/`. Focused CLI/gatecampaign tests, full `go test ./...`, full `go vet ./...`, JSON decode, sanitized receipt inspection and `git diff --check` passed.
+
+## Phase 293 — crash-after-checkpoint restart preserves call uniqueness and pacing (2026-07-27 22:24 -03)
+
+**Hypothesis.** A process crash immediately after atomically publishing the first trial's pacing checkpoint must not duplicate that completed provider call on restart, and the resumed second trial must not start before the persisted deadline.
+
+**Implemented.** Added opt-in subprocess fault injection through `MOTOR_AUTONOMO_FAULT_AFTER_PACING_STATE_TRIAL`, executed only immediately after successful atomic state publication and exiting with a distinctive status. A subprocess regression proves the crash point, while a virtual-clock regression reconstructs one durable completed report, reloads the checkpoint, and proves the next trial remains blocked until `next_trial_not_before`. The hook is inert unless explicitly enabled.
+
+**Live bounded campaign.** Groq `llama-3.1-8b-instant`; two isolated inconsistent-pair trials; one call per trial; 10 s persisted inter-trial delay; 45 s timeout; 128 output-token ceiling; zero retries/fallback; NIM circuit-open; strict integral JSON; zero canonical writes. The first process exited immediately after checkpoint publication. Restart loaded trial 1 rather than repeating it, waited until the durable deadline, and issued only trial 2. Both calls succeeded, both responses matched all 5/5 protected fields structurally, both stores reopened durably, and no canonical state was promoted. Trial 1 completed at 01:24:21.884Z; trial 2 completed at 01:24:32.402Z, consistent with the 10 s not-before boundary plus provider latency. The aggregate records exactly two calls—not three—for two completed trials.
+
+**Decision.** The checkpoint now has executable crash/restart evidence for the post-publication boundary: completed calls are not duplicated and pacing survives restart. This does not yet cover a crash after the provider call but before durable report/checkpoint publication; that ambiguity requires receipt-based reconciliation before any automatic replay. Preserve zero retry and fail closed at that earlier boundary.
+
+**Evidence and verification.** `results/runtime-gate/phase293-groq-llama31-crash-resume-pacing/live/`. Focused tests, CLI race test, full `go test ./...`, full `go vet ./...`, receipt/state inspection, `git diff --check`, and secret scan passed.

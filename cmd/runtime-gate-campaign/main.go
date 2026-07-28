@@ -21,6 +21,8 @@ const maxManifestBytes = 1 << 20
 
 const pacingStateSchemaVersion = 1
 
+const faultAfterPacingStateEnvironment = "MOTOR_AUTONOMO_FAULT_AFTER_PACING_STATE_TRIAL"
+
 type pacingState struct {
 	SchemaVersion      int       `json:"schema_version"`
 	CampaignName       string    `json:"campaign_name"`
@@ -110,6 +112,7 @@ func run() error {
 		if err := writePacingState(statePath, state); err != nil {
 			return fmt.Errorf("persist pacing after trial %d: %w", trial, err)
 		}
+		crashAfterPacingStatePublication(trial)
 		if err != nil && *trials == 1 {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
@@ -165,6 +168,12 @@ func loadPacingState(path, outputDirectory, campaign string, planned int) (pacin
 		reports = append(reports, report)
 	}
 	return state, reports, nil
+}
+
+func crashAfterPacingStatePublication(trial int) {
+	if os.Getenv(faultAfterPacingStateEnvironment) == fmt.Sprint(trial) {
+		os.Exit(86)
+	}
 }
 
 func writePacingState(path string, state pacingState) error {
