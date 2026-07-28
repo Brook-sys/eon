@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase308-nim-llama31-70b-duplicate-variance",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 0,
+  "durable_reopens": 3,
+  "expected_matches": 3,
+  "json_valid": 3,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 477,
+  "output_tokens": 93,
+  "latency_p50": 13812893916,
+  "latency_p95": 27813520620,
+  "latency_max": 27813520620,
+  "selected_bindings": {
+    "nim-llama31-70b": 3
+  },
+  "finish_reasons": {
+    "stop": 3
+  },
+  "framing_classes": {
+    "exact": 3
+  },
+  "second_acquire_reasons": {
+    "resource_resource_rate_limit": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}

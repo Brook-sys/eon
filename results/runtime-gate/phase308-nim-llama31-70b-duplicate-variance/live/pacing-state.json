@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase308-nim-llama31-70b-duplicate-variance",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T06:28:37.210228732Z"
+}
