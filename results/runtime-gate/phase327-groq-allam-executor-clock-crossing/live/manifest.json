@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "name": "phase327-groq-allam-executor-clock-crossing",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A deterministic executor reserves estimated_tokens=100 at 10:00:30. During the provider call its injected clock advances to 10:02:30 and authenticated usage reports input_tokens=120 and output_tokens=80. Reconciliation normalizes the expired minute bucket before accounting observed usage. Exact keys/types: completion_minute_count=200; completion_window_start=\"10:02\"; stale_estimate_refunded=false; in_flight_after_release=0; canonical_writes=0. Do not choose clocks, quotas, routing, retries, or writes.",
+  "expected_response": "{\"completion_minute_count\":200,\"completion_window_start\":\"10:02\",\"stale_estimate_refunded\":false,\"in_flight_after_release\":0,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "canonical_writes": 0,
+      "completion_minute_count": 200,
+      "completion_window_start": "10:02",
+      "in_flight_after_release": 0,
+      "stale_estimate_refunded": false
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}

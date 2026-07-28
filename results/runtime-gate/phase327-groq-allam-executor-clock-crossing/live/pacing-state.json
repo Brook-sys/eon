@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase327-groq-allam-executor-clock-crossing",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-28T16:42:44.662852746Z"
+}

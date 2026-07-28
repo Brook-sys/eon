@@ -53,6 +53,82 @@ func (p *crashAfterReservedProvider) Complete(context.Context, port.CompletionRe
 	return port.CompletionResult{}, errors.New("simulated process loss after request start")
 }
 
+type clockCrossingProvider struct {
+	clock  *source.ManualClock
+	result port.CompletionResult
+}
+
+func (p clockCrossingProvider) ID() string { return "clock-crossing" }
+func (p clockCrossingProvider) Kind() domain.ProviderKind {
+	return domain.ProviderKindOpenAICompatible
+}
+func (p clockCrossingProvider) Profile() domain.ProviderProfile {
+	return domain.ProviderProfile{MaxOutputTokens: 512, MaxContextTokens: 8000}
+}
+func (p clockCrossingProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	if err := p.clock.Advance(2 * time.Minute); err != nil {
+		return port.CompletionResult{}, err
+	}
+	return p.result, nil
+}
+
+func TestModelExecutorReconcilesObservedTokensIntoCompletionMinute(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 28, 10, 0, 30, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	spec := modelTestSpec()
+	spec.MaxOutputTokens = 100
+	seedModelAgendaWithSpec(t, store, now, spec)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_clock_crossing", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_clock_crossing", PayloadRef: "payload_clock_crossing"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:clock-crossing", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider := clockCrossingProvider{clock: clock, result: port.CompletionResult{
+		Text: string(body), Model: "fixture", InputTokens: 120, OutputTokens: 80, FinishReason: port.CompletionFinishStop,
+	}}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@clock-crossing"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@clock-crossing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth.Limits[DefaultModelCompleteResource] = domain.ResourceLimit{Resource: DefaultModelCompleteResource, MaxTokensPerMinute: 1000}
+	executor := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor, Authorizer: auth,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@clock-crossing", LeaseTTL: time.Minute,
+	}
+	result, err := executor.Execute(ctx, "operation_model")
+	if err != nil || !result.Completed {
+		t.Fatalf("execute result=%+v err=%v", result, err)
+	}
+	var usage domain.ResourceUsage
+	if err := store.View(ctx, func(r port.Reader) error {
+		var readErr error
+		usage, readErr = r.ResourceUsage(DefaultModelCompleteResource)
+		return readErr
+	}); err != nil {
+		t.Fatal(err)
+	}
+	wantWindow := now.Add(2 * time.Minute).Truncate(time.Minute)
+	if !usage.TokenMinuteWindowStart.Equal(wantWindow) || usage.TokenMinuteCount != 200 || usage.InFlight != 0 {
+		t.Fatalf("completion-minute usage=%+v, want window=%v tokens=200 in_flight=0", usage, wantWindow)
+	}
+}
+
 func TestModelExecutorBurnsUnresolvedReservationAcrossRedispatch(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 7, 23, 4, 40, 0, 0, time.UTC)
