@@ -223,6 +223,181 @@ func TestNewResourceBudgetFailure(t *testing.T) {
 	}
 }
 
+func TestCooldownEscalation(t *testing.T) {
+	limit := ResourceLimit{
+		Resource:         "model:test",
+		MaxConcurrent:    4,
+		FailureThreshold: 2,
+		CooldownBase:     2 * time.Second,
+		CooldownMax:      30 * time.Second,
+	}
+
+	tests := []struct {
+		name     string
+		failures int
+		want     time.Duration
+	}{
+		{"below_threshold", 1, 0},
+		{"at_threshold", 2, 2 * time.Second},        // shift=0 → 1×base
+		{"threshold_plus_1", 3, 4 * time.Second},    // shift=1 → 2×base
+		{"threshold_plus_2", 4, 8 * time.Second},    // shift=2 → 4×base
+		{"threshold_plus_3", 5, 16 * time.Second},   // shift=3 → 8×base
+		{"threshold_plus_4", 6, 30 * time.Second},   // shift=4 → 32s > 30s cap → cap
+		{"threshold_plus_10", 12, 30 * time.Second}, // shift=10 → well above cap
+		{"extreme_failures", 20, 30 * time.Second},  // shift=18 capped at 16 → still above max
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cooldownFor(tc.failures, limit)
+			if tc.want == 0 {
+				// Below threshold: cooldownFor is not called by ReportFailure,
+				// but the function itself returns base at shift=0.
+				// Just verify it does not panic.
+				if got < 0 {
+					t.Fatalf("negative cooldown: %v", got)
+				}
+				return
+			}
+			if got != tc.want {
+				t.Fatalf("cooldownFor(%d) = %v, want %v", tc.failures, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCircuitOpenCloseBoundary(t *testing.T) {
+	now := time.Date(2026, 7, 28, 8, 0, 0, 0, time.UTC)
+	limit := ResourceLimit{
+		Resource:         "model:test",
+		MaxConcurrent:    4,
+		MaxPerMinute:     60,
+		FailureThreshold: 1,
+		CooldownBase:     10 * time.Second,
+		CooldownMax:      10 * time.Second,
+	}
+	cost := ResourceCost{Slots: 1, Calls: 1}
+
+	// Open circuit by reporting a failure at threshold.
+	usage := ResourceUsage{Resource: "model:test", InFlight: 1}
+	reported, err := ReportFailure(usage, limit, cost, nil, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reported.CircuitOpenUntil == nil {
+		t.Fatal("expected circuit open")
+	}
+	expectedUntil := now.Add(10 * time.Second)
+	if !reported.CircuitOpenUntil.Equal(expectedUntil) {
+		t.Fatalf("circuit until = %v, want %v", *reported.CircuitOpenUntil, expectedUntil)
+	}
+
+	// 1 nanosecond before the boundary: denied.
+	justBefore := expectedUntil.Add(-time.Nanosecond)
+	res, err := Acquire(limit, reported, cost, 0, justBefore)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Allowed {
+		t.Fatal("expected deny 1ns before circuit opens")
+	}
+	if res.FailureCode != "DEPENDENCY_CIRCUIT_OPEN" {
+		t.Fatalf("code = %s", res.FailureCode)
+	}
+
+	// Exactly at the boundary: allowed.
+	res, err = Acquire(limit, reported, cost, 0, expectedUntil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Allowed {
+		t.Fatalf("expected allow at exact circuit boundary, got %+v", res)
+	}
+
+	// 1 nanosecond after: allowed.
+	res, err = Acquire(limit, reported, cost, 0, expectedUntil.Add(time.Nanosecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Allowed {
+		t.Fatal("expected allow after circuit opens")
+	}
+}
+
+func TestSuccessClearsCircuitOpenUntil(t *testing.T) {
+	now := time.Date(2026, 7, 28, 8, 0, 0, 0, time.UTC)
+	openUntil := now.Add(time.Minute)
+	usage := ResourceUsage{
+		Resource:            "model:test",
+		InFlight:            1,
+		ConsecutiveFailures: 5,
+		CircuitOpenUntil:    &openUntil,
+	}
+	cost := ResourceCost{Slots: 1, Calls: 1}
+
+	result, err := ReportSuccess(usage, cost, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ConsecutiveFailures != 0 {
+		t.Fatalf("consecutive failures = %d, want 0", result.ConsecutiveFailures)
+	}
+	if result.CircuitOpenUntil != nil {
+		t.Fatalf("circuit should be nil after success, got %v", *result.CircuitOpenUntil)
+	}
+	if result.InFlight != 0 {
+		t.Fatalf("in-flight = %d, want 0", result.InFlight)
+	}
+}
+
+func TestReportFailureIgnoresExpiredRetryAfter(t *testing.T) {
+	now := time.Date(2026, 7, 28, 8, 0, 0, 0, time.UTC)
+	limit := ResourceLimit{
+		Resource:         "model:test",
+		MaxConcurrent:    4,
+		FailureThreshold: 5, // high threshold → no computed cooldown at streak=1
+		CooldownBase:     time.Second,
+		CooldownMax:      time.Minute,
+	}
+	cost := ResourceCost{Slots: 1, Calls: 1}
+
+	// Retry-After in the past → should not set CircuitOpenUntil.
+	past := now.Add(-time.Second)
+	usage := ResourceUsage{Resource: "model:test", InFlight: 1}
+	reported, err := ReportFailure(usage, limit, cost, &past, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reported.CircuitOpenUntil != nil {
+		t.Fatalf("expired retry-after should not open circuit, got %v", *reported.CircuitOpenUntil)
+	}
+
+	// Retry-After exactly at now → should not set CircuitOpenUntil.
+	exactlyNow := now
+	usage = ResourceUsage{Resource: "model:test", InFlight: 1}
+	reported, err = ReportFailure(usage, limit, cost, &exactlyNow, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reported.CircuitOpenUntil != nil {
+		t.Fatalf("exactly-now retry-after should not open circuit, got %v", *reported.CircuitOpenUntil)
+	}
+
+	// Retry-After 1ns in the future → should set CircuitOpenUntil.
+	justFuture := now.Add(time.Nanosecond)
+	usage = ResourceUsage{Resource: "model:test", InFlight: 1}
+	reported, err = ReportFailure(usage, limit, cost, &justFuture, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reported.CircuitOpenUntil == nil {
+		t.Fatal("future retry-after should open circuit")
+	}
+	if !reported.CircuitOpenUntil.Equal(justFuture.UTC()) {
+		t.Fatalf("circuit until = %v, want %v", *reported.CircuitOpenUntil, justFuture.UTC())
+	}
+}
+
 func TestWindowRoll(t *testing.T) {
 	now := time.Date(2026, 7, 16, 15, 1, 0, 0, time.UTC)
 	limit := ResourceLimit{Resource: "r", MaxPerMinute: 2}

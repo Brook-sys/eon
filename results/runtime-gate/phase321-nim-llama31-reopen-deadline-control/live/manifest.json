@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "name": "phase321-nim-llama31-reopen-deadline-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A trusted clock persisted a provider circuit deadline 90 seconds in the future, then the runtime crashed and reopened its durable store 30 seconds later. The persisted deadline is unchanged and remains 60 seconds in the future. Classify two scheduler checks: trial 1 occurs immediately after reopen and must wait; trial 2 occurs exactly at the persisted deadline and may acquire. Exact keys/types: wait_trials=[1]; acquire_trials=[2]; replay_provider_call=false; canonical_writes=0. Preserve array order. Do not choose a new deadline, retry, route, or write.",
+  "expected_response": "{\"wait_trials\":[1],\"acquire_trials\":[2],\"replay_provider_call\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "acquire_trials": [
+        2
+      ],
+      "canonical_writes": 0,
+      "replay_provider_call": false,
+      "wait_trials": [
+        1
+      ]
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "nim-seeded",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-70b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}

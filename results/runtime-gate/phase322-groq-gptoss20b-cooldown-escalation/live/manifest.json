@@ -1,0 +1,182 @@
+{
+  "phase": 322,
+  "task": "cooldown_escalation_classification",
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "trials": 3,
+  "oracle_fields": [
+    "circuit_open",
+    "cooldown_seconds"
+  ],
+  "results": [
+    {
+      "trial": 1,
+      "model": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 203.2,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "trial": 2,
+      "model": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 99.1,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "trial": 3,
+      "model": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 101.6,
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ],
+  "timestamp": "2026-07-28T14:24:51+0300",
+  "fallback_model": "llama-3.1-8b-instant",
+  "fallback_results": [
+    {
+      "trial": 1,
+      "model": "llama-3.1-8b-instant",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 106.4,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "trial": 2,
+      "model": "llama-3.1-8b-instant",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 110.9,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "trial": 3,
+      "model": "llama-3.1-8b-instant",
+      "provider": "groq",
+      "status": 403,
+      "latency_ms": 135.2,
+      "error": "HTTP Error 403: Forbidden"
+    }
+  ],
+  "fallback_timestamp": "2026-07-28T14:25:25+0300",
+  "live_results": [
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "status": 403,
+      "latency_ms": 105.7,
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "provider": "nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "status": 200,
+      "latency_ms": 6953.3,
+      "content": "{\"scenarios\": [\n{\"id\": 1, \"circuit_open\": false, \"cooldown_seconds\": null},\n{\"id\": 2, \"circuit_open\": true, \"cooldown_seconds\": 2},\n{\"id\": 3, \"circuit_open\": true, \"cooldown_seconds\": 4},\n{\"id\": 4, \"circuit_open\": true, \"cooldown_seconds\": 16},\n{\"id\": 5, \"circuit_open\": true, \"cooldown_seconds\": 30},\n{\"id\": 6, \"circuit_open\": false, \"cooldown_seconds\": null}\n]}",
+      "usage": {
+        "prompt_tokens": 246,
+        "completion_tokens": 125,
+        "total_tokens": 371
+      },
+      "finish_reason": "stop",
+      "json_valid": true,
+      "structural_matches": "6/6",
+      "structural_pass": true
+    }
+  ],
+  "live_timestamp": "2026-07-28T14:26:32+0300",
+  "live_campaign": [
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "status": 200,
+      "latency_ms": 565.4,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 289,
+        "completion_tokens": 174
+      },
+      "content": "{\"scenarios\": [\n  {\"id\": 1, \"circuit_open\": true, \"cooldown_seconds\": 2},\n  {\"id\": 2, \"circuit_open\": true, \"cooldown_seconds\": 4},\n  {\"id\": 3, \"circuit_open\": true, \"cooldown_seconds\": 8},\n  {\"id\": 4, \"circuit_open\": true, \"cooldown_seconds\": 16},\n  {\"id\": 5, \"circuit_open\": true, \"cooldown_seconds\": 32},\n  {\"id\": 6, \"circuit_open\": false, \"cooldown_seconds\": 2}\n]} ",
+      "json_valid": true,
+      "structural_matches": "1/6",
+      "structural_pass": false,
+      "mismatches": [
+        {
+          "scenario": 1,
+          "exp": [
+            false,
+            null
+          ],
+          "got": [
+            true,
+            2
+          ]
+        },
+        {
+          "scenario": 2,
+          "exp": [
+            true,
+            2
+          ],
+          "got": [
+            true,
+            4
+          ]
+        },
+        {
+          "scenario": 3,
+          "exp": [
+            true,
+            4
+          ],
+          "got": [
+            true,
+            8
+          ]
+        },
+        {
+          "scenario": 5,
+          "exp": [
+            true,
+            30
+          ],
+          "got": [
+            true,
+            32
+          ]
+        },
+        {
+          "scenario": 6,
+          "exp": [
+            false,
+            null
+          ],
+          "got": [
+            false,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "status": 200,
+      "latency_ms": 668.7,
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 252,
+        "completion_tokens": 125
+      },
+      "content": "{\"scenarios\": [\n{\"id\": 1, \"circuit_open\": false, \"cooldown_seconds\": null},\n{\"id\": 2, \"circuit_open\": true, \"cooldown_seconds\": 2},\n{\"id\": 3, \"circuit_open\": true, \"cooldown_seconds\": 4},\n{\"id\": 4, \"circuit_open\": true, \"cooldown_seconds\": 16},\n{\"id\": 5, \"circuit_open\": true, \"cooldown_seconds\": 30},\n{\"id\": 6, \"circuit_open\": false, \"cooldown_seconds\": null}\n]}",
+      "json_valid": true,
+      "structural_matches": "6/6",
+      "structural_pass": true
+    }
+  ],
+  "live_campaign_timestamp": "2026-07-28T14:28:07+0300"
+}
