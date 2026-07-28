@@ -136,7 +136,8 @@ func TestAcquireCircuitAndReport(t *testing.T) {
 
 func TestReconcileObservedTokens(t *testing.T) {
 	now := time.Date(2026, 7, 16, 15, 0, 0, 0, time.UTC)
-	usage := ResourceUsage{Resource: "model:local", TokenMinuteCount: 1000}
+	minuteStart := now.Truncate(time.Minute)
+	usage := ResourceUsage{Resource: "model:local", TokenMinuteWindowStart: minuteStart, TokenMinuteCount: 1000}
 
 	// Estimate > Observed (e.g. fast early exit)
 	next, err := ReconcileObservedTokens(usage, 500, 100, now)
@@ -461,5 +462,192 @@ func TestWindowRoll(t *testing.T) {
 	}
 	if !res.Allowed || res.Usage.MinuteCount != 1 {
 		t.Fatalf("rolled window = %+v", res)
+	}
+}
+
+func TestDayWindowRoll(t *testing.T) {
+	now := time.Date(2026, 7, 17, 0, 0, 30, 0, time.UTC)
+	limit := ResourceLimit{Resource: "r", MaxPerDay: 5}
+	// Yesterday's day window was exhausted; new day should reset.
+	usage := ResourceUsage{
+		Resource:       "r",
+		DayWindowStart: time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC),
+		DayCount:       5,
+	}
+	res, err := Acquire(limit, usage, ResourceCost{Calls: 1}, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Allowed || res.Usage.DayCount != 1 {
+		t.Fatalf("day window should have rolled: allowed=%v DayCount=%d", res.Allowed, res.Usage.DayCount)
+	}
+	expectedDayStart := time.Date(2026, 7, 17, 0, 0, 0, 0, time.UTC)
+	if !res.Usage.DayWindowStart.Equal(expectedDayStart) {
+		t.Fatalf("DayWindowStart = %v, want %v", res.Usage.DayWindowStart, expectedDayStart)
+	}
+
+	// Same day, already exhausted: must deny.
+	usage2 := ResourceUsage{
+		Resource:       "r",
+		DayWindowStart: expectedDayStart,
+		DayCount:       5,
+	}
+	res2, err := Acquire(limit, usage2, ResourceCost{Calls: 1}, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res2.Allowed || res2.FailureCode != "RESOURCE_DAILY_QUOTA" {
+		t.Fatalf("same-day exhausted should deny: %+v", res2)
+	}
+	if res2.WaitUntil == nil {
+		t.Fatal("expected WaitUntil for daily quota")
+	}
+	nextDay := expectedDayStart.Add(24 * time.Hour)
+	if !res2.WaitUntil.Equal(nextDay) {
+		t.Fatalf("WaitUntil = %v, want %v", res2.WaitUntil, nextDay)
+	}
+}
+
+func TestTokenPerMinuteQuota(t *testing.T) {
+	now := time.Date(2026, 7, 28, 11, 0, 30, 0, time.UTC)
+	minuteStart := now.Truncate(time.Minute)
+	limit := ResourceLimit{Resource: "model:test", MaxTokensPerMinute: 500}
+
+	tests := []struct {
+		name           string
+		usage          ResourceUsage
+		cost           ResourceCost
+		wantAllowed    bool
+		wantCode       string
+		wantTokenCount int
+	}{
+		{
+			name:           "within budget",
+			usage:          ResourceUsage{Resource: "model:test", TokenMinuteWindowStart: minuteStart, TokenMinuteCount: 300},
+			cost:           ResourceCost{Slots: 1, Tokens: 100},
+			wantAllowed:    true,
+			wantTokenCount: 400,
+		},
+		{
+			name:           "exact ceiling",
+			usage:          ResourceUsage{Resource: "model:test", TokenMinuteWindowStart: minuteStart, TokenMinuteCount: 400},
+			cost:           ResourceCost{Slots: 1, Tokens: 100},
+			wantAllowed:    true,
+			wantTokenCount: 500,
+		},
+		{
+			name:        "over ceiling",
+			usage:       ResourceUsage{Resource: "model:test", TokenMinuteWindowStart: minuteStart, TokenMinuteCount: 450},
+			cost:        ResourceCost{Slots: 1, Tokens: 100},
+			wantAllowed: false,
+			wantCode:    "RESOURCE_TOKEN_RATE",
+		},
+		{
+			name:           "stale token window rolls",
+			usage:          ResourceUsage{Resource: "model:test", TokenMinuteWindowStart: minuteStart.Add(-2 * time.Minute), TokenMinuteCount: 500},
+			cost:           ResourceCost{Slots: 1, Tokens: 100},
+			wantAllowed:    true,
+			wantTokenCount: 100,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := Acquire(limit, tt.usage, tt.cost, 0, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Allowed != tt.wantAllowed {
+				t.Fatalf("Allowed = %v, want %v (code=%s)", res.Allowed, tt.wantAllowed, res.FailureCode)
+			}
+			if !tt.wantAllowed {
+				if res.FailureCode != tt.wantCode {
+					t.Fatalf("FailureCode = %s, want %s", res.FailureCode, tt.wantCode)
+				}
+				if res.WaitUntil == nil {
+					t.Fatal("expected WaitUntil for token rate limit")
+				}
+				return
+			}
+			if res.Usage.TokenMinuteCount != tt.wantTokenCount {
+				t.Fatalf("TokenMinuteCount = %d, want %d", res.Usage.TokenMinuteCount, tt.wantTokenCount)
+			}
+		})
+	}
+}
+
+func TestReconcileObservedTokensBoundary(t *testing.T) {
+	now := time.Date(2026, 7, 28, 11, 0, 0, 0, time.UTC)
+	minuteStart := now.Truncate(time.Minute)
+	limit := ResourceLimit{Resource: "model:test", MaxTokensPerMinute: 500}
+
+	// Reconcile pushes usage above ceiling → next acquire must deny.
+	usage := ResourceUsage{
+		Resource:               "model:test",
+		TokenMinuteWindowStart: minuteStart,
+		TokenMinuteCount:       400,
+	}
+	reconciled, err := ReconcileObservedTokens(usage, 100, 250, now) // 400 - 100 + 250 = 550
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reconciled.TokenMinuteCount != 550 {
+		t.Fatalf("TokenMinuteCount after reconcile = %d, want 550", reconciled.TokenMinuteCount)
+	}
+	res, err := Acquire(limit, reconciled, ResourceCost{Slots: 1, Tokens: 1}, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Allowed || res.FailureCode != "RESOURCE_TOKEN_RATE" {
+		t.Fatalf("should deny after reconcile pushed above ceiling: %+v", res)
+	}
+
+	// Observed == 0 is a no-op.
+	usage2 := ResourceUsage{Resource: "model:test", TokenMinuteCount: 300}
+	noop, err := ReconcileObservedTokens(usage2, 100, 0, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if noop.TokenMinuteCount != 300 {
+		t.Fatalf("observed=0 should be no-op: got %d", noop.TokenMinuteCount)
+	}
+
+	// Estimated == observed is a no-op.
+	noop2, err := ReconcileObservedTokens(usage2, 100, 100, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if noop2.TokenMinuteCount != 300 {
+		t.Fatalf("estimated==observed should be no-op: got %d", noop2.TokenMinuteCount)
+	}
+
+	// Window rolled between acquire and reconcile: estimated tokens must
+	// not be subtracted from a stale (already-reset) counter.
+	staleUsage := ResourceUsage{
+		Resource:               "model:test",
+		TokenMinuteWindowStart: minuteStart.Add(-2 * time.Minute),
+		TokenMinuteCount:       450,
+	}
+	rolled, err := ReconcileObservedTokens(staleUsage, 100, 200, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rolled.TokenMinuteCount != 200 {
+		t.Fatalf("rolled window reconcile should add only observed: got %d, want 200", rolled.TokenMinuteCount)
+	}
+	if !rolled.TokenMinuteWindowStart.Equal(minuteStart) {
+		t.Fatalf("rolled window start = %v, want %v", rolled.TokenMinuteWindowStart, minuteStart)
+	}
+
+	// Equal estimate and observation still belongs to the completion minute
+	// after a window roll; the equality fast path must not retain stale usage.
+	rolledEqual, err := ReconcileObservedTokens(staleUsage, 200, 200, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rolledEqual.TokenMinuteCount != 200 {
+		t.Fatalf("equal reconcile after roll = %d, want 200", rolledEqual.TokenMinuteCount)
+	}
+	if !rolledEqual.TokenMinuteWindowStart.Equal(minuteStart) {
+		t.Fatalf("equal reconcile window start = %v, want %v", rolledEqual.TokenMinuteWindowStart, minuteStart)
 	}
 }

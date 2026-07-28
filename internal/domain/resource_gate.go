@@ -280,11 +280,23 @@ func ReconcileObservedTokens(usage ResourceUsage, estimated, observed int, now t
 	if now.IsZero() {
 		return usage, errors.New("token reconciliation requires now")
 	}
-	if observed == 0 || estimated == observed {
+	if observed == 0 {
 		return usage, nil
 	}
-	next := usage
-	next.TokenMinuteCount = saturatingSubInt(next.TokenMinuteCount, estimated)
+	now = now.UTC()
+	activeWindow := !usage.TokenMinuteWindowStart.IsZero() && usage.TokenMinuteWindowStart.Equal(now.Truncate(time.Minute))
+	if usage.TokenMinuteWindowStart.IsZero() && estimated == observed {
+		// Preserve the legacy/no-window no-op contract: without a persisted
+		// bucket there is no evidence that reconciliation crossed a boundary.
+		return usage, nil
+	}
+	next := normalizeUsageWindows(usage, usage.Resource, now)
+	if activeWindow {
+		if estimated == observed {
+			return next, nil
+		}
+		next.TokenMinuteCount = saturatingSubInt(next.TokenMinuteCount, estimated)
+	}
 	next.TokenMinuteCount += observed
 	return next, nil
 }
