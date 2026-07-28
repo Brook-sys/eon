@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -239,7 +240,8 @@ func TestUnsettledReceiptAlertSurfaces(t *testing.T) {
 	}
 }
 
-func TestBuildAlertsReturnsUnsettledReceiptQueryError(t *testing.T) {
+func newReceiptFailProjector(t *testing.T) (*inspect.Projector, domain.MissionID, error) {
+	t.Helper()
 	store := memory.New()
 	now := time.Date(2026, 7, 28, 17, 0, 0, 0, time.UTC)
 	mission := domain.MissionRevision{
@@ -262,7 +264,43 @@ func TestBuildAlertsReturnsUnsettledReceiptQueryError(t *testing.T) {
 		t.Fatal(err)
 	}
 	projector.Clock = func() time.Time { return now }
-	if _, err := projector.BuildAlerts(context.Background(), mission.MissionID); !errors.Is(err, want) {
+	return projector, mission.MissionID, want
+}
+
+func TestBuildAlertsReturnsUnsettledReceiptQueryError(t *testing.T) {
+	projector, missionID, want := newReceiptFailProjector(t)
+	if _, err := projector.BuildAlerts(context.Background(), missionID); !errors.Is(err, want) {
 		t.Fatalf("BuildAlerts error = %v, want %v", err, want)
+	}
+}
+
+func TestAlertsHTTPFailsClosedWhenReceiptQueryFails(t *testing.T) {
+	projector, missionID, _ := newReceiptFailProjector(t)
+	api, err := inspect.NewAPI(projector)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/alerts?mission_id="+string(missionID), nil)
+	resp := httptest.NewRecorder()
+	api.Handler().ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusInternalServerError {
+		t.Fatalf("alerts status = %d, want %d; body=%s", resp.Code, http.StatusInternalServerError, resp.Body.String())
+	}
+	var body struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Error.Code != "internal_error" || body.Error.Message != "inspection failed" {
+		t.Fatalf("alerts error = %#v", body.Error)
+	}
+	if strings.Contains(resp.Body.String(), "receipt projection unavailable") {
+		t.Fatalf("alerts response leaked internal storage error: %s", resp.Body.String())
 	}
 }

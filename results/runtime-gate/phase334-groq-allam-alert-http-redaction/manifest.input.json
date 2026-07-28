@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "phase334-groq-allam-alert-http-redaction",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A read-only alerts HTTP endpoint queries durable unsettled completion receipts. Health and overview reads succeed, but the receipt query fails with internal detail 'receipt projection unavailable'. Classify the required HTTP boundary without choosing recovery or writes. Exact keys/types: status=500; stable_code=\"internal_error\"; generic_message=\"inspection failed\"; internal_detail_leaked=false; healthy_zero_snapshot=false; canonical_writes=0.",
+  "expected_response": "{\"status\":500,\"stable_code\":\"internal_error\",\"generic_message\":\"inspection failed\",\"internal_detail_leaked\":false,\"healthy_zero_snapshot\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "status": 500,
+      "stable_code": "internal_error",
+      "generic_message": "inspection failed",
+      "internal_detail_leaked": false,
+      "healthy_zero_snapshot": false,
+      "canonical_writes": 0
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}
