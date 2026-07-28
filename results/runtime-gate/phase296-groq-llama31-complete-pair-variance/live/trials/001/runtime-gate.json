@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "name": "phase280-groq-llama31-complete-evidence-pair-control",
+  "started_at": "2026-07-28T02:22:45.345662043Z",
+  "completed_at": "2026-07-28T02:22:45.889241377Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-llama31-8b-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-llama31-8b",
+  "route_rejected": {
+    "groq-llama31-8b-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 394010419,
+  "observed_input_tokens": 189,
+  "observed_output_tokens": 48,
+  "finish_reason": "stop",
+  "response_bytes": 163,
+  "response_sha256": "0ca7e16bf26aea3e32960df5fc34782da3711d7f74565e2f225ba0378a3cdd65",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": true,
+    "overall_match": false,
+    "fields_checked": 4,
+    "fields_matched": 3,
+    "fields_mismatched": 1,
+    "fields_absent": 0,
+    "field_outcomes": [
+      {
+        "field": "available_evidence",
+        "status": "type_mismatch"
+      },
+      {
+        "field": "canonical_writes",
+        "status": "matched"
+      },
+      {
+        "field": "complete_pair",
+        "status": "matched"
+      },
+      {
+        "field": "risk",
+        "status": "matched"
+      }
+    ]
+  },
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-28T02:23:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-llama31-8b",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T02:22:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T02:22:00Z",
+      "token_minute_count": 237,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:groq-llama31-8b-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T02:23:45.345662043Z",
+      "last_failure_at": "2026-07-28T02:22:45.345662043Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T02:22:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T02:22:00Z",
+      "token_minute_count": 237,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase280-groq-llama31-complete-evidence-pair-control",
+  "planned_trials": 5,
+  "completed_trials": 5,
+  "next_trial_not_before": "2026-07-28T02:22:48.368912188Z"
+}
