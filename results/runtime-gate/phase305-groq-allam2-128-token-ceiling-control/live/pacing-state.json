@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase305-groq-allam2-128-token-ceiling-control",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T05:22:47.779476066Z"
+}
