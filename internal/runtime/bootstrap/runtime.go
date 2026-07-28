@@ -602,38 +602,39 @@ func (rt *Runtime) Close(ctx context.Context) error {
 
 // CycleResult summarizes one control-loop iteration for tests and diagnostics.
 type CycleResult struct {
-	CommandsProcessed            int
-	EventsProcessed              int
-	MemoriesCompacted            int
-	RemindersScheduled           int
-	DeliveriesProcessed          int
-	TelegramFetched              int
-	TelegramAccepted             int
-	TelegramRejected             int
-	TelegramDuplicate            int
-	LeasesReconciled             int
-	SubagentsReconciled          int
-	SubagentDispatches           int
-	SubagentEffectsReconciled    int
-	RemoteSubagentsExecuted      int
-	SubagentStatusesDispatched   int
-	SubagentStatusesApplied      int
-	SubagentIngressRetryAttempts int
-	SubagentIngressRetries       int
-	SubagentIngressConflicts     int
-	SubagentIngressExhaustions   int
-	SubagentIngressRetrySleep    time.Duration
-	SubagentIngressRecoveryDelay time.Duration
-	SchedulerRan                 bool
-	SchedulerSteps               int
-	SchedulerKind                kernel.DecisionKind
-	OperationsExecuted           int
-	OperationsSkipped            int
-	DispatchBudgetHit            bool
-	CycleBudgetHit               bool
-	CadenceVersion               string
-	Worked                       bool
-	Stopping                     bool
+	CommandsProcessed                 int
+	EventsProcessed                   int
+	MemoriesCompacted                 int
+	RemindersScheduled                int
+	DeliveriesProcessed               int
+	TelegramFetched                   int
+	TelegramAccepted                  int
+	TelegramRejected                  int
+	TelegramDuplicate                 int
+	LeasesReconciled                  int
+	ModelCompletionReceiptsReconciled int
+	SubagentsReconciled               int
+	SubagentDispatches                int
+	SubagentEffectsReconciled         int
+	RemoteSubagentsExecuted           int
+	SubagentStatusesDispatched        int
+	SubagentStatusesApplied           int
+	SubagentIngressRetryAttempts      int
+	SubagentIngressRetries            int
+	SubagentIngressConflicts          int
+	SubagentIngressExhaustions        int
+	SubagentIngressRetrySleep         time.Duration
+	SubagentIngressRecoveryDelay      time.Duration
+	SchedulerRan                      bool
+	SchedulerSteps                    int
+	SchedulerKind                     kernel.DecisionKind
+	OperationsExecuted                int
+	OperationsSkipped                 int
+	DispatchBudgetHit                 bool
+	CycleBudgetHit                    bool
+	CadenceVersion                    string
+	Worked                            bool
+	Stopping                          bool
 }
 
 // ProcessCycle drains inboxes and steps the scheduler under cadence budgets.
@@ -815,6 +816,21 @@ func (rt *Runtime) ProcessCycle(ctx context.Context) (CycleResult, error) {
 	// continuity scheduling so operator answers and deliveries stay timely.
 	if err := rt.processQuestionChannel(ctx, &result); err != nil {
 		return result, err
+	}
+
+	// Pre-dispatch recovery boundary: settle durable completion receipts before
+	// selecting any new work. This releases permits left reserved when a process
+	// stopped after committing provider evidence but before settlement. Failure
+	// is fail-closed: no scheduler decision is made in that cycle.
+	if rt.Model != nil && rt.Model.Authorizer != nil {
+		settled, err := rt.Model.Authorizer.ReconcileModelCompletionReceipts(ctx, rt.Opts.ModelCompletionReceiptBatch)
+		if err != nil {
+			return result, fmt.Errorf("model completion receipt reconciliation: %w", err)
+		}
+		result.ModelCompletionReceiptsReconciled = settled
+		if settled > 0 {
+			result.Worked = true
+		}
 	}
 
 	if rt.Opts.MissionID == "" {

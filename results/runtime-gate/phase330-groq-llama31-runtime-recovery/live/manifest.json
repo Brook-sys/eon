@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "phase330-groq-llama31-runtime-recovery",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A deterministic runtime reopens after a crash that happened after a provider completion receipt was committed but before resource settlement. Before dispatching new work, a bounded kernel recovery step settles the durable receipt: release the snapshotted permit, charge observed usage, mark settled atomically, and stop the cycle on recovery error. Exact keys/types: recovery_before_dispatch=true; bounded=true; error_policy=\"stop_cycle\"; releases_permit=true; model_authority=false; canonical_writes=0. Do not choose recovery, accounting, scheduling, routing, retries, or writes.",
+  "expected_response": "{\"recovery_before_dispatch\":true,\"bounded\":true,\"error_policy\":\"stop_cycle\",\"releases_permit\":true,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "bounded": true,
+      "canonical_writes": 0,
+      "error_policy": "stop_cycle",
+      "model_authority": false,
+      "recovery_before_dispatch": true,
+      "releases_permit": true
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

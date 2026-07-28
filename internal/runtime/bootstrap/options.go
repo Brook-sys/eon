@@ -52,6 +52,9 @@ type Options struct {
 	MaxInboxBatch int
 	// MemoryCompactionBatch caps expired semantic memories removed per cycle.
 	MemoryCompactionBatch int
+	// ModelCompletionReceiptBatch caps durable model completion settlements at
+	// the pre-dispatch recovery boundary of each control cycle.
+	ModelCompletionReceiptBatch int
 	// PeerBindAddr enables the P2P RPC listener when not empty.
 	PeerBindAddr string
 	// PeerNodeID is the stable local identity used in authenticated sync frames.
@@ -296,6 +299,12 @@ func (o *Options) Validate() error {
 	}
 	if o.MaxInboxBatch <= 0 {
 		o.MaxInboxBatch = 8
+	}
+	if o.ModelCompletionReceiptBatch <= 0 {
+		o.ModelCompletionReceiptBatch = 8
+	}
+	if o.ModelCompletionReceiptBatch > 256 {
+		return errors.New("model completion receipt batch is capped at 256")
 	}
 	if o.MaxInboxBatch > 256 {
 		return errors.New("max inbox batch is capped at 256")
