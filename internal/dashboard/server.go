@@ -17,6 +17,8 @@ import (
 type Server struct {
 	Inspect http.Handler
 	Control http.Handler
+	// Vault is an optional localhost-only write-only credential surface.
+	Vault http.Handler
 	// APIBase is the browser-visible prefix for fetch/EventSource calls.
 	// Default "/api" mounts inspect under /api/inspect and control under /api/control.
 	APIBase string
@@ -44,6 +46,9 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(base+"/inspect/", http.StripPrefix(base+"/inspect", s.Inspect))
 	mux.Handle(base+"/control/", http.StripPrefix(base+"/control", s.Control))
+	if s.Vault != nil {
+		mux.Handle(base+"/vault/", http.StripPrefix(base+"/vault", s.Vault))
+	}
 	mux.HandleFunc("GET /{$}", s.handleIndex)
 	mux.HandleFunc("GET /dashboard", s.handleIndex)
 	mux.HandleFunc("GET /dashboard/", s.handleIndex)

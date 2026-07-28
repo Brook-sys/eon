@@ -32,6 +32,7 @@ func renderIndex(apiBase, defaultMissionID string) string {
   --err: #c45c5c;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --sidebar: 224px;
 }
 * { box-sizing: border-box; }
 body {
@@ -78,6 +79,9 @@ button {
   cursor: pointer; background: #243247; border-color: #3a4f6a;
 }
 button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(91,159,212,.35); outline-offset: 2px;
+}
 button.primary { background: #1e4d73; border-color: var(--accent); }
 button.warn { background: #4a3a12; border-color: var(--warn); }
 button.danger { background: #4a2020; border-color: var(--err); }
@@ -110,6 +114,31 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .tabs button.active { border-color: var(--accent); background: #1e4d73; }
+.app-shell { display:grid; grid-template-columns:var(--sidebar) minmax(0,1fr); min-height:calc(100vh - 50px); }
+.side-nav { position:sticky; top:50px; height:calc(100vh - 50px); padding:18px 12px; border-right:1px solid var(--border); background:#111923; }
+.side-nav .nav-title { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; padding:0 10px 8px; }
+.side-nav button { width:100%; border:0; background:transparent; text-align:left; padding:10px 12px; margin:2px 0; color:var(--muted); }
+.side-nav button:hover { background:#182536; color:var(--text); }
+.side-nav button.active { background:#1e4d73; color:#fff; }
+.view-heading { grid-column:1/-1; padding:4px 2px; }
+.view-heading h2 { margin:0; font-size:22px; }
+.view-heading p { margin:4px 0 0; color:var(--muted); }
+.technical { border-style:dashed; }
+.human-card { border:1px solid var(--border); border-radius:9px; padding:12px; background:#111925; }
+.human-card + .human-card { margin-top:8px; }
+.provider-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.provider-grid label.full-field { grid-column:1/-1; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media (max-width: 760px) {
+  .app-shell { display:block; }
+  .side-nav { position:sticky; top:49px; z-index:2; height:auto; display:flex; overflow-x:auto; gap:5px; padding:8px; border-right:0; border-bottom:1px solid var(--border); }
+  .side-nav .nav-title { display:none; }
+  .side-nav button { width:auto; white-space:nowrap; min-height:44px; }
+  .provider-grid, .grid2 { grid-template-columns:1fr; }
+  .provider-grid label.full-field { grid-column:auto; }
+  main { padding:8px; }
+  input,select,textarea,button { min-height:44px; }
+}
 </style>
 </head>
 <body>
@@ -119,9 +148,20 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   <span class="meta" id="headerMeta">experimental control surface</span>
   <span class="meta" id="clockMeta"></span>
 </header>
+<div class="app-shell">
+<nav class="side-nav" aria-label="Navegação principal">
+  <div class="nav-title">Áreas</div>
+  <button type="button" class="active" data-view-target="home" aria-current="page">Visão geral</button>
+  <button type="button" data-view-target="mission">Missão</button>
+  <button type="button" data-view-target="monitor">Monitoramento</button>
+  <button type="button" data-view-target="knowledge">Conhecimento</button>
+  <button type="button" data-view-target="models">Provedores e modelos</button>
+  <button type="button" data-view-target="advanced">Avançado</button>
+</nav>
 <main>
+  <div class="view-heading"><h2 id="viewTitle">Visão geral</h2><p id="viewDescription">Acompanhe o estado essencial do EON e aja sobre o que precisa de atenção.</p></div>
   <div>
-    <section>
+    <section data-view="home mission">
       <h2>Contexto</h2>
       <div class="row">
         <label>mission_id
@@ -133,7 +173,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <p class="muted">Leituras via Control API. Mutações só por comandos/eventos tipados e drafts versionados. Tokens e segredos nunca aparecem aqui.</p>
       <div class="errbox" id="globalError"></div>
     </section>
-    <section>
+    <section data-view="home mission">
       <h2>Overview</h2>
       <div id="overview" class="muted">carregue uma missão</div>
       <div class="ops" id="missionOps" style="margin-top:10px">
@@ -144,7 +184,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="okbox" id="cmdOk"></div>
       <div class="errbox" id="cmdErr"></div>
     </section>
-    <section>
+    <section data-view="mission advanced" class="technical">
       <h2>Emenda de missão (FR-AUTH-004)</h2>
       <p class="hint">Preview puro (diff + impacto) e accept append-only. Nunca muta a revisão ativa in-place; candidate_revision = base+1. No-op e impacto bloqueado falham fechados. Agenda só reconcilia após accept.</p>
       <div class="row">
@@ -202,7 +242,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="amendErr"></div>
       <div id="amendDetail" class="prebox muted" style="margin-top:8px">sem preview</div>
     </section>
-    <section>
+    <section data-view="home monitor">
       <h2>Alertas / telemetria</h2>
       <p class="hint">Sinais derivados e postura OTel (FR-CTRL-007). Nunca canônicos, nunca autoritativos para o kernel. Retention limita buffers de export descartáveis, não retenção de store.</p>
       <div id="alertsBox" class="muted">carregue overview ou /alerts</div>
@@ -213,11 +253,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
       <div class="errbox" id="alertsErr"></div>
     </section>
-    <section>
+    <section data-view="home mission">
       <h2>Perguntas pendentes</h2>
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
-    <section>
+    <section data-view="knowledge advanced">
       <h2>Frontier / higiene</h2>
       <p class="hint">Browse somente-leitura do reservatório de WorkOpportunity e dry-run de PlanFrontierReservoirHygiene. Nenhuma transição de higiene é aplicada da UI; compactação permanece com a família local frontier_management.</p>
       <div id="frontHygiene" class="muted">carregue hygiene dry-run</div>
@@ -247,7 +287,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="frontList" class="list muted">nenhuma lista carregada</div>
       <div id="frontDetail" class="prebox muted" hidden></div>
     </section>
-    <section>
+    <section data-view="knowledge">
       <h2>Conhecimento</h2>
       <p class="hint">Browse somente-leitura de sources, claims, evidence e artifacts. Conteúdo livre chega redigido pela Control API; snapshot bytes não são exportados. Mutações canônicas não passam por aqui.</p>
       <div id="knowCatalog" class="muted">carregue o catálogo</div>
@@ -289,7 +329,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="knowList" class="list muted">nenhuma lista carregada</div>
       <div id="knowDetail" class="prebox muted" hidden></div>
     </section>
-    <section>
+    <section data-view="knowledge advanced">
       <h2>Commits / provider</h2>
       <p class="hint">Browse somente-leitura de commits canônicos (GET /commits) e perfil de capacidades do provider (FR-MODEL-005). Probe é orçamentado e não inventa features; secrets nunca aparecem.</p>
       <div class="row">
@@ -314,7 +354,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="okbox" id="commitOk"></div>
       <div class="errbox" id="commitErr"></div>
     </section>
-    <section>
+    <section data-view="models monitor advanced">
       <h2>Models / resources / context pressure</h2>
       <p class="hint">Postura correlacionada do catálogo MODELS ativo (GET /model-bindings), ResourceGate e pressão binding-local. Uso ou pressão ausentes permanecem ausentes; secrets e corpos de provider nunca aparecem.</p>
       <div class="row">
@@ -335,7 +375,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="okbox" id="resourceOk"></div>
       <div class="errbox" id="resourceErr"></div>
     </section>
-    <section>
+    <section data-view="monitor advanced">
       <h2>Inspetor de execução</h2>
       <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem. Projeções bounded sinalizam explicitamente quando a auditoria está incompleta.</p>
       <div class="row">
@@ -370,7 +410,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
   </div>
   <div>
-    <section>
+    <section data-view="monitor advanced">
       <h2>Timeline (SSE)</h2>
       <div class="row">
         <label>after_sequence
@@ -388,7 +428,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
       <div id="timeline" class="timeline">aguardando conexão…</div>
     </section>
-    <section>
+    <section data-view="mission">
       <h2>Resposta correlacionada</h2>
       <div class="row">
         <label>question_id
@@ -420,7 +460,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="answerErr"></div>
     </section>
   </div>
-  <section class="full">
+  <section class="full technical" data-view="models advanced">
     <h2>Configuração versionada</h2>
     <p class="hint">Draft → validate (preview/diff) → apply com recibo. Rollback semântico re-aplica payload ancestral como nova revisão (ponteiro só avança). Segredos só por referência.</p>
     <div class="row">
@@ -498,12 +538,83 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       </div>
     </div>
   </section>
+  <section class="full" data-view="models">
+    <h2>Provedores e modelos</h2>
+    <p class="hint">Cadastre serviços compatíveis com a API da OpenAI sem editar JSON. Toda mudança vira um rascunho revisável; novos modelos começam desativados.</p>
+    <div class="grid2">
+      <div>
+        <div class="row">
+          <button type="button" id="btnProviderRefresh" class="primary">Atualizar lista</button>
+          <button type="button" id="btnProviderNew">Adicionar provedor</button>
+        </div>
+        <div id="providerCards" class="list muted">carregando provedores…</div>
+      </div>
+      <div>
+        <form id="providerForm" class="human-card">
+          <h3 id="providerFormTitle" style="margin-top:0">Adicionar provedor</h3>
+          <div class="provider-grid">
+            <label>Identificador
+              <input id="providerID" required pattern="[a-z0-9._-]+" placeholder="groq-principal" autocomplete="off"/>
+            </label>
+            <label>Tipo
+              <select id="providerKind"><option value="openai_compatible">OpenAI-compatible</option><option value="groq">Groq</option><option value="nvidia_nim">NVIDIA NIM</option></select>
+            </label>
+            <label class="full-field">Endereço da API
+              <input id="providerURL" type="url" required placeholder="https://api.exemplo.com/v1" autocomplete="url"/>
+            </label>
+            <label class="full-field">Modelo
+              <input id="providerModel" required placeholder="nome exato informado pelo provedor" autocomplete="off"/>
+            </label>
+            <label>Janela de contexto
+              <input id="providerContext" type="number" min="2" value="8192" required/>
+            </label>
+            <label>Máximo de saída
+              <input id="providerOutput" type="number" min="1" value="512" required/>
+            </label>
+            <label>Chamadas simultâneas
+              <input id="providerConcurrency" type="number" min="1" max="100" value="1" required/>
+            </label>
+            <label>Prioridade
+              <input id="providerPriority" type="number" min="0" value="10" required/>
+            </label>
+            <label class="full-field">Chave da API
+              <input id="providerSecret" type="password" placeholder="Cole uma chave nova (não será exibida novamente)" autocomplete="new-password"/>
+              <span class="hint">Write-only: cifrada localmente com AES-256-GCM; nunca retorna pela API.</span>
+            </label>
+          </div>
+          <details style="margin-top:10px"><summary>Detalhes avançados</summary>
+            <div class="provider-grid" style="margin-top:8px">
+              <label>Referência temporária da credencial
+                <input id="providerKeyRef" value="EON_PROVIDER_API_KEY" placeholder="VARIAVEL_DE_AMBIENTE"/>
+              </label>
+              <label>Timeout (segundos)<input id="providerTimeout" type="number" min="1" max="600" value="45"/></label>
+            </div>
+          </details>
+          <div class="ops">
+            <button class="primary" type="submit">Criar rascunho</button>
+            <button type="button" id="btnProviderCancel">Limpar</button>
+          </div>
+          <div class="okbox" id="providerOk" role="status" aria-live="polite"></div>
+          <div class="errbox" id="providerErr" role="alert" aria-live="assertive"></div>
+        </form>
+        <div class="human-card" style="margin-top:12px">
+          <h3 style="margin-top:0">Cofre de credenciais</h3>
+          <p id="vaultState" class="hint">consultando…</p>
+          <label>Senha mestra<input id="vaultPassword" type="password" minlength="12" autocomplete="current-password"/></label>
+          <div class="ops"><button type="button" id="btnVaultUnlock" class="primary">Criar ou desbloquear</button><button type="button" id="btnVaultLock">Bloquear agora</button></div>
+          <p class="hint">A senha não é persistida. O cofre bloqueia após reinício e 15 minutos sem uso. Disponível somente via localhost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
+</div>
 <script>
 (function () {
   const API_BASE = ` + jsonString(base) + `;
   const inspectBase = API_BASE + "/inspect";
   const controlBase = API_BASE + "/control";
+  const vaultBase = API_BASE + "/vault";
 
   const el = (id) => document.getElementById(id);
   const maxUint64Decimal = "18446744073709551615";
@@ -514,6 +625,32 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   let lastSeq = "0";
   let lastMissionRevision = null;
   let inspectorRequestGeneration = 0;
+  let modelsActiveRevision = 0;
+  let modelsPayload = null;
+
+  const views = {
+    home: ["Visão geral", "Acompanhe o estado essencial do EON e aja sobre o que precisa de atenção."],
+    mission: ["Missão", "Entenda o trabalho atual, responda perguntas e controle a execução."],
+    monitor: ["Monitoramento", "Investigue saúde, eventos, recursos e comportamento do runtime."],
+    knowledge: ["Conhecimento", "Explore evidências, commits, fronteira e memória do sistema."],
+    models: ["Provedores e modelos", "Gerencie APIs OpenAI-compatible e modelos por mudanças revisáveis."],
+    advanced: ["Avançado", "Contratos técnicos, configuração versionada e ferramentas de diagnóstico."]
+  };
+  function selectView(name) {
+    if (!views[name]) name = "home";
+    document.querySelectorAll("[data-view]").forEach(function (node) {
+      node.hidden = !(node.getAttribute("data-view") || "").split(/\s+/).includes(name);
+    });
+    document.querySelectorAll("[data-view-target]").forEach(function (button) {
+      const active = button.getAttribute("data-view-target") === name;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current");
+    });
+    el("viewTitle").textContent = views[name][0];
+    el("viewDescription").textContent = views[name][1];
+    try { history.replaceState(null, "", "#" + name); } catch (_) {}
+    if (name === "models") refreshProviderManager();
+  }
 
   function setError(msg) {
     el("globalError").textContent = msg || "";
@@ -562,6 +699,114 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       throw new Error(code + ": " + message);
     }
     return body;
+  }
+
+  function providerDefaults() {
+    return { version:"models.v1", providers:[], bindings:[] };
+  }
+  function clearProviderForm() {
+    el("providerForm").reset();
+    el("providerKind").value = "openai_compatible";
+    el("providerContext").value = "8192";
+    el("providerOutput").value = "512";
+    el("providerConcurrency").value = "1";
+    el("providerPriority").value = "10";
+    el("providerTimeout").value = "45";
+    el("providerKeyRef").value = "EON_PROVIDER_API_KEY";
+    el("providerID").readOnly = false;
+    el("providerFormTitle").textContent = "Adicionar provedor";
+    el("providerOk").textContent = "";
+    el("providerErr").textContent = "";
+  }
+  function modelLimit(resource, concurrency) {
+    return { resource:resource, max_concurrent:concurrency, max_per_minute:0, max_per_day:0,
+      max_tokens_per_minute:0, failure_threshold:3, cooldown_base:30000000000,
+      cooldown_max:300000000000, reserved_for_critical:0 };
+  }
+  function renderProviderCards() {
+    const cfg = modelsPayload || providerDefaults();
+    if (!cfg.providers.length) {
+      el("providerCards").innerHTML = '<div class="human-card"><strong>Nenhum provedor configurado</strong><p class="hint">Adicione uma API OpenAI-compatible. O primeiro modelo será criado desativado.</p></div>';
+      return;
+    }
+    el("providerCards").innerHTML = cfg.providers.map(function (p) {
+      const bindings = cfg.bindings.filter(function (b) { return b.provider_ref === p.id; });
+      const enabled = bindings.filter(function (b) { return b.enabled; }).length;
+      return '<div class="human-card"><div class="row" style="justify-content:space-between"><div><strong>' + esc(p.id) + '</strong><div class="muted">' + esc(p.kind) + ' · ' + esc(p.base_url) + '</div></div><span class="badge ' + (enabled ? 'live' : '') + '">' + enabled + ' ativo(s)</span></div>'
+        + bindings.map(function (b) { return '<div class="card"><strong>' + esc(b.model_id) + '</strong><div class="muted">' + (b.enabled ? 'Ativo' : 'Desativado') + ' · contexto ' + esc(b.context_tokens) + '</div></div>'; }).join('')
+        + '<div class="ops"><button type="button" data-provider-edit="' + esc(p.id) + '">Editar</button><button type="button" data-provider-toggle="' + esc(p.id) + '">' + (enabled ? 'Desativar modelos' : 'Ativar modelos') + '</button><button class="danger" type="button" data-provider-remove="' + esc(p.id) + '">Remover</button></div></div>';
+    }).join('');
+    el("providerCards").querySelectorAll("[data-provider-edit]").forEach(function (b) { b.addEventListener("click", function () { editProvider(b.dataset.providerEdit); }); });
+    el("providerCards").querySelectorAll("[data-provider-toggle]").forEach(function (b) { b.addEventListener("click", function () { toggleProvider(b.dataset.providerToggle); }); });
+    el("providerCards").querySelectorAll("[data-provider-remove]").forEach(function (b) { b.addEventListener("click", function () { removeProvider(b.dataset.providerRemove); }); });
+  }
+  async function refreshProviderManager() {
+    el("providerErr").textContent = "";
+    try {
+      const body = await getJSON(controlBase + "/config/revisions/active?scope=MODELS");
+      const rev = body.revision || body;
+      modelsActiveRevision = Number(rev.revision || 0);
+      modelsPayload = rev.payload && rev.payload.models ? rev.payload.models : (rev.payload || providerDefaults());
+      if (!Array.isArray(modelsPayload.providers)) modelsPayload.providers = [];
+      if (!Array.isArray(modelsPayload.bindings)) modelsPayload.bindings = [];
+    } catch (err) {
+      if (!String(err.message || err).includes("not_found")) el("providerErr").textContent = String(err.message || err);
+      modelsActiveRevision = 0; modelsPayload = providerDefaults();
+    }
+    renderProviderCards();
+    await refreshVaultStatus();
+  }
+  async function refreshVaultStatus(){try{const s=await getJSON(vaultBase+"/status");el("vaultState").textContent=!s.initialized?"Ainda não inicializado.":(s.locked?"Bloqueado.":"Desbloqueado · "+String((s.secrets||[]).length)+" credencial(is).");el("providerSecret").disabled=!s.initialized||s.locked;}catch(err){el("vaultState").textContent="Indisponível: "+String(err.message||err);el("providerSecret").disabled=true;}}
+  async function unlockVault(){const password=el("vaultPassword").value;if(!password){el("providerErr").textContent="Informe a senha mestra.";return;}try{const s=await getJSON(vaultBase+"/status");await postJSON(vaultBase+(s.initialized?"/unlock":"/initialize"),{password:password});el("vaultPassword").value="";el("providerOk").textContent=s.initialized?"Cofre desbloqueado.":"Cofre criado e desbloqueado.";await refreshVaultStatus();}catch(err){el("providerErr").textContent=String(err.message||err);}}
+  async function lockVault(){try{await postJSON(vaultBase+"/lock",{});el("providerOk").textContent="Cofre bloqueado.";await refreshVaultStatus();}catch(err){el("providerErr").textContent=String(err.message||err);}}
+  async function storeProviderSecret(id,value){const response=await fetch(vaultBase+"/secrets/"+encodeURIComponent("provider/"+id+"/api-key"),{method:"PUT",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({value:value})});if(!response.ok){let message="HTTP "+response.status;try{const body=await response.json();message=(body.error&&body.error.message)||message;}catch(_){}throw new Error(message);}}
+  async function createModelsDraft(next, reason) {
+    const body = await postJSON(controlBase + "/config/drafts", { schema_version:1, scope:"MODELS", based_on_revision:modelsActiveRevision,
+      reason:reason, applicability:"NEXT_CYCLE", models:next });
+    el("providerOk").textContent = "Rascunho criado. Revise, valide e aplique na área Avançado.";
+    el("cfgScope").value = "MODELS";
+    await refreshConfig(false);
+    return body;
+  }
+  function editProvider(id) {
+    const p = modelsPayload.providers.find(function (x) { return x.id === id; });
+    const b = modelsPayload.bindings.find(function (x) { return x.provider_ref === id; });
+    if (!p || !b) return;
+    el("providerID").value=p.id; el("providerID").readOnly=true; el("providerKind").value=p.kind;
+    el("providerURL").value=p.base_url; el("providerModel").value=b.model_id; el("providerContext").value=b.context_tokens;
+    el("providerOutput").value=b.max_output_tokens; el("providerConcurrency").value=p.global_limit.max_concurrent || 1;
+    el("providerPriority").value=b.priority; el("providerKeyRef").value=p.api_key_env; el("providerTimeout").value=Math.round(Number(p.timeout)/1e9);
+    el("providerFormTitle").textContent="Editar " + id; el("providerForm").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  async function toggleProvider(id) {
+    const next = JSON.parse(JSON.stringify(modelsPayload));
+    const bs = next.bindings.filter(function (b) { return b.provider_ref === id; });
+    const turnOn = !bs.some(function (b) { return b.enabled; });
+    bs.forEach(function (b) { b.enabled = turnOn; });
+    try { await createModelsDraft(next, (turnOn ? "activate " : "deactivate ") + id + " from dashboard"); }
+    catch (err) { el("providerErr").textContent=String(err.message||err); }
+  }
+  async function removeProvider(id) {
+    if (!window.confirm("Remover " + id + " e seus modelos do próximo catálogo? O histórico continuará preservado.")) return;
+    const next = JSON.parse(JSON.stringify(modelsPayload));
+    next.providers = next.providers.filter(function (p) { return p.id !== id; });
+    next.bindings = next.bindings.filter(function (b) { return b.provider_ref !== id; });
+    try { await createModelsDraft(next, "remove " + id + " from dashboard"); }
+    catch (err) { el("providerErr").textContent=String(err.message||err); }
+  }
+  async function submitProviderForm(event) {
+    event.preventDefault(); el("providerOk").textContent=""; el("providerErr").textContent="";
+    const id=el("providerID").value.trim(), ctx=Number(el("providerContext").value), out=Number(el("providerOutput").value);
+    if (out >= ctx) { el("providerErr").textContent="O máximo de saída deve ser menor que a janela de contexto."; return; }
+    const next=JSON.parse(JSON.stringify(modelsPayload || providerDefaults()));
+    const p={id:id,kind:el("providerKind").value,base_url:el("providerURL").value.trim(),api_key_env:el("providerKeyRef").value.trim(),timeout:Number(el("providerTimeout").value)*1e9,max_response_bytes:1048576,global_limit:modelLimit("model-provider:"+id,Number(el("providerConcurrency").value))};
+    const bindingID=id+"-primary";
+    const b={id:bindingID,provider_ref:id,model_id:el("providerModel").value.trim(),enabled:false,priority:Number(el("providerPriority").value),context_tokens:ctx,max_output_tokens:out,max_output_dialect:"max_tokens",limit:modelLimit("model-binding:"+bindingID,1)};
+    const pi=next.providers.findIndex(function(x){return x.id===id;}); if(pi>=0) next.providers[pi]=p; else next.providers.push(p);
+    const bi=next.bindings.findIndex(function(x){return x.provider_ref===id;}); if(bi>=0){b.id=next.bindings[bi].id;b.enabled=next.bindings[bi].enabled;b.limit.resource="model-binding:"+b.id;next.bindings[bi]=b;}else next.bindings.push(b);
+    next.version="models.dashboard."+Date.now();
+    try { const secret=el("providerSecret").value;if(secret)await storeProviderSecret(id,secret);await createModelsDraft(next,(pi>=0?"update ":"add ")+id+" from dashboard");clearProviderForm(); }
+    catch(err){el("providerErr").textContent=String(err.message||err);}
   }
 
   function renderOverview(o) {
@@ -2001,6 +2246,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     /* selection-based optional; operators use explicit id fields */
   });
 
+  document.querySelectorAll("[data-view-target]").forEach(function (button) {
+    button.addEventListener("click", function () { selectView(button.getAttribute("data-view-target")); });
+  });
+  el("providerForm").addEventListener("submit", submitProviderForm);
+  el("btnProviderRefresh").addEventListener("click", refreshProviderManager);
+  el("btnProviderNew").addEventListener("click", function () { clearProviderForm(); el("providerID").focus(); });
+  el("btnProviderCancel").addEventListener("click", clearProviderForm);
+  el("btnVaultUnlock").addEventListener("click", unlockVault);
+  el("btnVaultLock").addEventListener("click", lockVault);
+
   el("btnRefresh").addEventListener("click", refresh);
   el("btnConnect").addEventListener("click", connectStream);
   el("btnAnswer").addEventListener("click", submitAnswer);
@@ -2634,6 +2889,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   el("btnTelemetry").addEventListener("click", loadTelemetry);
 
   // Clickable commit/operation ids in timeline rows via data attributes are filled by overview.
+  clearProviderForm();
+  selectView((location.hash || "#home").slice(1));
   fillDefaultPayload();
   refreshKnowledgeCatalog();
   loadProviderProfile(false);

@@ -29,6 +29,7 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/retry"
 	"motor-autonomo/internal/runtime/source"
+	"motor-autonomo/internal/secretvault"
 	"motor-autonomo/internal/storage/dolt"
 	"motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/storage/sqlite"
@@ -84,6 +85,7 @@ type Runtime struct {
 	Inspect   *inspect.API
 	Control   *control.API
 	Dashboard *dashboard.Server
+	Vault     *secretvault.Vault
 	Handler   http.Handler
 
 	// Optional non-authoritative Telegram surfaces. Nil when disabled.
@@ -284,6 +286,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 
 	var dash *dashboard.Server
+	var vault *secretvault.Vault
 	var handler http.Handler
 	if opts.EnableDashboard {
 		dash, err = dashboard.New(inspectAPI.Handler(), controlAPI.Handler())
@@ -295,6 +298,20 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			return nil, err
 		}
 		dash.DefaultMissionID = string(opts.MissionID)
+		vaultPath := opts.SQLitePath + ".credentials.vault"
+		if opts.SQLitePath == "" {
+			vaultPath = filepath.Join(os.TempDir(), "eon-memory.credentials.vault")
+		}
+		var vaultErr error
+		vault, vaultErr = secretvault.New(vaultPath)
+		if vaultErr != nil {
+			_ = telemetry.Shutdown(ctx)
+			if closer != nil {
+				_ = closer.Close()
+			}
+			return nil, fmt.Errorf("credential vault: %w", vaultErr)
+		}
+		dash.Vault = secretvault.HTTP{Vault: vault}.Handler()
 		handler = dash.Handler()
 	} else {
 		mux := http.NewServeMux()
@@ -445,6 +462,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Inspect:                     inspectAPI,
 		Control:                     controlAPI,
 		Dashboard:                   dash,
+		Vault:                       vault,
 		Handler:                     handler,
 		TelegramAdapter:             telegramBits.Adapter,
 		TelegramWorker:              telegramBits.Worker,

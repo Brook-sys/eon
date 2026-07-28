@@ -100,6 +100,16 @@ func TestDashboardServesIndexAndProxiesAPIs(t *testing.T) {
 		t.Fatal("default mission not prefilled")
 	}
 	for _, marker := range []string{
+		"Navegação principal",
+		"data-view-target=\"home\"",
+		"data-view-target=\"models\"",
+		"Provedores e modelos",
+		"providerForm",
+		"submitProviderForm",
+		"refreshProviderManager",
+		"O máximo de saída deve ser menor",
+		"Rascunho criado. Revise, valide e aplique",
+		"role=\"status\" aria-live=\"polite\"",
 		"Configuração versionada",
 		"/config/drafts",
 		"/config/revisions/rollback",

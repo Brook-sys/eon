@@ -1,0 +1,371 @@
+// Package secretvault provides a small encrypted, local credential store.
+// Secret values are never returned by its metadata API or written in plaintext.
+package secretvault
+
+import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/pbkdf2"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+const (
+	formatVersion = 1
+	iterations    = 600_000
+	maxSecretSize = 16 << 10
+	autoLockAfter = 15 * time.Minute
+)
+
+var (
+	ErrLocked          = errors.New("credential vault is locked")
+	ErrInitialized     = errors.New("credential vault is already initialized")
+	ErrUninitialized   = errors.New("credential vault is not initialized")
+	ErrInvalidPassword = errors.New("invalid vault password")
+)
+
+type envelope struct {
+	Version    int    `json:"version"`
+	Iterations int    `json:"iterations"`
+	Salt       string `json:"salt"`
+	Verifier   string `json:"verifier"`
+	Nonce      string `json:"nonce"`
+	Ciphertext string `json:"ciphertext"`
+}
+
+type record struct {
+	Value     string    `json:"value"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type payload struct {
+	Secrets map[string]record `json:"secrets"`
+}
+
+type Metadata struct {
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Status struct {
+	Initialized bool       `json:"initialized"`
+	Locked      bool       `json:"locked"`
+	Secrets     []Metadata `json:"secrets,omitempty"`
+}
+
+type Vault struct {
+	mu       sync.Mutex
+	path     string
+	key      []byte
+	data     payload
+	lastUsed time.Time
+}
+
+func New(path string) (*Vault, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, errors.New("vault path is required")
+	}
+	return &Vault{path: path, data: payload{Secrets: map[string]record{}}}, nil
+}
+
+func (v *Vault) Status() Status {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	_, err := os.Stat(v.path)
+	s := Status{Initialized: err == nil, Locked: len(v.key) == 0}
+	if len(v.key) != 0 {
+		for name, r := range v.data.Secrets {
+			s.Secrets = append(s.Secrets, Metadata{Name: name, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt})
+		}
+		sort.Slice(s.Secrets, func(i, j int) bool { return s.Secrets[i].Name < s.Secrets[j].Name })
+	}
+	return s
+}
+
+func (v *Vault) Initialize(password string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if _, err := os.Stat(v.path); err == nil {
+		return ErrInitialized
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		return err
+	}
+	key, err := derive(password, salt, iterations)
+	if err != nil {
+		return err
+	}
+	v.key = key
+	v.data = payload{Secrets: map[string]record{}}
+	if err := v.saveLocked(salt, iterations); err != nil {
+		zero(v.key)
+		v.key = nil
+		return err
+	}
+	v.lastUsed = time.Now()
+	return nil
+}
+
+func (v *Vault) Unlock(password string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	raw, err := os.ReadFile(v.path)
+	if errors.Is(err, os.ErrNotExist) {
+		return ErrUninitialized
+	}
+	if err != nil {
+		return err
+	}
+	var env envelope
+	if err = json.Unmarshal(raw, &env); err != nil {
+		return fmt.Errorf("decode vault: %w", err)
+	}
+	if env.Version != formatVersion || env.Iterations < 100_000 {
+		return errors.New("unsupported vault format")
+	}
+	salt, err := base64.StdEncoding.DecodeString(env.Salt)
+	if err != nil {
+		return errors.New("invalid vault salt")
+	}
+	key, err := derive(password, salt, env.Iterations)
+	if err != nil {
+		return err
+	}
+	want, err := base64.StdEncoding.DecodeString(env.Verifier)
+	if err != nil {
+		return errors.New("invalid vault verifier")
+	}
+	got := verifier(key)
+	if len(want) != len(got) || subtle.ConstantTimeCompare(want, got) != 1 {
+		zero(key)
+		return ErrInvalidPassword
+	}
+	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
+	if err != nil {
+		zero(key)
+		return errors.New("invalid vault nonce")
+	}
+	ct, err := base64.StdEncoding.DecodeString(env.Ciphertext)
+	if err != nil {
+		zero(key)
+		return errors.New("invalid vault ciphertext")
+	}
+	plain, err := open(key, nonce, ct)
+	if err != nil {
+		zero(key)
+		return ErrInvalidPassword
+	}
+	var p payload
+	err = json.Unmarshal(plain, &p)
+	zero(plain)
+	if err != nil {
+		zero(key)
+		return errors.New("invalid vault payload")
+	}
+	if p.Secrets == nil {
+		p.Secrets = map[string]record{}
+	}
+	zero(v.key)
+	v.key = key
+	v.data = p
+	v.lastUsed = time.Now()
+	return nil
+}
+
+func (v *Vault) Lock() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	zero(v.key)
+	v.key = nil
+	v.data = payload{Secrets: map[string]record{}}
+	v.lastUsed = time.Time{}
+}
+
+func (v *Vault) Put(name, value string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		return err
+	}
+	if value == "" || len(value) > maxSecretSize {
+		return errors.New("secret value is required and must not exceed 16 KiB")
+	}
+	now := time.Now().UTC()
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		r.CreatedAt = now
+	}
+	r.Value = value
+	r.UpdatedAt = now
+	v.data.Secrets[name] = r
+	v.lastUsed = time.Now()
+	return v.saveWithCurrentKeyLocked()
+}
+
+func (v *Vault) Delete(name string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		return err
+	}
+	delete(v.data.Secrets, name)
+	v.lastUsed = time.Now()
+	return v.saveWithCurrentKeyLocked()
+}
+
+func (v *Vault) Resolve(name string) (string, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return "", ErrLocked
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		return "", os.ErrNotExist
+	}
+	v.lastUsed = time.Now()
+	return r.Value, nil
+}
+
+func (v *Vault) expireLocked() {
+	if len(v.key) != 0 && !v.lastUsed.IsZero() && time.Since(v.lastUsed) >= autoLockAfter {
+		zero(v.key)
+		v.key = nil
+		v.data = payload{Secrets: map[string]record{}}
+		v.lastUsed = time.Time{}
+	}
+}
+
+func (v *Vault) saveWithCurrentKeyLocked() error {
+	raw, err := os.ReadFile(v.path)
+	if err != nil {
+		return err
+	}
+	var env envelope
+	if err = json.Unmarshal(raw, &env); err != nil {
+		return err
+	}
+	salt, err := base64.StdEncoding.DecodeString(env.Salt)
+	if err != nil {
+		return err
+	}
+	return v.saveLocked(salt, env.Iterations)
+}
+func (v *Vault) saveLocked(salt []byte, iter int) error {
+	plain, err := json.Marshal(v.data)
+	if err != nil {
+		return err
+	}
+	block, err := aes.NewCipher(v.key)
+	if err != nil {
+		return err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return err
+	}
+	ct := gcm.Seal(nil, nonce, plain, []byte("eon:credential-vault:v1"))
+	zero(plain)
+	env := envelope{Version: formatVersion, Iterations: iter, Salt: base64.StdEncoding.EncodeToString(salt), Verifier: base64.StdEncoding.EncodeToString(verifier(v.key)), Nonce: base64.StdEncoding.EncodeToString(nonce), Ciphertext: base64.StdEncoding.EncodeToString(ct)}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(v.path)
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".vault-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err = tmp.Chmod(0600); err == nil {
+		_, err = tmp.Write(raw)
+	}
+	if err == nil {
+		err = tmp.Sync()
+	}
+	closeErr := tmp.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmpName, v.path)
+}
+func derive(password string, salt []byte, iter int) ([]byte, error) {
+	return pbkdf2.Key(sha256.New, password, salt, iter, 32)
+}
+func verifier(key []byte) []byte {
+	h := sha256.New()
+	h.Write([]byte("eon:credential-vault:verify:v1"))
+	h.Write(key)
+	return h.Sum(nil)
+}
+func open(key, nonce, ct []byte) ([]byte, error) {
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	g, err := cipher.NewGCM(b)
+	if err != nil {
+		return nil, err
+	}
+	return g.Open(nil, nonce, ct, []byte("eon:credential-vault:v1"))
+}
+func validatePassword(p string) error {
+	if len(p) < 12 || len(p) > 1024 {
+		return errors.New("vault password must contain 12 to 1024 characters")
+	}
+	return nil
+}
+func validateName(n string) error {
+	if n == "" || len(n) > 256 || strings.ContainsAny(n, "\x00\r\n") {
+		return errors.New("invalid secret name")
+	}
+	return nil
+}
+func zero(b []byte) {
+	for i := range b {
+		b[i] = 0
+	}
+}
