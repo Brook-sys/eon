@@ -77,6 +77,68 @@ func TestDurableStoreContract(t *testing.T) {
 	})
 }
 
+func TestFutureProviderRetryDeadlineSurvivesSQLiteRestartAndExpires(t *testing.T) {
+	ctx := t.Context()
+	path := filepath.Join(t.TempDir(), "runtime.sqlite")
+	resource := domain.ModelProviderResource("nim")
+	now := time.Date(2026, 7, 28, 11, 0, 0, 0, time.UTC)
+	retryAt := now.Add(90 * time.Second)
+	limit := domain.ResourceLimit{Resource: resource, MaxConcurrent: 1}
+
+	store, err := storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, err := domain.ReportFailure(
+		domain.ResourceUsage{Resource: resource, InFlight: 1},
+		limit,
+		domain.ResourceCost{Slots: 1, Calls: 1},
+		&retryAt,
+		now,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.SaveResourceUsage(usage) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	store, err = storage.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	if err := store.View(ctx, func(r port.Reader) error {
+		persisted, readErr := r.ResourceUsage(resource)
+		if readErr != nil {
+			return readErr
+		}
+		if persisted.CircuitOpenUntil == nil || !persisted.CircuitOpenUntil.Equal(retryAt) {
+			t.Fatalf("persisted circuit deadline = %v, want %v", persisted.CircuitOpenUntil, retryAt)
+		}
+		got, acquireErr := domain.Acquire(limit, persisted, domain.ResourceCost{Slots: 1}, 0, now.Add(30*time.Second))
+		if acquireErr != nil {
+			return acquireErr
+		}
+		if got.Allowed || got.WaitUntil == nil || !got.WaitUntil.Equal(retryAt) {
+			t.Fatalf("acquire before retry deadline = %+v", got)
+		}
+		got, acquireErr = domain.Acquire(limit, persisted, domain.ResourceCost{Slots: 1}, 0, retryAt)
+		if acquireErr != nil {
+			return acquireErr
+		}
+		if !got.Allowed {
+			t.Fatalf("acquire at retry deadline denied: %+v", got)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestModelCompletionReceiptSurvivesSQLiteRestart(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "runtime.sqlite")
 	store, err := storage.Open(path)
