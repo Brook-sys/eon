@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase314-groq-llama33-changed-task",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T07:42:48.25331957Z"
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "name": "phase314-groq-llama33-changed-task",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. You observed three bounded provider attempts in order: trial 1 HTTP 429 with Retry-After present; trial 2 valid JSON but schema mismatch; trial 3 valid schema and content. Exact keys/types: retryable_trials is [1]; semantic_failures is [2]; accepted_trial=3; canonical_writes=0. Preserve arrays and do not choose routing.",
+  "expected_response": "{\"retryable_trials\":[1],\"semantic_failures\":[2],\"accepted_trial\":3,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "accepted_trial": 3,
+      "canonical_writes": 0,
+      "retryable_trials": [
+        1
+      ],
+      "semantic_failures": [
+        2
+      ]
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
