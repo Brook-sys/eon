@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase300-groq-compound-mini-paced-duplicate-evidence-control",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-07-28T03:43:52.620393727Z"
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "name": "phase300-groq-compound-mini-paced-duplicate-evidence-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "A remote side effect timed out after dispatch. Three authenticated durable evidence entries exist: delivery_receipt, remote_status, and a duplicate delivery_receipt. Return exactly one raw JSON object with exactly these keys: risk, available_evidence, complete_pair, canonical_writes. Use this exact JSON type contract: risk is the string unknown_effect; available_evidence MUST be a JSON ARRAY of exactly three JSON STRINGS preserving all authenticated entries including the duplicate, in this order: delivery_receipt, remote_status, delivery_receipt (never deduplicate, summarize, or use an object, map, or scalar); complete_pair is the boolean false because the authenticated evidence set is malformed by duplication; canonical_writes is the number 0. Do not choose RETRY, RECONCILE, or DEFER. No markdown or extra text.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"delivery_receipt\",\"remote_status\",\"delivery_receipt\"],\"complete_pair\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "available_evidence": [
+        "delivery_receipt",
+        "remote_status",
+        "delivery_receipt"
+      ],
+      "canonical_writes": 0,
+      "complete_pair": false,
+      "risk": "unknown_effect"
+    },
+    "array_set_equality": false
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ],
+  "inter_trial_delay_seconds": 30
+}
