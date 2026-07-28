@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "name": "phase316-nim-deepseek-v4-flash-missing-retry-after",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 1,
+  "execution_failures": 2,
+  "durable_reopens": 3,
+  "expected_matches": 1,
+  "json_valid": 1,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 194,
+  "output_tokens": 196,
+  "latency_p50": 991793943,
+  "latency_p95": 7881349693,
+  "latency_max": 7881349693,
+  "selected_bindings": {
+    "nim-deepseek-v4-flash": 3
+  },
+  "finish_reasons": {
+    "": 2,
+    "stop": 1
+  },
+  "framing_classes": {
+    "exact": 1
+  },
+  "provider_http_statuses": {
+    "503": 2
+  },
+  "second_acquire_reasons": {
+    "": 2,
+    "resource_resource_rate_limit": 1
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}
