@@ -1,0 +1,11 @@
+.git
+.github
+.local
+.provider-secrets.env
+results
+memory
+*.db
+*.sqlite
+runtime
+model-benchmark-runner
+simpler-format-recovery-campaign

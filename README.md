@@ -246,6 +246,47 @@ Important boundaries:
 
 ## Quick start
 
+### Fastest start: prebuilt container
+
+The `main` branch publishes multi-architecture images (`linux/amd64` and
+`linux/arm64`) to GHCR. The default container uses durable SQLite storage,
+runs as a non-root user, exposes the dashboard on port 8080, and includes a
+health check:
+
+```bash
+docker volume create eon-data
+docker run --name eon --restart unless-stopped \
+  -p 8080:8080 \
+  -v eon-data:/data \
+  ghcr.io/brook-sys/eon:latest
+```
+
+Open <http://localhost:8080/>. To use Compose instead:
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+Provider secrets remain environment variables and are never baked into the
+image. For example:
+
+```bash
+docker run --name eon --restart unless-stopped \
+  -p 8080:8080 -v eon-data:/data \
+  -e EON_MODEL_API_KEY \
+  ghcr.io/brook-sys/eon:latest \
+  -store=sqlite -sqlite-path=/data/eon.db -listen=0.0.0.0:8080 \
+  -model -model-base-url=https://api.groq.com/openai/v1 \
+  -model-name=llama-3.3-70b-versatile \
+  -model-api-key-env=EON_MODEL_API_KEY
+```
+
+Pin a release tag or `sha-...` image tag for reproducible deployments instead
+of `latest`. The package may initially be private depending on the repository
+owner's GHCR package visibility; make it public in the package settings for
+anonymous pulls.
+
 ### 1. Clone and enter the repository
 
 ```bash

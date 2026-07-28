@@ -1,0 +1,21 @@
+services:
+  eon:
+    image: ghcr.io/brook-sys/eon:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - eon-data:/data
+    # To enable a model, uncomment env_file and command, then edit the values.
+    # env_file: .env
+    # command:
+    #   - -store=sqlite
+    #   - -sqlite-path=/data/eon.db
+    #   - -listen=0.0.0.0:8080
+    #   - -model
+    #   - -model-base-url=https://api.groq.com/openai/v1
+    #   - -model-name=llama-3.3-70b-versatile
+    #   - -model-api-key-env=EON_MODEL_API_KEY
+
+volumes:
+  eon-data:

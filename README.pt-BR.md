@@ -246,6 +246,38 @@ Fronteiras importantes:
 
 ## Início rápido
 
+### Forma mais rápida: container pronto
+
+A branch `main` publica imagens multi-arquitetura (`linux/amd64` e
+`linux/arm64`) no GHCR. Por padrão, o container usa SQLite persistente, roda
+como usuário sem privilégios, expõe o dashboard na porta 8080 e inclui
+healthcheck:
+
+```bash
+docker volume create eon-data
+docker run --name eon --restart unless-stopped \
+  -p 8080:8080 \
+  -v eon-data:/data \
+  ghcr.io/brook-sys/eon:latest
+```
+
+Abra <http://localhost:8080/>. Com Compose:
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+Segredos de providers continuam em variáveis de ambiente e nunca entram na
+imagem. Para habilitar um modelo, consulte o exemplo equivalente no
+[README em inglês](README.md#fastest-start-prebuilt-container) e ajuste o
+endpoint, modelo e nome da variável de credencial.
+
+Para deployments reproduzíveis, fixe uma tag de release ou `sha-...` em vez
+de `latest`. O pacote pode nascer privado conforme a visibilidade configurada
+no GHCR; torne-o público nas configurações do pacote para permitir pulls
+anônimos.
+
 ### 1. Clone e entre no repositório
 
 ```bash
