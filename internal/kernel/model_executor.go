@@ -853,20 +853,24 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			break
 		}
 		observedTotal := completion.InputTokens + completion.OutputTokens
-		e.releaseResourcePermitsWithTokens(ctx, operation, permits, true, nil, observedTotal)
-		if activeKind == domain.ProviderKindNVIDIANIM {
-			budget.ContextPressure = domain.RecordContextSuccess(budget.ContextPressure)
-			_ = e.saveContextPressure(ctx, activeBindingID, budget.ContextPressure)
-		}
+		// Provider completion is a local durability boundary. Cancellation may
+		// have raced with a successful response, but it must not suppress the
+		// receipt or resource reconciliation that make the call recoverable.
+		reconcileCtx := context.WithoutCancel(ctx)
 		if strings.TrimSpace(completion.Model) == "" {
 			completion.Model = "unknown"
 		}
-		// Persist the complete provider-neutral value before tools, parsing, or
-		// canonical processing. Re-appending an identical replay under the new
-		// attempt makes repeated crash/reopen cycles safe as well.
+		// Persist the complete provider-neutral value before releasing resource
+		// permits, tools, parsing, or canonical processing. This ordering is the
+		// crash/recovery boundary: if the process is lost after the provider
+		// returns but before permit release, the durable receipt survives and the
+		// operation can be recovered on reopen. Re-appending an identical replay
+		// under the new attempt makes repeated crash/reopen cycles safe as well.
 		durableCompletion := port.DurableModelCompletionResult(completion)
 		payloadHash, hashErr := durableCompletion.Hash()
 		if hashErr != nil {
+			// Even on hash failure, release permits to avoid a resource leak.
+			e.releaseResourcePermitsWithTokens(reconcileCtx, operation, permits, true, nil, observedTotal)
 			lastErr = fmt.Errorf("hash model completion receipt: %w", hashErr)
 			break
 		}
@@ -879,7 +883,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			PayloadHash:   payloadHash,
 			RecordedAt:    e.Clock.Now().UTC(),
 		}
-		if receiptErr := e.Store.Update(ctx, func(tx port.Transaction) error {
+		if receiptErr := e.Store.Update(reconcileCtx, func(tx port.Transaction) error {
 			op, err := tx.Operation(operationID)
 			if err != nil {
 				return err
@@ -892,8 +896,18 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			return tx.AppendModelCompletionReceipt(receiptToSave)
 		}); receiptErr != nil {
+			// Receipt persistence failed: release permits to avoid a resource leak,
+			// but propagate the error since the completion is not durably recorded.
+			e.releaseResourcePermitsWithTokens(reconcileCtx, operation, permits, false, nil, 0)
 			lastErr = fmt.Errorf("persist model completion receipt: %w", receiptErr)
 			break
+		}
+		// Receipt is durable: release permits with observed tokens using the
+		// cancellation-proof context, consistent with the failure path.
+		e.releaseResourcePermitsWithTokens(reconcileCtx, operation, permits, true, nil, observedTotal)
+		if activeKind == domain.ProviderKindNVIDIANIM {
+			budget.ContextPressure = domain.RecordContextSuccess(budget.ContextPressure)
+			_ = e.saveContextPressure(reconcileCtx, activeBindingID, budget.ContextPressure)
 		}
 
 		// if this response was a tool request, do NOT advance to VERIFYING or attempt to parse as final text proposal.

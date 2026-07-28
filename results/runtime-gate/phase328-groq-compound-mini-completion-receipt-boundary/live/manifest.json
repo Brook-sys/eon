@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "name": "phase328-groq-compound-mini-completion-receipt-boundary",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A deterministic executor receives an authenticated provider completion. It persists the provider-neutral completion receipt before releasing resource permits, then reconciles observed tokens with a cancellation-proof local context. If process loss occurs after receipt commit but before permit release, the receipt is durable and recovery has evidence of the completed call. Exact keys/types: receipt_before_release=true; cancellation_blocks_receipt=false; recovery_evidence=\"durable_completion_receipt\"; model_authority=false; canonical_writes=0. Do not choose recovery, accounting, routing, retries, or writes.",
+  "expected_response": "{\"receipt_before_release\":true,\"cancellation_blocks_receipt\":false,\"recovery_evidence\":\"durable_completion_receipt\",\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "cancellation_blocks_receipt": false,
+      "canonical_writes": 0,
+      "model_authority": false,
+      "receipt_before_release": true,
+      "recovery_evidence": "durable_completion_receipt"
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

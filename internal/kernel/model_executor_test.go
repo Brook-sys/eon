@@ -72,6 +72,85 @@ func (p clockCrossingProvider) Complete(context.Context, port.CompletionRequest)
 	return p.result, nil
 }
 
+type cancelWithCompletionProvider struct {
+	cancel context.CancelFunc
+	result port.CompletionResult
+}
+
+func (p cancelWithCompletionProvider) ID() string { return "cancel-with-completion" }
+func (p cancelWithCompletionProvider) Kind() domain.ProviderKind {
+	return domain.ProviderKindOpenAICompatible
+}
+func (p cancelWithCompletionProvider) Profile() domain.ProviderProfile {
+	return domain.ProviderProfile{MaxOutputTokens: 512, MaxContextTokens: 8000}
+}
+func (p cancelWithCompletionProvider) Complete(context.Context, port.CompletionRequest) (port.CompletionResult, error) {
+	p.cancel()
+	return p.result, nil
+}
+
+func TestModelExecutorPersistsReceiptAndReconcilesAfterCompletionCancellation(t *testing.T) {
+	now := time.Date(2026, 7, 28, 17, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+	spec := modelTestSpec()
+	spec.MaxOutputTokens = 100
+	seedModelAgendaWithSpec(t, store, now, spec)
+
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_cancel_boundary", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes:       []domain.Change{{Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_cancel_boundary", PayloadRef: "payload_cancel_boundary"}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:cancel-boundary", IdempotencyKey: "idem_model",
+	}
+	body, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	provider := cancelWithCompletionProvider{cancel: cancel, result: port.CompletionResult{
+		Text: string(body), Model: "fixture", InputTokens: 120, OutputTokens: 80, FinishReason: port.CompletionFinishStop,
+	}}
+	processor, err := changeset.New(changeset.Config{Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@cancel-boundary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@cancel-boundary")
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth.Limits[DefaultModelCompleteResource] = domain.ResourceLimit{Resource: DefaultModelCompleteResource, MaxTokensPerMinute: 1000}
+	executor := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor, Authorizer: auth,
+		Compiler:      prompt.Compiler{Estimator: prompt.ConservativeEstimator{}, ProviderContextTokens: 8000},
+		PolicyVersion: "policy@cancel-boundary", LeaseTTL: time.Minute,
+	}
+	_, _ = executor.Execute(ctx, "operation_model")
+
+	if err := store.View(context.Background(), func(r port.Reader) error {
+		receipt, err := r.ModelCompletionReceipt("operation_model", 1, 1)
+		if err != nil {
+			return fmt.Errorf("durable completion receipt: %w", err)
+		}
+		if receipt.Result.InputTokens != 120 || receipt.Result.OutputTokens != 80 {
+			return fmt.Errorf("receipt usage = %d+%d, want 120+80", receipt.Result.InputTokens, receipt.Result.OutputTokens)
+		}
+		usage, err := r.ResourceUsage(DefaultModelCompleteResource)
+		if err != nil {
+			return err
+		}
+		if usage.InFlight != 0 || usage.TokenMinuteCount != 200 {
+			return fmt.Errorf("reconciled usage=%+v, want in_flight=0 tokens=200", usage)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestModelExecutorReconcilesObservedTokensIntoCompletionMinute(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2026, 7, 28, 10, 0, 30, 0, time.UTC)
