@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "name": "phase313-groq-gptoss-duplicate-control",
+  "started_at": "2026-07-28T07:22:27.776309385Z",
+  "completed_at": "2026-07-28T07:22:29.169644413Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-gptoss20b-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-gptoss20b",
+  "route_rejected": {
+    "groq-gptoss20b-seeded": "circuit_open"
+  },
+  "provider_succeeded": false,
+  "provider_latency": 394149497,
+  "provider_error_class": "provider",
+  "provider_error_reason": "empty_content",
+  "expected_response_set": false,
+  "expected_response_match": false,
+  "second_acquire_reason": "",
+  "operation_state": "READY",
+  "execution_error": "model recovery exhausted: model complete: openai-compatible provider: INVALID_RESPONSE: empty_content",
+  "usages": [
+    {
+      "resource": "model-binding:groq-gptoss20b",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T07:22:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T07:22:00Z",
+      "token_minute_count": 128,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T07:23:28.713817874Z",
+      "last_failure_at": "2026-07-28T07:22:28.713817874Z"
+    },
+    {
+      "resource": "model-binding:groq-gptoss20b-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T07:23:27.776309385Z",
+      "last_failure_at": "2026-07-28T07:22:27.776309385Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T07:22:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T07:22:00Z",
+      "token_minute_count": 128,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "name": "phase313-groq-gptoss-duplicate-control",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 0,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "latency_p50": 431335465,
+  "latency_p95": 686914533,
+  "latency_max": 686914533,
+  "selected_bindings": {
+    "groq-gptoss20b": 3
+  },
+  "finish_reasons": {
+    "": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}
