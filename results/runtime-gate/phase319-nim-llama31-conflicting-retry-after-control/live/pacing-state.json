@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase319-nim-llama31-conflicting-retry-after-control",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-28T10:04:43.390666338Z"
+}
