@@ -19,6 +19,16 @@ import (
 
 const maxManifestBytes = 1 << 20
 
+const pacingStateSchemaVersion = 1
+
+type pacingState struct {
+	SchemaVersion      int       `json:"schema_version"`
+	CampaignName       string    `json:"campaign_name"`
+	PlannedTrials      int       `json:"planned_trials"`
+	CompletedTrials    int       `json:"completed_trials"`
+	NextTrialNotBefore time.Time `json:"next_trial_not_before,omitempty"`
+}
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -69,9 +79,14 @@ func run() error {
 	reports := make([]gatecampaign.RuntimeGateCampaignReport, 0, *trials)
 	batchClock := source.SystemClock{}
 	batchContext := context.Background()
-	for trial := 1; trial <= *trials; trial++ {
+	statePath := filepath.Join(*outputDirectory, "pacing-state.json")
+	state, reports, err := loadPacingState(statePath, *outputDirectory, manifest.Name, *trials)
+	if err != nil {
+		return err
+	}
+	for trial := state.CompletedTrials + 1; trial <= *trials; trial++ {
 		if trial > 1 {
-			if err := waitBeforeNextTrial(batchContext, batchClock, reports[len(reports)-1], time.Duration(manifest.InterTrialDelaySeconds)*time.Second); err != nil {
+			if err := waitUntilNextTrial(batchContext, batchClock, state.NextTrialNotBefore); err != nil {
 				return fmt.Errorf("wait before trial %d: %w", trial, err)
 			}
 		}
@@ -90,6 +105,11 @@ func run() error {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
 		reports = append(reports, report)
+		state.CompletedTrials = trial
+		state.NextTrialNotBefore = report.CompletedAt.Add(time.Duration(manifest.InterTrialDelaySeconds) * time.Second)
+		if err := writePacingState(statePath, state); err != nil {
+			return fmt.Errorf("persist pacing after trial %d: %w", trial, err)
+		}
 		if err != nil && *trials == 1 {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
@@ -115,6 +135,58 @@ func run() error {
 	body, _ := json.Marshal(map[string]any{"calls": report.ExternalCalls, "binding": report.SelectedBindingID, "provider_success": report.ProviderSucceeded, "http_status": report.ProviderHTTPStatus, "second_acquire": report.SecondAcquireReason, "durable_reopen": report.DurableReopen})
 	fmt.Println(string(body))
 	return nil
+}
+
+func loadPacingState(path, outputDirectory, campaign string, planned int) (pacingState, []gatecampaign.RuntimeGateCampaignReport, error) {
+	state := pacingState{SchemaVersion: pacingStateSchemaVersion, CampaignName: campaign, PlannedTrials: planned}
+	body, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return state, nil, nil
+	}
+	if err != nil {
+		return state, nil, err
+	}
+	if err := json.Unmarshal(body, &state); err != nil {
+		return state, nil, fmt.Errorf("decode pacing state: %w", err)
+	}
+	if state.SchemaVersion != pacingStateSchemaVersion || state.CampaignName != campaign || state.PlannedTrials != planned || state.CompletedTrials < 0 || state.CompletedTrials > planned {
+		return state, nil, errors.New("pacing state does not match requested campaign")
+	}
+	reports := make([]gatecampaign.RuntimeGateCampaignReport, 0, state.CompletedTrials)
+	for trial := 1; trial <= state.CompletedTrials; trial++ {
+		body, err := os.ReadFile(filepath.Join(outputDirectory, "trials", fmt.Sprintf("%03d", trial), "runtime-gate.json"))
+		if err != nil {
+			return state, nil, fmt.Errorf("load completed trial %d: %w", trial, err)
+		}
+		var report gatecampaign.RuntimeGateCampaignReport
+		if err := json.Unmarshal(body, &report); err != nil || report.SchemaVersion == 0 || !report.DurableReopen {
+			return state, nil, fmt.Errorf("completed trial %d report is invalid or not durable", trial)
+		}
+		reports = append(reports, report)
+	}
+	return state, reports, nil
+}
+
+func writePacingState(path string, state pacingState) error {
+	body, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, append(body, '\n'), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func waitUntilNextTrial(ctx context.Context, clock source.Clock, deadline time.Time) error {
+	if clock == nil {
+		return errors.New("clock is required")
+	}
+	if deadline.IsZero() {
+		return nil
+	}
+	return clock.WaitUntil(ctx, deadline)
 }
 
 func waitBeforeNextTrial(ctx context.Context, clock source.Clock, previous gatecampaign.RuntimeGateCampaignReport, delay time.Duration) error {

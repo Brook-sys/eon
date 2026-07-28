@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "name": "phase292-groq-llama31-resumable-pacing-smoke",
+  "started_at": "2026-07-28T01:04:15.815612984Z",
+  "completed_at": "2026-07-28T01:04:16.353832939Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:nim-llama31-70b-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-llama31-8b-live",
+  "route_rejected": {
+    "nim-llama31-70b-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 407237321,
+  "observed_input_tokens": 221,
+  "observed_output_tokens": 54,
+  "finish_reason": "stop",
+  "response_bytes": 182,
+  "response_sha256": "74146199e58ee27ef0abb45fec03a9b3102342eeee3ced91c92979e6fd827764",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": true,
+    "overall_match": true,
+    "fields_checked": 5,
+    "fields_matched": 5,
+    "fields_mismatched": 0,
+    "fields_absent": 0,
+    "field_outcomes": [
+      {
+        "field": "available_evidence",
+        "status": "matched"
+      },
+      {
+        "field": "canonical_writes",
+        "status": "matched"
+      },
+      {
+        "field": "complete_pair",
+        "status": "matched"
+      },
+      {
+        "field": "reconcile_safe",
+        "status": "matched"
+      },
+      {
+        "field": "risk",
+        "status": "matched"
+      }
+    ]
+  },
+  "response_framing_class": "markdown_fence",
+  "second_acquire_reason": "",
+  "operation_state": "READY",
+  "execution_error": "model recovery exhausted: decode exact_json completion: invalid character '`' looking for beginning of value",
+  "usages": [
+    {
+      "resource": "model-binding:groq-llama31-8b-live",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T01:04:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T01:04:00Z",
+      "token_minute_count": 275,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:nim-llama31-70b-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-28T01:05:15.815612984Z",
+      "last_failure_at": "2026-07-28T01:04:15.815612984Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-28T01:04:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-28T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-28T01:04:00Z",
+      "token_minute_count": 275,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
