@@ -407,6 +407,32 @@ func TestReportFailureIgnoresExpiredRetryAfter(t *testing.T) {
 	}
 }
 
+func TestReportFailureDoesNotShortenExistingCircuit(t *testing.T) {
+	now := time.Date(2026, 7, 28, 10, 0, 0, 0, time.UTC)
+	existingUntil := now.Add(2 * time.Minute)
+	limit := ResourceLimit{
+		Resource:         "model:test",
+		MaxConcurrent:    4,
+		FailureThreshold: 2,
+		CooldownBase:     10 * time.Second,
+		CooldownMax:      time.Minute,
+	}
+	usage := ResourceUsage{
+		Resource:            "model:test",
+		InFlight:            1,
+		ConsecutiveFailures: 1,
+		CircuitOpenUntil:    &existingUntil,
+	}
+
+	reported, err := ReportFailure(usage, limit, ResourceCost{Slots: 1}, nil, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reported.CircuitOpenUntil == nil || !reported.CircuitOpenUntil.Equal(existingUntil) {
+		t.Fatalf("failure shortened existing circuit: got %v want %v", reported.CircuitOpenUntil, existingUntil)
+	}
+}
+
 func TestWindowRoll(t *testing.T) {
 	now := time.Date(2026, 7, 16, 15, 1, 0, 0, time.UTC)
 	limit := ResourceLimit{Resource: "r", MaxPerMinute: 2}

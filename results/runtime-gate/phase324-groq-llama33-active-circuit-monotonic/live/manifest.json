@@ -1,0 +1,19 @@
+{
+  "bounds": {
+    "calls": 1,
+    "max_output_tokens": 64,
+    "retries": 0,
+    "timeout_seconds": 45
+  },
+  "error_class": "http",
+  "expected": {
+    "circuit_open_until": "10:02:00",
+    "shortened": false
+  },
+  "latency_ms": 121.5,
+  "model": "llama-3.3-70b-versatile",
+  "phase": 324,
+  "provider": "groq",
+  "status": 403,
+  "task": "active_circuit_monotonic_deadline"
+}

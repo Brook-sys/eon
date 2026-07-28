@@ -318,8 +318,17 @@ func ReportFailure(usage ResourceUsage, limit ResourceLimit, cost ResourceCost, 
 	next.LastFailureAt = &t
 
 	var openUntil time.Time
+	// Reporting another failure must never shorten an already active circuit.
+	// Keep the latest authenticated/persisted lower bound, then extend it when
+	// the computed cooldown or provider Retry-After is later.
+	if next.CircuitOpenUntil != nil && next.CircuitOpenUntil.After(now) {
+		openUntil = next.CircuitOpenUntil.UTC()
+	}
 	if limit.FailureThreshold > 0 && next.ConsecutiveFailures >= limit.FailureThreshold {
-		openUntil = now.Add(cooldownFor(next.ConsecutiveFailures, limit))
+		computed := now.Add(cooldownFor(next.ConsecutiveFailures, limit))
+		if openUntil.IsZero() || computed.After(openUntil) {
+			openUntil = computed
+		}
 	}
 	if retryAfter != nil && !retryAfter.IsZero() {
 		ra := retryAfter.UTC()
