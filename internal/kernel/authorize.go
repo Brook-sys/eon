@@ -534,6 +534,89 @@ func (a *CapabilityAuthorizer) ReportModelCompleteObserved(
 	return a.reportModelCompleteBatch(ctx, operation, permits, func(*domain.ResourcePermit) bool { return success }, retryAfter, observedTokens)
 }
 
+// SettleModelCompletionReceipt atomically applies the receipt's durable permit
+// snapshot and marks it settled. Replays are no-ops, so normal execution and
+// crash recovery share one receipt-keyed accounting boundary.
+func (a *CapabilityAuthorizer) SettleModelCompletionReceipt(ctx context.Context, operation domain.Operation, receipt domain.ModelCompletionReceipt) error {
+	if a == nil || len(receipt.Permits) == 0 {
+		return nil
+	}
+	if a.Store == nil || a.Clock == nil {
+		return errors.New("capability authorizer requires store and clock")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	now := a.Clock.Now().UTC()
+	observed := receipt.Result.InputTokens + receipt.Result.OutputTokens
+	return a.Store.Update(ctx, func(tx port.Transaction) error {
+		current, err := tx.ModelCompletionReceipt(receipt.OperationID, receipt.Attempt, receipt.ModelCall)
+		if err != nil {
+			return err
+		}
+		if current.SettledAt != nil {
+			return nil
+		}
+		resources := make([]domain.ResourceID, 0, len(current.Permits))
+		for i := range current.Permits {
+			permit := &current.Permits[i]
+			usage, err := tx.ResourceUsage(permit.Resource)
+			if errors.Is(err, port.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			next, err := domain.ReportSuccess(usage, permit.Cost, now)
+			if err == nil && observed > 0 {
+				next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observed, now)
+			}
+			if err != nil {
+				return err
+			}
+			if err := tx.SaveResourceUsage(next); err != nil {
+				return err
+			}
+			resources = append(resources, permit.Resource)
+		}
+		if err := tx.MarkModelCompletionReceiptSettled(current.OperationID, current.Attempt, current.ModelCall, now); err != nil {
+			return err
+		}
+		if len(resources) == 0 {
+			return nil
+		}
+		_, err = tx.AppendEvent(domain.Event{SchemaVersion: domain.SchemaVersionV1, ID: domain.EventID(fmt.Sprintf("%s:resource_released:receipt:%d:%d", operation.ID, current.Attempt, current.ModelCall)), Kind: EventResourceReleased, OccurredAt: now, MissionRevision: operation.MissionRevision, InquiryID: operation.InquiryID, OperationID: operation.ID, PayloadRef: joinResourceIDs(resources) + ";outcome=success"})
+		return err
+	})
+}
+
+// ReconcileModelCompletionReceipts settles at most limit receipts.
+func (a *CapabilityAuthorizer) ReconcileModelCompletionReceipts(ctx context.Context, limit int) (int, error) {
+	if limit <= 0 {
+		return 0, nil
+	}
+	var receipts []domain.ModelCompletionReceipt
+	if err := a.Store.View(ctx, func(r port.Reader) error {
+		var err error
+		receipts, err = r.UnsettledModelCompletionReceipts(limit)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	settled := 0
+	for _, receipt := range receipts {
+		var op domain.Operation
+		if err := a.Store.View(ctx, func(r port.Reader) error { var err error; op, err = r.Operation(receipt.OperationID); return err }); err != nil {
+			return settled, err
+		}
+		if err := a.SettleModelCompletionReceipt(context.WithoutCancel(ctx), op, receipt); err != nil {
+			return settled, err
+		}
+		settled++
+	}
+	return settled, nil
+}
+
 // ReportModelCompleteScopedFailure atomically releases every composite model
 // permit while applying the failure only to the classified provider/binding
 // scope. A model attempt therefore produces one durable release event and one

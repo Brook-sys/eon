@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "phase329-groq-gptoss120b-receipt-settlement",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A deterministic executor has already persisted a provider completion receipt containing the exact resource permits admitted before the call. A crash occurs before permit release. On reopen, a bounded kernel reconciler settles that receipt atomically: it releases each snapshotted permit, charges provider-observed tokens, and marks the receipt settled. Replaying the same receipt changes nothing. Exact keys/types: recovery_source=\"durable_receipt\"; releases_permits=true; charges_observed_tokens=true; replay_double_charges=false; model_authority=false; canonical_writes=0. Do not choose recovery, accounting, routing, retries, or writes.",
+  "expected_response": "{\"recovery_source\":\"durable_receipt\",\"releases_permits\":true,\"charges_observed_tokens\":true,\"replay_double_charges\":false,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "canonical_writes": 0,
+      "charges_observed_tokens": true,
+      "model_authority": false,
+      "recovery_source": "durable_receipt",
+      "releases_permits": true,
+      "replay_double_charges": false
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-gptoss120b-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-120b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-gptoss120b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-120b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

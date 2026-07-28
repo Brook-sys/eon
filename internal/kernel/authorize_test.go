@@ -452,3 +452,94 @@ func TestModelExecutorAuthorizerDisabledKeepsLegacyPath(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestSettleModelCompletionReceiptReleasesReconcilesAndReplayIsNoOp(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 28, 17, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	store := memory.New()
+	seedModelAgenda(t, store, now)
+	auth, err := NewMVPCapabilityAuthorizer(store, clock, "policy@test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var op domain.Operation
+	var spec domain.OperationSpec
+	if err := store.View(ctx, func(r port.Reader) error {
+		var e error
+		op, e = r.Operation("operation_model")
+		if e == nil {
+			spec, e = r.OperationSpec(op.SpecID)
+		}
+		return e
+	}); err != nil {
+		t.Fatal(err)
+	}
+	grant, err := auth.ReserveModelComplete(ctx, op, spec, 0, "", "")
+	if err != nil || grant.Permit == nil {
+		t.Fatalf("grant=%+v err=%v", grant, err)
+	}
+	result := domain.ModelCompletionResult{InputTokens: 40, OutputTokens: 60, Model: "m", FinishReason: "stop"}
+	hash, _ := result.Hash()
+	receipt := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: op.ID, Attempt: 1, ModelCall: 1, Result: result, PayloadHash: hash, RecordedAt: now, Permits: []domain.ResourcePermit{*grant.Permit}}
+	if err := store.Update(ctx, func(tx port.Transaction) error { return tx.AppendModelCompletionReceipt(receipt) }); err != nil {
+		t.Fatal(err)
+	}
+	if err := auth.SettleModelCompletionReceipt(ctx, op, receipt); err != nil {
+		t.Fatal(err)
+	}
+	if err := auth.SettleModelCompletionReceipt(ctx, op, receipt); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.View(ctx, func(r port.Reader) error {
+		u, e := r.ResourceUsage(grant.Permit.Resource)
+		if e != nil {
+			return e
+		}
+		if u.InFlight != 0 || u.TokenMinuteCount != 100 {
+			t.Fatalf("usage=%+v", u)
+		}
+		got, e := r.ModelCompletionReceipt(op.ID, 1, 1)
+		if e != nil {
+			return e
+		}
+		if got.SettledAt == nil {
+			t.Fatal("receipt not settled")
+		}
+		events, e := r.Events(0, 100)
+		if e != nil {
+			return e
+		}
+		releases := 0
+		for _, event := range events {
+			if event.Kind == EventResourceReleased {
+				releases++
+			}
+		}
+		if releases != 1 {
+			t.Fatalf("release events=%d", releases)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestModelCompletionReceiptRejectsInvalidAndDuplicateDurablePermits(t *testing.T) {
+	now := time.Date(2026, 7, 28, 18, 0, 0, 0, time.UTC)
+	result := domain.ModelCompletionResult{Text: "x"}
+	hash, _ := result.Hash()
+	base := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: "op", Attempt: 1, ModelCall: 1, Result: result, PayloadHash: hash, RecordedAt: now}
+	for name, permits := range map[string][]domain.ResourcePermit{
+		"invalid":   {{Resource: "r", Cost: domain.ResourceCost{Slots: -1}, GrantedAt: now}},
+		"duplicate": {{Resource: "r", Cost: domain.ResourceCost{Slots: 1}, GrantedAt: now}, {Resource: "r", Cost: domain.ResourceCost{Slots: 1}, GrantedAt: now}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			receipt := base
+			receipt.Permits = permits
+			if err := receipt.Validate(); err == nil {
+				t.Fatal("expected validation failure")
+			}
+		})
+	}
+}

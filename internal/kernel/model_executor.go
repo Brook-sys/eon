@@ -883,6 +883,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			PayloadHash:   payloadHash,
 			RecordedAt:    e.Clock.Now().UTC(),
 		}
+		for _, permit := range permits {
+			if permit != nil {
+				receiptToSave.Permits = append(receiptToSave.Permits, *permit)
+			}
+		}
 		if receiptErr := e.Store.Update(reconcileCtx, func(tx port.Transaction) error {
 			op, err := tx.Operation(operationID)
 			if err != nil {
@@ -904,7 +909,14 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		}
 		// Receipt is durable: release permits with observed tokens using the
 		// cancellation-proof context, consistent with the failure path.
-		e.releaseResourcePermitsWithTokens(reconcileCtx, operation, permits, true, nil, observedTotal)
+		if e.Authorizer != nil && len(receiptToSave.Permits) > 0 {
+			if err := e.Authorizer.SettleModelCompletionReceipt(reconcileCtx, operation, receiptToSave); err != nil {
+				lastErr = fmt.Errorf("settle model completion receipt: %w", err)
+				break
+			}
+		} else {
+			e.releaseResourcePermitsWithTokens(reconcileCtx, operation, permits, true, nil, observedTotal)
+		}
 		if activeKind == domain.ProviderKindNVIDIANIM {
 			budget.ContextPressure = domain.RecordContextSuccess(budget.ContextPressure)
 			_ = e.saveContextPressure(reconcileCtx, activeBindingID, budget.ContextPressure)

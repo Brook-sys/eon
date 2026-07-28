@@ -265,12 +265,14 @@ type ModelContextWriter interface {
 // invocation by its natural execution key.
 type ModelCompletionReceiptReader interface {
 	ModelCompletionReceipt(domain.OperationID, uint32, uint32) (domain.ModelCompletionReceipt, error)
+	UnsettledModelCompletionReceipts(int) ([]domain.ModelCompletionReceipt, error)
 }
 
 // ModelCompletionReceiptWriter is append-idempotent: replaying the same payload
 // succeeds, while a different payload at the same natural key is ErrConflict.
 type ModelCompletionReceiptWriter interface {
 	AppendModelCompletionReceipt(domain.ModelCompletionReceipt) error
+	MarkModelCompletionReceiptSettled(domain.OperationID, uint32, uint32, time.Time) error
 }
 
 // ModelCallReservationReader exposes durable pre-invocation spending records.

@@ -20,6 +20,10 @@ type ModelCompletionReceipt struct {
 	Result        ModelCompletionResult `json:"result"`
 	PayloadHash   string                `json:"payload_hash"`
 	RecordedAt    time.Time             `json:"recorded_at"`
+	// Permits is the durable authority snapshot used only to settle the cost
+	// already admitted before this completion. Older receipts omit it.
+	Permits   []ResourcePermit `json:"permits,omitempty"`
+	SettledAt *time.Time       `json:"settled_at,omitempty"`
 }
 
 // ModelCompletionResult mirrors the provider-neutral completion value without
@@ -61,6 +65,22 @@ func (r ModelCompletionReceipt) Validate() error {
 	}
 	if r.PayloadHash != hash {
 		return errors.New("model completion receipt payload hash mismatch")
+	}
+	seenPermits := make(map[ResourceID]struct{}, len(r.Permits))
+	for _, permit := range r.Permits {
+		if permit.Resource == "" || permit.GrantedAt.IsZero() {
+			return errors.New("model completion receipt permit requires resource and grant time")
+		}
+		if err := permit.Cost.Validate(); err != nil {
+			return fmt.Errorf("model completion receipt permit cost: %w", err)
+		}
+		if _, duplicate := seenPermits[permit.Resource]; duplicate {
+			return errors.New("model completion receipt permits must have unique resources")
+		}
+		seenPermits[permit.Resource] = struct{}{}
+	}
+	if r.SettledAt != nil && r.SettledAt.IsZero() {
+		return errors.New("model completion receipt settled time must be non-zero")
 	}
 	return nil
 }

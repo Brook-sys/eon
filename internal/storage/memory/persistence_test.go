@@ -17,7 +17,9 @@ func TestCheckpointPreservesModelCompletionReceiptAndAcceptsOlderOmission(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	receipt := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: "op", Attempt: 1, ModelCall: 1, Result: result, PayloadHash: hash, RecordedAt: time.Date(2026, 7, 22, 19, 0, 0, 0, time.UTC)}
+	recordedAt := time.Date(2026, 7, 22, 19, 0, 0, 0, time.UTC)
+	settledAt := recordedAt.Add(time.Minute)
+	receipt := domain.ModelCompletionReceipt{SchemaVersion: 1, OperationID: "op", Attempt: 1, ModelCall: 1, Result: result, PayloadHash: hash, RecordedAt: recordedAt, Permits: []domain.ResourcePermit{{Resource: "model:test", Cost: domain.ResourceCost{Slots: 1, Tokens: 3}, GrantedAt: recordedAt}}, SettledAt: &settledAt}
 	store := New()
 	store.state.modelCompletionReceipts[modelCompletionReceiptKey("op", 1, 1)] = receipt
 	payload, err := store.MarshalBinary()
@@ -29,7 +31,7 @@ func TestCheckpointPreservesModelCompletionReceiptAndAcceptsOlderOmission(t *tes
 		t.Fatal(err)
 	}
 	got, err := reader{state: &restored.state}.ModelCompletionReceipt("op", 1, 1)
-	if err != nil || got.PayloadHash != receipt.PayloadHash || len(got.Result.ToolCalls) != 1 {
+	if err != nil || got.PayloadHash != receipt.PayloadHash || len(got.Result.ToolCalls) != 1 || len(got.Permits) != 1 || got.Permits[0].Resource != "model:test" || got.SettledAt == nil || !got.SettledAt.Equal(settledAt) {
 		t.Fatalf("restored receipt = %#v err=%v", got, err)
 	}
 

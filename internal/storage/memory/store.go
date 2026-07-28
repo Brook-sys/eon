@@ -269,6 +269,13 @@ func cloneModelCompletionReceipt(v domain.ModelCompletionReceipt) domain.ModelCo
 	if v.Result.ToolCalls != nil {
 		v.Result.ToolCalls = append([]domain.ModelCompletionToolCall{}, v.Result.ToolCalls...)
 	}
+	if v.Permits != nil {
+		v.Permits = append([]domain.ResourcePermit{}, v.Permits...)
+	}
+	if v.SettledAt != nil {
+		settled := *v.SettledAt
+		v.SettledAt = &settled
+	}
 	return v
 }
 
@@ -295,6 +302,49 @@ func (t transaction) AppendModelCompletionReceipt(v domain.ModelCompletionReceip
 		}
 		return fmt.Errorf("%w: model completion receipt %s", port.ErrConflict, key)
 	}
+	t.state.modelCompletionReceipts[key] = cloneModelCompletionReceipt(v)
+	return nil
+}
+
+func (r reader) UnsettledModelCompletionReceipts(limit int) ([]domain.ModelCompletionReceipt, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	out := make([]domain.ModelCompletionReceipt, 0, limit)
+	keys := make([]string, 0, len(r.state.modelCompletionReceipts))
+	for key := range r.state.modelCompletionReceipts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		v := r.state.modelCompletionReceipts[key]
+		if v.SettledAt == nil && len(v.Permits) > 0 {
+			out = append(out, cloneModelCompletionReceipt(v))
+		}
+		if len(out) == limit {
+			break
+		}
+	}
+	return out, nil
+}
+func (t transaction) UnsettledModelCompletionReceipts(limit int) ([]domain.ModelCompletionReceipt, error) {
+	return reader(t).UnsettledModelCompletionReceipts(limit)
+}
+
+func (t transaction) MarkModelCompletionReceiptSettled(operationID domain.OperationID, attempt, call uint32, at time.Time) error {
+	if at.IsZero() {
+		return errors.New("settlement time is required")
+	}
+	key := modelCompletionReceiptKey(operationID, attempt, call)
+	v, ok := t.state.modelCompletionReceipts[key]
+	if !ok {
+		return notFound("model completion receipt", operationID)
+	}
+	if v.SettledAt != nil {
+		return nil
+	}
+	at = at.UTC()
+	v.SettledAt = &at
 	t.state.modelCompletionReceipts[key] = cloneModelCompletionReceipt(v)
 	return nil
 }
