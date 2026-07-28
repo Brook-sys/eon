@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "phase306-groq-allam2-compact-64-token-control",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 64,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. Exact keys/types: risk=\"unknown_effect\"; available_evidence is a JSON array of these three strings in this order, preserving the duplicate: \"delivery_receipt\", \"remote_status\", \"delivery_receipt\"; complete_pair=false; canonical_writes=0. Do not deduplicate or choose a disposition.",
+  "expected_response": "{\"risk\":\"unknown_effect\",\"available_evidence\":[\"delivery_receipt\",\"remote_status\",\"delivery_receipt\"],\"complete_pair\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "available_evidence": [
+        "delivery_receipt",
+        "remote_status",
+        "delivery_receipt"
+      ],
+      "canonical_writes": 0,
+      "complete_pair": false,
+      "risk": "unknown_effect"
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam2-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam2",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}

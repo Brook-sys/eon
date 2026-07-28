@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "name": "phase306-groq-allam2-compact-64-token-control",
+  "trials": 3,
+  "external_calls": 3,
+  "provider_successes": 3,
+  "execution_failures": 3,
+  "durable_reopens": 3,
+  "expected_matches": 0,
+  "json_valid": 0,
+  "schema_evaluated": 0,
+  "schema_adherent": 0,
+  "schema_content_complete": 0,
+  "changes_valid": 0,
+  "input_tokens": 525,
+  "output_tokens": 192,
+  "latency_p50": 377113395,
+  "latency_p95": 442352907,
+  "latency_max": 442352907,
+  "selected_bindings": {
+    "groq-allam2": 3
+  },
+  "finish_reasons": {
+    "length": 3
+  },
+  "framing_classes": {
+    "invalid_json": 3
+  },
+  "second_acquire_reasons": {
+    "": 3
+  },
+  "planned_trials": 3,
+  "early_stopped": false
+}
