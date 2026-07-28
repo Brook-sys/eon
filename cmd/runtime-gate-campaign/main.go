@@ -22,12 +22,14 @@ const maxManifestBytes = 1 << 20
 const pacingStateSchemaVersion = 1
 
 const faultAfterPacingStateEnvironment = "MOTOR_AUTONOMO_FAULT_AFTER_PACING_STATE_TRIAL"
+const faultAfterTrialReportEnvironment = "MOTOR_AUTONOMO_FAULT_AFTER_TRIAL_REPORT_TRIAL"
 
 type pacingState struct {
 	SchemaVersion      int       `json:"schema_version"`
 	CampaignName       string    `json:"campaign_name"`
 	PlannedTrials      int       `json:"planned_trials"`
 	CompletedTrials    int       `json:"completed_trials"`
+	InFlightTrial      int       `json:"in_flight_trial,omitempty"`
 	NextTrialNotBefore time.Time `json:"next_trial_not_before,omitempty"`
 }
 
@@ -82,7 +84,7 @@ func run() error {
 	batchClock := source.SystemClock{}
 	batchContext := context.Background()
 	statePath := filepath.Join(*outputDirectory, "pacing-state.json")
-	state, reports, err := loadPacingState(statePath, *outputDirectory, manifest.Name, *trials)
+	state, reports, err := loadPacingState(statePath, *outputDirectory, manifest.Name, *trials, time.Duration(manifest.InterTrialDelaySeconds)*time.Second)
 	if err != nil {
 		return err
 	}
@@ -102,12 +104,18 @@ func run() error {
 				return err
 			}
 		}
+		state.InFlightTrial = trial
+		if err := writePacingState(statePath, state); err != nil {
+			return fmt.Errorf("persist intent before trial %d: %w", trial, err)
+		}
 		report, err := runTrial(manifest, providers, trialDirectory)
 		if err != nil && report.SchemaVersion == 0 {
 			return fmt.Errorf("trial %d: %w", trial, err)
 		}
 		reports = append(reports, report)
+		crashAfterTrialReportPublication(trial)
 		state.CompletedTrials = trial
+		state.InFlightTrial = 0
 		state.NextTrialNotBefore = report.CompletedAt.Add(time.Duration(manifest.InterTrialDelaySeconds) * time.Second)
 		if err := writePacingState(statePath, state); err != nil {
 			return fmt.Errorf("persist pacing after trial %d: %w", trial, err)
@@ -140,7 +148,7 @@ func run() error {
 	return nil
 }
 
-func loadPacingState(path, outputDirectory, campaign string, planned int) (pacingState, []gatecampaign.RuntimeGateCampaignReport, error) {
+func loadPacingState(path, outputDirectory, campaign string, planned int, interTrialDelay time.Duration) (pacingState, []gatecampaign.RuntimeGateCampaignReport, error) {
 	state := pacingState{SchemaVersion: pacingStateSchemaVersion, CampaignName: campaign, PlannedTrials: planned}
 	body, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
@@ -152,27 +160,53 @@ func loadPacingState(path, outputDirectory, campaign string, planned int) (pacin
 	if err := json.Unmarshal(body, &state); err != nil {
 		return state, nil, fmt.Errorf("decode pacing state: %w", err)
 	}
-	if state.SchemaVersion != pacingStateSchemaVersion || state.CampaignName != campaign || state.PlannedTrials != planned || state.CompletedTrials < 0 || state.CompletedTrials > planned {
+	if state.SchemaVersion != pacingStateSchemaVersion || state.CampaignName != campaign || state.PlannedTrials != planned || state.CompletedTrials < 0 || state.CompletedTrials > planned || state.InFlightTrial < 0 || state.InFlightTrial > planned {
 		return state, nil, errors.New("pacing state does not match requested campaign")
+	}
+	if state.InFlightTrial != 0 {
+		if state.InFlightTrial != state.CompletedTrials+1 {
+			return state, nil, errors.New("pacing state has invalid in-flight trial")
+		}
+		report, reportErr := loadDurableTrialReport(outputDirectory, state.InFlightTrial)
+		if reportErr != nil {
+			return state, nil, fmt.Errorf("trial %d has unknown provider effect and requires receipt reconciliation: %w", state.InFlightTrial, reportErr)
+		}
+		state.CompletedTrials = state.InFlightTrial
+		state.InFlightTrial = 0
+		state.NextTrialNotBefore = report.CompletedAt.Add(interTrialDelay)
 	}
 	reports := make([]gatecampaign.RuntimeGateCampaignReport, 0, state.CompletedTrials)
 	for trial := 1; trial <= state.CompletedTrials; trial++ {
-		body, err := os.ReadFile(filepath.Join(outputDirectory, "trials", fmt.Sprintf("%03d", trial), "runtime-gate.json"))
+		report, err := loadDurableTrialReport(outputDirectory, trial)
 		if err != nil {
 			return state, nil, fmt.Errorf("load completed trial %d: %w", trial, err)
-		}
-		var report gatecampaign.RuntimeGateCampaignReport
-		if err := json.Unmarshal(body, &report); err != nil || report.SchemaVersion == 0 || !report.DurableReopen {
-			return state, nil, fmt.Errorf("completed trial %d report is invalid or not durable", trial)
 		}
 		reports = append(reports, report)
 	}
 	return state, reports, nil
 }
 
+func loadDurableTrialReport(outputDirectory string, trial int) (gatecampaign.RuntimeGateCampaignReport, error) {
+	body, err := os.ReadFile(filepath.Join(outputDirectory, "trials", fmt.Sprintf("%03d", trial), "runtime-gate.json"))
+	if err != nil {
+		return gatecampaign.RuntimeGateCampaignReport{}, err
+	}
+	var report gatecampaign.RuntimeGateCampaignReport
+	if err := json.Unmarshal(body, &report); err != nil || report.SchemaVersion == 0 || !report.DurableReopen || report.ExternalCalls != 1 {
+		return gatecampaign.RuntimeGateCampaignReport{}, errors.New("report is invalid, incomplete, or not durable")
+	}
+	return report, nil
+}
+
 func crashAfterPacingStatePublication(trial int) {
 	if os.Getenv(faultAfterPacingStateEnvironment) == fmt.Sprint(trial) {
 		os.Exit(86)
+	}
+}
+
+func crashAfterTrialReportPublication(trial int) {
+	if os.Getenv(faultAfterTrialReportEnvironment) == fmt.Sprint(trial) {
+		os.Exit(87)
 	}
 }
 

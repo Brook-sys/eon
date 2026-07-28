@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,6 +73,20 @@ func TestCrashAfterPacingStatePublicationFaultInjection(t *testing.T) {
 	}
 }
 
+func TestCrashAfterTrialReportPublicationFaultInjection(t *testing.T) {
+	if os.Getenv("GO_WANT_REPORT_CRASH_HELPER") == "1" {
+		crashAfterTrialReportPublication(1)
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=TestCrashAfterTrialReportPublicationFaultInjection")
+	cmd.Env = append(os.Environ(), "GO_WANT_REPORT_CRASH_HELPER=1", faultAfterTrialReportEnvironment+"=1")
+	err := cmd.Run()
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 87 {
+		t.Fatalf("helper error = %v, want exit code 87", err)
+	}
+}
+
 func TestLoadPacingStateResumesAfterDurableCompletedTrial(t *testing.T) {
 	root := t.TempDir()
 	trialDir := filepath.Join(root, "trials", "001")
@@ -79,7 +94,7 @@ func TestLoadPacingStateResumesAfterDurableCompletedTrial(t *testing.T) {
 		t.Fatal(err)
 	}
 	completedAt := time.Date(2026, 7, 27, 22, 0, 0, 0, time.UTC)
-	report := gatecampaign.RuntimeGateCampaignReport{SchemaVersion: 1, CompletedAt: completedAt, DurableReopen: true}
+	report := gatecampaign.RuntimeGateCampaignReport{SchemaVersion: 1, ExternalCalls: 1, CompletedAt: completedAt, DurableReopen: true}
 	body, err := json.Marshal(report)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +107,7 @@ func TestLoadPacingStateResumesAfterDurableCompletedTrial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	loaded, reports, err := loadPacingState(filepath.Join(root, "pacing-state.json"), root, "resume", 2)
+	loaded, reports, err := loadPacingState(filepath.Join(root, "pacing-state.json"), root, "resume", 2, 30*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,5 +127,41 @@ func TestLoadPacingStateResumesAfterDurableCompletedTrial(t *testing.T) {
 	}
 	if err := <-done; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLoadPacingStateReconcilesInFlightFromDurableReport(t *testing.T) {
+	root := t.TempDir()
+	trialDir := filepath.Join(root, "trials", "001")
+	if err := os.MkdirAll(trialDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	completedAt := time.Date(2026, 7, 27, 22, 30, 0, 0, time.UTC)
+	body, _ := json.Marshal(gatecampaign.RuntimeGateCampaignReport{SchemaVersion: 1, ExternalCalls: 1, CompletedAt: completedAt, DurableReopen: true})
+	if err := os.WriteFile(filepath.Join(trialDir, "runtime-gate.json"), body, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := pacingState{SchemaVersion: pacingStateSchemaVersion, CampaignName: "reconcile", PlannedTrials: 2, InFlightTrial: 1}
+	if err := writePacingState(filepath.Join(root, "pacing-state.json"), state); err != nil {
+		t.Fatal(err)
+	}
+	loaded, reports, err := loadPacingState(filepath.Join(root, "pacing-state.json"), root, "reconcile", 2, 10*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.CompletedTrials != 1 || loaded.InFlightTrial != 0 || len(reports) != 1 || !loaded.NextTrialNotBefore.Equal(completedAt.Add(10*time.Second)) {
+		t.Fatalf("unexpected reconciled state: %+v reports=%d", loaded, len(reports))
+	}
+}
+
+func TestLoadPacingStateFailsClosedWhenInFlightEffectIsUnknown(t *testing.T) {
+	root := t.TempDir()
+	state := pacingState{SchemaVersion: pacingStateSchemaVersion, CampaignName: "unknown", PlannedTrials: 2, InFlightTrial: 1}
+	if err := writePacingState(filepath.Join(root, "pacing-state.json"), state); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := loadPacingState(filepath.Join(root, "pacing-state.json"), root, "unknown", 2, 10*time.Second)
+	if err == nil || !strings.Contains(err.Error(), "unknown provider effect") {
+		t.Fatalf("error = %v, want unknown provider effect", err)
 	}
 }

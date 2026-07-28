@@ -6080,3 +6080,15 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Decision.** The checkpoint now has executable crash/restart evidence for the post-publication boundary: completed calls are not duplicated and pacing survives restart. This does not yet cover a crash after the provider call but before durable report/checkpoint publication; that ambiguity requires receipt-based reconciliation before any automatic replay. Preserve zero retry and fail closed at that earlier boundary.
 
 **Evidence and verification.** `results/runtime-gate/phase293-groq-llama31-crash-resume-pacing/live/`. Focused tests, CLI race test, full `go test ./...`, full `go vet ./...`, receipt/state inspection, `git diff --check`, and secret scan passed.
+
+## Phase 294 — durable in-flight intent fails closed across the ambiguous call boundary (2026-07-27 22:40 -03)
+
+**Hypothesis.** Publishing a durable trial intent before provider acquisition can distinguish a safely completed call from the ambiguous crash window after dispatch but before report publication. Restart may adopt a complete durable report, but must never replay an in-flight trial whose one-call effect cannot be proven.
+
+**Implemented.** The campaign pacing checkpoint now records `in_flight_trial` atomically before `runTrial`. Startup validates the monotonic intent, adopts it only when the corresponding report proves exactly one external call plus durable reopen, reconstructs the inter-trial deadline from `CompletedAt`, and otherwise stops with an explicit unknown-provider-effect reconciliation error. Added a second subprocess fault point after durable report publication but before checkpoint completion, plus regressions for report adoption, fail-closed missing receipt, invalid intent, and both crash exit codes.
+
+**Live bounded campaign.** Groq `llama-3.1-8b-instant`; one inconsistent authenticated-pair extraction; one call maximum; 45 s timeout; 128 output-token ceiling; zero retries/fallback; NIM circuit-open; strict integral JSON; zero canonical writes. The provider succeeded in 378 ms with 221 input + 54 output tokens and `stop`. Exact bytes differed, but the sanitized structural oracle matched all 5/5 protected fields. SQLite reopened durably and the final pacing checkpoint cleared the in-flight marker with exactly one completed trial.
+
+**Decision.** Automatic restart is now safe at both observable sides of the report boundary: a durable one-call report is adopted without replay, while absent/incomplete evidence parks the campaign for receipt reconciliation. Do not infer that an absent report means the provider was not called, and do not add automatic retry at this boundary. The next useful experiment is a full subprocess live crash after report publication followed by restart, or a provider-supported idempotency receipt wired into the ambiguous branch.
+
+**Evidence and verification.** `results/runtime-gate/phase294-groq-llama31-inflight-intent-live/live/`. Focused command/gatecampaign tests, full `go test ./...`, full `go vet ./...`, JSON/checkpoint inspection, `git diff --check`, and secret-safe artifact inspection passed.
