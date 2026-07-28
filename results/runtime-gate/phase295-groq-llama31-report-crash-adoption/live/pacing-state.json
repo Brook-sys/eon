@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase295-groq-llama31-report-crash-adoption",
+  "planned_trials": 2,
+  "completed_trials": 2,
+  "next_trial_not_before": "2026-07-28T02:03:01.66118047Z"
+}
