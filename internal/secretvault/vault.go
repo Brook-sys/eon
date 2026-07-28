@@ -33,7 +33,13 @@ var (
 	ErrInitialized     = errors.New("credential vault is already initialized")
 	ErrUninitialized   = errors.New("credential vault is not initialized")
 	ErrInvalidPassword = errors.New("invalid vault password")
+	pathLocks          sync.Map
 )
+
+func lockForPath(path string) *sync.Mutex {
+	lock, _ := pathLocks.LoadOrStore(path, &sync.Mutex{})
+	return lock.(*sync.Mutex)
+}
 
 type envelope struct {
 	Version    int    `json:"version"`
@@ -72,14 +78,23 @@ type Vault struct {
 	key      []byte
 	data     payload
 	lastUsed time.Time
+	now      func() time.Time
 }
 
 func New(path string) (*Vault, error) {
+	return NewWithClock(path, time.Now)
+}
+
+// NewWithClock injects the clock used for activity and inactivity expiry.
+func NewWithClock(path string, now func() time.Time) (*Vault, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil, errors.New("vault path is required")
 	}
-	return &Vault{path: path, data: payload{Secrets: map[string]record{}}}, nil
+	if now == nil {
+		return nil, errors.New("vault clock is required")
+	}
+	return &Vault{path: path, data: payload{Secrets: map[string]record{}}, now: now}, nil
 }
 
 func (v *Vault) Status() Status {
@@ -124,7 +139,7 @@ func (v *Vault) Initialize(password string) error {
 		v.key = nil
 		return err
 	}
-	v.lastUsed = time.Now()
+	v.lastUsed = v.now()
 	return nil
 }
 
@@ -191,7 +206,7 @@ func (v *Vault) Unlock(password string) error {
 	zero(v.key)
 	v.key = key
 	v.data = p
-	v.lastUsed = time.Now()
+	v.lastUsed = v.now()
 	return nil
 }
 
@@ -217,7 +232,13 @@ func (v *Vault) Put(name, value string) error {
 	if value == "" || len(value) > maxSecretSize {
 		return errors.New("secret value is required and must not exceed 16 KiB")
 	}
-	now := time.Now().UTC()
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		return err
+	}
+	now := v.now().UTC()
 	r, ok := v.data.Secrets[name]
 	if !ok {
 		r.CreatedAt = now
@@ -225,7 +246,7 @@ func (v *Vault) Put(name, value string) error {
 	r.Value = value
 	r.UpdatedAt = now
 	v.data.Secrets[name] = r
-	v.lastUsed = time.Now()
+	v.lastUsed = v.now()
 	return v.saveWithCurrentKeyLocked()
 }
 
@@ -239,8 +260,14 @@ func (v *Vault) Delete(name string) error {
 	if err := validateName(name); err != nil {
 		return err
 	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		return err
+	}
 	delete(v.data.Secrets, name)
-	v.lastUsed = time.Now()
+	v.lastUsed = v.now()
 	return v.saveWithCurrentKeyLocked()
 }
 
@@ -255,12 +282,12 @@ func (v *Vault) Resolve(name string) (string, error) {
 	if !ok {
 		return "", os.ErrNotExist
 	}
-	v.lastUsed = time.Now()
+	v.lastUsed = v.now()
 	return r.Value, nil
 }
 
 func (v *Vault) expireLocked() {
-	if len(v.key) != 0 && !v.lastUsed.IsZero() && time.Since(v.lastUsed) >= autoLockAfter {
+	if len(v.key) != 0 && !v.lastUsed.IsZero() && v.now().Sub(v.lastUsed) >= autoLockAfter {
 		zero(v.key)
 		v.key = nil
 		v.data = payload{Secrets: map[string]record{}}
@@ -282,6 +309,39 @@ func (v *Vault) saveWithCurrentKeyLocked() error {
 		return err
 	}
 	return v.saveLocked(salt, env.Iterations)
+}
+
+func (v *Vault) reloadWithCurrentKeyLocked() error {
+	raw, err := os.ReadFile(v.path)
+	if err != nil {
+		return err
+	}
+	var env envelope
+	if err = json.Unmarshal(raw, &env); err != nil {
+		return fmt.Errorf("decode vault: %w", err)
+	}
+	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
+	if err != nil {
+		return errors.New("invalid vault nonce")
+	}
+	ct, err := base64.StdEncoding.DecodeString(env.Ciphertext)
+	if err != nil {
+		return errors.New("invalid vault ciphertext")
+	}
+	plain, err := open(v.key, nonce, ct)
+	if err != nil {
+		return ErrInvalidPassword
+	}
+	defer zero(plain)
+	var p payload
+	if err = json.Unmarshal(plain, &p); err != nil {
+		return errors.New("invalid vault payload")
+	}
+	if p.Secrets == nil {
+		p.Secrets = map[string]record{}
+	}
+	v.data = p
+	return nil
 }
 func (v *Vault) saveLocked(salt []byte, iter int) error {
 	plain, err := json.Marshal(v.data)
@@ -330,7 +390,20 @@ func (v *Vault) saveLocked(salt []byte, iter int) error {
 	if err != nil {
 		return err
 	}
-	return os.Rename(tmpName, v.path)
+	if err = os.Rename(tmpName, v.path); err != nil {
+		return err
+	}
+	// Persist the directory-entry replacement, not only the temporary bytes.
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	err = d.Sync()
+	closeErr = d.Close()
+	if err != nil {
+		return err
+	}
+	return closeErr
 }
 func derive(password string, salt []byte, iter int) ([]byte, error) {
 	return pbkdf2.Key(sha256.New, password, salt, iter, 32)

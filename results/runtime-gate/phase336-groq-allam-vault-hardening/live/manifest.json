@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "name": "phase336-groq-allam-vault-hardening",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. An encrypted local credential vault serializes writes by canonical path, reloads the latest committed payload before mutation, atomically renames a synced temporary file, syncs the parent directory, and auto-locks exactly at an injected inactivity deadline. A model may classify these supplied invariants but cannot read secrets, choose the clock, mutate the vault, bypass locking, or make canonical writes. Exact keys/types: lost_update_prevented=true; abandoned_temp_harmless=true; locks_at_boundary=true; model_can_read_secret=false; canonical_writes=0.",
+  "expected_response": "{\"lost_update_prevented\":true,\"abandoned_temp_harmless\":true,\"locks_at_boundary\":true,\"model_can_read_secret\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "abandoned_temp_harmless": true,
+      "canonical_writes": 0,
+      "locks_at_boundary": true,
+      "lost_update_prevented": true,
+      "model_can_read_secret": false
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

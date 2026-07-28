@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestVaultEncryptedRoundTripAndMetadataRedaction(t *testing.T) {
@@ -47,6 +49,103 @@ func TestVaultEncryptedRoundTripAndMetadataRedaction(t *testing.T) {
 	got, err := v.Resolve("provider/groq/api-key")
 	if err != nil || got != "super-secret-token" {
 		t.Fatalf("resolve=%q %v", got, err)
+	}
+}
+
+func TestInactivityClockLocksExactlyAtBoundaryAndActivityExtendsIt(t *testing.T) {
+	now := time.Date(2026, 7, 28, 10, 0, 0, 0, time.UTC)
+	v, err := NewWithClock(filepath.Join(t.TempDir(), "vault"), func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = v.Initialize("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	if err = v.Put("a", "secret"); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(autoLockAfter - time.Nanosecond)
+	if _, err = v.Resolve("a"); err != nil {
+		t.Fatalf("before boundary: %v", err)
+	}
+	// Resolve is activity and starts a fresh inactivity interval.
+	now = now.Add(autoLockAfter - time.Nanosecond)
+	if v.Status().Locked {
+		t.Fatal("locked before extended boundary")
+	}
+	now = now.Add(time.Nanosecond)
+	if !v.Status().Locked {
+		t.Fatal("vault did not lock exactly at inactivity boundary")
+	}
+}
+
+func TestConcurrentHandlesMergeWritesWithoutLostUpdate(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vault")
+	first, _ := New(path)
+	if err := first.Initialize("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	second, _ := New(path)
+	if err := second.Unlock("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	start := make(chan struct{})
+	errCh := make(chan error, 2)
+	var wg sync.WaitGroup
+	for _, item := range []struct {
+		v    *Vault
+		name string
+	}{{first, "one"}, {second, "two"}} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			errCh <- item.v.Put(item.name, "value-"+item.name)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	reopened, _ := New(path)
+	if err := reopened.Unlock("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"one", "two"} {
+		if got, err := reopened.Resolve(name); err != nil || got != "value-"+name {
+			t.Fatalf("%s=%q, %v", name, got, err)
+		}
+	}
+}
+
+func TestInterruptedTemporaryWriteDoesNotDamageCommittedVault(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vault")
+	v, _ := New(path)
+	if err := v.Initialize("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Put("provider/key", "committed-secret"); err != nil {
+		t.Fatal(err)
+	}
+	// A process killed before rename can leave only an unrelated temporary file.
+	if err := os.WriteFile(filepath.Join(dir, ".vault-interrupted"), []byte(`{"truncated":`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	reopened, _ := New(path)
+	if err := reopened.Unlock("correct horse battery staple"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := reopened.Resolve("provider/key"); err != nil || got != "committed-secret" {
+		t.Fatalf("resolved=%q, %v", got, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm() != 0600 {
+		t.Fatalf("mode=%v, err=%v", info.Mode().Perm(), err)
 	}
 }
 
