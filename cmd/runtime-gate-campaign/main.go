@@ -67,7 +67,14 @@ func run() error {
 		return err
 	}
 	reports := make([]gatecampaign.RuntimeGateCampaignReport, 0, *trials)
+	batchClock := source.SystemClock{}
+	batchContext := context.Background()
 	for trial := 1; trial <= *trials; trial++ {
+		if trial > 1 {
+			if err := waitBeforeNextTrial(batchContext, batchClock, reports[len(reports)-1], time.Duration(manifest.InterTrialDelaySeconds)*time.Second); err != nil {
+				return fmt.Errorf("wait before trial %d: %w", trial, err)
+			}
+		}
 		trialDirectory := *outputDirectory
 		if *trials > 1 {
 			trialDirectory = filepath.Join(*outputDirectory, "trials", fmt.Sprintf("%03d", trial))
@@ -108,6 +115,16 @@ func run() error {
 	body, _ := json.Marshal(map[string]any{"calls": report.ExternalCalls, "binding": report.SelectedBindingID, "provider_success": report.ProviderSucceeded, "http_status": report.ProviderHTTPStatus, "second_acquire": report.SecondAcquireReason, "durable_reopen": report.DurableReopen})
 	fmt.Println(string(body))
 	return nil
+}
+
+func waitBeforeNextTrial(ctx context.Context, clock source.Clock, previous gatecampaign.RuntimeGateCampaignReport, delay time.Duration) error {
+	if clock == nil {
+		return errors.New("clock is required")
+	}
+	if delay <= 0 {
+		return nil
+	}
+	return clock.WaitUntil(ctx, previous.CompletedAt.Add(delay))
 }
 
 func runTrial(manifest gatecampaign.RuntimeGateCampaignManifest, providers map[string]port.ModelProvider, outputDirectory string) (gatecampaign.RuntimeGateCampaignReport, error) {

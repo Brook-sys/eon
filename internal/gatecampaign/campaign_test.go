@@ -87,6 +87,22 @@ func TestManifestAllowsBoundedLargeOutputProbe(t *testing.T) {
 	}
 }
 
+func TestManifestAllowsOnlyBoundedInterTrialPacing(t *testing.T) {
+	manifest := runtimeGateTestManifest()
+	for _, seconds := range []int{0, 30, 300} {
+		manifest.InterTrialDelaySeconds = seconds
+		if err := manifest.Validate(); err != nil {
+			t.Fatalf("inter-trial delay %d must be accepted: %v", seconds, err)
+		}
+	}
+	for _, seconds := range []int{-1, 301} {
+		manifest.InterTrialDelaySeconds = seconds
+		if err := manifest.Validate(); err == nil || !strings.Contains(err.Error(), "inter_trial_delay_seconds") {
+			t.Fatalf("inter-trial delay %d error=%v", seconds, err)
+		}
+	}
+}
+
 func TestRuntimeGateSeedUsesDeclaredProbeContract(t *testing.T) {
 	for _, outputSchema := range []string{"", "exact_json", "proposed_changeset"} {
 		manifest := runtimeGateTestManifest()

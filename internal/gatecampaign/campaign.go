@@ -40,6 +40,7 @@ type RuntimeGateCampaignManifest struct {
 	StructuralExpectation     *StructuralExpectation `json:"structural_expectation,omitempty"`
 	SeedPrimaryCircuitSeconds int                    `json:"seed_primary_circuit_seconds"`
 	EarlyStopRepeatedFailures int                    `json:"early_stop_repeated_failures,omitempty"`
+	InterTrialDelaySeconds    int                    `json:"inter_trial_delay_seconds,omitempty"`
 	Bindings                  []RuntimeGateBinding   `json:"bindings"`
 }
 
@@ -114,6 +115,9 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	}
 	if m.EarlyStopRepeatedFailures < 0 || m.EarlyStopRepeatedFailures > MaxRuntimeGateBatchTrials || m.EarlyStopRepeatedFailures == 1 {
 		return errors.New("early_stop_repeated_failures must be zero or between 2 and 5")
+	}
+	if m.InterTrialDelaySeconds < 0 || m.InterTrialDelaySeconds > 300 {
+		return errors.New("inter_trial_delay_seconds must be between 0 and 300")
 	}
 	if len(m.Bindings) != 2 {
 		return errors.New("runtime gate campaign requires exactly two bindings")
