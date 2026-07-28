@@ -323,7 +323,7 @@ func ReportFailure(usage ResourceUsage, limit ResourceLimit, cost ResourceCost, 
 	}
 	if retryAfter != nil && !retryAfter.IsZero() {
 		ra := retryAfter.UTC()
-		if openUntil.IsZero() || ra.After(openUntil) {
+		if ra.After(now) && (openUntil.IsZero() || ra.After(openUntil)) {
 			openUntil = ra
 		}
 	}
