@@ -25,7 +25,9 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /rekey", h.rekey)
 	mux.HandleFunc("POST /export", h.export)
 	mux.HandleFunc("POST /import", h.importVault)
+	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
+	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	mux.HandleFunc("POST /resolve", h.resolveBatch)
@@ -138,6 +140,14 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 func (h HTTP) auditLog(w http.ResponseWriter, _ *http.Request) {
 	write(w, http.StatusOK, h.Vault.AuditLog())
 }
+func (h HTTP) listSecrets(w http.ResponseWriter, _ *http.Request) {
+	entries, err := h.Vault.ListSecrets()
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"secrets": entries})
+}
 func (h HTTP) getSecret(w http.ResponseWriter, r *http.Request) {
 	val, err := h.Vault.Resolve(r.PathValue("name"))
 	if err != nil {
@@ -145,6 +155,17 @@ func (h HTTP) getSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]string{"value": val})
+}
+func (h HTTP) rotateSecret(w http.ResponseWriter, r *http.Request) {
+	var q secretRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if err := h.Vault.Rotate(r.PathValue("name"), q.Value); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusNoContent, nil)
 }
 func (h HTTP) put(w http.ResponseWriter, r *http.Request) {
 	var q secretRequest

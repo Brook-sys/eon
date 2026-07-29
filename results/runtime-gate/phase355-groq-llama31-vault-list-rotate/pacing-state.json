@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase355-groq-llama31-vault-list-rotate",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-29T19:09:05.369319821Z"
+}

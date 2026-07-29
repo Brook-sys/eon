@@ -113,6 +113,15 @@ type ResolveResult struct {
 	Error string `json:"error,omitempty"`
 }
 
+// SecretEntry holds metadata for a single secret without exposing its value.
+type SecretEntry struct {
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	Expired   bool      `json:"expired,omitempty"`
+}
+
 type Status struct {
 	Initialized bool       `json:"initialized"`
 	Locked      bool       `json:"locked"`
@@ -488,6 +497,81 @@ func (v *Vault) ResolveAll(names []string) []ResolveResult {
 	}
 	_ = hasSuccess
 	return results
+}
+
+// ListSecrets returns metadata for all stored secrets without exposing values.
+// The vault must be unlocked. Expired secrets are marked as expired but still
+// listed. Results are sorted by name for deterministic output.
+func (v *Vault) ListSecrets() ([]SecretEntry, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("list", "", "failure")
+		return nil, ErrLocked
+	}
+	now := v.now()
+	entries := make([]SecretEntry, 0, len(v.data.Secrets))
+	for name, r := range v.data.Secrets {
+		e := SecretEntry{
+			Name:      name,
+			CreatedAt: r.CreatedAt,
+			UpdatedAt: r.UpdatedAt,
+			ExpiresAt: r.ExpiresAt,
+		}
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			e.Expired = true
+		}
+		entries = append(entries, e)
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	v.lastUsed = v.now()
+	v.recordAuditLocked("list", "", "success")
+	return entries, nil
+}
+
+// Rotate updates the value of an existing secret while preserving its
+// CreatedAt timestamp. This is a security best practice for credential
+// rotation. The vault must be unlocked and the secret must already exist.
+func (v *Vault) Rotate(name, newValue string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("rotate", name, "failure")
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("rotate", name, "failure")
+		return err
+	}
+	if newValue == "" || len(newValue) > maxSecretSize {
+		v.recordAuditLocked("rotate", name, "failure")
+		return ErrInvalidSecretValue
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("rotate", name, "failure")
+		return err
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		v.recordAuditLocked("rotate", name, "failure")
+		return os.ErrNotExist
+	}
+	r.Value = newValue
+	r.UpdatedAt = v.now().UTC()
+	v.data.Secrets[name] = r
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("rotate", name, "success")
+	} else {
+		v.recordAuditLocked("rotate", name, "failure")
+	}
+	return err
 }
 
 func (v *Vault) ChangePassword(oldPassword, newPassword string) error {

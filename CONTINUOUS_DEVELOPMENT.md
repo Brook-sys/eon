@@ -6749,3 +6749,33 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 4. Expired secret returns HTTP 410 `secret_expired`.
 
 **Verification.** `go test ./internal/secretvault/...`, `go vet ./internal/secretvault/...`, and `git diff --check` passed cleanly.
+
+## Phase 355 — secret vault list and rotate operations (2026-07-29 16:10 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` and `secretvault.HTTP` with secret listing and credential rotation capabilities.
+1. Added `SecretEntry` struct containing `Name`, `CreatedAt`, `UpdatedAt`, `ExpiresAt`, and `Expired` fields — metadata only, no secret values exposed.
+2. Implemented `ListSecrets() ([]SecretEntry, error)` in `Vault`, returning metadata for all stored secrets sorted by name for deterministic output. Expired secrets are marked with `Expired: true` but still listed. The vault must be unlocked.
+3. Implemented `Rotate(name, newValue string) error` in `Vault`, updating the value of an existing secret while preserving its `CreatedAt` timestamp. This follows security best practices for credential rotation. The vault must be unlocked and the secret must already exist. Rotation acquires the path lock and reloads the vault before writing to prevent lost updates from concurrent handles.
+4. Added `GET /secrets` HTTP endpoint returning `{"secrets": [...]}` with metadata for all secrets (no values exposed).
+5. Added `POST /secrets/{name}/rotate` HTTP endpoint accepting `{"value":"..."}` body, returning HTTP 204 No Content on success.
+6. Domain errors map via existing `writeErr`: `ErrLocked` → HTTP 423, `os.ErrNotExist` → HTTP 404, `ErrInvalidSecretValue` → HTTP 400.
+
+**Live hypothesis and bounds.** Rotated from Groq `groq/compound-mini` (Phase 354) to Groq `llama-3.1-8b-instant` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.1-8b-instant` completed live evaluation in 292.0 ms (94 input + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/list_rotate_test.go` confirm:
+1. `ListSecrets` on locked vault returns `ErrLocked`.
+2. `ListSecrets` returns all secrets sorted by name with correct metadata.
+3. `ListSecrets` marks expired secrets with `Expired: true`.
+4. `ListSecrets` does not expose secret values.
+5. `Rotate` on locked vault returns `ErrLocked`.
+6. `Rotate` on non-existent secret returns `os.ErrNotExist`.
+7. `Rotate` with empty value returns `ErrInvalidSecretValue`.
+8. `Rotate` updates value while preserving `CreatedAt` and advancing `UpdatedAt`.
+9. HTTP `GET /secrets` returns HTTP 200 with metadata list, no secret values leaked.
+10. HTTP `POST /secrets/{name}/rotate` returns HTTP 204 on success and updates the secret value.
+11. HTTP `POST /secrets/nonexistent/rotate` returns HTTP 404.
+12. HTTP `POST /secrets/{name}/rotate` with empty value returns HTTP 400.
+13. HTTP `GET /secrets` on locked vault returns HTTP 423.
+14. HTTP `POST /secrets/{name}/rotate` on locked vault returns HTTP 423.
+
+**Verification.** `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase355-groq-llama31-vault-list-rotate/`.
