@@ -6732,3 +6732,20 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 5. HTTP `POST /resolve` accepts name arrays up to 100 items, returning HTTP 200 with `ResolveResult` list, and rejecting empty requests with HTTP 400 `invalid_request`.
 
 **Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
+
+## Phase 354 — credential vault single secret HTTP resolution (2026-07-29 21:00 -03)
+
+**Objective and implementation.** Exposed `GET /secrets/{name}` on `secretvault.HTTP` to complement batch resolution (`POST /resolve`) with single-secret retrieval over HTTP.
+1. Implemented `getSecret(w, r)` in `secretvault.HTTP` mapping `GET /secrets/{name}` to `h.Vault.Resolve(r.PathValue("name"))`.
+2. Returns HTTP 200 OK with JSON `{"value": "..."}` on success.
+3. Automatically maps domain errors via `writeErr`: `ErrLocked` -> HTTP 423 `vault_locked`, `os.ErrNotExist` -> HTTP 404 `not_found`, `ErrSecretExpired` -> HTTP 410 `secret_expired`.
+
+**Live hypothesis and bounds.** Rotated from Groq `llama-3.3-70b-versatile` to Groq `groq/compound-mini` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `groq/compound-mini` completed live evaluation in 661.1 ms (606 tokens total, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/single_resolve_test.go` confirm:
+1. `GET /secrets/{name}` returns HTTP 200 OK and secret value when unlocked.
+2. Missing secret returns HTTP 404 `not_found`.
+3. Locked vault returns HTTP 423 `vault_locked`.
+4. Expired secret returns HTTP 410 `secret_expired`.
+
+**Verification.** `go test ./internal/secretvault/...`, `go vet ./internal/secretvault/...`, and `git diff --check` passed cleanly.

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "phase354-groq-qwen25-vault-single-resolve",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 32,
+  "output_schema": "exact_text",
+  "probe_prompt": "Reply with exactly the text: READY\n\nNo markdown and no explanation.",
+  "expected_response": "READY",
+  "seed_primary_circuit_seconds": 60,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31-8b-seeded",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-qwen25-32b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen-2.5-32b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}
