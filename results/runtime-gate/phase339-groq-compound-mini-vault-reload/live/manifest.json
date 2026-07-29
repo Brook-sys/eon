@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "phase339-groq-compound-mini-vault-reload",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A runtime attempts to hot-reload its model executor while the encrypted credential vault is locked. Construction of the replacement fails before any provider request. The already-running executor must remain installed, the wrapped locked-vault cause must remain classifiable, and neither logs nor errors may expose the configured credential-reference name or secret. The model cannot unlock, retry, replace the executor, or write canonical state. Exact keys/types: reload_succeeds=false; prior_executor_preserved=true; cause_preserved=true; credential_reference_exposed=false; secret_exposed=false; canonical_writes=0.",
+  "expected_response": "{\"reload_succeeds\":false,\"prior_executor_preserved\":true,\"cause_preserved\":true,\"credential_reference_exposed\":false,\"secret_exposed\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "canonical_writes": 0,
+      "cause_preserved": true,
+      "credential_reference_exposed": false,
+      "prior_executor_preserved": true,
+      "reload_succeeds": false,
+      "secret_exposed": false
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama33-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.3-70b-versatile",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}
