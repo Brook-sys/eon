@@ -112,6 +112,7 @@ func writeErr(w http.ResponseWriter, err error) {
 	status := http.StatusBadRequest
 	code := "invalid_request"
 	message := err.Error()
+
 	if errors.Is(err, ErrLocked) {
 		status = http.StatusLocked
 		code = "vault_locked"
@@ -128,6 +129,13 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrNotExist) {
 		status = http.StatusNotFound
 		code = "not_found"
+	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) {
+		status = http.StatusBadRequest
+		code = "invalid_request"
+	} else {
+		status = http.StatusInternalServerError
+		code = "internal_error"
+		message = "internal vault operation failed"
 	}
 	write(w, status, map[string]any{"error": map[string]string{"code": code, "message": message}})
 }

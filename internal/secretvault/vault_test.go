@@ -286,3 +286,65 @@ func TestHTTPIsWriteOnlyAndLocalOnly(t *testing.T) {
 		}
 	}
 }
+
+func TestHTTPInternalErrorRedactionAndValidationMapping(t *testing.T) {
+	dir := t.TempDir()
+	vaultPath := filepath.Join(dir, "vault.json")
+	v, _ := New(vaultPath)
+	h := HTTP{Vault: v}.Handler()
+
+	// 1. Password validation error (< 12 chars) -> 400 invalid_request
+	req := httptest.NewRequest(http.MethodPost, "http://local/initialize", strings.NewReader(`{"password":"short"}`))
+	req.RemoteAddr = "127.0.0.1:1"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("short pass status=%d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "invalid_request") || !strings.Contains(w.Body.String(), "12 to 1024") {
+		t.Fatalf("unexpected body for short pass: %s", w.Body.String())
+	}
+
+	// Initialize vault properly
+	req = httptest.NewRequest(http.MethodPost, "http://local/initialize", strings.NewReader(`{"password":"correct horse battery staple"}`))
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("init status=%d %s", w.Code, w.Body.String())
+	}
+
+	// 2. Secret name validation error (empty or invalid characters) -> 400 invalid_request
+	req = httptest.NewRequest(http.MethodPut, "http://local/secrets/%00", strings.NewReader(`{"value":"foo"}`))
+	req.SetPathValue("name", "\x00")
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("invalid secret name status=%d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "invalid_secret_name") && !strings.Contains(w.Body.String(), "invalid_request") {
+		t.Fatalf("unexpected body for invalid secret name: %s", w.Body.String())
+	}
+
+	// 3. Corrupt vault file on disk -> Unlock returns 500 internal_error with redacted message (no path leak)
+	if err := os.WriteFile(vaultPath, []byte(`{invalid-json`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Lock vault first so next operation tries to unlock/read file
+	v.Lock()
+	req = httptest.NewRequest(http.MethodPost, "http://local/unlock", strings.NewReader(`{"password":"correct horse battery staple"}`))
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("corrupt vault status=%d, want 500", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "internal_error") || !strings.Contains(body, "internal vault operation failed") {
+		t.Fatalf("expected redacted internal error, got: %s", body)
+	}
+	if strings.Contains(body, vaultPath) || strings.Contains(body, "vault.json") {
+		t.Fatalf("internal error leaked file path: %s", body)
+	}
+}

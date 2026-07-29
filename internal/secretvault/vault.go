@@ -29,11 +29,14 @@ const (
 )
 
 var (
-	ErrLocked          = errors.New("credential vault is locked")
-	ErrInitialized     = errors.New("credential vault is already initialized")
-	ErrUninitialized   = errors.New("credential vault is not initialized")
-	ErrInvalidPassword = errors.New("invalid vault password")
-	pathLocks          sync.Map
+	ErrLocked               = errors.New("credential vault is locked")
+	ErrInitialized          = errors.New("credential vault is already initialized")
+	ErrUninitialized        = errors.New("credential vault is not initialized")
+	ErrInvalidPassword      = errors.New("invalid vault password")
+	ErrInvalidPasswordLength = errors.New("vault password must contain 12 to 1024 characters")
+	ErrInvalidSecretName    = errors.New("invalid secret name")
+	ErrInvalidSecretValue   = errors.New("secret value is required and must not exceed 16 KiB")
+	pathLocks               sync.Map
 )
 
 func lockForPath(path string) *sync.Mutex {
@@ -230,7 +233,7 @@ func (v *Vault) Put(name, value string) error {
 		return err
 	}
 	if value == "" || len(value) > maxSecretSize {
-		return errors.New("secret value is required and must not exceed 16 KiB")
+		return ErrInvalidSecretValue
 	}
 	pathLock := lockForPath(v.path)
 	pathLock.Lock()
@@ -486,13 +489,13 @@ func open(key, nonce, ct []byte) ([]byte, error) {
 }
 func validatePassword(p string) error {
 	if len(p) < 12 || len(p) > 1024 {
-		return errors.New("vault password must contain 12 to 1024 characters")
+		return ErrInvalidPasswordLength
 	}
 	return nil
 }
 func validateName(n string) error {
 	if n == "" || len(n) > 256 || strings.ContainsAny(n, "\x00\r\n") {
-		return errors.New("invalid secret name")
+		return ErrInvalidSecretName
 	}
 	return nil
 }

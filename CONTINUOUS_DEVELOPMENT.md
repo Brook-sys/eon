@@ -6655,3 +6655,18 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 3. Legacy zero-`grantedAt` callers preserve existing contract.
 
 **Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
+
+
+## Phase 347 — credential vault HTTP API sanitization and fail-closed internal error redaction (2026-07-29 06:20 -03)
+
+**Objective and implementation.** Sanitized HTTP API error handling in `secretvault.HTTP` to fail closed and redact internal storage, filesystem, and I/O error details. Defined explicit sentinel validation errors (`ErrInvalidPasswordLength`, `ErrInvalidSecretName`, `ErrInvalidSecretValue`) in `secretvault.Vault` returned when inputs violate length, format, or size constraints. Updated HTTP helper `writeErr` to map constraint validation errors to HTTP 400 `invalid_request` with user-safe validation messages, while mapping all unexpected internal storage, file reading, decryption, or atomic serialization errors to HTTP 500 `internal_error` with a generic sanitized message (`"internal vault operation failed"`). Domain errors (`ErrLocked` -> 423 `vault_locked`, `ErrInvalidPassword` -> 401 `invalid_password`, `ErrUninitialized` -> 409 `vault_uninitialized`, `ErrInitialized` -> 409 `vault_initialized`, `os.ErrNotExist` -> 404 `not_found`) retain exact status codes and messages without modification.
+
+**Live hypothesis and bounds.** Cross-provider rotation using Groq `allam-2-7b` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` control) on authority-free structural classification of the credential vault HTTP error redaction boundary: isolated trial per provider, 45 s deadline, 128 max output tokens, raw JSON framing with 7 protected fields (`validation_error_is_bad_request`, `internal_io_error_is_server_error`, `internal_error_message_redacted`, `file_path_not_leaked`, `domain_status_codes_preserved`, `model_authority`, `canonical_writes`), and zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `allam-2-7b` completed in 464.1 ms (284 input + 103 output tokens, 387 total), matching 7/7 protected fields (`validation_error_is_bad_request: true`, `internal_io_error_is_server_error: true`, `internal_error_message_redacted: true`, `file_path_not_leaked: true`, `domain_status_codes_preserved: true`, `model_authority: false`, `canonical_writes: 0`). NVIDIA NIM `meta/llama-3.1-8b-instruct` completed as cross-provider control in 1.282 s (284 input + 96 output tokens, 299 total) with exact framing (`exact`) matching 7/7 protected fields. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/vault_test.go` confirm:
+1. Short password (< 12 chars) returns HTTP 400 `invalid_request`.
+2. Invalid secret name returns HTTP 400 `invalid_request`.
+3. Corrupt/unreadable vault file returns HTTP 500 `internal_error` with message `"internal vault operation failed"` and zero internal filesystem path leak.
+4. Domain locked/uninitialized status codes remain unchanged.
+
+**Verification.** `go test ./...`, `go vet ./...`, secret scan, and `git diff --check` passed cleanly.

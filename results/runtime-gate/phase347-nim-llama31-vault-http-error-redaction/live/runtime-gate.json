@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "name": "phase347-nim-llama31-vault-http-error-redaction",
+  "started_at": "2026-07-29T09:30:23.420032872Z",
+  "completed_at": "2026-07-29T09:30:24.874530508Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-allam2-seeded",
+  "selected_provider_id": "nvidia_nim",
+  "selected_binding_id": "nim-llama31",
+  "route_rejected": {
+    "groq-allam2-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 1282510049,
+  "observed_input_tokens": 244,
+  "observed_output_tokens": 55,
+  "finish_reason": "stop",
+  "response_bytes": 230,
+  "response_sha256": "731d2ed020882eb1601bbc3a80499eed671e36e6bff13c64778a45024ecf70ed",
+  "expected_response_set": true,
+  "expected_response_match": true,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": false,
+    "overall_match": true,
+    "fields_checked": 7,
+    "fields_matched": 7,
+    "fields_mismatched": 0,
+    "fields_absent": 0,
+    "field_outcomes": [
+      {
+        "field": "canonical_writes",
+        "status": "matched"
+      },
+      {
+        "field": "domain_status_codes_preserved",
+        "status": "matched"
+      },
+      {
+        "field": "file_path_not_leaked",
+        "status": "matched"
+      },
+      {
+        "field": "internal_error_message_redacted",
+        "status": "matched"
+      },
+      {
+        "field": "internal_io_error_is_server_error",
+        "status": "matched"
+      },
+      {
+        "field": "model_authority",
+        "status": "matched"
+      },
+      {
+        "field": "validation_error_is_bad_request",
+        "status": "matched"
+      }
+    ]
+  },
+  "response_json_valid": true,
+  "response_framing_class": "exact",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-29T09:31:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-allam2-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-29T09:31:23.420032872Z",
+      "last_failure_at": "2026-07-29T09:30:23.420032872Z"
+    },
+    {
+      "resource": "model-binding:nim-llama31",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-29T09:30:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-29T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-29T09:30:00Z",
+      "token_minute_count": 299,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nvidia_nim",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-29T09:30:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-29T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-29T09:30:00Z",
+      "token_minute_count": 299,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

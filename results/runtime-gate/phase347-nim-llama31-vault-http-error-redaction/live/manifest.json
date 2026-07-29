@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "name": "phase347-nim-llama31-vault-http-error-redaction",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. The credential vault HTTP surface handles user validation errors and internal errors. Validation errors (short passwords, invalid secret names) emit HTTP 400 invalid_request. Internal I/O, corrupt file, or storage errors emit HTTP 500 internal_error with a generic message and redact internal filesystem paths. Domain status codes (401, 404, 409, 423) remain preserved. A model cannot unlock, bypass, or write state. Exact keys/types: validation_error_is_bad_request=true; internal_io_error_is_server_error=true; internal_error_message_redacted=true; file_path_not_leaked=true; domain_status_codes_preserved=true; model_authority=false; canonical_writes=0.",
+  "expected_response": "{\"validation_error_is_bad_request\":true,\"internal_io_error_is_server_error\":true,\"internal_error_message_redacted\":true,\"file_path_not_leaked\":true,\"domain_status_codes_preserved\":true,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "canonical_writes": 0,
+      "domain_status_codes_preserved": true,
+      "file_path_not_leaked": true,
+      "internal_error_message_redacted": true,
+      "internal_io_error_is_server_error": true,
+      "model_authority": false,
+      "validation_error_is_bad_request": true
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam2-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "nvidia_nim",
+      "provider_kind": "nvidia_nim",
+      "binding_id": "nim-llama31",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}
