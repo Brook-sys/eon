@@ -72,9 +72,10 @@ func TestRuntimeReloadToolMergeFailurePreservesCurrentExecutor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build current executor: %v", err)
 	}
+	var logs bytes.Buffer
 	rt := &Runtime{
 		Opts: Options{}, Store: store, Clock: clock, IDs: ids, Model: current,
-		logger: log.New(io.Discard, "", 0), subagentTools: unresolvableToolProvider{},
+		logger: log.New(&logs, "", 0), subagentTools: unresolvableToolProvider{},
 	}
 	rt.Executor.Model = current
 	t.Setenv("MERGE_FAILURE_TEST_KEY", "test-secret")
@@ -86,6 +87,13 @@ func TestRuntimeReloadToolMergeFailurePreservesCurrentExecutor(t *testing.T) {
 	}
 	if rt.Model != current || rt.Executor.Model != current {
 		t.Fatal("failed tool merge replaced the current executor")
+	}
+	if !strings.Contains(logs.String(), "model executor tool merge failed") ||
+		!strings.Contains(logs.String(), "tool provider definition cannot be resolved") {
+		t.Fatalf("merge failure was not logged with its stable class: %q", logs.String())
+	}
+	if strings.Contains(logs.String(), "MERGE_FAILURE_TEST_KEY") || strings.Contains(logs.String(), "test-secret") {
+		t.Fatalf("merge failure log leaked credential metadata: %q", logs.String())
 	}
 }
 

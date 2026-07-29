@@ -33,6 +33,7 @@ func (rt *Runtime) reloadModelExecutorIfNeeded(ctx context.Context) error {
 		if modelExec != nil && rt.subagentTools != nil {
 			merged, mergeErr := tool.MergeProviders(modelExec.Tools, rt.subagentTools)
 			if mergeErr != nil {
+				rt.logger.Printf("runtime: model executor tool merge failed: %v", mergeErr)
 				return fmt.Errorf("merge model and subagent tools after reload: %w", mergeErr)
 			}
 			modelExec.Tools = merged
