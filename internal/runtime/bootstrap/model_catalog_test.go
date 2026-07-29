@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -275,6 +276,10 @@ type fixedSecretResolver map[string]string
 
 func (r fixedSecretResolver) Resolve(name string) (string, error) { return r[name], nil }
 
+type failingSecretResolver struct{ err error }
+
+func (r failingSecretResolver) Resolve(string) (string, error) { return "", r.err }
+
 func TestOpenModelProviderUsesResolverOnlyWhenEnvironmentEmpty(t *testing.T) {
 	const name = "MODEL_RESOLVER_TEST_KEY"
 	t.Setenv(name, "")
@@ -287,5 +292,18 @@ func TestOpenModelProviderUsesResolverOnlyWhenEnvironmentEmpty(t *testing.T) {
 	p, err = openModelProvider("http://localhost", "fixture", name, fixedSecretResolver{name: "vault-secret"}, ModelMaxOutputTokensLegacy, 1024, 1024, time.Second, "test", nil)
 	if err != nil || p == nil {
 		t.Fatalf("environment provider: provider=%v err=%v", p, err)
+	}
+}
+
+func TestOpenModelProviderRedactsCredentialReferenceOnResolverFailure(t *testing.T) {
+	const name = "SENSITIVE_CREDENTIAL_REFERENCE"
+	t.Setenv(name, "")
+	sentinel := errors.New("vault locked")
+	_, err := openModelProvider("http://localhost", "fixture", name, failingSecretResolver{err: sentinel}, ModelMaxOutputTokensLegacy, 1024, 1024, time.Second, "test", nil)
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("resolver error = %v, want wrapped sentinel", err)
+	}
+	if strings.Contains(err.Error(), name) {
+		t.Fatalf("resolver error leaked credential reference: %v", err)
 	}
 }

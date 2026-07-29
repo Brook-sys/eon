@@ -267,7 +267,7 @@ func openModelProvider(
 		if apiKey == "" && secrets != nil {
 			resolved, resolveErr := secrets.Resolve(env)
 			if resolveErr != nil {
-				return nil, fmt.Errorf("resolve model credential %q: %w", env, resolveErr)
+				return nil, fmt.Errorf("resolve model credential: %w", resolveErr)
 			}
 			apiKey = strings.TrimSpace(resolved)
 		}
