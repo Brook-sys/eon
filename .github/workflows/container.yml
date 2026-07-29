@@ -106,14 +106,37 @@ jobs:
           python3 - <<'PY'
           import json
           manifest = json.load(open('/tmp/manifest.json', encoding='utf-8'))
-          platforms = {
-              (item.get('platform') or {}).get('os', '') + '/' +
-              (item.get('platform') or {}).get('architecture', '')
-              for item in manifest.get('manifests', [])
-          }
-          missing = {'linux/amd64', 'linux/arm64'} - platforms
+          wanted = {'linux/amd64', 'linux/arm64'}
+          children = {}
+          for item in manifest.get('manifests', []):
+              platform = (item.get('platform') or {}).get('os', '') + '/' + (item.get('platform') or {}).get('architecture', '')
+              if platform in wanted:
+                  children[platform] = item.get('digest', '')
+          missing = wanted - children.keys()
           if missing:
               raise SystemExit('published image is missing required platforms: ' + ', '.join(sorted(missing)))
+          if any(not digest.startswith('sha256:') for digest in children.values()):
+              raise SystemExit('published image has a required platform without an immutable child digest')
+          for platform in sorted(wanted):
+              print(platform, children[platform])
           PY
-          docker pull --platform linux/amd64 "$IMAGE"
-          .github/scripts/container-smoke.sh "$IMAGE"
+          while read -r platform digest; do
+            child_image="ghcr.io/${{ github.repository }}@$digest"
+            docker pull --platform "$platform" "$child_image"
+            observed_platform=$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$child_image")
+            test "$observed_platform" = "$platform"
+            observed_revision=$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$child_image")
+            test "$observed_revision" = "$EXPECTED_REVISION"
+            if [ "$platform" = linux/amd64 ]; then
+              .github/scripts/container-smoke.sh "$child_image"
+            fi
+          done < <(python3 - <<'PY'
+          import json
+          manifest = json.load(open('/tmp/manifest.json', encoding='utf-8'))
+          wanted = {'linux/amd64', 'linux/arm64'}
+          for item in manifest['manifests']:
+              platform = (item.get('platform') or {}).get('os', '') + '/' + (item.get('platform') or {}).get('architecture', '')
+              if platform in wanted:
+                  print(platform, item['digest'])
+          PY
+          )

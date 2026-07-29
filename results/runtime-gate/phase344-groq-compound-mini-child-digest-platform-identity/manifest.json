@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "name": "phase344-groq-compound-mini-child-digest-platform-identity",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. CI receives a published multi-arch index digest. It must find immutable sha256 child digests for linux/amd64 and linux/arm64, pull each child for its declared platform, inspect each pulled image's platform and OCI revision label, then smoke only the amd64 child. A model cannot publish, inspect, choose, or write state. Exact keys/types: amd64_child_digest_pinned=true; arm64_child_digest_pinned=true; child_platforms_match=true; child_revisions_match=true; amd64_child_smoked=true; model_authority=false; canonical_writes=0.",
+  "expected_response": "{\"amd64_child_digest_pinned\":true,\"arm64_child_digest_pinned\":true,\"child_platforms_match\":true,\"child_revisions_match\":true,\"amd64_child_smoked\":true,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "amd64_child_digest_pinned": true,
+      "arm64_child_digest_pinned": true,
+      "child_platforms_match": true,
+      "child_revisions_match": true,
+      "amd64_child_smoked": true,
+      "model_authority": false,
+      "canonical_writes": 0
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-allam2-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "allam-2-7b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

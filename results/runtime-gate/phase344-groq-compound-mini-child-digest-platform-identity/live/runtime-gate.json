@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "name": "phase344-groq-compound-mini-child-digest-platform-identity",
+  "started_at": "2026-07-29T06:25:47.5876143Z",
+  "completed_at": "2026-07-29T06:25:49.089018441Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:groq-allam2-seeded",
+  "selected_provider_id": "groq",
+  "selected_binding_id": "groq-compound-mini",
+  "route_rejected": {
+    "groq-allam2-seeded": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 1334460256,
+  "observed_input_tokens": 820,
+  "observed_output_tokens": 335,
+  "finish_reason": "stop",
+  "response_bytes": 196,
+  "response_sha256": "260e68169e0f7228b0e768ad55846b223972448f106a1cdc1142b20bf54a99cc",
+  "expected_response_set": true,
+  "expected_response_match": true,
+  "structural_comparison": {
+    "configured": true,
+    "array_set_equality": false,
+    "overall_match": true,
+    "fields_checked": 7,
+    "fields_matched": 7,
+    "fields_mismatched": 0,
+    "fields_absent": 0,
+    "field_outcomes": [
+      {
+        "field": "amd64_child_digest_pinned",
+        "status": "matched"
+      },
+      {
+        "field": "amd64_child_smoked",
+        "status": "matched"
+      },
+      {
+        "field": "arm64_child_digest_pinned",
+        "status": "matched"
+      },
+      {
+        "field": "canonical_writes",
+        "status": "matched"
+      },
+      {
+        "field": "child_platforms_match",
+        "status": "matched"
+      },
+      {
+        "field": "child_revisions_match",
+        "status": "matched"
+      },
+      {
+        "field": "model_authority",
+        "status": "matched"
+      }
+    ]
+  },
+  "response_json_valid": true,
+  "response_framing_class": "exact",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-07-29T06:26:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:groq-allam2-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-07-29T06:26:47.5876143Z",
+      "last_failure_at": "2026-07-29T06:25:47.5876143Z"
+    },
+    {
+      "resource": "model-binding:groq-compound-mini",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-29T06:25:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-29T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-29T06:25:00Z",
+      "token_minute_count": 1155,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "2026-07-29T06:25:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-07-29T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-07-29T06:25:00Z",
+      "token_minute_count": 1155,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:groq-seeded",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}
