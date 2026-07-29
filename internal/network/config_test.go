@@ -114,3 +114,10 @@ func TestLoadMTLSConfig_MissingFiles(t *testing.T) {
 		t.Error("expected error for missing CA, got nil")
 	}
 }
+
+func TestLoadMTLSConfig_EmptyFields(t *testing.T) {
+	cfg := PeerConfig{}
+	if _, err := LoadMTLSConfig(cfg); err == nil {
+		t.Fatalf("expected error for empty configuration fields")
+	}
+}

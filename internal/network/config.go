@@ -16,6 +16,10 @@ type PeerConfig struct {
 
 // LoadMTLSConfig parses the PEM material and produces a strongly verified TLS config.
 func LoadMTLSConfig(cfg PeerConfig) (*tls.Config, error) {
+	if cfg.NodeCert == "" || cfg.NodeKey == "" || cfg.CACert == "" {
+		return nil, fmt.Errorf("missing peer mtls path configuration")
+	}
+
 	cert, err := tls.LoadX509KeyPair(cfg.NodeCert, cfg.NodeKey)
 	if err != nil {
 		return nil, fmt.Errorf("load node keypair: %w", err)
