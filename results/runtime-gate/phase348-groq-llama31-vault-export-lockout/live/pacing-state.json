@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase348-groq-llama31-vault-export-lockout",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-29T11:25:44.123348473Z"
+}

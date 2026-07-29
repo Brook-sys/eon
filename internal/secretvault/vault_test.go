@@ -2,6 +2,8 @@ package secretvault
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -346,5 +348,124 @@ func TestHTTPInternalErrorRedactionAndValidationMapping(t *testing.T) {
 	}
 	if strings.Contains(body, vaultPath) || strings.Contains(body, "vault.json") {
 		t.Fatalf("internal error leaked file path: %s", body)
+	}
+}
+
+func TestVaultLockoutAndClose(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vault.json")
+	now := time.Now()
+	clock := func() time.Time { return now }
+	v, err := NewWithClock(path, clock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pass := "correct horse battery staple"
+	if err := v.Initialize(pass); err != nil {
+		t.Fatal(err)
+	}
+	v.Lock()
+
+	// 5 failed attempts trigger lockout
+	for i := 0; i < 5; i++ {
+		if err := v.Unlock("wrong password value"); !errors.Is(err, ErrInvalidPassword) {
+			t.Fatalf("attempt %d err=%v, want ErrInvalidPassword", i, err)
+		}
+	}
+	// 6th attempt is locked out
+	if err := v.Unlock("wrong password value"); !errors.Is(err, ErrAccountLockedOut) {
+		t.Fatalf("6th attempt err=%v, want ErrAccountLockedOut", err)
+	}
+	// Correct password also rejected during lockout
+	if err := v.Unlock(pass); !errors.Is(err, ErrAccountLockedOut) {
+		t.Fatalf("correct pass during lockout err=%v, want ErrAccountLockedOut", err)
+	}
+
+	// Advance clock past lockoutDuration (30s)
+	now = now.Add(31 * time.Second)
+	if err := v.Unlock(pass); err != nil {
+		t.Fatalf("unlock after lockout cooldown failed: %v", err)
+	}
+	if v.Status().Locked {
+		t.Fatal("vault should be unlocked")
+	}
+
+	// Test Close() explicitly zeroing and locking
+	v.Close()
+	if !v.Status().Locked {
+		t.Fatal("vault should be locked after Close()")
+	}
+}
+
+func TestVaultExportAndHTTPExport(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "vault.json")
+	v, _ := New(path)
+	pass := "correct horse battery staple"
+	if err := v.Initialize(pass); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Put("api-key", "secret-12345"); err != nil {
+		t.Fatal(err)
+	}
+
+	backupPath := filepath.Join(dir, "backup.json")
+	backupPass := "new backup password 12345"
+
+	// Export directly
+	if err := v.Export(backupPath, backupPass); err != nil {
+		t.Fatalf("export failed: %v", err)
+	}
+
+	// Verify backup vault unlocks with backupPass
+	backupVault, _ := New(backupPath)
+	if err := backupVault.Unlock(backupPass); err != nil {
+		t.Fatalf("unlock backup failed: %v", err)
+	}
+	val, err := backupVault.Resolve("api-key")
+	if err != nil || val != "secret-12345" {
+		t.Fatalf("resolved backup key=%q err=%v", val, err)
+	}
+
+	// Test HTTP Export & Close
+	h := HTTP{Vault: v}.Handler()
+	httpBackup := filepath.Join(dir, "http_backup.json")
+	body := fmt.Sprintf(`{"backup_path":%q,"backup_password":%q}`, httpBackup, backupPass)
+	req := httptest.NewRequest(http.MethodPost, "http://local/export", strings.NewReader(body))
+	req.RemoteAddr = "127.0.0.1:1"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("HTTP export status=%d %s", w.Code, w.Body.String())
+	}
+
+	// HTTP Close
+	req = httptest.NewRequest(http.MethodPost, "http://local/close", nil)
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("HTTP close status=%d", w.Code)
+	}
+	if !v.Status().Locked {
+		t.Fatal("vault should be locked after HTTP close")
+	}
+
+	// Test HTTP 429 Rate Limited mapping
+	for i := 0; i < 5; i++ {
+		req = httptest.NewRequest(http.MethodPost, "http://local/unlock", strings.NewReader(`{"password":"wrong password value"}`))
+		req.RemoteAddr = "127.0.0.1:1"
+		w = httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+	}
+	req = httptest.NewRequest(http.MethodPost, "http://local/unlock", strings.NewReader(`{"password":"wrong password value"}`))
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("HTTP lockout status=%d, want 429", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "rate_limited") {
+		t.Fatalf("unexpected body for 429 lockout: %s", w.Body.String())
 	}
 }

@@ -22,21 +22,25 @@ import (
 )
 
 const (
-	formatVersion = 1
-	iterations    = 600_000
-	maxSecretSize = 16 << 10
-	autoLockAfter = 15 * time.Minute
+	formatVersion     = 1
+	iterations        = 600_000
+	maxSecretSize     = 16 << 10
+	autoLockAfter     = 15 * time.Minute
+	maxFailedAttempts = 5
+	lockoutDuration   = 30 * time.Second
 )
 
 var (
-	ErrLocked               = errors.New("credential vault is locked")
-	ErrInitialized          = errors.New("credential vault is already initialized")
-	ErrUninitialized        = errors.New("credential vault is not initialized")
-	ErrInvalidPassword      = errors.New("invalid vault password")
+	ErrLocked                = errors.New("credential vault is locked")
+	ErrInitialized           = errors.New("credential vault is already initialized")
+	ErrUninitialized         = errors.New("credential vault is not initialized")
+	ErrInvalidPassword       = errors.New("invalid vault password")
 	ErrInvalidPasswordLength = errors.New("vault password must contain 12 to 1024 characters")
-	ErrInvalidSecretName    = errors.New("invalid secret name")
-	ErrInvalidSecretValue   = errors.New("secret value is required and must not exceed 16 KiB")
-	pathLocks               sync.Map
+	ErrInvalidSecretName     = errors.New("invalid secret name")
+	ErrInvalidSecretValue    = errors.New("secret value is required and must not exceed 16 KiB")
+	ErrAccountLockedOut      = errors.New("vault is locked out due to too many failed attempts")
+	ErrInvalidBackupPath     = errors.New("backup path is required")
+	pathLocks                sync.Map
 )
 
 func lockForPath(path string) *sync.Mutex {
@@ -76,12 +80,14 @@ type Status struct {
 }
 
 type Vault struct {
-	mu       sync.Mutex
-	path     string
-	key      []byte
-	data     payload
-	lastUsed time.Time
-	now      func() time.Time
+	mu          sync.Mutex
+	path        string
+	key         []byte
+	data        payload
+	lastUsed    time.Time
+	failedCount int
+	lockedUntil time.Time
+	now         func() time.Time
 }
 
 func New(path string) (*Vault, error) {
@@ -150,6 +156,9 @@ func (v *Vault) Unlock(password string) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	v.expireLocked()
+	if v.isLockedOutLocked() {
+		return ErrAccountLockedOut
+	}
 	raw, err := os.ReadFile(v.path)
 	if errors.Is(err, os.ErrNotExist) {
 		return ErrUninitialized
@@ -179,6 +188,7 @@ func (v *Vault) Unlock(password string) error {
 	got := verifier(key)
 	if len(want) != len(got) || subtle.ConstantTimeCompare(want, got) != 1 {
 		zero(key)
+		v.recordFailedAttemptLocked()
 		return ErrInvalidPassword
 	}
 	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
@@ -194,6 +204,7 @@ func (v *Vault) Unlock(password string) error {
 	plain, err := open(key, nonce, ct)
 	if err != nil {
 		zero(key)
+		v.recordFailedAttemptLocked()
 		return ErrInvalidPassword
 	}
 	var p payload
@@ -210,6 +221,8 @@ func (v *Vault) Unlock(password string) error {
 	v.key = key
 	v.data = p
 	v.lastUsed = v.now()
+	v.failedCount = 0
+	v.lockedUntil = time.Time{}
 	return nil
 }
 
@@ -220,6 +233,17 @@ func (v *Vault) Lock() {
 	v.key = nil
 	v.data = payload{Secrets: map[string]record{}}
 	v.lastUsed = time.Time{}
+}
+
+func (v *Vault) Close() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	zero(v.key)
+	v.key = nil
+	v.data = payload{Secrets: map[string]record{}}
+	v.lastUsed = time.Time{}
+	v.failedCount = 0
+	v.lockedUntil = time.Time{}
 }
 
 func (v *Vault) Put(name, value string) error {
@@ -296,6 +320,9 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	if len(v.key) == 0 {
 		return ErrLocked
 	}
+	if v.isLockedOutLocked() {
+		return ErrAccountLockedOut
+	}
 	if err := validatePassword(newPassword); err != nil {
 		return err
 	}
@@ -317,6 +344,7 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	}
 	if len(testKey) != len(v.key) || subtle.ConstantTimeCompare(testKey, v.key) != 1 {
 		zero(testKey)
+		v.recordFailedAttemptLocked()
 		return ErrInvalidPassword
 	}
 	zero(testKey)
@@ -345,12 +373,131 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	}
 	zero(oldKey)
 	v.lastUsed = v.now()
+	v.failedCount = 0
+	v.lockedUntil = time.Time{}
 	return nil
+}
+
+func (v *Vault) Export(backupPath, backupPassword string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return ErrLocked
+	}
+	backupPath = strings.TrimSpace(backupPath)
+	if backupPath == "" {
+		return ErrInvalidBackupPath
+	}
+	if err := validatePassword(backupPassword); err != nil {
+		return err
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		return err
+	}
+	salt := make([]byte, 32)
+	if _, err := rand.Read(salt); err != nil {
+		return err
+	}
+	exportKey, err := derive(backupPassword, salt, iterations)
+	if err != nil {
+		return err
+	}
+	defer zero(exportKey)
+
+	plain, err := json.Marshal(v.data)
+	if err != nil {
+		return err
+	}
+	block, err := aes.NewCipher(exportKey)
+	if err != nil {
+		return err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return err
+	}
+	ct := gcm.Seal(nil, nonce, plain, []byte("eon:credential-vault:v1"))
+	zero(plain)
+	env := envelope{
+		Version:    formatVersion,
+		Iterations: iterations,
+		Salt:       base64.StdEncoding.EncodeToString(salt),
+		Verifier:   base64.StdEncoding.EncodeToString(verifier(exportKey)),
+		Nonce:      base64.StdEncoding.EncodeToString(nonce),
+		Ciphertext: base64.StdEncoding.EncodeToString(ct),
+	}
+	raw, err := json.Marshal(env)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(backupPath)
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(dir, ".export-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err = tmp.Chmod(0600); err == nil {
+		_, err = tmp.Write(raw)
+	}
+	if err == nil {
+		err = tmp.Sync()
+	}
+	closeErr := tmp.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	if err = os.Rename(tmpName, backupPath); err != nil {
+		return err
+	}
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	err = d.Sync()
+	closeErr = d.Close()
+	if err != nil {
+		return err
+	}
+	v.lastUsed = v.now()
+	return closeErr
+}
+
+func (v *Vault) isLockedOutLocked() bool {
+	if !v.lockedUntil.IsZero() {
+		if v.now().Before(v.lockedUntil) {
+			return true
+		}
+		v.lockedUntil = time.Time{}
+		v.failedCount = 0
+	}
+	return false
+}
+
+func (v *Vault) recordFailedAttemptLocked() {
+	v.failedCount++
+	if v.failedCount >= maxFailedAttempts {
+		v.lockedUntil = v.now().Add(lockoutDuration)
+	}
 }
 
 func (v *Vault) expireLocked() {
 	if len(v.key) != 0 && !v.lastUsed.IsZero() && v.now().Sub(v.lastUsed) >= autoLockAfter {
-		zero(v.key)
 		v.key = nil
 		v.data = payload{Secrets: map[string]record{}}
 		v.lastUsed = time.Time{}

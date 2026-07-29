@@ -19,7 +19,9 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
 	mux.HandleFunc("POST /lock", h.lock)
+	mux.HandleFunc("POST /close", h.close)
 	mux.HandleFunc("POST /rekey", h.rekey)
+	mux.HandleFunc("POST /export", h.export)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	return localOnly(mux)
@@ -31,6 +33,10 @@ type passwordRequest struct {
 type rekeyRequest struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
+}
+type exportRequest struct {
+	BackupPath     string `json:"backup_path"`
+	BackupPassword string `json:"backup_password"`
 }
 type secretRequest struct {
 	Value string `json:"value"`
@@ -65,12 +71,27 @@ func (h HTTP) lock(w http.ResponseWriter, _ *http.Request) {
 	h.Vault.Lock()
 	write(w, http.StatusOK, h.Vault.Status())
 }
+func (h HTTP) close(w http.ResponseWriter, _ *http.Request) {
+	h.Vault.Close()
+	write(w, http.StatusOK, h.Vault.Status())
+}
 func (h HTTP) rekey(w http.ResponseWriter, r *http.Request) {
 	var q rekeyRequest
 	if !decode(w, r, &q) {
 		return
 	}
 	if err := h.Vault.ChangePassword(q.OldPassword, q.NewPassword); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, h.Vault.Status())
+}
+func (h HTTP) export(w http.ResponseWriter, r *http.Request) {
+	var q exportRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if err := h.Vault.Export(q.BackupPath, q.BackupPassword); err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -129,9 +150,13 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrNotExist) {
 		status = http.StatusNotFound
 		code = "not_found"
-	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) {
+	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) {
 		status = http.StatusBadRequest
 		code = "invalid_request"
+	} else if errors.Is(err, ErrAccountLockedOut) {
+		status = http.StatusTooManyRequests
+		code = "rate_limited"
+		message = "vault is locked out due to consecutive failed attempts"
 	} else {
 		status = http.StatusInternalServerError
 		code = "internal_error"
