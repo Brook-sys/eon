@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 type HTTP struct{ Vault *Vault }
@@ -16,6 +17,7 @@ type HTTP struct{ Vault *Vault }
 func (h HTTP) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", h.status)
+	mux.HandleFunc("GET /audit", h.auditLog)
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
 	mux.HandleFunc("POST /lock", h.lock)
@@ -46,6 +48,7 @@ type importRequest struct {
 }
 type secretRequest struct {
 	Value string `json:"value"`
+	TTL   string `json:"ttl,omitempty"`
 }
 
 func (h HTTP) status(w http.ResponseWriter, _ *http.Request) {
@@ -126,12 +129,30 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, h.Vault.Status())
 }
+func (h HTTP) auditLog(w http.ResponseWriter, _ *http.Request) {
+	write(w, http.StatusOK, h.Vault.AuditLog())
+}
 func (h HTTP) put(w http.ResponseWriter, r *http.Request) {
 	var q secretRequest
 	if !decode(w, r, &q) {
 		return
 	}
-	if err := h.Vault.Put(r.PathValue("name"), q.Value); err != nil {
+	ttlStr := strings.TrimSpace(q.TTL)
+	if ttlStr == "" {
+		ttlStr = strings.TrimSpace(r.URL.Query().Get("ttl"))
+	}
+	var err error
+	if ttlStr != "" {
+		dur, parseErr := time.ParseDuration(ttlStr)
+		if parseErr != nil {
+			writeErr(w, ErrInvalidTTL)
+			return
+		}
+		err = h.Vault.PutWithTTL(r.PathValue("name"), q.Value, dur)
+	} else {
+		err = h.Vault.Put(r.PathValue("name"), q.Value)
+	}
+	if err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -179,7 +200,10 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrNotExist) {
 		status = http.StatusNotFound
 		code = "not_found"
-	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) || errors.Is(err, ErrInvalidBackupFormat) || errors.Is(err, ErrInvalidImportMode) {
+	} else if errors.Is(err, ErrSecretExpired) {
+		status = http.StatusGone
+		code = "secret_expired"
+	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) || errors.Is(err, ErrInvalidBackupFormat) || errors.Is(err, ErrInvalidImportMode) || errors.Is(err, ErrInvalidTTL) {
 		status = http.StatusBadRequest
 		code = "invalid_request"
 	} else if errors.Is(err, ErrImportConflict) {

@@ -6689,3 +6689,24 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 4. HTTP `POST /import` accepts `"overwrite"` (HTTP 200) and rejects invalid modes (HTTP 400 `invalid_request`).
 
 **Verification.** `go test ./internal/secretvault/...`, `go vet ./internal/secretvault/...`, and `git diff --check` passed cleanly.
+
+
+## Phase 352 — secret vault expiration / TTL and audit trail logging (2026-07-29 19:25 -03)
+
+**Objective and implementation.** Added secret expiration (TTL) support and secret audit logging to `secretvault.Vault` and `secretvault.HTTP`.
+1. Extended `record` with `ExpiresAt time.Time` and added `PutWithTTL(name, value string, ttl time.Duration)` and `PutWithExpiry(name, value string, expiresAt time.Time)`.
+2. Updated `Resolve(name)` to verify secret expiration (`!ExpiresAt.IsZero() && !v.now().Before(ExpiresAt)`); returns `ErrSecretExpired` (HTTP 410 `secret_expired`) when expired, keeping secret values redacted.
+3. Updated `Status()` to report `ExpiresAt` and set `Expired: true` when a secret's TTL has elapsed.
+4. Added `AuditEvent` struct and bounded `AuditLog() []AuditEvent` (max 1000 events) capturing vault actions (`initialize`, `unlock`, `put`, `resolve`, `delete`, `rekey`, `lock`, `close`) without logging plaintext secret values or passwords.
+5. Exposed `GET /audit` and added optional `ttl` JSON field / query parameter parsing to HTTP `PUT /secrets/{name}`.
+
+**Live hypothesis and bounds.** Model rotation to Groq `llama-3.1-8b-instant` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.1-8b-instant` completed live evaluation in 362.4 ms (94 prompt + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/ttl_audit_test.go` confirm:
+1. `PutWithTTL` stores `ExpiresAt`, allowing resolution before TTL and returning `ErrSecretExpired` after TTL expiration.
+2. `Status` reports `ExpiresAt` and marks `Expired: true` post-expiration.
+3. `AuditLog` captures actions without leaking secret values or passwords.
+4. HTTP `PUT /secrets/{name}` with `ttl` sets secret expiration, returning HTTP 410 `secret_expired` on expired resolution.
+5. HTTP `GET /audit` returns recorded audit history.
+
+**Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.

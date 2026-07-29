@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase352-groq-llama31-vault-ttl-audit",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-29T16:25:42.861700649Z"
+}

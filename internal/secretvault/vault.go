@@ -43,6 +43,8 @@ var (
 	ErrInvalidBackupFormat   = errors.New("invalid or unsupported backup format")
 	ErrImportConflict        = errors.New("import conflict: a secret with this name already exists")
 	ErrInvalidImportMode     = errors.New("invalid import mode")
+	ErrSecretExpired         = errors.New("secret has expired")
+	ErrInvalidTTL            = errors.New("invalid secret ttl duration")
 	pathLocks                sync.Map
 )
 
@@ -81,6 +83,7 @@ type record struct {
 	Value     string    `json:"value"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
 }
 
 type payload struct {
@@ -91,6 +94,15 @@ type Metadata struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	Expired   bool      `json:"expired,omitempty"`
+}
+
+type AuditEvent struct {
+	Timestamp  time.Time `json:"timestamp"`
+	Action     string    `json:"action"`
+	SecretName string    `json:"secret_name,omitempty"`
+	Status     string    `json:"status"`
 }
 
 type Status struct {
@@ -108,6 +120,7 @@ type Vault struct {
 	failedCount int
 	lockedUntil time.Time
 	now         func() time.Time
+	audit       []AuditEvent
 }
 
 func New(path string) (*Vault, error) {
@@ -126,6 +139,27 @@ func NewWithClock(path string, now func() time.Time) (*Vault, error) {
 	return &Vault{path: path, data: payload{Secrets: map[string]record{}}, now: now}, nil
 }
 
+func (v *Vault) recordAuditLocked(action, secretName, status string) {
+	evt := AuditEvent{
+		Timestamp:  v.now().UTC(),
+		Action:     action,
+		SecretName: secretName,
+		Status:     status,
+	}
+	v.audit = append(v.audit, evt)
+	if len(v.audit) > 1000 {
+		v.audit = v.audit[len(v.audit)-1000:]
+	}
+}
+
+func (v *Vault) AuditLog() []AuditEvent {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	res := make([]AuditEvent, len(v.audit))
+	copy(res, v.audit)
+	return res
+}
+
 func (v *Vault) Status() Status {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -133,8 +167,13 @@ func (v *Vault) Status() Status {
 	_, err := os.Stat(v.path)
 	s := Status{Initialized: err == nil, Locked: len(v.key) == 0}
 	if len(v.key) != 0 {
+		now := v.now()
 		for name, r := range v.data.Secrets {
-			s.Secrets = append(s.Secrets, Metadata{Name: name, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt})
+			m := Metadata{Name: name, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, ExpiresAt: r.ExpiresAt}
+			if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+				m.Expired = true
+			}
+			s.Secrets = append(s.Secrets, m)
 		}
 		sort.Slice(s.Secrets, func(i, j int) bool { return s.Secrets[i].Name < s.Secrets[j].Name })
 	}
@@ -146,19 +185,24 @@ func (v *Vault) Initialize(password string) error {
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if _, err := os.Stat(v.path); err == nil {
+		v.recordAuditLocked("initialize", "", "failure")
 		return ErrInitialized
 	} else if !errors.Is(err, os.ErrNotExist) {
+		v.recordAuditLocked("initialize", "", "failure")
 		return err
 	}
 	if err := validatePassword(password); err != nil {
+		v.recordAuditLocked("initialize", "", "failure")
 		return err
 	}
 	salt := make([]byte, 32)
 	if _, err := rand.Read(salt); err != nil {
+		v.recordAuditLocked("initialize", "", "failure")
 		return err
 	}
 	key, err := derive(password, salt, iterations)
 	if err != nil {
+		v.recordAuditLocked("initialize", "", "failure")
 		return err
 	}
 	v.key = key
@@ -166,9 +210,11 @@ func (v *Vault) Initialize(password string) error {
 	if err := v.saveLocked(salt, iterations); err != nil {
 		zero(v.key)
 		v.key = nil
+		v.recordAuditLocked("initialize", "", "failure")
 		return err
 	}
 	v.lastUsed = v.now()
+	v.recordAuditLocked("initialize", "", "success")
 	return nil
 }
 
@@ -177,54 +223,66 @@ func (v *Vault) Unlock(password string) error {
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if v.isLockedOutLocked() {
+		v.recordAuditLocked("unlock", "", "failure")
 		return ErrAccountLockedOut
 	}
 	raw, err := os.ReadFile(v.path)
 	if errors.Is(err, os.ErrNotExist) {
+		v.recordAuditLocked("unlock", "", "failure")
 		return ErrUninitialized
 	}
 	if err != nil {
+		v.recordAuditLocked("unlock", "", "failure")
 		return err
 	}
 	var env envelope
 	if err = json.Unmarshal(raw, &env); err != nil {
+		v.recordAuditLocked("unlock", "", "failure")
 		return fmt.Errorf("decode vault: %w", err)
 	}
 	if env.Version != formatVersion || env.Iterations < 100_000 {
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("unsupported vault format")
 	}
 	salt, err := base64.StdEncoding.DecodeString(env.Salt)
 	if err != nil {
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("invalid vault salt")
 	}
 	key, err := derive(password, salt, env.Iterations)
 	if err != nil {
+		v.recordAuditLocked("unlock", "", "failure")
 		return err
 	}
 	want, err := base64.StdEncoding.DecodeString(env.Verifier)
 	if err != nil {
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("invalid vault verifier")
 	}
 	got := verifier(key)
 	if len(want) != len(got) || subtle.ConstantTimeCompare(want, got) != 1 {
 		zero(key)
 		v.recordFailedAttemptLocked()
+		v.recordAuditLocked("unlock", "", "failure")
 		return ErrInvalidPassword
 	}
 	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
 	if err != nil {
 		zero(key)
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("invalid vault nonce")
 	}
 	ct, err := base64.StdEncoding.DecodeString(env.Ciphertext)
 	if err != nil {
 		zero(key)
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("invalid vault ciphertext")
 	}
 	plain, err := open(key, nonce, ct)
 	if err != nil {
 		zero(key)
 		v.recordFailedAttemptLocked()
+		v.recordAuditLocked("unlock", "", "failure")
 		return ErrInvalidPassword
 	}
 	var p payload
@@ -232,6 +290,7 @@ func (v *Vault) Unlock(password string) error {
 	zero(plain)
 	if err != nil {
 		zero(key)
+		v.recordAuditLocked("unlock", "", "failure")
 		return errors.New("invalid vault payload")
 	}
 	if p.Secrets == nil {
@@ -243,6 +302,7 @@ func (v *Vault) Unlock(password string) error {
 	v.lastUsed = v.now()
 	v.failedCount = 0
 	v.lockedUntil = time.Time{}
+	v.recordAuditLocked("unlock", "", "success")
 	return nil
 }
 
@@ -253,6 +313,7 @@ func (v *Vault) Lock() {
 	v.key = nil
 	v.data = payload{Secrets: map[string]record{}}
 	v.lastUsed = time.Time{}
+	v.recordAuditLocked("lock", "", "success")
 }
 
 func (v *Vault) Close() {
@@ -264,25 +325,44 @@ func (v *Vault) Close() {
 	v.lastUsed = time.Time{}
 	v.failedCount = 0
 	v.lockedUntil = time.Time{}
+	v.recordAuditLocked("close", "", "success")
 }
 
 func (v *Vault) Put(name, value string) error {
+	return v.PutWithExpiry(name, value, time.Time{})
+}
+
+func (v *Vault) PutWithTTL(name, value string, ttl time.Duration) error {
+	if ttl <= 0 {
+		return ErrInvalidTTL
+	}
+	v.mu.Lock()
+	now := v.now().UTC()
+	v.mu.Unlock()
+	return v.PutWithExpiry(name, value, now.Add(ttl))
+}
+
+func (v *Vault) PutWithExpiry(name, value string, expiresAt time.Time) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if len(v.key) == 0 {
+		v.recordAuditLocked("put", name, "failure")
 		return ErrLocked
 	}
 	if err := validateName(name); err != nil {
+		v.recordAuditLocked("put", name, "failure")
 		return err
 	}
 	if value == "" || len(value) > maxSecretSize {
+		v.recordAuditLocked("put", name, "failure")
 		return ErrInvalidSecretValue
 	}
 	pathLock := lockForPath(v.path)
 	pathLock.Lock()
 	defer pathLock.Unlock()
 	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("put", name, "failure")
 		return err
 	}
 	now := v.now().UTC()
@@ -292,9 +372,20 @@ func (v *Vault) Put(name, value string) error {
 	}
 	r.Value = value
 	r.UpdatedAt = now
+	if !expiresAt.IsZero() {
+		r.ExpiresAt = expiresAt.UTC()
+	} else {
+		r.ExpiresAt = time.Time{}
+	}
 	v.data.Secrets[name] = r
 	v.lastUsed = v.now()
-	return v.saveWithCurrentKeyLocked()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("put", name, "success")
+	} else {
+		v.recordAuditLocked("put", name, "failure")
+	}
+	return err
 }
 
 func (v *Vault) Delete(name string) error {
@@ -302,20 +393,29 @@ func (v *Vault) Delete(name string) error {
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if len(v.key) == 0 {
+		v.recordAuditLocked("delete", name, "failure")
 		return ErrLocked
 	}
 	if err := validateName(name); err != nil {
+		v.recordAuditLocked("delete", name, "failure")
 		return err
 	}
 	pathLock := lockForPath(v.path)
 	pathLock.Lock()
 	defer pathLock.Unlock()
 	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("delete", name, "failure")
 		return err
 	}
 	delete(v.data.Secrets, name)
 	v.lastUsed = v.now()
-	return v.saveWithCurrentKeyLocked()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("delete", name, "success")
+	} else {
+		v.recordAuditLocked("delete", name, "failure")
+	}
+	return err
 }
 
 func (v *Vault) Resolve(name string) (string, error) {
@@ -323,13 +423,20 @@ func (v *Vault) Resolve(name string) (string, error) {
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if len(v.key) == 0 {
+		v.recordAuditLocked("resolve", name, "failure")
 		return "", ErrLocked
 	}
 	r, ok := v.data.Secrets[name]
 	if !ok {
+		v.recordAuditLocked("resolve", name, "failure")
 		return "", os.ErrNotExist
 	}
 	v.lastUsed = v.now()
+	if !r.ExpiresAt.IsZero() && !v.now().Before(r.ExpiresAt) {
+		v.recordAuditLocked("resolve", name, "expired")
+		return "", ErrSecretExpired
+	}
+	v.recordAuditLocked("resolve", name, "success")
 	return r.Value, nil
 }
 
@@ -338,33 +445,41 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if len(v.key) == 0 {
+		v.recordAuditLocked("rekey", "", "failure")
 		return ErrLocked
 	}
 	if v.isLockedOutLocked() {
+		v.recordAuditLocked("rekey", "", "failure")
 		return ErrAccountLockedOut
 	}
 	if err := validatePassword(newPassword); err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	raw, err := os.ReadFile(v.path)
 	if err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	var env envelope
 	if err = json.Unmarshal(raw, &env); err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return fmt.Errorf("decode vault: %w", err)
 	}
 	salt, err := base64.StdEncoding.DecodeString(env.Salt)
 	if err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return errors.New("invalid vault salt")
 	}
 	testKey, err := derive(oldPassword, salt, env.Iterations)
 	if err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	if len(testKey) != len(v.key) || subtle.ConstantTimeCompare(testKey, v.key) != 1 {
 		zero(testKey)
 		v.recordFailedAttemptLocked()
+		v.recordAuditLocked("rekey", "", "failure")
 		return ErrInvalidPassword
 	}
 	zero(testKey)
@@ -374,14 +489,17 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	defer pathLock.Unlock()
 
 	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	newSalt := make([]byte, 32)
 	if _, err := rand.Read(newSalt); err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	newKey, err := derive(newPassword, newSalt, iterations)
 	if err != nil {
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	oldKey := v.key
@@ -389,12 +507,14 @@ func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	if err := v.saveLocked(newSalt, iterations); err != nil {
 		zero(newKey)
 		v.key = oldKey
+		v.recordAuditLocked("rekey", "", "failure")
 		return err
 	}
 	zero(oldKey)
 	v.lastUsed = v.now()
 	v.failedCount = 0
 	v.lockedUntil = time.Time{}
+	v.recordAuditLocked("rekey", "", "success")
 	return nil
 }
 
