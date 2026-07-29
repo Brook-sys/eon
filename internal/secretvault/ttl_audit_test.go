@@ -187,6 +187,96 @@ func TestVault_AuditLogAndHTTP(t *testing.T) {
 	if err != secretvault.ErrSecretExpired {
 		t.Fatalf("Expected ErrSecretExpired after advance, got %v", err)
 	}
+
+	// Test POST /purge-expired via HTTP API
+	reqPurge, _ := http.NewRequest(http.MethodPost, srv.URL+"/purge-expired", nil)
+	respPurge, err := http.DefaultClient.Do(reqPurge)
+	if err != nil {
+		t.Fatalf("POST /purge-expired failed: %v", err)
+	}
+	defer respPurge.Body.Close()
+	if respPurge.StatusCode != http.StatusOK {
+		t.Fatalf("POST /purge-expired expected 200, got %d", respPurge.StatusCode)
+	}
+
+	var purgeRes map[string]int
+	if err := json.NewDecoder(respPurge.Body).Decode(&purgeRes); err != nil {
+		t.Fatalf("Decode /purge-expired response failed: %v", err)
+	}
+	if purgeRes["purged"] < 1 {
+		t.Fatalf("Expected purged >= 1, got %d", purgeRes["purged"])
+	}
+}
+
+func TestVault_PurgeAndRotateWithTTL(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	vaultPath := filepath.Join(tmpDir, "purge_rotate_vault.json")
+
+	now := time.Now()
+	clock := func() time.Time { return now }
+
+	v, err := secretvault.NewWithClock(vaultPath, clock)
+	if err != nil {
+		t.Fatalf("NewWithClock failed: %v", err)
+	}
+
+	password := "master-password-12345"
+	if err := v.Initialize(password); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	if err := v.Put("key1", "val1"); err != nil {
+		t.Fatalf("Put key1 failed: %v", err)
+	}
+	if err := v.PutWithTTL("key2", "val2", 1*time.Minute); err != nil {
+		t.Fatalf("PutWithTTL key2 failed: %v", err)
+	}
+
+	// Rotate key1 with TTL
+	if err := v.RotateWithTTL("key1", "val1-rotated", 2*time.Minute); err != nil {
+		t.Fatalf("RotateWithTTL key1 failed: %v", err)
+	}
+
+	val, err := v.Resolve("key1")
+	if err != nil || val != "val1-rotated" {
+		t.Fatalf("Resolve key1 expected 'val1-rotated', got val=%q err=%v", val, err)
+	}
+
+	// Rotate with invalid TTL
+	if err := v.RotateWithTTL("key1", "val1-bad", -1*time.Second); err != secretvault.ErrInvalidTTL {
+		t.Fatalf("RotateWithTTL expected ErrInvalidTTL, got %v", err)
+	}
+
+	// Advance clock by 90 seconds (key2 expired, key1 still valid)
+	now = now.Add(90 * time.Second)
+
+	purged, err := v.PurgeExpired()
+	if err != nil {
+		t.Fatalf("PurgeExpired failed: %v", err)
+	}
+	if purged != 1 {
+		t.Fatalf("PurgeExpired expected 1, got %d", purged)
+	}
+
+	// Verify key2 is completely deleted from vault
+	st := v.Status()
+	for _, m := range st.Secrets {
+		if m.Name == "key2" {
+			t.Fatalf("key2 should have been purged")
+		}
+	}
+
+	// Advance clock by 60 more seconds (key1 now expired)
+	now = now.Add(60 * time.Second)
+	purged, err = v.PurgeExpired()
+	if err != nil {
+		t.Fatalf("PurgeExpired second run failed: %v", err)
+	}
+	if purged != 1 {
+		t.Fatalf("PurgeExpired expected 1 for key1, got %d", purged)
+	}
 }
 
 func TestVault_BatchResolve(t *testing.T) {

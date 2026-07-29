@@ -574,6 +574,107 @@ func (v *Vault) Rotate(name, newValue string) error {
 	return err
 }
 
+// PurgeExpired removes all expired secrets from the vault and persists the
+// change. The vault must be unlocked. Returns the number of secrets removed.
+func (v *Vault) PurgeExpired() (int, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("purge_expired", "", "failure")
+		return 0, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("purge_expired", "", "failure")
+		return 0, err
+	}
+	now := v.now()
+	var removed int
+	for name, r := range v.data.Secrets {
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			delete(v.data.Secrets, name)
+			removed++
+		}
+	}
+	if removed == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("purge_expired", "", "success")
+		return 0, nil
+	}
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("purge_expired", "", "success")
+	} else {
+		v.recordAuditLocked("purge_expired", "", "failure")
+	}
+	return removed, err
+}
+
+// RotateWithExpiry updates the value of an existing secret while preserving
+// its CreatedAt timestamp and optionally setting a new expiration time.
+// The vault must be unlocked and the secret must already exist.
+func (v *Vault) RotateWithExpiry(name, newValue string, expiresAt time.Time) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("rotate", name, "failure")
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("rotate", name, "failure")
+		return err
+	}
+	if newValue == "" || len(newValue) > maxSecretSize {
+		v.recordAuditLocked("rotate", name, "failure")
+		return ErrInvalidSecretValue
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("rotate", name, "failure")
+		return err
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		v.recordAuditLocked("rotate", name, "failure")
+		return os.ErrNotExist
+	}
+	r.Value = newValue
+	r.UpdatedAt = v.now().UTC()
+	if !expiresAt.IsZero() {
+		r.ExpiresAt = expiresAt.UTC()
+	} else {
+		r.ExpiresAt = time.Time{}
+	}
+	v.data.Secrets[name] = r
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("rotate", name, "success")
+	} else {
+		v.recordAuditLocked("rotate", name, "failure")
+	}
+	return err
+}
+
+// RotateWithTTL updates the value of an existing secret and sets its
+// expiration to now + ttl.
+func (v *Vault) RotateWithTTL(name, newValue string, ttl time.Duration) error {
+	if ttl <= 0 {
+		return ErrInvalidTTL
+	}
+	v.mu.Lock()
+	now := v.now().UTC()
+	v.mu.Unlock()
+	return v.RotateWithExpiry(name, newValue, now.Add(ttl))
+}
+
 func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -1038,8 +1139,22 @@ func validatePassword(p string) error {
 	return nil
 }
 func validateName(n string) error {
-	if n == "" || len(n) > 256 || strings.ContainsAny(n, "\x00\r\n") {
+	if n == "" || len(n) > 256 {
 		return ErrInvalidSecretName
+	}
+	if strings.TrimSpace(n) != n {
+		return ErrInvalidSecretName
+	}
+	if strings.ContainsAny(n, "\x00\r\n\t") {
+		return ErrInvalidSecretName
+	}
+	if strings.Contains(n, "\\") || strings.Contains(n, "//") || strings.HasPrefix(n, "/") || strings.HasSuffix(n, "/") {
+		return ErrInvalidSecretName
+	}
+	for _, part := range strings.Split(n, "/") {
+		if part == "." || part == ".." || strings.TrimSpace(part) != part || part == "" {
+			return ErrInvalidSecretName
+		}
 	}
 	return nil
 }

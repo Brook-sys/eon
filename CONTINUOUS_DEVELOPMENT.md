@@ -395,6 +395,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
 
+2026-07-29 20:04 — Secret Vault Purge Expired, Rotate with Expiration/TTL & Input Validation (Phase 356) — implementado o método `PurgeExpired` no `Vault` para remoção atômica e persistente de segredos expirados, `RotateWithExpiry`/`RotateWithTTL` para rotação de credenciais com expiração e preservação do timestamp `CreatedAt`, endpoint HTTP `POST /purge-expired`, suporte a TTL opcional em `POST /secrets/{name}/rotate`, e endurecimento da validação de nomes (`validateName`) para suporte a nomes hierárquicos com barras (`/`) e rejeição de path traversal (`..`), backslashes (`\`), barras duplicadas (`//`), barras iniciais/finais e caracteres de controle. Suíte de testes atualizada em `ttl_audit_test.go`. Avaliação live: Groq `llama-3.3-70b-versatile` (`phase356-groq-llama33-vault-purge-ttl`, 1/1 PASS, 384.8ms, match `READY`, durable reopen OK). Verificação: `go test ./...`, `go vet ./...`, `gofmt -w .`, `git diff --check`.
+
 2026-07-29 19:26 — Secret Vault Expiration TTL & Audit Logging (Phase 352) — implementado o parâmetro `ExpiresAt` / `PutWithTTL` / `PutWithExpiry` em `secretvault.Vault` com expiração lazy na listagem e na recuperação de valores (`ErrSecretExpired`), além de sistema de `AuditEvent`s e método `AuditLog()` (e endpoint HTTP `GET /audit`). Suíte de testes `ttl_audit_test.go` criada. Avaliações live de modelo: `phase352-groq-llama31-vault-ttl-audit` (Groq Llama 3.1 8B, 1/1 PASS, 0.36s) e `phase352-groq-llama33-vault-ttl-audit-control` (Groq Llama 3.3 70B, 1/1 PASS). Verificação: `go test ./internal/secretvault/...`, `gofmt`, `git diff --check`. Commit `bf211ad`.
 
 2026-07-29 08:40 — Secret Vault Security Hardening (Phase 348) — adicionado bloqueio de conta após 5 falhas de senha consecutivas (lockout de 30s retornando `ErrAccountLockedOut` / HTTP 429), método `Close()` para limpeza determinística de chaves/estado na memória, e `Export(backupPath, backupPassword)` para exportação de backup criptografado envelope. Endpoints HTTP `POST /close` e `POST /export` adicionados ao handler. Avaliações live de modelo: `phase348-groq-llama31-vault-export-lockout` (Groq Llama 3.1 8B, 1/1 PASS, 1.25s) and `phase349d-groq-llama33-vault-export-lockout-control` (Groq Llama 3.3 70B, 1/1 PASS, 1.10s). Verificação: `go test ./internal/secretvault`, `gofmt`, `git diff --check`.
@@ -6779,3 +6781,25 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 14. HTTP `POST /secrets/{name}/rotate` on locked vault returns HTTP 423.
 
 **Verification.** `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase355-groq-llama31-vault-list-rotate/`.
+
+## Phase 356 — secret vault purge expired, rotate with expiration/TTL & input validation (2026-07-29 20:04 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` and `secretvault.HTTP` with secret purge capabilities, credential rotation with expiration TTL, and hardened name validation.
+1. Implemented `PurgeExpired() (int, error)` in `Vault`, atomically removing all expired secrets from the vault and persisting the update. The vault must be unlocked.
+2. Implemented `RotateWithExpiry(name, newValue string, expiresAt time.Time) error` and `RotateWithTTL(name, newValue string, ttl time.Duration) error`, updating secret value while setting a new expiration time and preserving `CreatedAt`.
+3. Added `POST /purge-expired` HTTP endpoint returning `{"purged": N}` with HTTP 200 OK.
+4. Extended `POST /secrets/{name}/rotate` HTTP endpoint to accept optional `ttl` in body or query string, invoking `RotateWithTTL`.
+5. Hardened `validateName` to explicitly allow hierarchical slash-separated names (e.g., `provider/groq/api-key`) while rejecting path traversal (`..`), backslashes (`\`), double slashes (`//`), leading/trailing slashes, and control characters (`\x00`, `\r`, `\n`, `\t`).
+
+**Live hypothesis and bounds.** Rotated from Groq `llama-3.1-8b-instant` (Phase 355) to Groq `llama-3.3-70b-versatile` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation in 384.8 ms (94 input + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/ttl_audit_test.go` confirm:
+1. `PurgeExpired` on locked vault returns `ErrLocked`.
+2. `PurgeExpired` deletes expired secrets permanently while preserving unexpired secrets.
+3. `RotateWithTTL` updates value and sets expiration time correctly.
+4. `RotateWithTTL` with invalid/negative TTL returns `ErrInvalidTTL`.
+5. HTTP `POST /purge-expired` returns HTTP 200 with purged count.
+6. HTTP `POST /secrets/{name}/rotate` with TTL query parameter correctly sets expiration.
+7. `validateName` accepts slash-separated names (`provider/groq/api-key`) while rejecting path traversal (`a/../b`), leading slash (`/a`), and whitespace/control characters.
+
+**Verification.** `go test ./...`, `go vet ./...`, `gofmt -w .`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase356-groq-llama33-vault-purge-ttl/`.

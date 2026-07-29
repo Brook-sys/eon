@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase356-groq-llama33-vault-purge-ttl",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-29T20:04:19.437388849Z"
+}

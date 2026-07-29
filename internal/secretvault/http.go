@@ -28,6 +28,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
+	mux.HandleFunc("POST /purge-expired", h.purgeExpired)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	mux.HandleFunc("POST /resolve", h.resolveBatch)
@@ -161,7 +162,22 @@ func (h HTTP) rotateSecret(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &q) {
 		return
 	}
-	if err := h.Vault.Rotate(r.PathValue("name"), q.Value); err != nil {
+	ttlStr := strings.TrimSpace(q.TTL)
+	if ttlStr == "" {
+		ttlStr = strings.TrimSpace(r.URL.Query().Get("ttl"))
+	}
+	var err error
+	if ttlStr != "" {
+		dur, parseErr := time.ParseDuration(ttlStr)
+		if parseErr != nil {
+			writeErr(w, ErrInvalidTTL)
+			return
+		}
+		err = h.Vault.RotateWithTTL(r.PathValue("name"), q.Value, dur)
+	} else {
+		err = h.Vault.Rotate(r.PathValue("name"), q.Value)
+	}
+	if err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -192,6 +208,14 @@ func (h HTTP) put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusNoContent, nil)
+}
+func (h HTTP) purgeExpired(w http.ResponseWriter, _ *http.Request) {
+	removed, err := h.Vault.PurgeExpired()
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"purged": removed})
 }
 func (h HTTP) delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Vault.Delete(r.PathValue("name")); err != nil {
