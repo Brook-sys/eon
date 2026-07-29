@@ -15,7 +15,16 @@ import (
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 	"motor-autonomo/internal/storage/memory"
+	"motor-autonomo/internal/tool"
 )
+
+type unresolvableToolProvider struct{}
+
+func (unresolvableToolProvider) Definitions() []port.ToolDefinition {
+	return []port.ToolDefinition{{Name: "missing_tool"}}
+}
+
+func (unresolvableToolProvider) Find(string) (tool.Tool, bool) { return nil, false }
 
 func TestRuntimeReloadModelExecutorFailurePreservesCurrentExecutorAndRedactsCredentialReference(t *testing.T) {
 	ctx := context.Background()
@@ -49,6 +58,34 @@ func TestRuntimeReloadModelExecutorFailurePreservesCurrentExecutorAndRedactsCred
 	}
 	if strings.Contains(err.Error(), credentialReference) || strings.Contains(logs.String(), credentialReference) {
 		t.Fatalf("credential reference leaked: error=%q logs=%q", err, logs.String())
+	}
+}
+
+func TestRuntimeReloadToolMergeFailurePreservesCurrentExecutor(t *testing.T) {
+	ctx := context.Background()
+	store := memory.New()
+	clock := source.NewManualClock(time.Now())
+	ids := source.NewSequenceIDGenerator(1)
+	current, err := BuildModelExecutor(Options{Model: &ModelOptions{
+		Enabled: true, PolicyVersion: "v1", BaseURL: "http://localhost", Model: "current-model",
+	}}, store, clock, ids, nil)
+	if err != nil {
+		t.Fatalf("build current executor: %v", err)
+	}
+	rt := &Runtime{
+		Opts: Options{}, Store: store, Clock: clock, IDs: ids, Model: current,
+		logger: log.New(io.Discard, "", 0), subagentTools: unresolvableToolProvider{},
+	}
+	rt.Executor.Model = current
+	t.Setenv("MERGE_FAILURE_TEST_KEY", "test-secret")
+	seedModelsConfig(t, ctx, store, "MERGE_FAILURE_TEST_KEY", "merge-failure-v2")
+
+	err = rt.reloadModelExecutorIfNeeded(ctx)
+	if err == nil || !strings.Contains(err.Error(), "tool provider definition cannot be resolved") {
+		t.Fatalf("reload error = %v, want tool merge failure", err)
+	}
+	if rt.Model != current || rt.Executor.Model != current {
+		t.Fatal("failed tool merge replaced the current executor")
 	}
 }
 
