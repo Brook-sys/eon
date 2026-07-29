@@ -149,6 +149,99 @@ func TestInterruptedTemporaryWriteDoesNotDamageCommittedVault(t *testing.T) {
 	}
 }
 
+func TestVaultChangePasswordReencryptsSecretsAndRejectsOldPassword(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "credentials.vault")
+	v, _ := New(path)
+	oldPass := "correct horse battery staple"
+	newPass := "new super secure master password"
+
+	if err := v.Initialize(oldPass); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Put("provider/groq/api-key", "super-secret-token"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Change password with invalid old password fails
+	if err := v.ChangePassword("wrong old password", newPass); err != ErrInvalidPassword {
+		t.Fatalf("expected ErrInvalidPassword, got: %v", err)
+	}
+
+	// Change password with invalid new password fails
+	if err := v.ChangePassword(oldPass, "short"); err == nil {
+		t.Fatal("expected error for short new password, got nil")
+	}
+
+	// Successful re-key
+	if err := v.ChangePassword(oldPass, newPass); err != nil {
+		t.Fatalf("ChangePassword failed: %v", err)
+	}
+
+	// Secret is still resolvable while unlocked
+	got, err := v.Resolve("provider/groq/api-key")
+	if err != nil || got != "super-secret-token" {
+		t.Fatalf("resolve after rekey = %q, %v", got, err)
+	}
+
+	// Lock and verify old password can no longer unlock
+	v.Lock()
+	if err := v.Unlock(oldPass); err != ErrInvalidPassword {
+		t.Fatalf("unlock with old pass expected ErrInvalidPassword, got: %v", err)
+	}
+
+	// New password unlocks successfully
+	if err := v.Unlock(newPass); err != nil {
+		t.Fatalf("unlock with new pass failed: %v", err)
+	}
+	got, err = v.Resolve("provider/groq/api-key")
+	if err != nil || got != "super-secret-token" {
+		t.Fatalf("resolve after unlock with new pass = %q, %v", got, err)
+	}
+}
+
+func TestHTTPRekeyEndpoint(t *testing.T) {
+	v, _ := New(filepath.Join(t.TempDir(), "vault"))
+	h := HTTP{Vault: v}.Handler()
+
+	// Initialize
+	req := httptest.NewRequest(http.MethodPost, "http://local/initialize", strings.NewReader(`{"password":"correct horse battery staple"}`))
+	req.RemoteAddr = "127.0.0.1:1"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("init=%d %s", w.Code, w.Body.String())
+	}
+
+	// Add secret
+	req = httptest.NewRequest(http.MethodPut, "http://local/secrets/provider%2Fgroq%2Fapi-key", strings.NewReader(`{"value":"hidden-value"}`))
+	req.SetPathValue("name", "provider/groq/api-key")
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("put=%d %s", w.Code, w.Body.String())
+	}
+
+	// Rekey via HTTP
+	rekeyBody := `{"old_password":"correct horse battery staple","new_password":"new super secure master password"}`
+	req = httptest.NewRequest(http.MethodPost, "http://local/rekey", strings.NewReader(rekeyBody))
+	req.RemoteAddr = "127.0.0.1:1"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("rekey=%d %s", w.Code, w.Body.String())
+	}
+
+	// Verify status indicates initialized and unlocked
+	var st Status
+	if err := json.Unmarshal(w.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	if !st.Initialized || st.Locked || len(st.Secrets) != 1 {
+		t.Fatalf("unexpected status after rekey: %+v", st)
+	}
+}
+
 func TestHTTPIsWriteOnlyAndLocalOnly(t *testing.T) {
 	v, _ := New(filepath.Join(t.TempDir(), "vault"))
 	h := HTTP{Vault: v}.Handler()

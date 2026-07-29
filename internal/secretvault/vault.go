@@ -286,6 +286,65 @@ func (v *Vault) Resolve(name string) (string, error) {
 	return r.Value, nil
 }
 
+func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return ErrLocked
+	}
+	if err := validatePassword(newPassword); err != nil {
+		return err
+	}
+	raw, err := os.ReadFile(v.path)
+	if err != nil {
+		return err
+	}
+	var env envelope
+	if err = json.Unmarshal(raw, &env); err != nil {
+		return fmt.Errorf("decode vault: %w", err)
+	}
+	salt, err := base64.StdEncoding.DecodeString(env.Salt)
+	if err != nil {
+		return errors.New("invalid vault salt")
+	}
+	testKey, err := derive(oldPassword, salt, env.Iterations)
+	if err != nil {
+		return err
+	}
+	if len(testKey) != len(v.key) || subtle.ConstantTimeCompare(testKey, v.key) != 1 {
+		zero(testKey)
+		return ErrInvalidPassword
+	}
+	zero(testKey)
+
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		return err
+	}
+	newSalt := make([]byte, 32)
+	if _, err := rand.Read(newSalt); err != nil {
+		return err
+	}
+	newKey, err := derive(newPassword, newSalt, iterations)
+	if err != nil {
+		return err
+	}
+	oldKey := v.key
+	v.key = newKey
+	if err := v.saveLocked(newSalt, iterations); err != nil {
+		zero(newKey)
+		v.key = oldKey
+		return err
+	}
+	zero(oldKey)
+	v.lastUsed = v.now()
+	return nil
+}
+
 func (v *Vault) expireLocked() {
 	if len(v.key) != 0 && !v.lastUsed.IsZero() && v.now().Sub(v.lastUsed) >= autoLockAfter {
 		zero(v.key)

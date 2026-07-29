@@ -19,6 +19,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
 	mux.HandleFunc("POST /lock", h.lock)
+	mux.HandleFunc("POST /rekey", h.rekey)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	return localOnly(mux)
@@ -26,6 +27,10 @@ func (h HTTP) Handler() http.Handler {
 
 type passwordRequest struct {
 	Password string `json:"password"`
+}
+type rekeyRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }
 type secretRequest struct {
 	Value string `json:"value"`
@@ -58,6 +63,17 @@ func (h HTTP) unlock(w http.ResponseWriter, r *http.Request) {
 }
 func (h HTTP) lock(w http.ResponseWriter, _ *http.Request) {
 	h.Vault.Lock()
+	write(w, http.StatusOK, h.Vault.Status())
+}
+func (h HTTP) rekey(w http.ResponseWriter, r *http.Request) {
+	var q rekeyRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if err := h.Vault.ChangePassword(q.OldPassword, q.NewPassword); err != nil {
+		writeErr(w, err)
+		return
+	}
 	write(w, http.StatusOK, h.Vault.Status())
 }
 func (h HTTP) put(w http.ResponseWriter, r *http.Request) {
