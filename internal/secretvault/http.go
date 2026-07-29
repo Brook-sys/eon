@@ -133,11 +133,12 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, ErrInvalidImportMode)
 		return
 	}
-	if err := h.Vault.ImportWithOptions(q.BackupPath, q.BackupPassword, ImportOptions{Mode: mode}); err != nil {
+	res, err := h.Vault.ImportWithOptions(q.BackupPath, q.BackupPassword, ImportOptions{Mode: mode})
+	if err != nil {
 		writeErr(w, err)
 		return
 	}
-	write(w, http.StatusOK, h.Vault.Status())
+	write(w, http.StatusOK, res)
 }
 func (h HTTP) auditLog(w http.ResponseWriter, _ *http.Request) {
 	write(w, http.StatusOK, h.Vault.AuditLog())

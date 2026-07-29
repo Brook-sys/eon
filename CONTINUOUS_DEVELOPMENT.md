@@ -6819,3 +6819,21 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 5. Disk persistence and audit trail record `delete_all` action.
 
 **Verification.** `go test ./...`, `go vet ./...`, `gofmt -w .`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase357-nim-deepseekv4-vault-purge-batch/`.
+
+## Phase 358 — credential vault ImportResult statistics struct, HTTP POST /import JSON response, and Groq Llama 3.1 8B live probe (2026-07-30 00:15 -03)
+
+**Objective and implementation.** Refactored credential vault import methods and HTTP handlers to calculate and return granular operation statistics (`ImportResult`).
+1. Defined `type ImportResult struct { Total int; Imported int; Skipped int }` in `secretvault`.
+2. Updated `Vault.Import` and `Vault.ImportWithOptions` signatures to return `(ImportResult, error)`.
+3. Updated internal import logic to track total secrets present in backup, successfully imported secrets count, and skipped entries (when `ImportModeSkip` is specified).
+4. Refactored HTTP `POST /import` endpoint in `http.go` to return `ImportResult` payload (`{"total": N, "imported": N, "skipped": N}`) with HTTP 200 OK on success, replacing the generic `Status()` payload.
+5. Added deterministic unit tests in `internal/secretvault/import_result_test.go` verifying `ImportResult` calculation on CLI and HTTP POST `/import` responses across import modes.
+
+**Live hypothesis and bounds.** Rotated provider deployment from NVIDIA NIM `deepseek-ai/deepseek-v4-flash` (Phase 357) to Groq `llama-3.1-8b-instant` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.1-8b-instant` completed live evaluation in 392.8 ms (94 prompt + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests confirm:
+1. `Import` and `ImportWithOptions` return `ImportResult{Total: N, Imported: N, Skipped: N}`.
+2. `ImportWithOptions` with `ImportModeSkip` returns correct `Imported` and `Skipped` counts.
+3. HTTP `POST /import` returns HTTP 200 OK with `ImportResult` JSON payload.
+
+**Verification.** `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase358-groq-llama31-vault-import-result/`.

@@ -59,8 +59,12 @@ func TestExportImportRoundTrip(t *testing.T) {
 	}
 
 	// Import into Vault 2
-	if err := v2.Import(backupPath, backupPass); err != nil {
+	res, err := v2.Import(backupPath, backupPass)
+	if err != nil {
 		t.Fatalf("Import vault2: %v", err)
+	}
+	if res.Total != 2 || res.Imported != 2 || res.Skipped != 0 {
+		t.Errorf("Import result = %+v, expected Total=2, Imported=2, Skipped=0", res)
 	}
 
 	// Verify secrets in Vault 2
@@ -109,14 +113,14 @@ func TestImportValidationErrors(t *testing.T) {
 	}
 
 	// Import non-existent file
-	if err := v.Import(badPath, backupPass); !os.IsNotExist(err) {
+	if _, err := v.Import(badPath, backupPass); !os.IsNotExist(err) {
 		t.Errorf("Import nonexistent = %v, expected os.ErrNotExist", err)
 	}
 
 	// Import with invalid backup password
 	v2, _ := New(filepath.Join(dir, "vault2.vault"))
 	_ = v2.Initialize(pass)
-	if err := v2.Import(backupPath, "wrong backup password"); err != ErrInvalidPassword {
+	if _, err := v2.Import(backupPath, "wrong backup password"); err != ErrInvalidPassword {
 		t.Errorf("Import wrong password = %v, expected ErrInvalidPassword", err)
 	}
 
@@ -124,7 +128,7 @@ func TestImportValidationErrors(t *testing.T) {
 	v3, _ := New(filepath.Join(dir, "vault3.vault"))
 	_ = v3.Initialize(pass)
 	_ = v3.Put("test/key", "conflicting_value")
-	if err := v3.Import(backupPath, backupPass); err != ErrImportConflict {
+	if _, err := v3.Import(backupPath, backupPass); err != ErrImportConflict {
 		t.Errorf("Import conflict = %v, expected ErrImportConflict", err)
 	}
 
@@ -133,7 +137,7 @@ func TestImportValidationErrors(t *testing.T) {
 	if err := os.WriteFile(corruptPath, []byte("invalid json data"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := v2.Import(corruptPath, backupPass); err != ErrInvalidBackupFormat {
+	if _, err := v2.Import(corruptPath, backupPass); err != ErrInvalidBackupFormat {
 		t.Errorf("Import corrupt = %v, expected ErrInvalidBackupFormat", err)
 	}
 }
@@ -220,13 +224,13 @@ func TestImportWithOptionsModes(t *testing.T) {
 	_ = v2.Put("existing/key", "current_value")
 
 	// Invalid mode
-	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportMode(99)}); err != ErrInvalidImportMode {
+	if _, err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportMode(99)}); err != ErrInvalidImportMode {
 		t.Errorf("ImportWithOptions invalid mode = %v, expected ErrInvalidImportMode", err)
 	}
 
 	// ModeFail returns conflict
-	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeFail}); err != ErrImportConflict {
-		t.Errorf("ImportWithOptions ModeFail = %v, expected ErrImportConflict", err)
+	if _, err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeFail}); err != ErrImportConflict {
+		t.Errorf("ImportWithOptions ModeFail = %v, expected ErrInvalidImportMode or ErrImportConflict", err)
 	}
 	// Verify unchanged
 	if val, _ := v2.Resolve("existing/key"); val != "current_value" {
@@ -234,8 +238,12 @@ func TestImportWithOptionsModes(t *testing.T) {
 	}
 
 	// ModeSkip skips existing, imports new
-	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeSkip}); err != nil {
+	resSkip, err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeSkip})
+	if err != nil {
 		t.Fatalf("ImportWithOptions ModeSkip: %v", err)
+	}
+	if resSkip.Imported != 1 || resSkip.Skipped != 1 {
+		t.Errorf("ModeSkip res = %+v, expected Imported=1, Skipped=1", resSkip)
 	}
 	if val, _ := v2.Resolve("existing/key"); val != "current_value" {
 		t.Errorf("existing/key after ModeSkip = %q, expected current_value", val)
@@ -245,8 +253,12 @@ func TestImportWithOptionsModes(t *testing.T) {
 	}
 
 	// ModeOverwrite updates existing
-	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeOverwrite}); err != nil {
+	resOverwrite, err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeOverwrite})
+	if err != nil {
 		t.Fatalf("ImportWithOptions ModeOverwrite: %v", err)
+	}
+	if resOverwrite.Imported != 2 || resOverwrite.Skipped != 0 {
+		t.Errorf("ModeOverwrite res = %+v, expected Imported=2, Skipped=0", resOverwrite)
 	}
 	if val, _ := v2.Resolve("existing/key"); val != "original_value" {
 		t.Errorf("existing/key after ModeOverwrite = %q, expected original_value", val)

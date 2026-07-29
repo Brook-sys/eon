@@ -60,6 +60,13 @@ const (
 	ImportModeOverwrite
 )
 
+// ImportResult summarizes the outcome of an ImportWithOptions operation.
+type ImportResult struct {
+	Total    int `json:"total"`
+	Imported int `json:"imported"`
+	Skipped  int `json:"skipped"`
+}
+
 // ImportOptions configures Import behaviour.
 type ImportOptions struct {
 	Mode ImportMode
@@ -888,63 +895,63 @@ func (v *Vault) Export(backupPath, backupPassword string) error {
 // secrets into the current vault. The vault must be unlocked. If a secret
 // from the backup already exists in the vault, Import returns
 // ErrImportConflict for the first conflict and no changes are applied.
-func (v *Vault) Import(backupPath, backupPassword string) error {
+func (v *Vault) Import(backupPath, backupPassword string) (ImportResult, error) {
 	return v.ImportWithOptions(backupPath, backupPassword, ImportOptions{Mode: ImportModeFail})
 }
 
 // ImportWithOptions reads an encrypted export file created by Export and merges the
 // secrets into the current vault according to the specified ImportOptions.
-func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts ImportOptions) error {
+func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts ImportOptions) (ImportResult, error) {
 	if opts.Mode != ImportModeFail && opts.Mode != ImportModeSkip && opts.Mode != ImportModeOverwrite {
-		return ErrInvalidImportMode
+		return ImportResult{}, ErrInvalidImportMode
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	v.expireLocked()
 	if len(v.key) == 0 {
-		return ErrLocked
+		return ImportResult{}, ErrLocked
 	}
 	backupPath = strings.TrimSpace(backupPath)
 	if backupPath == "" {
-		return ErrInvalidBackupPath
+		return ImportResult{}, ErrInvalidBackupPath
 	}
 	if err := validatePassword(backupPassword); err != nil {
-		return err
+		return ImportResult{}, err
 	}
 	pathLock := lockForPath(v.path)
 	pathLock.Lock()
 	defer pathLock.Unlock()
 
 	if err := v.reloadWithCurrentKeyLocked(); err != nil {
-		return err
+		return ImportResult{}, err
 	}
 
 	raw, err := os.ReadFile(backupPath)
 	if err != nil {
-		return err
+		return ImportResult{}, err
 	}
 	var env envelope
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	if env.Version != formatVersion {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	salt, err := base64.StdEncoding.DecodeString(env.Salt)
 	if err != nil || len(salt) == 0 {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
 	if err != nil || len(nonce) == 0 {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	ct, err := base64.StdEncoding.DecodeString(env.Ciphertext)
 	if err != nil || len(ct) == 0 {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	exportKey, err := derive(backupPassword, salt, env.Iterations)
 	if err != nil {
-		return err
+		return ImportResult{}, err
 	}
 	defer zero(exportKey)
 
@@ -952,30 +959,30 @@ func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts Import
 	expectedVerifier := verifier(exportKey)
 	gotVerifier, err := base64.StdEncoding.DecodeString(env.Verifier)
 	if err != nil || subtle.ConstantTimeCompare(expectedVerifier, gotVerifier) != 1 {
-		return ErrInvalidPassword
+		return ImportResult{}, ErrInvalidPassword
 	}
 
 	plain, err := open(exportKey, nonce, ct)
 	if err != nil {
-		return ErrInvalidPassword
+		return ImportResult{}, ErrInvalidPassword
 	}
 	defer zero(plain)
 
 	var imported payload
 	if err := json.Unmarshal(plain, &imported); err != nil {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 	if imported.Secrets == nil {
-		return ErrInvalidBackupFormat
+		return ImportResult{}, ErrInvalidBackupFormat
 	}
 
 	// Validate names and value sizes before modifying state.
 	for name, rec := range imported.Secrets {
 		if err := validateName(name); err != nil {
-			return err
+			return ImportResult{}, err
 		}
 		if rec.Value == "" || len(rec.Value) > maxSecretSize {
-			return ErrInvalidSecretValue
+			return ImportResult{}, ErrInvalidSecretValue
 		}
 	}
 
@@ -983,28 +990,37 @@ func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts Import
 	if opts.Mode == ImportModeFail {
 		for name := range imported.Secrets {
 			if _, exists := v.data.Secrets[name]; exists {
-				return ErrImportConflict
+				return ImportResult{}, ErrImportConflict
 			}
 		}
 	}
 
 	now := v.now().UTC()
-	var modified bool
+	var importedCount, skippedCount int
 	for name, rec := range imported.Secrets {
 		_, exists := v.data.Secrets[name]
 		if exists && opts.Mode == ImportModeSkip {
+			skippedCount++
 			continue
 		}
 		rec.CreatedAt = now
 		rec.UpdatedAt = now
 		v.data.Secrets[name] = rec
-		modified = true
+		importedCount++
 	}
 	v.lastUsed = v.now()
-	if !modified && len(imported.Secrets) > 0 {
-		return nil
+	res := ImportResult{
+		Total:    len(imported.Secrets),
+		Imported: importedCount,
+		Skipped:  skippedCount,
 	}
-	return v.saveWithCurrentKeyLocked()
+	if importedCount == 0 && len(imported.Secrets) > 0 {
+		return res, nil
+	}
+	if err := v.saveWithCurrentKeyLocked(); err != nil {
+		return ImportResult{}, err
+	}
+	return res, nil
 }
 
 func (v *Vault) isLockedOutLocked() bool {
