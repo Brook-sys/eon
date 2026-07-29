@@ -268,13 +268,28 @@ docker compose up -d
 docker compose ps
 ```
 
+O Compose sempre consulta o registry, evitando reutilizar silenciosamente um
+`latest` antigo. Confirme a saúde e a revisão imutável realmente executada:
+
+```bash
+curl -fsS http://localhost:8080/api/inspect/health
+curl -fsS http://localhost:8080/api/inspect/version
+```
+
 Segredos de providers continuam em variáveis de ambiente e nunca entram na
 imagem. Para habilitar um modelo, consulte o exemplo equivalente no
 [README em inglês](README.md#fastest-start-prebuilt-container) e ajuste o
 endpoint, modelo e nome da variável de credencial.
 
 Para deployments reproduzíveis, fixe uma tag de release ou `sha-...` em vez
-de `latest`. O pacote pode nascer privado conforme a visibilidade configurada
+de `latest`, sem editar o Compose:
+
+```bash
+EON_IMAGE=ghcr.io/brook-sys/eon:sha-<commit> docker compose up -d
+```
+
+A versão informada pelo runtime inclui a revisão completa do código-fonte. O
+pacote pode nascer privado conforme a visibilidade configurada
 no GHCR; torne-o público nas configurações do pacote para permitir pulls
 anônimos.
 

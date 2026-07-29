@@ -20,6 +20,11 @@ import (
 	"motor-autonomo/internal/runtime/bootstrap"
 )
 
+// buildVersion is replaced by the container build through -ldflags. Keeping
+// the default makes local source builds explicit rather than impersonating a
+// published revision.
+var buildVersion = "dev"
+
 func main() {
 	var (
 		listen             = flag.String("listen", "127.0.0.1:8080", "HTTP bind address for inspect/control/dashboard")
@@ -28,7 +33,7 @@ func main() {
 		doltPath           = flag.String("dolt-path", "", "Dolt database path (required for -store=dolt)")
 		missionID          = flag.String("mission-id", "", "mission ID for the continuity control loop (optional)")
 		runtimeName        = flag.String("runtime-name", "motor-autonomo", "runtime identity name")
-		runtimeVersion     = flag.String("runtime-version", "dev", "runtime identity version")
+		runtimeVersion     = flag.String("runtime-version", buildVersion, "runtime identity version")
 		dashboard          = flag.Bool("dashboard", true, "serve experimental operator dashboard")
 		modelPresetCatalog = flag.String("model-preset-catalog", "", "evidence-backed model preset catalog path (optional)")
 		otelEnabled        = flag.Bool("otel", false, "enable optional OpenTelemetry export (derived-only)")

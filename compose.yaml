@@ -1,6 +1,7 @@
 services:
   eon:
-    image: ghcr.io/brook-sys/eon:latest
+    image: ${EON_IMAGE:-ghcr.io/brook-sys/eon:latest}
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "8080:8080"

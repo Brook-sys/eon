@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "name": "phase342-groq-llama31-container-identity",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. A container build injects the full source revision into the runtime version; the HTTP version endpoint exposes it; Compose always pulls latest or accepts an explicit immutable image; CI runs the final image before publication and checks health, revision, non-root SQLite ownership, dashboard, and restart with the same volume. The model cannot build, publish, select revisions, or write state. Exact keys/types: revision_observable=true; stale_latest_prevented=true; final_image_smoked=true; durable_restart_checked=true; model_authority=false; canonical_writes=0.",
+  "expected_response": "{\"revision_observable\":true,\"stale_latest_prevented\":true,\"final_image_smoked\":true,\"durable_restart_checked\":true,\"model_authority\":false,\"canonical_writes\":0}",
+  "structural_expectation": {
+    "fields": {
+      "revision_observable": true,
+      "stale_latest_prevented": true,
+      "final_image_smoked": true,
+      "durable_restart_checked": true,
+      "model_authority": false,
+      "canonical_writes": 0
+    }
+  },
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "provider": "groq-seeded",
+      "provider_kind": "groq",
+      "binding_id": "groq-compound-mini-seeded",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "groq/compound-mini",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "groq",
+      "binding_id": "groq-llama31",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_completion_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}

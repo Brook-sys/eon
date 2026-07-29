@@ -26,8 +26,24 @@ jobs:
       - run: go test ./...
       - run: go vet ./...
 
-  image:
+  smoke:
     needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build final amd64 image
+        run: |
+          docker build \
+            --build-arg VERSION=ci \
+            --build-arg REVISION=${{ github.sha }} \
+            --tag eon:smoke .
+      - name: Smoke-test final image and durable volume
+        env:
+          EXPECTED_REVISION: ${{ github.sha }}
+        run: .github/scripts/container-smoke.sh eon:smoke
+
+  image:
+    needs: [test, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -65,6 +81,9 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            REVISION=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: mode=max

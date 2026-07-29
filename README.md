@@ -261,11 +261,21 @@ docker run --name eon --restart unless-stopped \
   ghcr.io/brook-sys/eon:latest
 ```
 
+Pull before recreating an existing deployment so `latest` cannot resolve to a
+stale local image. The Compose file enforces this automatically:
+
 Open <http://localhost:8080/>. To use Compose instead:
 
 ```bash
 docker compose up -d
 docker compose ps
+```
+
+Confirm both health and the immutable source revision actually running:
+
+```bash
+curl -fsS http://localhost:8080/api/inspect/health
+curl -fsS http://localhost:8080/api/inspect/version
 ```
 
 Provider secrets remain environment variables and are never baked into the
@@ -283,7 +293,14 @@ docker run --name eon --restart unless-stopped \
 ```
 
 Pin a release tag or `sha-...` image tag for reproducible deployments instead
-of `latest`. The package may initially be private depending on the repository
+of `latest`, without editing Compose:
+
+```bash
+EON_IMAGE=ghcr.io/brook-sys/eon:sha-<commit> docker compose up -d
+```
+
+The reported runtime version includes the full source revision. The package may
+initially be private depending on the repository
 owner's GHCR package visibility; make it public in the package settings for
 anonymous pulls.
 
