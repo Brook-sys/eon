@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "phase357-nim-deepseekv4-vault-purge-batch",
+  "max_calls": 1,
+  "timeout_seconds": 45,
+  "max_output_tokens": 32,
+  "probe_prompt": "Reply with exactly the text: READY\n\nNo markdown and no explanation.",
+  "expected_response": "READY",
+  "output_schema": "exact_text",
+  "early_stop_repeated_failures": 2,
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "binding_id": "nim-llama31-8b-seeded",
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 1
+    },
+    {
+      "binding_id": "nim-deepseek-v4-flash",
+      "provider": "nim-deepseek",
+      "provider_kind": "nvidia_nim",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "deepseek-ai/deepseek-v4-flash",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 4096,
+      "priority": 2
+    }
+  ]
+}

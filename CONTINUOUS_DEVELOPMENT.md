@@ -6802,4 +6802,20 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 6. HTTP `POST /secrets/{name}/rotate` with TTL query parameter correctly sets expiration.
 7. `validateName` accepts slash-separated names (`provider/groq/api-key`) while rejecting path traversal (`a/../b`), leading slash (`/a`), and whitespace/control characters.
 
-**Verification.** `go test ./...`, `go vet ./...`, `gofmt -w .`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase356-groq-llama33-vault-purge-ttl/`.
+## Phase 357 — credential vault atomic DeleteAll operation, HTTP DELETE /secrets endpoint, and NIM DeepSeek-v4 live trial (2026-07-29 23:26 -03)
+
+**Objective and implementation.** Added atomic batch deletion of all vault secrets in `secretvault.Vault` and `secretvault.HTTP`.
+1. Added `DeleteAll() (int, error)` method to `secretvault.Vault`. Acquires exclusive vault mutex lock, reloads disk state under file lock, clears all secrets atomically (`map[string]record{}`), persists updated encrypted state to disk, records `delete_all` audit event, and returns the count of deleted secrets. Returns `ErrLocked` if vault is locked.
+2. Exposed HTTP `DELETE /secrets` endpoint in `HTTP.Handler()`, delegating to `h.Vault.DeleteAll()` and returning HTTP 200 OK with JSON `{"deleted": count}`. Domain errors map via `writeErr` (`ErrLocked` -> HTTP 423 `vault_locked`).
+3. Unit tests in `internal/secretvault/delete_all_test.go` verify `DeleteAll` behavior on uninitialized/locked vault (`ErrLocked`), empty vault (`0`), non-empty vault, HTTP `DELETE /secrets` status/payload response, disk file persistence, and audit logging.
+
+**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM `deepseek-ai/deepseek-v4-flash` (with `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** NVIDIA NIM `deepseek-ai/deepseek-v4-flash` completed live evaluation in 1.650 s (70 prompt + 32 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/delete_all_test.go` confirm:
+1. `DeleteAll` on locked vault returns `ErrLocked`.
+2. `DeleteAll` on empty vault returns `0` deleted secrets.
+3. `DeleteAll` on populated vault atomically removes all entries and returns exact count.
+4. HTTP `DELETE /secrets` returns HTTP 200 with `{"deleted": count}`.
+5. Disk persistence and audit trail record `delete_all` action.
+
+**Verification.** `go test ./...`, `go vet ./...`, `gofmt -w .`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase357-nim-deepseekv4-vault-purge-batch/`.

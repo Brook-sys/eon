@@ -574,6 +574,37 @@ func (v *Vault) Rotate(name, newValue string) error {
 	return err
 }
 
+// DeleteAll deletes all secrets from the vault atomically in a single write operation.
+func (v *Vault) DeleteAll() (int, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("delete_all", "", "failure")
+		return 0, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("delete_all", "", "failure")
+		return 0, err
+	}
+	count := len(v.data.Secrets)
+	if count == 0 {
+		v.recordAuditLocked("delete_all", "", "success")
+		return 0, nil
+	}
+	v.data.Secrets = map[string]record{}
+	v.lastUsed = v.now()
+	if err := v.saveWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("delete_all", "", "failure")
+		return 0, err
+	}
+	v.recordAuditLocked("delete_all", "", "success")
+	return count, nil
+}
+
 // PurgeExpired removes all expired secrets from the vault and persists the
 // change. The vault must be unlocked. Returns the number of secrets removed.
 func (v *Vault) PurgeExpired() (int, error) {

@@ -29,6 +29,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
 	mux.HandleFunc("POST /purge-expired", h.purgeExpired)
+	mux.HandleFunc("DELETE /secrets", h.deleteAllSecrets)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	mux.HandleFunc("POST /resolve", h.resolveBatch)
@@ -216,6 +217,14 @@ func (h HTTP) purgeExpired(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"purged": removed})
+}
+func (h HTTP) deleteAllSecrets(w http.ResponseWriter, _ *http.Request) {
+	deleted, err := h.Vault.DeleteAll()
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"deleted": deleted})
 }
 func (h HTTP) delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Vault.Delete(r.PathValue("name")); err != nil {
