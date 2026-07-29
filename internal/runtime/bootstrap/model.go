@@ -62,14 +62,14 @@ func BuildModelExecutor(
 			if binding.MaxOutputDialect == domain.MaxOutputDialectCompletion {
 				field = ModelMaxOutputTokensCompletion
 			}
-			instance, openErr := openModelProvider(provider.BaseURL, binding.ModelID, provider.APIKeyEnv, field, binding.ContextTokens, provider.MaxResponseBytes, provider.Timeout, string(provider.Kind)+":"+binding.ID, telemetry)
+			instance, openErr := openModelProvider(provider.BaseURL, binding.ModelID, provider.APIKeyEnv, opts.ModelSecretResolver, field, binding.ContextTokens, provider.MaxResponseBytes, provider.Timeout, string(provider.Kind)+":"+binding.ID, telemetry)
 			if openErr != nil {
 				return nil, fmt.Errorf("model binding %s provider: %w", binding.ID, openErr)
 			}
 			providersByBinding[binding.ID] = instance
 		}
 	} else {
-		modelProvider, err = openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, modelOpts.Timeout, "openai-compatible", telemetry)
+		modelProvider, err = openModelProvider(modelOpts.BaseURL, modelOpts.Model, modelOpts.APIKeyEnv, opts.ModelSecretResolver, modelOpts.MaxOutputField, modelOpts.ContextTokens, modelOpts.MaxResponseBytes, modelOpts.Timeout, "openai-compatible", telemetry)
 		if err != nil {
 			return nil, fmt.Errorf("model provider: %w", err)
 		}
@@ -82,7 +82,7 @@ func BuildModelExecutor(
 			if ctxTokens <= 0 {
 				ctxTokens = modelOpts.ContextTokens
 			}
-			fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, field, ctxTokens, fb.MaxResponseBytes, fb.Timeout, "openai-compatible-fallback", telemetry)
+			fallbackProvider, err = openModelProvider(fb.BaseURL, fb.Model, fb.APIKeyEnv, opts.ModelSecretResolver, field, ctxTokens, fb.MaxResponseBytes, fb.Timeout, "openai-compatible-fallback", telemetry)
 			if err != nil {
 				return nil, fmt.Errorf("model fallback provider: %w", err)
 			}
@@ -253,6 +253,7 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 // apiKeyEnv is the env var name only — secrets never land in flags or durable config.
 func openModelProvider(
 	baseURL, modelName, apiKeyEnv string,
+	secrets SecretResolver,
 	maxField ModelMaxOutputField,
 	contextTokens int,
 	maxResponseBytes int64,
@@ -263,6 +264,13 @@ func openModelProvider(
 	apiKey := ""
 	if env := strings.TrimSpace(apiKeyEnv); env != "" {
 		apiKey = strings.TrimSpace(os.Getenv(env))
+		if apiKey == "" && secrets != nil {
+			resolved, resolveErr := secrets.Resolve(env)
+			if resolveErr != nil {
+				return nil, fmt.Errorf("resolve model credential %q: %w", env, resolveErr)
+			}
+			apiKey = strings.TrimSpace(resolved)
+		}
 		// Empty key is allowed: some local OpenAI-compatible servers ignore auth.
 	}
 	field := openai.MaxOutputTokensLegacy

@@ -335,6 +335,9 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Clock: clock,
 		IDs:   ids,
 	}
+	if vault != nil {
+		opts.ModelSecretResolver = vault
+	}
 	modelExec, err := BuildModelExecutor(opts, store, clock, ids, telemetry)
 	if err != nil {
 		_ = telemetry.Shutdown(ctx)

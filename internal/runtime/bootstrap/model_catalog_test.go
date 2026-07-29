@@ -270,3 +270,22 @@ func TestSQLiteReopenRestoresEnabledPresetAndRouter(t *testing.T) {
 		t.Fatalf("restored routing decision = %+v / %+v", selected, decision)
 	}
 }
+
+type fixedSecretResolver map[string]string
+
+func (r fixedSecretResolver) Resolve(name string) (string, error) { return r[name], nil }
+
+func TestOpenModelProviderUsesResolverOnlyWhenEnvironmentEmpty(t *testing.T) {
+	const name = "MODEL_RESOLVER_TEST_KEY"
+	t.Setenv(name, "")
+	p, err := openModelProvider("http://localhost", "fixture", name, fixedSecretResolver{name: "vault-secret"}, ModelMaxOutputTokensLegacy, 1024, 1024, time.Second, "test", nil)
+	if err != nil || p == nil {
+		t.Fatalf("resolver provider: provider=%v err=%v", p, err)
+	}
+
+	t.Setenv(name, "env-secret")
+	p, err = openModelProvider("http://localhost", "fixture", name, fixedSecretResolver{name: "vault-secret"}, ModelMaxOutputTokensLegacy, 1024, 1024, time.Second, "test", nil)
+	if err != nil || p == nil {
+		t.Fatalf("environment provider: provider=%v err=%v", p, err)
+	}
+}

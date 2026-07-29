@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "phase337-groq-compound-mini-vault-resolver",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 96,
+  "output_schema": "exact_json",
+  "probe_prompt": "Return one raw JSON object only. First byte {; last byte }; no fences or extra text. Runtime provider assembly first reads the configured environment-variable name; only when that value is empty it asks a narrow unlocked local vault resolver for the same name. The resolved secret is passed directly to provider construction, is never persisted in model config or returned by HTTP, and the model cannot resolve or export it. Exact keys/types: env_precedes_vault=true; vault_fallback_only=true; secret_persisted_in_config=false; model_can_export_secret=false; canonical_writes=0.",
+  "expected_response": "{\"env_precedes_vault\":true,\"vault_fallback_only\":true,\"secret_persisted_in_config\":false,\"model_can_export_secret\":false,\"canonical_writes\":0}",
+  "structural_expectation": {"fields":{"env_precedes_vault":true,"vault_fallback_only":true,"secret_persisted_in_config":false,"model_can_export_secret":false,"canonical_writes":0}},
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {"provider":"groq-seeded","provider_kind":"groq","binding_id":"groq-allam-seeded","base_url":"https://api.groq.com/openai/v1","model":"allam-2-7b","api_key_env":"GROQ_API_KEY","max_output_field":"max_completion_tokens","context_tokens":8192,"priority":1},
+    {"provider":"groq","provider_kind":"groq","binding_id":"groq-compound-mini","base_url":"https://api.groq.com/openai/v1","model":"groq/compound-mini","api_key_env":"GROQ_API_KEY","max_output_field":"max_completion_tokens","context_tokens":8192,"priority":2}
+  ]
+}

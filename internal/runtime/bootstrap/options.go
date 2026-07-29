@@ -26,6 +26,12 @@ const (
 
 // Options is the process-level assembly contract. Zero values are filled by
 // Validate with conservative local defaults suitable for single-mission MVP.
+// SecretResolver provides write-only credential references to process assembly.
+// Implementations must never expose enumeration or export operations here.
+type SecretResolver interface {
+	Resolve(name string) (string, error)
+}
+
 type Options struct {
 	// ListenAddr is the HTTP bind address for inspect/control/dashboard.
 	ListenAddr string
@@ -74,6 +80,9 @@ type Options struct {
 	// ModelPresetCatalogPath optionally exposes an evidence-verified preset
 	// catalog through the Control API/dashboard. Empty disables the catalog.
 	ModelPresetCatalogPath string
+	// ModelSecretResolver optionally resolves APIKeyEnv references when the
+	// corresponding process environment variable is empty.
+	ModelSecretResolver SecretResolver
 
 	// QuestionRoutes seeds the active outbox/reminder routes when no durable
 	// CHANNELS revision is installed. Empty means channel delivery is idle until
