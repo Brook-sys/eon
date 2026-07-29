@@ -264,13 +264,17 @@ func ReportSuccess(usage ResourceUsage, cost ResourceCost, now time.Time) (Resou
 
 // ReconcileObservedTokens replaces the estimated token charge made at
 // acquire time with the provider-observed total for the same successful call.
-// Calls and slots are deliberately untouched: a completed request is never
-// refunded, and concurrency is released separately by ReportSuccess.
-//
-// When providers report more tokens than reserved this may move usage above
-// the configured ceiling; the next Acquire then waits for the minute window
-// to roll rather than pretending the excess did not happen.
+// It delegates to ReconcileObservedTokensWithGrantedAt with a zero grantedAt.
 func ReconcileObservedTokens(usage ResourceUsage, estimated, observed int, now time.Time) (ResourceUsage, error) {
+	return ReconcileObservedTokensWithGrantedAt(usage, estimated, observed, time.Time{}, now)
+}
+
+// ReconcileObservedTokensWithGrantedAt replaces estimated token charges with
+// provider-observed totals, handling window boundary crossings deterministically.
+// If grantedAt is non-zero and falls in a previous minute window than now, estimated
+// tokens were accounted for in that previous window and are not subtracted from the
+// current window; only observed tokens exceeding estimated are charged to now.
+func ReconcileObservedTokensWithGrantedAt(usage ResourceUsage, estimated, observed int, grantedAt, now time.Time) (ResourceUsage, error) {
 	if err := usage.Validate(); err != nil {
 		return usage, err
 	}
@@ -284,13 +288,34 @@ func ReconcileObservedTokens(usage ResourceUsage, estimated, observed int, now t
 		return usage, nil
 	}
 	now = now.UTC()
+	next := normalizeUsageWindows(usage, usage.Resource, now)
+
+	if !grantedAt.IsZero() {
+		grantedMinute := grantedAt.UTC().Truncate(time.Minute)
+		nowMinute := now.Truncate(time.Minute)
+		if grantedMinute.Equal(nowMinute) {
+			if estimated == observed {
+				return next, nil
+			}
+			next.TokenMinuteCount = saturatingSubInt(next.TokenMinuteCount, estimated)
+			next.TokenMinuteCount += observed
+			return next, nil
+		}
+		// Cross-minute boundary: estimated tokens were accounted for in the
+		// granted minute window. Only charge excess observed tokens to current window.
+		excess := saturatingSubInt(observed, estimated)
+		if excess > 0 {
+			next.TokenMinuteCount += excess
+		}
+		return next, nil
+	}
+
 	activeWindow := !usage.TokenMinuteWindowStart.IsZero() && usage.TokenMinuteWindowStart.Equal(now.Truncate(time.Minute))
 	if usage.TokenMinuteWindowStart.IsZero() && estimated == observed {
 		// Preserve the legacy/no-window no-op contract: without a persisted
 		// bucket there is no evidence that reconciliation crossed a boundary.
 		return usage, nil
 	}
-	next := normalizeUsageWindows(usage, usage.Resource, now)
 	if activeWindow {
 		if estimated == observed {
 			return next, nil

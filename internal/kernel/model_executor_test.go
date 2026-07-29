@@ -203,8 +203,11 @@ func TestModelExecutorReconcilesObservedTokensIntoCompletionMinute(t *testing.T)
 		t.Fatal(err)
 	}
 	wantWindow := now.Add(2 * time.Minute).Truncate(time.Minute)
-	if !usage.TokenMinuteWindowStart.Equal(wantWindow) || usage.TokenMinuteCount != 200 || usage.InFlight != 0 {
-		t.Fatalf("completion-minute usage=%+v, want window=%v tokens=200 in_flight=0", usage, wantWindow)
+	// Estimated 100 tokens were accounted for in the 10:00 window at Acquire time.
+	// Across the 2-minute clock advance, 10:02 receives only excess observed tokens
+	// (200 observed - 100 estimated = 100 excess) without double-counting the reserved budget.
+	if !usage.TokenMinuteWindowStart.Equal(wantWindow) || usage.TokenMinuteCount != 100 || usage.InFlight != 0 {
+		t.Fatalf("completion-minute usage=%+v, want window=%v tokens=100 in_flight=0", usage, wantWindow)
 	}
 }
 

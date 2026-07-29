@@ -651,3 +651,58 @@ func TestReconcileObservedTokensBoundary(t *testing.T) {
 		t.Fatalf("equal reconcile window start = %v, want %v", rolledEqual.TokenMinuteWindowStart, minuteStart)
 	}
 }
+
+func TestReconcileObservedTokensWithGrantedAtCrossWindowPreservesConcurrentUsage(t *testing.T) {
+	grantedAt := time.Date(2026, 7, 28, 10, 0, 55, 0, time.UTC)
+	now := time.Date(2026, 7, 28, 10, 1, 5, 0, time.UTC)
+	nowMinute := now.Truncate(time.Minute)
+
+	// Call B acquired in 10:01 created usage with TokenMinuteWindowStart = 10:01 and TokenMinuteCount = 500
+	usage := ResourceUsage{
+		Resource:               "model:test",
+		TokenMinuteWindowStart: nowMinute,
+		TokenMinuteCount:       500,
+	}
+
+	// Call A (granted at 10:00:55, estimated 1000) completes at 10:01:05 with observed 1005 tokens (excess 5).
+	// Because grantedAt is 10:00, 1000 estimated tokens must NOT be subtracted from Call B's 500 count in 10:01.
+	// Only excess 5 tokens are charged to 10:01.
+	reconciled, err := ReconcileObservedTokensWithGrantedAt(usage, 1000, 1005, grantedAt, now)
+	if err != nil {
+		t.Fatalf("reconcile cross window: %v", err)
+	}
+
+	if reconciled.TokenMinuteCount != 505 {
+		t.Fatalf("TokenMinuteCount = %d, want 505 (500 concurrent + 5 excess)", reconciled.TokenMinuteCount)
+	}
+	if !reconciled.TokenMinuteWindowStart.Equal(nowMinute) {
+		t.Fatalf("TokenMinuteWindowStart = %v, want %v", reconciled.TokenMinuteWindowStart, nowMinute)
+	}
+
+	// Same test with observed <= estimated (e.g. 900 observed vs 1000 estimated).
+	// No excess tokens to charge to 10:01; Call B's 500 remains intact.
+	reconciledNoExcess, err := ReconcileObservedTokensWithGrantedAt(usage, 1000, 900, grantedAt, now)
+	if err != nil {
+		t.Fatalf("reconcile cross window no excess: %v", err)
+	}
+	if reconciledNoExcess.TokenMinuteCount != 500 {
+		t.Fatalf("TokenMinuteCount = %d, want 500 (no excess charged to new window)", reconciledNoExcess.TokenMinuteCount)
+	}
+
+	// Same minute completion: grantedAt 10:01:02, now 10:01:05.
+	// Estimated (1000) is subtracted from usage (which includes Call A's 1000) and replaced by 1005.
+	sameMinGrantedAt := time.Date(2026, 7, 28, 10, 1, 2, 0, time.UTC)
+	usageSameMin := ResourceUsage{
+		Resource:               "model:test",
+		TokenMinuteWindowStart: nowMinute,
+		TokenMinuteCount:       1500, // 500 from B + 1000 estimated from A
+	}
+	reconciledSameMin, err := ReconcileObservedTokensWithGrantedAt(usageSameMin, 1000, 1005, sameMinGrantedAt, now)
+	if err != nil {
+		t.Fatalf("reconcile same minute: %v", err)
+	}
+	// 1500 - 1000 + 1005 = 1505
+	if reconciledSameMin.TokenMinuteCount != 1505 {
+		t.Fatalf("TokenMinuteCount same minute = %d, want 1505", reconciledSameMin.TokenMinuteCount)
+	}
+}

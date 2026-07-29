@@ -448,7 +448,7 @@ func (a *CapabilityAuthorizer) ReportCapabilityObserved(
 		if success {
 			next, err = domain.ReportSuccess(usage, permit.Cost, now)
 			if err == nil && observedTokens > 0 {
-				next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observedTokens, now)
+				next, err = domain.ReconcileObservedTokensWithGrantedAt(next, permit.Cost.Tokens, observedTokens, permit.GrantedAt, now)
 			}
 		} else {
 			next, err = domain.ReportFailure(usage, limit, permit.Cost, retryAfter, now)
@@ -569,7 +569,7 @@ func (a *CapabilityAuthorizer) SettleModelCompletionReceipt(ctx context.Context,
 			}
 			next, err := domain.ReportSuccess(usage, permit.Cost, now)
 			if err == nil && observed > 0 {
-				next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observed, now)
+				next, err = domain.ReconcileObservedTokensWithGrantedAt(next, permit.Cost.Tokens, observed, permit.GrantedAt, now)
 			}
 			if err != nil {
 				return err
@@ -682,7 +682,7 @@ func (a *CapabilityAuthorizer) reportModelCompleteBatch(
 			if success {
 				next, err = domain.ReportSuccess(usage, permit.Cost, now)
 				if err == nil && observedTokens > 0 {
-					next, err = domain.ReconcileObservedTokens(next, permit.Cost.Tokens, observedTokens, now)
+					next, err = domain.ReconcileObservedTokensWithGrantedAt(next, permit.Cost.Tokens, observedTokens, permit.GrantedAt, now)
 				}
 			} else {
 				next, err = domain.ReportFailure(usage, limit, permit.Cost, retryAfter, now)

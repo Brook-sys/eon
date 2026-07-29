@@ -6642,3 +6642,16 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Observed evidence and decision.** Groq `llama-3.1-8b-instant` completed in 67.8 ms (172 input + 64 output tokens), producing exact raw JSON matching 7/7 protected fields (`master_key_reencrypted: true`, `atomic_sync_rename: true`, `old_key_zeroed: true`, `old_password_rejected: false`, `new_password_unlocked: false`, `model_authority: false`, `canonical_writes: 0`). NVIDIA NIM `meta/llama-3.1-8b-instruct` completed as cross-provider control in 605.8 ms (172 input + 64 output tokens) with identical 7/7 field match and zero model authority. Deterministic tests verify `ChangePassword` re-encryption, old password rejection, new password unlock, failure recovery, path lock serialization, and HTTP endpoint status/error mapping.
 
 **Verification.** `go test ./...`, `go vet ./...`, `git diff --check` passed cleanly.
+
+## Phase 346 — deterministic token reconciliation across window boundaries (2026-07-29 05:00 -03)
+
+**Objective and implementation.** Introduced `ReconcileObservedTokensWithGrantedAt(usage, estimated, observed, grantedAt, now)` in `internal/domain/resource_gate.go` and updated `internal/kernel/authorize.go` across `releaseResource`, `settleReceipt`, and `releaseResources` to supply `permit.GrantedAt`. When a model execution spans minute window boundaries (`grantedAt.Truncate(time.Minute) != now.Truncate(time.Minute)`), estimated tokens reserved at Acquire time were already accounted for and spent in the granted window. Subtracting estimated tokens from the completion window previously resulted in negative counts that erased usage added by concurrent requests in the completion window. Under the new deterministic logic, cross-window completions do not subtract estimated tokens from the completion window and charge only excess observed tokens (`max(0, observed - estimated)`), preventing double-counting while preserving isolation for concurrent calls. `ReconcileObservedTokens` delegates to `ReconcileObservedTokensWithGrantedAt` with a zero `grantedAt` to retain full backward compatibility.
+
+**Live hypothesis and bounds.** Model rotation using Groq `llama-3.3-70b-versatile` and NVIDIA NIM `meta/llama-3.1-8b-instruct` (control) classifying authority-free token reconciliation across window boundaries: 45 s deadline, 128 max output tokens, raw JSON classification, zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation on `cognitive-v2` in 127 ms (112 prompt + 62 output tokens, HTTP 200 OK) with 30/66 valid syntax runs, while NVIDIA NIM control experienced rate-limiting (429). Unit tests in `internal/domain/resource_gate_test.go` and `internal/kernel/model_executor_test.go` confirm:
+1. Same-minute completions subtract estimated tokens and add observed tokens.
+2. Cross-minute completions charge only excess tokens to the completion window, leaving concurrent usage in the completion window intact.
+3. Legacy zero-`grantedAt` callers preserve existing contract.
+
+**Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
