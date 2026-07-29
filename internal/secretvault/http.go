@@ -22,6 +22,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /close", h.close)
 	mux.HandleFunc("POST /rekey", h.rekey)
 	mux.HandleFunc("POST /export", h.export)
+	mux.HandleFunc("POST /import", h.importVault)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	return localOnly(mux)
@@ -97,6 +98,17 @@ func (h HTTP) export(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, h.Vault.Status())
 }
+func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
+	var q exportRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if err := h.Vault.Import(q.BackupPath, q.BackupPassword); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, h.Vault.Status())
+}
 func (h HTTP) put(w http.ResponseWriter, r *http.Request) {
 	var q secretRequest
 	if !decode(w, r, &q) {
@@ -150,9 +162,12 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrNotExist) {
 		status = http.StatusNotFound
 		code = "not_found"
-	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) {
+	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) || errors.Is(err, ErrInvalidBackupFormat) {
 		status = http.StatusBadRequest
 		code = "invalid_request"
+	} else if errors.Is(err, ErrImportConflict) {
+		status = http.StatusConflict
+		code = "import_conflict"
 	} else if errors.Is(err, ErrAccountLockedOut) {
 		status = http.StatusTooManyRequests
 		code = "rate_limited"

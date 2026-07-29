@@ -40,6 +40,8 @@ var (
 	ErrInvalidSecretValue    = errors.New("secret value is required and must not exceed 16 KiB")
 	ErrAccountLockedOut      = errors.New("vault is locked out due to too many failed attempts")
 	ErrInvalidBackupPath     = errors.New("backup path is required")
+	ErrInvalidBackupFormat = errors.New("invalid or unsupported backup format")
+	ErrImportConflict      = errors.New("import conflict: a secret with this name already exists")
 	pathLocks                sync.Map
 )
 
@@ -476,6 +478,105 @@ func (v *Vault) Export(backupPath, backupPassword string) error {
 	}
 	v.lastUsed = v.now()
 	return closeErr
+}
+
+// Import reads an encrypted export file created by Export and merges the
+// secrets into the current vault. The vault must be unlocked. If a secret
+// from the backup already exists in the vault, Import returns
+// ErrImportConflict for the first conflict and no changes are applied.
+func (v *Vault) Import(backupPath, backupPassword string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		return ErrLocked
+	}
+	backupPath = strings.TrimSpace(backupPath)
+	if backupPath == "" {
+		return ErrInvalidBackupPath
+	}
+	if err := validatePassword(backupPassword); err != nil {
+		return err
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		return err
+	}
+
+	raw, err := os.ReadFile(backupPath)
+	if err != nil {
+		return err
+	}
+	var env envelope
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return ErrInvalidBackupFormat
+	}
+	if env.Version != formatVersion {
+		return ErrInvalidBackupFormat
+	}
+	salt, err := base64.StdEncoding.DecodeString(env.Salt)
+	if err != nil || len(salt) == 0 {
+		return ErrInvalidBackupFormat
+	}
+	nonce, err := base64.StdEncoding.DecodeString(env.Nonce)
+	if err != nil || len(nonce) == 0 {
+		return ErrInvalidBackupFormat
+	}
+	ct, err := base64.StdEncoding.DecodeString(env.Ciphertext)
+	if err != nil || len(ct) == 0 {
+		return ErrInvalidBackupFormat
+	}
+	exportKey, err := derive(backupPassword, salt, env.Iterations)
+	if err != nil {
+		return err
+	}
+	defer zero(exportKey)
+
+	// Verify the backup key via the verifier before attempting decrypt.
+	expectedVerifier := verifier(exportKey)
+	gotVerifier, err := base64.StdEncoding.DecodeString(env.Verifier)
+	if err != nil || subtle.ConstantTimeCompare(expectedVerifier, gotVerifier) != 1 {
+		return ErrInvalidPassword
+	}
+
+	plain, err := open(exportKey, nonce, ct)
+	if err != nil {
+		return ErrInvalidPassword
+	}
+	defer zero(plain)
+
+	var imported payload
+	if err := json.Unmarshal(plain, &imported); err != nil {
+		return ErrInvalidBackupFormat
+	}
+	if imported.Secrets == nil {
+		return ErrInvalidBackupFormat
+	}
+
+	// Detect conflicts before applying any change.
+	for name := range imported.Secrets {
+		if _, exists := v.data.Secrets[name]; exists {
+			return ErrImportConflict
+		}
+	}
+
+	now := v.now().UTC()
+	for name, rec := range imported.Secrets {
+		if err := validateName(name); err != nil {
+			return err
+		}
+		if rec.Value == "" || len(rec.Value) > maxSecretSize {
+			return ErrInvalidSecretValue
+		}
+		rec.CreatedAt = now
+		rec.UpdatedAt = now
+		v.data.Secrets[name] = rec
+	}
+	v.lastUsed = v.now()
+	return v.saveWithCurrentKeyLocked()
 }
 
 func (v *Vault) isLockedOutLocked() bool {
