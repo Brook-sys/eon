@@ -103,6 +103,14 @@ type AuditEvent struct {
 	Action     string    `json:"action"`
 	SecretName string    `json:"secret_name,omitempty"`
 	Status     string    `json:"status"`
+	Detail     string    `json:"detail,omitempty"`
+}
+
+// ResolveResult holds the outcome of resolving a single secret name.
+type ResolveResult struct {
+	Name  string `json:"name"`
+	Value string `json:"value,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 type Status struct {
@@ -438,6 +446,48 @@ func (v *Vault) Resolve(name string) (string, error) {
 	}
 	v.recordAuditLocked("resolve", name, "success")
 	return r.Value, nil
+}
+
+// ResolveAll resolves multiple secret names in a single locked call. Each name
+// produces a ResolveResult; a missing or expired secret sets Error but does not
+// abort the batch. The vault's inactivity timer is refreshed once.
+func (v *Vault) ResolveAll(names []string) []ResolveResult {
+	results := make([]ResolveResult, len(names))
+	for i := range names {
+		results[i].Name = names[i]
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		for i := range results {
+			results[i].Error = ErrLocked.Error()
+			v.recordAuditLocked("resolve", results[i].Name, "failure")
+		}
+		return results
+	}
+	v.lastUsed = v.now()
+	now := v.now()
+	hasSuccess := false
+	for i, name := range names {
+		r, ok := v.data.Secrets[name]
+		if !ok {
+			results[i].Error = os.ErrNotExist.Error()
+			v.recordAuditLocked("resolve", name, "failure")
+			continue
+		}
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			results[i].Error = ErrSecretExpired.Error()
+			v.recordAuditLocked("resolve", name, "expired")
+			continue
+		}
+		results[i].Value = r.Value
+		results[i].Error = ""
+		hasSuccess = true
+		v.recordAuditLocked("resolve", name, "success")
+	}
+	_ = hasSuccess
+	return results
 }
 
 func (v *Vault) ChangePassword(oldPassword, newPassword string) error {

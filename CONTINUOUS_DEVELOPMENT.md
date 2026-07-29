@@ -6712,3 +6712,23 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 5. HTTP `GET /audit` returns recorded audit history.
 
 **Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
+
+
+## Phase 353 — secret vault atomic batch resolve and HTTP resolve endpoint (2026-07-29 20:26 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` and `secretvault.HTTP` with atomic batch secret resolution (`ResolveAll` / `POST /resolve`).
+1. Added `ResolveResult` struct containing `Name`, `Value`, and `Error` string fields.
+2. Implemented `ResolveAll(names []string) []ResolveResult` in `Vault`, resolving multiple credential names in a single lock acquisition, refreshing the vault's inactivity timer once, and recording audit events for each name without leaking plaintext values on errors. Missing or expired secrets populate `Error` on their individual `ResolveResult` entry without aborting the rest of the batch.
+3. Added `POST /resolve` HTTP endpoint in `HTTP.Handler()`, parsing a `resolveRequest` body (`{"names": ["k1", "k2"]}`), enforcing batch bounds (1 to 100 names max per request), and returning an array of `ResolveResult` objects with HTTP 200 OK.
+4. Unit tests in `internal/secretvault/ttl_audit_test.go` verify batch resolution under unlocked, expired, locked, missing-key, and HTTP scenarios.
+
+**Live hypothesis and bounds.** Model rotation using Groq `llama-3.3-70b-versatile` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation in 276.0 ms (94 prompt + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/ttl_audit_test.go` confirm:
+1. `ResolveAll` resolves multiple secret names atomically in a single mutex acquisition.
+2. Missing secrets return `os.ErrNotExist` error string per item while valid secrets return values.
+3. Expired secrets return `ErrSecretExpired` error string per item.
+4. Locked vault returns `ErrLocked` error string for all requested items.
+5. HTTP `POST /resolve` accepts name arrays up to 100 items, returning HTTP 200 with `ResolveResult` list, and rejecting empty requests with HTTP 400 `invalid_request`.
+
+**Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.

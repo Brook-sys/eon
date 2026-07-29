@@ -188,3 +188,95 @@ func TestVault_AuditLogAndHTTP(t *testing.T) {
 		t.Fatalf("Expected ErrSecretExpired after advance, got %v", err)
 	}
 }
+
+func TestVault_BatchResolve(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	vaultPath := filepath.Join(tmpDir, "batch_vault.json")
+
+	now := time.Now()
+	clock := func() time.Time { return now }
+
+	v, err := secretvault.NewWithClock(vaultPath, clock)
+	if err != nil {
+		t.Fatalf("NewWithClock failed: %v", err)
+	}
+
+	password := "master-password-12345"
+	if err := v.Initialize(password); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	// Add 3 secrets: normal, to expire, and omit a 4th
+	if err := v.Put("k1", "val1"); err != nil {
+		t.Fatalf("Put k1 failed: %v", err)
+	}
+	if err := v.PutWithTTL("k2", "val2", 1*time.Minute); err != nil {
+		t.Fatalf("Put k2 failed: %v", err)
+	}
+	if err := v.Put("k3", "val3"); err != nil {
+		t.Fatalf("Put k3 failed: %v", err)
+	}
+
+	// Resolve batch when unlocked before expiration
+	res := v.ResolveAll([]string{"k1", "k2", "missing"})
+	if len(res) != 3 {
+		t.Fatalf("Expected 3 results, got %d", len(res))
+	}
+	if res[0].Name != "k1" || res[0].Value != "val1" || res[0].Error != "" {
+		t.Fatalf("Unexpected res[0]: %+v", res[0])
+	}
+	if res[1].Name != "k2" || res[1].Value != "val2" || res[1].Error != "" {
+		t.Fatalf("Unexpected res[1]: %+v", res[1])
+	}
+	if res[2].Name != "missing" || res[2].Value != "" || res[2].Error == "" {
+		t.Fatalf("Unexpected res[2]: %+v", res[2])
+	}
+
+	// Advance clock past TTL for k2
+	now = now.Add(2 * time.Minute)
+
+	res = v.ResolveAll([]string{"k1", "k2", "k3"})
+	if res[0].Error != "" || res[0].Value != "val1" {
+		t.Fatalf("res[0] expected success, got %+v", res[0])
+	}
+	if res[1].Error != secretvault.ErrSecretExpired.Error() {
+		t.Fatalf("res[1] expected expired, got %+v", res[1])
+	}
+	if res[2].Error != "" || res[2].Value != "val3" {
+		t.Fatalf("res[2] expected success, got %+v", res[2])
+	}
+
+	// Resolve batch when locked
+	v.Lock()
+	res = v.ResolveAll([]string{"k1", "k3"})
+	if res[0].Error != secretvault.ErrLocked.Error() || res[1].Error != secretvault.ErrLocked.Error() {
+		t.Fatalf("Expected locked error for all items, got %+v", res)
+	}
+
+	// HTTP API testing POST /resolve
+	if err := v.Unlock(password); err != nil {
+		t.Fatalf("Unlock failed: %v", err)
+	}
+	srv := httptest.NewServer(secretvault.HTTP{Vault: v}.Handler())
+	defer srv.Close()
+
+	body, _ := json.Marshal(map[string][]string{"names": {"k1", "missing"}})
+	resp, err := http.Post(srv.URL+"/resolve", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("POST /resolve failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("POST /resolve expected 200, got %d", resp.StatusCode)
+	}
+
+	var httpRes []secretvault.ResolveResult
+	if err := json.NewDecoder(resp.Body).Decode(&httpRes); err != nil {
+		t.Fatalf("Decode /resolve response failed: %v", err)
+	}
+	if len(httpRes) != 2 || httpRes[0].Value != "val1" || httpRes[1].Error == "" {
+		t.Fatalf("Unexpected HTTP resolve results: %+v", httpRes)
+	}
+}

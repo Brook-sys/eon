@@ -27,6 +27,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /import", h.importVault)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
+	mux.HandleFunc("POST /resolve", h.resolveBatch)
 	return localOnly(mux)
 }
 
@@ -49,6 +50,10 @@ type importRequest struct {
 type secretRequest struct {
 	Value string `json:"value"`
 	TTL   string `json:"ttl,omitempty"`
+}
+
+type resolveRequest struct {
+	Names []string `json:"names"`
 }
 
 func (h HTTP) status(w http.ResponseWriter, _ *http.Request) {
@@ -164,6 +169,22 @@ func (h HTTP) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusNoContent, nil)
+}
+func (h HTTP) resolveBatch(w http.ResponseWriter, r *http.Request) {
+	var q resolveRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Names) == 0 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "names list is required"}})
+		return
+	}
+	if len(q.Names) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "maximum 100 secret names per resolve batch"}})
+		return
+	}
+	results := h.Vault.ResolveAll(q.Names)
+	write(w, http.StatusOK, results)
 }
 func decode(w http.ResponseWriter, r *http.Request, d any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 20<<10)
