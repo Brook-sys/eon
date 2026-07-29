@@ -199,3 +199,108 @@ func TestHTTPExportAndImport(t *testing.T) {
 	}
 	resp.Body.Close()
 }
+
+func TestImportWithOptionsModes(t *testing.T) {
+	dir := t.TempDir()
+	v1, _ := New(filepath.Join(dir, "v1.vault"))
+	const pass = "correct horse battery staple"
+	const backupPass = "backup password string 123"
+	_ = v1.Initialize(pass)
+	_ = v1.Put("existing/key", "original_value")
+	_ = v1.Put("new/key", "imported_value")
+
+	backupPath := filepath.Join(dir, "backup.env")
+	if err := v1.Export(backupPath, backupPass); err != nil {
+		t.Fatalf("Export v1: %v", err)
+	}
+
+	// Target vault with a conflicting key
+	v2, _ := New(filepath.Join(dir, "v2.vault"))
+	_ = v2.Initialize(pass)
+	_ = v2.Put("existing/key", "current_value")
+
+	// Invalid mode
+	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportMode(99)}); err != ErrInvalidImportMode {
+		t.Errorf("ImportWithOptions invalid mode = %v, expected ErrInvalidImportMode", err)
+	}
+
+	// ModeFail returns conflict
+	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeFail}); err != ErrImportConflict {
+		t.Errorf("ImportWithOptions ModeFail = %v, expected ErrImportConflict", err)
+	}
+	// Verify unchanged
+	if val, _ := v2.Resolve("existing/key"); val != "current_value" {
+		t.Errorf("existing/key after ModeFail = %q, expected current_value", val)
+	}
+
+	// ModeSkip skips existing, imports new
+	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeSkip}); err != nil {
+		t.Fatalf("ImportWithOptions ModeSkip: %v", err)
+	}
+	if val, _ := v2.Resolve("existing/key"); val != "current_value" {
+		t.Errorf("existing/key after ModeSkip = %q, expected current_value", val)
+	}
+	if val, _ := v2.Resolve("new/key"); val != "imported_value" {
+		t.Errorf("new/key after ModeSkip = %q, expected imported_value", val)
+	}
+
+	// ModeOverwrite updates existing
+	if err := v2.ImportWithOptions(backupPath, backupPass, ImportOptions{Mode: ImportModeOverwrite}); err != nil {
+		t.Fatalf("ImportWithOptions ModeOverwrite: %v", err)
+	}
+	if val, _ := v2.Resolve("existing/key"); val != "original_value" {
+		t.Errorf("existing/key after ModeOverwrite = %q, expected original_value", val)
+	}
+}
+
+func TestHTTPImportModes(t *testing.T) {
+	dir := t.TempDir()
+	v1, _ := New(filepath.Join(dir, "v1.vault"))
+	const pass = "correct horse battery staple"
+	const backupPass = "backup password string 123"
+	_ = v1.Initialize(pass)
+	_ = v1.Put("dup/key", "backup_val")
+	backupPath := filepath.Join(dir, "backup.env")
+	_ = v1.Export(backupPath, backupPass)
+
+	v2, _ := New(filepath.Join(dir, "v2.vault"))
+	_ = v2.Initialize(pass)
+	_ = v2.Put("dup/key", "target_val")
+
+	ts := httptest.NewServer(HTTP{Vault: v2}.Handler())
+	defer ts.Close()
+
+	// Invalid mode via HTTP -> 400
+	bodyBad, _ := json.Marshal(map[string]string{
+		"backup_path":     backupPath,
+		"backup_password": backupPass,
+		"mode":            "invalid_mode",
+	})
+	resp, err := http.Post(ts.URL+"/import", "application/json", bytes.NewReader(bodyBad))
+	if err != nil {
+		t.Fatalf("POST /import bad mode: %v", err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("POST /import bad mode status = %d, expected 400", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	// Overwrite mode via HTTP -> 200
+	bodyOverwrite, _ := json.Marshal(map[string]string{
+		"backup_path":     backupPath,
+		"backup_password": backupPass,
+		"mode":            "overwrite",
+	})
+	resp, err = http.Post(ts.URL+"/import", "application/json", bytes.NewReader(bodyOverwrite))
+	if err != nil {
+		t.Fatalf("POST /import overwrite: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("POST /import overwrite status = %d, expected 200", resp.StatusCode)
+	}
+	resp.Body.Close()
+
+	if val, _ := v2.Resolve("dup/key"); val != "backup_val" {
+		t.Errorf("HTTP import overwrite dup/key = %q, expected backup_val", val)
+	}
+}

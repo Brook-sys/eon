@@ -39,6 +39,11 @@ type exportRequest struct {
 	BackupPath     string `json:"backup_path"`
 	BackupPassword string `json:"backup_password"`
 }
+type importRequest struct {
+	BackupPath     string `json:"backup_path"`
+	BackupPassword string `json:"backup_password"`
+	Mode           string `json:"mode,omitempty"`
+}
 type secretRequest struct {
 	Value string `json:"value"`
 }
@@ -99,11 +104,23 @@ func (h HTTP) export(w http.ResponseWriter, r *http.Request) {
 	write(w, http.StatusOK, h.Vault.Status())
 }
 func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
-	var q exportRequest
+	var q importRequest
 	if !decode(w, r, &q) {
 		return
 	}
-	if err := h.Vault.Import(q.BackupPath, q.BackupPassword); err != nil {
+	var mode ImportMode
+	switch strings.ToLower(strings.TrimSpace(q.Mode)) {
+	case "", "fail":
+		mode = ImportModeFail
+	case "skip":
+		mode = ImportModeSkip
+	case "overwrite":
+		mode = ImportModeOverwrite
+	default:
+		writeErr(w, ErrInvalidImportMode)
+		return
+	}
+	if err := h.Vault.ImportWithOptions(q.BackupPath, q.BackupPassword, ImportOptions{Mode: mode}); err != nil {
 		writeErr(w, err)
 		return
 	}
@@ -162,7 +179,7 @@ func writeErr(w http.ResponseWriter, err error) {
 	} else if errors.Is(err, os.ErrNotExist) {
 		status = http.StatusNotFound
 		code = "not_found"
-	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) || errors.Is(err, ErrInvalidBackupFormat) {
+	} else if errors.Is(err, ErrInvalidPasswordLength) || errors.Is(err, ErrInvalidSecretName) || errors.Is(err, ErrInvalidSecretValue) || errors.Is(err, ErrInvalidBackupPath) || errors.Is(err, ErrInvalidBackupFormat) || errors.Is(err, ErrInvalidImportMode) {
 		status = http.StatusBadRequest
 		code = "invalid_request"
 	} else if errors.Is(err, ErrImportConflict) {

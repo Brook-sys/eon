@@ -1,0 +1,36 @@
+{
+  "name": "phase351-groq-llama33-vault-import-options-classify",
+  "schema_version": 1,
+  "probe_prompt": "You are classifying vault import conflict resolution modes. Given: a vault has existing/key=current_value. An import backup contains existing/key=backup_val and new/key=imported_val. For each mode, what happens?\n\nReply with a JSON object (raw JSON, no markdown fences) with exactly these fields:\n{\n  \"fail_mode\": \"conflict_error\",\n  \"skip_mode_existing_unchanged\": true,\n  \"skip_mode_new_imported\": true,\n  \"overwrite_mode_existing\": \"backup_val\",\n  \"overwrite_mode_new_imported\": true,\n  \"model_authority\": false,\n  \"canonical_writes\": 0\n}",
+  "expected_response": "{\"fail_mode\":\"conflict_error\",\"skip_mode_existing_unchanged\":true,\"skip_mode_new_imported\":true,\"overwrite_mode_existing\":\"backup_val\",\"overwrite_mode_new_imported\":true,\"model_authority\":false,\"canonical_writes\":0}",
+  "output_schema": "exact_json",
+  "max_calls": 1,
+  "max_output_tokens": 128,
+  "timeout_seconds": 45,
+  "early_stop_repeated_failures": 2,
+  "seed_primary_circuit_seconds": 60,
+  "bindings": [
+    {
+      "binding_id": "groq-llama33-70b-classify",
+      "provider": "groq",
+      "provider_kind": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env": "GROQ_API_KEY",
+      "priority": 1,
+      "context_tokens": 4096,
+      "max_output_field": "max_tokens"
+    },
+    {
+      "binding_id": "nim-llama31-70b-control",
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "priority": 2,
+      "context_tokens": 4096,
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

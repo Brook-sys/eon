@@ -40,10 +40,28 @@ var (
 	ErrInvalidSecretValue    = errors.New("secret value is required and must not exceed 16 KiB")
 	ErrAccountLockedOut      = errors.New("vault is locked out due to too many failed attempts")
 	ErrInvalidBackupPath     = errors.New("backup path is required")
-	ErrInvalidBackupFormat = errors.New("invalid or unsupported backup format")
-	ErrImportConflict      = errors.New("import conflict: a secret with this name already exists")
+	ErrInvalidBackupFormat   = errors.New("invalid or unsupported backup format")
+	ErrImportConflict        = errors.New("import conflict: a secret with this name already exists")
+	ErrInvalidImportMode     = errors.New("invalid import mode")
 	pathLocks                sync.Map
 )
+
+// ImportMode controls how Import handles name conflicts.
+type ImportMode int
+
+const (
+	// ImportModeFail returns ErrImportConflict on the first conflicting name.
+	ImportModeFail ImportMode = iota
+	// ImportModeSkip silently skips conflicting secrets.
+	ImportModeSkip
+	// ImportModeOverwrite replaces existing secrets with the imported value.
+	ImportModeOverwrite
+)
+
+// ImportOptions configures Import behaviour.
+type ImportOptions struct {
+	Mode ImportMode
+}
 
 func lockForPath(path string) *sync.Mutex {
 	lock, _ := pathLocks.LoadOrStore(path, &sync.Mutex{})
@@ -485,6 +503,15 @@ func (v *Vault) Export(backupPath, backupPassword string) error {
 // from the backup already exists in the vault, Import returns
 // ErrImportConflict for the first conflict and no changes are applied.
 func (v *Vault) Import(backupPath, backupPassword string) error {
+	return v.ImportWithOptions(backupPath, backupPassword, ImportOptions{Mode: ImportModeFail})
+}
+
+// ImportWithOptions reads an encrypted export file created by Export and merges the
+// secrets into the current vault according to the specified ImportOptions.
+func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts ImportOptions) error {
+	if opts.Mode != ImportModeFail && opts.Mode != ImportModeSkip && opts.Mode != ImportModeOverwrite {
+		return ErrInvalidImportMode
+	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	v.expireLocked()
@@ -556,14 +583,7 @@ func (v *Vault) Import(backupPath, backupPassword string) error {
 		return ErrInvalidBackupFormat
 	}
 
-	// Detect conflicts before applying any change.
-	for name := range imported.Secrets {
-		if _, exists := v.data.Secrets[name]; exists {
-			return ErrImportConflict
-		}
-	}
-
-	now := v.now().UTC()
+	// Validate names and value sizes before modifying state.
 	for name, rec := range imported.Secrets {
 		if err := validateName(name); err != nil {
 			return err
@@ -571,11 +591,33 @@ func (v *Vault) Import(backupPath, backupPassword string) error {
 		if rec.Value == "" || len(rec.Value) > maxSecretSize {
 			return ErrInvalidSecretValue
 		}
+	}
+
+	// Detect conflicts if Mode is ImportModeFail.
+	if opts.Mode == ImportModeFail {
+		for name := range imported.Secrets {
+			if _, exists := v.data.Secrets[name]; exists {
+				return ErrImportConflict
+			}
+		}
+	}
+
+	now := v.now().UTC()
+	var modified bool
+	for name, rec := range imported.Secrets {
+		_, exists := v.data.Secrets[name]
+		if exists && opts.Mode == ImportModeSkip {
+			continue
+		}
 		rec.CreatedAt = now
 		rec.UpdatedAt = now
 		v.data.Secrets[name] = rec
+		modified = true
 	}
 	v.lastUsed = v.now()
+	if !modified && len(imported.Secrets) > 0 {
+		return nil
+	}
 	return v.saveWithCurrentKeyLocked()
 }
 

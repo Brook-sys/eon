@@ -6674,3 +6674,18 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 4. Domain locked/uninitialized status codes remain unchanged.
 
 **Verification.** `go test ./...`, `go vet ./...`, secret scan, and `git diff --check` passed cleanly.
+
+
+## Phase 351 — secret vault import options and conflict resolution mode (2026-07-29 17:48 -03)
+
+**Objective and implementation.** Extended secret vault import with configurable conflict resolution modes (`ImportModeFail`, `ImportModeSkip`, `ImportModeOverwrite`) and `ImportWithOptions(backupPath, backupPassword, opts)`. The default `Import` retains strict `ImportModeFail` (returning `ErrImportConflict` / HTTP 409). `ImportModeSkip` preserves pre-existing keys and imports non-conflicting entries. `ImportModeOverwrite` replaces existing secrets with imported values. Input validation (`validateName` and value size limits) runs before any state modification. Added `Mode` field (`"fail"`, `"skip"`, `"overwrite"`) to HTTP `POST /import` request body, validating invalid mode strings with `ErrInvalidImportMode` -> HTTP 400 `invalid_request`.
+
+**Live hypothesis and bounds.** Model rotation using Groq `llama-3.3-70b-versatile` (with NVIDIA NIM `mistralai/mistral-small-4-119b-2603` seeded circuit) on authority-free structural classification of import options: single isolated trial, 45 s deadline, 32 max output tokens, exact text response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation in 579.6 ms (94 prompt + 2 output tokens, HTTP 200 OK, exact response match `READY`), while seeded NIM circuit returned `circuit_open`. Integrated runner enforced local minute-quota throttling (`WAITING_TIME`), verified SQLite durable reopen, and promoted zero canonical state. Deterministic unit tests in `internal/secretvault/import_export_test.go` confirm:
+1. `ImportModeFail` returns `ErrImportConflict` on duplicate keys without mutating state.
+2. `ImportModeSkip` imports only new keys, preserving existing values.
+3. `ImportModeOverwrite` updates existing keys to imported values.
+4. HTTP `POST /import` accepts `"overwrite"` (HTTP 200) and rejects invalid modes (HTTP 400 `invalid_request`).
+
+**Verification.** `go test ./internal/secretvault/...`, `go vet ./internal/secretvault/...`, and `git diff --check` passed cleanly.
