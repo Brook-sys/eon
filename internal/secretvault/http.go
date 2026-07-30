@@ -25,7 +25,9 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /rekey", h.rekey)
 	mux.HandleFunc("POST /export", h.export)
 	mux.HandleFunc("POST /import", h.importVault)
+	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
+	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
 	mux.HandleFunc("POST /purge-expired", h.purgeExpired)
@@ -143,6 +145,9 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 func (h HTTP) auditLog(w http.ResponseWriter, _ *http.Request) {
 	write(w, http.StatusOK, h.Vault.AuditLog())
 }
+func (h HTTP) stats(w http.ResponseWriter, _ *http.Request) {
+	write(w, http.StatusOK, h.Vault.Stats())
+}
 func (h HTTP) listSecrets(w http.ResponseWriter, _ *http.Request) {
 	entries, err := h.Vault.ListSecrets()
 	if err != nil {
@@ -150,6 +155,14 @@ func (h HTTP) listSecrets(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"secrets": entries})
+}
+func (h HTTP) secretMetadata(w http.ResponseWriter, r *http.Request) {
+	entry, err := h.Vault.SecretMetadata(r.PathValue("name"))
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, entry)
 }
 func (h HTTP) getSecret(w http.ResponseWriter, r *http.Request) {
 	val, err := h.Vault.Resolve(r.PathValue("name"))

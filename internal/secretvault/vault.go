@@ -62,9 +62,10 @@ const (
 
 // ImportResult summarizes the outcome of an ImportWithOptions operation.
 type ImportResult struct {
-	Total    int `json:"total"`
-	Imported int `json:"imported"`
-	Skipped  int `json:"skipped"`
+	Total       int `json:"total"`
+	Imported    int `json:"imported"`
+	Skipped     int `json:"skipped"`
+	Overwritten int `json:"overwritten"`
 }
 
 // ImportOptions configures Import behaviour.
@@ -537,6 +538,79 @@ func (v *Vault) ListSecrets() ([]SecretEntry, error) {
 	return entries, nil
 }
 
+// SecretMetadata returns metadata for a single secret without exposing its
+// value. The vault must be unlocked. Returns os.ErrNotExist if the secret is
+// not found and ErrSecretExpired if the secret has expired.
+func (v *Vault) SecretMetadata(name string) (SecretEntry, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("metadata", name, "failure")
+		return SecretEntry{}, ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("metadata", name, "failure")
+		return SecretEntry{}, err
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		v.recordAuditLocked("metadata", name, "failure")
+		return SecretEntry{}, os.ErrNotExist
+	}
+	e := SecretEntry{
+		Name:      name,
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
+		ExpiresAt: r.ExpiresAt,
+	}
+	now := v.now()
+	if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+		e.Expired = true
+	}
+	v.lastUsed = v.now()
+	v.recordAuditLocked("metadata", name, "success")
+	return e, nil
+}
+
+// VaultStats provides a summary of vault state without exposing secret values.
+type VaultStats struct {
+	Initialized  bool `json:"initialized"`
+	Locked       bool `json:"locked"`
+	TotalSecrets int  `json:"total_secrets"`
+	ExpiredCount int  `json:"expired_count"`
+	ExpiringSoon int  `json:"expiring_soon"`
+	AuditEntries int  `json:"audit_entries"`
+}
+
+// Stats returns a summary of vault state. ExpiringSoon counts secrets that
+// will expire within the next hour. The vault must be unlocked to get
+// meaningful secret counts; a locked vault returns zero counts.
+func (v *Vault) Stats() VaultStats {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	_, err := os.Stat(v.path)
+	s := VaultStats{Initialized: err == nil, Locked: len(v.key) == 0}
+	if len(v.key) == 0 {
+		return s
+	}
+	now := v.now()
+	soonWindow := now.Add(time.Hour)
+	for _, r := range v.data.Secrets {
+		s.TotalSecrets++
+		if !r.ExpiresAt.IsZero() {
+			if !now.Before(r.ExpiresAt) {
+				s.ExpiredCount++
+			} else if r.ExpiresAt.Before(soonWindow) {
+				s.ExpiringSoon++
+			}
+		}
+	}
+	s.AuditEntries = len(v.audit)
+	return s
+}
+
 // Rotate updates the value of an existing secret while preserving its
 // CreatedAt timestamp. This is a security best practice for credential
 // rotation. The vault must be unlocked and the secret must already exist.
@@ -996,12 +1070,15 @@ func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts Import
 	}
 
 	now := v.now().UTC()
-	var importedCount, skippedCount int
+	var importedCount, skippedCount, overwrittenCount int
 	for name, rec := range imported.Secrets {
 		_, exists := v.data.Secrets[name]
 		if exists && opts.Mode == ImportModeSkip {
 			skippedCount++
 			continue
+		}
+		if exists && opts.Mode == ImportModeOverwrite {
+			overwrittenCount++
 		}
 		rec.CreatedAt = now
 		rec.UpdatedAt = now
@@ -1010,9 +1087,10 @@ func (v *Vault) ImportWithOptions(backupPath, backupPassword string, opts Import
 	}
 	v.lastUsed = v.now()
 	res := ImportResult{
-		Total:    len(imported.Secrets),
-		Imported: importedCount,
-		Skipped:  skippedCount,
+		Total:       len(imported.Secrets),
+		Imported:    importedCount,
+		Skipped:     skippedCount,
+		Overwritten: overwrittenCount,
 	}
 	if importedCount == 0 && len(imported.Secrets) > 0 {
 		return res, nil
