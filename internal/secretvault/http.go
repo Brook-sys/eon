@@ -29,6 +29,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
 	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
+	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
@@ -73,6 +74,10 @@ type batchDeleteRequest struct {
 
 type batchPutRequest struct {
 	Items []BatchPutItem `json:"items"`
+}
+
+type bulkTouchRequest struct {
+	Items []BulkTouchItem `json:"items"`
 }
 
 func (h HTTP) status(w http.ResponseWriter, _ *http.Request) {
@@ -290,6 +295,22 @@ func (h HTTP) batchPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.Vault.BatchPut(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+func (h HTTP) bulkTouch(w http.ResponseWriter, r *http.Request) {
+	var q bulkTouchRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 touch items"}})
+		return
+	}
+	result, err := h.Vault.BulkTouch(q.Items)
 	if err != nil {
 		writeErr(w, err)
 		return

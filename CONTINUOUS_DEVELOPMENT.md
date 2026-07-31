@@ -6881,3 +6881,14 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 4. Executed live evaluation campaign `phase361-groq-llama31-vault-batch-put` with Groq `llama-3.1-8b-instant` primary circuit control and NVIDIA NIM `meta/llama-3.1-8b-instruct` fallback.
 
 **Observed evidence and decision.** Groq `llama-3.1-8b-instant` primary circuit was seeded open to test fallback mechanics. NVIDIA NIM `meta/llama-3.1-8b-instruct` completed live evaluation in 616.28 ms (95 prompt + 2 output tokens, HTTP 200 OK, exact text match `READY`). `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Artifacts generated in `results/runtime-gate/phase361-groq-llama31-vault-batch-put/`.
+
+2026-07-31 22:05 — Phase 362 - BulkTouch secret TTL renewal/extension, HTTP endpoint and live campaign evaluation.
+
+**Objective and implementation.** Added single secret `Touch` and multi-secret `BulkTouch` expiration renewal capabilities to `secretvault.Vault` and HTTP `POST /secrets/bulk-touch` endpoint.
+1. Implemented `func (v *Vault) Touch(name string, ttl time.Duration) error` in `Vault`. Extends or clears `ExpiresAt` for an existing secret without altering stored value. Returns `os.ErrNotExist` when secret is missing, `ErrLocked` when locked, or error on negative TTL / invalid name.
+2. Implemented `func (v *Vault) BulkTouch(items []BulkTouchItem) (BulkTouchResult, error)` in `Vault`. Validates names, existence, and TTLs for a slice of items; updates valid entries atomically in a single file save; records errors for missing/invalid items.
+3. Added HTTP `POST /secrets/bulk-touch` endpoint in `HTTP.Handler()` accepting 1 to 100 items, returning `BulkTouchResult` (HTTP 200 OK).
+4. Added unit tests in `internal/secretvault/touch_test.go` covering `Touch` single secret, TTL clearing, missing secret error, locked vault error, `BulkTouch` atomic write and HTTP endpoint behavior.
+5. Executed live evaluation campaign `phase362-groq-qwen36-vault-bulk-touch` with Groq `qwen/qwen3.6-27b` primary circuit control and NVIDIA NIM `meta/llama-3.1-8b-instruct` fallback.
+
+**Observed evidence and decision.** Primary circuit for Groq `qwen/qwen3.6-27b` was seeded open for fallback path verification. NVIDIA NIM `meta/llama-3.1-8b-instruct` completed live evaluation in 624.08 ms (95 prompt + 2 output tokens, HTTP 200 OK, exact match `READY`). `go test`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Artifacts saved in `results/runtime-gate/phase362-groq-qwen36-vault-bulk-touch/`.

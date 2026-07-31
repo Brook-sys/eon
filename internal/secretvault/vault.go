@@ -839,6 +839,135 @@ func (v *Vault) BatchPut(items []BatchPutItem) (BatchPutResult, error) {
 	return result, nil
 }
 
+// BulkTouchItem represents one secret whose TTL is to be extended or updated.
+type BulkTouchItem struct {
+	Name string        `json:"name"`
+	TTL  time.Duration `json:"ttl"`
+}
+
+// BulkTouchResult summarizes the outcome of a bulk touch operation.
+type BulkTouchResult struct {
+	Updated []string `json:"updated"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// Touch extends or updates the TTL for a single secret without altering its value.
+// If TTL > 0, expiration is set to now + TTL. If TTL == 0, expiration is cleared.
+// Returns os.ErrNotExist if the secret does not exist, ErrLocked if vault is locked.
+func (v *Vault) Touch(name string, ttl time.Duration) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("touch", name, "failure")
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("touch", name, "failure")
+		return err
+	}
+	if ttl < 0 {
+		v.recordAuditLocked("touch", name, "failure")
+		return errors.New("invalid ttl")
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("touch", name, "failure")
+		return err
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		v.recordAuditLocked("touch", name, "failure")
+		return os.ErrNotExist
+	}
+	now := v.now().UTC()
+	r.UpdatedAt = now
+	if ttl > 0 {
+		r.ExpiresAt = now.Add(ttl)
+	} else {
+		r.ExpiresAt = time.Time{}
+	}
+	v.data.Secrets[name] = r
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("touch", name, "success")
+	} else {
+		v.recordAuditLocked("touch", name, "failure")
+	}
+	return err
+}
+
+// BulkTouch updates or extends the TTL for multiple secrets atomically in one write.
+// Items failing validation or matching non-existent secrets are recorded in Errors.
+// Valid touches are persisted in a single atomic file write.
+func (v *Vault) BulkTouch(items []BulkTouchItem) (BulkTouchResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("bulk_touch", "", "failure")
+		return BulkTouchResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("bulk_touch", "", "failure")
+		return BulkTouchResult{}, err
+	}
+	now := v.now().UTC()
+	result := BulkTouchResult{Updated: []string{}}
+	type validTouch struct {
+		name string
+		rec  record
+	}
+	touches := make([]validTouch, 0, len(items))
+	for _, item := range items {
+		if err := validateName(item.Name); err != nil {
+			result.Errors = append(result.Errors, item.Name+": invalid name")
+			continue
+		}
+		if item.TTL < 0 {
+			result.Errors = append(result.Errors, item.Name+": invalid ttl")
+			continue
+		}
+		r, ok := v.data.Secrets[item.Name]
+		if !ok {
+			result.Errors = append(result.Errors, item.Name+": not found")
+			continue
+		}
+		r.UpdatedAt = now
+		if item.TTL > 0 {
+			r.ExpiresAt = now.Add(item.TTL)
+		} else {
+			r.ExpiresAt = time.Time{}
+		}
+		touches = append(touches, validTouch{name: item.Name, rec: r})
+	}
+	if len(touches) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("bulk_touch", "", "success")
+		return result, nil
+	}
+	for _, t := range touches {
+		v.data.Secrets[t.name] = t.rec
+		result.Updated = append(result.Updated, t.name)
+	}
+	sort.Strings(result.Updated)
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("bulk_touch", "", "success")
+	} else {
+		v.recordAuditLocked("bulk_touch", "", "failure")
+		return BulkTouchResult{}, err
+	}
+	return result, nil
+}
+
 // SearchSecrets returns metadata for secrets matching the given filter.
 // If prefix is non-empty, only secrets whose name starts with the prefix
 // (case-sensitive) are returned. If substring is non-empty and prefix is
