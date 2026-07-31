@@ -373,6 +373,10 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	if int64(len(body)) > p.maxResponseBytes {
 		return port.CompletionResult{}, &Error{Kind: ErrorResponseTooLarge}
 	}
+	body = bytes.TrimSpace(body)
+	if idx := bytes.Index(body, []byte("data: [DONE]")); idx != -1 {
+		body = bytes.TrimSpace(body[:idx])
+	}
 	var decoded chatResponse
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "json_unmarshal_failed"}
@@ -594,6 +598,11 @@ func (p *Provider) DiscoverModels(ctx context.Context) ([]string, error) {
 	}
 	if int64(len(body)) > p.maxResponseBytes {
 		return nil, &Error{Kind: ErrorResponseTooLarge}
+	}
+
+	body = bytes.TrimSpace(body)
+	if idx := bytes.Index(body, []byte("data: [DONE]")); idx != -1 {
+		body = bytes.TrimSpace(body[:idx])
 	}
 
 	var payload struct {

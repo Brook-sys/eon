@@ -28,6 +28,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
+	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
@@ -68,6 +69,10 @@ type resolveRequest struct {
 
 type batchDeleteRequest struct {
 	Names []string `json:"names"`
+}
+
+type batchPutRequest struct {
+	Items []BatchPutItem `json:"items"`
 }
 
 func (h HTTP) status(w http.ResponseWriter, _ *http.Request) {
@@ -269,6 +274,22 @@ func (h HTTP) batchDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.Vault.BatchDelete(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+func (h HTTP) batchPut(w http.ResponseWriter, r *http.Request) {
+	var q batchPutRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 secret items"}})
+		return
+	}
+	result, err := h.Vault.BatchPut(q.Items)
 	if err != nil {
 		writeErr(w, err)
 		return

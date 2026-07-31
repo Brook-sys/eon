@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase361-groq-llama31-vault-batch-put",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-31T21:52:47.641583142Z"
+}

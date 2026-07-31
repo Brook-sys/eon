@@ -745,6 +745,100 @@ func (v *Vault) BatchDelete(names []string) (BatchDeleteResult, error) {
 	return result, nil
 }
 
+// BatchPutItem represents one secret to be upserted in a batch operation.
+// If TTL is non-zero, the secret expires at now + TTL. If TTL is zero,
+// no expiration is set.
+type BatchPutItem struct {
+	Name  string        `json:"name"`
+	Value string        `json:"value"`
+	TTL   time.Duration `json:"ttl,omitempty"`
+}
+
+// BatchPutResult summarizes the outcome of a batch put operation.
+type BatchPutResult struct {
+	Stored  []string `json:"stored"`
+	Created []string `json:"created"`
+	Updated []string `json:"updated"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// BatchPut upserts multiple secrets atomically in a single write. Items
+// that fail name or value validation are recorded in Errors and excluded
+// from the transaction. The vault must be unlocked. All valid upserts
+// persist in one write; if the write fails, no upserts are committed.
+// A non-zero TTL sets expiration to now + TTL for that item; zero TTL
+// means no expiration.
+func (v *Vault) BatchPut(items []BatchPutItem) (BatchPutResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_put", "", "failure")
+		return BatchPutResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_put", "", "failure")
+		return BatchPutResult{}, err
+	}
+	now := v.now().UTC()
+	result := BatchPutResult{Stored: []string{}, Created: []string{}, Updated: []string{}}
+	validItems := make([]BatchPutItem, 0, len(items))
+	for _, item := range items {
+		if err := validateName(item.Name); err != nil {
+			result.Errors = append(result.Errors, item.Name+": invalid name")
+			continue
+		}
+		if item.Value == "" || len(item.Value) > maxSecretSize {
+			result.Errors = append(result.Errors, item.Name+": invalid value")
+			continue
+		}
+		if item.TTL < 0 {
+			result.Errors = append(result.Errors, item.Name+": invalid ttl")
+			continue
+		}
+		validItems = append(validItems, item)
+	}
+	if len(validItems) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("batch_put", "", "success")
+		return result, nil
+	}
+	for _, item := range validItems {
+		r, ok := v.data.Secrets[item.Name]
+		if !ok {
+			r = record{}
+			r.CreatedAt = now
+			result.Created = append(result.Created, item.Name)
+		} else {
+			result.Updated = append(result.Updated, item.Name)
+		}
+		r.Value = item.Value
+		r.UpdatedAt = now
+		if item.TTL > 0 {
+			r.ExpiresAt = now.Add(item.TTL)
+		} else {
+			r.ExpiresAt = time.Time{}
+		}
+		v.data.Secrets[item.Name] = r
+		result.Stored = append(result.Stored, item.Name)
+	}
+	sort.Strings(result.Stored)
+	sort.Strings(result.Created)
+	sort.Strings(result.Updated)
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("batch_put", "", "success")
+	} else {
+		v.recordAuditLocked("batch_put", "", "failure")
+		return BatchPutResult{}, err
+	}
+	return result, nil
+}
+
 // SearchSecrets returns metadata for secrets matching the given filter.
 // If prefix is non-empty, only secrets whose name starts with the prefix
 // (case-sensitive) are returned. If substring is non-empty and prefix is

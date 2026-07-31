@@ -6871,3 +6871,13 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 11. `GET /secrets/missing/history` returns HTTP 404.
 
 **Verification.** `go test ./internal/secretvault/...` (all tests pass including the 11 new assertions), `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase360-groq-llama33-vault-health-history/`.
+
+2026-07-31 21:55 — Phase 361 - BatchPut atomic upsert and HTTP endpoint with provider fix and live evaluation campaign.
+
+**Objective and implementation.** Added `BatchPut` multi-secret atomic upsert capability to `secretvault.Vault` and HTTP `POST /secrets/batch-put` endpoint, plus provider SSE `data: [DONE]` trailing suffix handling in `internal/provider/openai`.
+1. Implemented `func (v *Vault) BatchPut(items []BatchPutItem) (BatchPutResult, error)` in `Vault`. Validates each item's name, value size, and TTL before executing a single atomic file write. Items failing validation are recorded in `Errors` and skipped. Sorting ensures deterministic `Stored`, `Created`, and `Updated` return slices.
+2. Added `POST /secrets/batch-put` HTTP handler accepting `{"items": [...]}` (1 to 100 items limit), returning `BatchPutResult` with HTTP 200 OK or appropriate error status via `writeErr`.
+3. Added `TestProviderHandlesTrailingDataDoneSuffix` in `internal/provider/openai/provider_test.go` to ensure openAI provider handles SSE streams terminating with `data: [DONE]`.
+4. Executed live evaluation campaign `phase361-groq-llama31-vault-batch-put` with Groq `llama-3.1-8b-instant` primary circuit control and NVIDIA NIM `meta/llama-3.1-8b-instruct` fallback.
+
+**Observed evidence and decision.** Groq `llama-3.1-8b-instant` primary circuit was seeded open to test fallback mechanics. NVIDIA NIM `meta/llama-3.1-8b-instruct` completed live evaluation in 616.28 ms (95 prompt + 2 output tokens, HTTP 200 OK, exact text match `READY`). `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Artifacts generated in `results/runtime-gate/phase361-groq-llama31-vault-batch-put/`.

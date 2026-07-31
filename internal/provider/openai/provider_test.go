@@ -36,6 +36,25 @@ func TestProviderCompletesPlainTextAgainstFakeServer(t *testing.T) {
 	}
 }
 
+func TestProviderHandlesTrailingDataDoneSuffix(t *testing.T) {
+	ts := fakeserver.New(fakeserver.Exchange{
+		RawBody: `{"id":"chatcmpl-1","choices":[{"index":0,"message":{"role":"assistant","content":"READY"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":2}}data: [DONE]`,
+	})
+	defer ts.Close()
+
+	provider, err := openai.New(openai.Config{BaseURL: ts.URL(), APIKey: "test", Model: "test-model", Client: ts.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := provider.Complete(context.Background(), port.CompletionRequest{Prompt: "test", MaxOutputTokens: 10})
+	if err != nil {
+		t.Fatalf("expected success with trailing data: [DONE], got err: %v", err)
+	}
+	if res.Text != "READY" {
+		t.Fatalf("expected text READY, got %q", res.Text)
+	}
+}
+
 func TestProviderClassifiesFinishReasonWithoutRetainingUnknownWireValue(t *testing.T) {
 	server := fakeserver.New(
 		fakeserver.Exchange{ResponseText: "partial", FinishReason: "length"},
