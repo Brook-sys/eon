@@ -129,6 +129,23 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .provider-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .provider-grid label.full-field { grid-column:1/-1; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.help-tip { display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; background:var(--border); color:var(--muted); font-size:10px; cursor:help; vertical-align:middle; margin-left:4px; position:relative; }
+.help-tip:hover { background:var(--accent); color:#fff; }
+.help-tip[data-tip]::after { content:attr(data-tip); position:absolute; bottom:22px; left:50%; transform:translateX(-50%); background:#0a0e12; border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:11px; color:var(--text); white-space:nowrap; max-width:280px; overflow:hidden; text-overflow:ellipsis; z-index:10; opacity:0; pointer-events:none; transition:opacity .15s; }
+.help-tip[data-tip]:hover::after { opacity:1; }
+.help-tip[data-tip]:focus-visible::after { opacity:1; }
+.welcome-banner { background:linear-gradient(135deg,#152030,#1a2838); border:1px solid var(--accent); border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+.welcome-banner h3 { margin:0 0 6px; font-size:14px; color:var(--accent); }
+.welcome-banner p { margin:0 0 8px; font-size:13px; color:var(--text); }
+.welcome-banner .welcome-close { float:right; background:none; border:0; color:var(--muted); font-size:18px; cursor:pointer; padding:0 4px; line-height:1; }
+.welcome-banner .welcome-close:hover { color:var(--text); }
+.welcome-banner .welcome-steps { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.welcome-banner .welcome-step { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); background:#0d1218; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; }
+.welcome-banner .welcome-step:hover { border-color:var(--accent); color:var(--text); }
+.welcome-banner .welcome-step .step-num { font-weight:700; color:var(--accent); }
+.shortcut-chip { display:inline-block; background:#0d1218; border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-family:var(--mono); font-size:10px; color:var(--muted); margin:0 2px; }
+.section-help { font-size:12px; color:var(--muted); background:#0d1218; border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin:0 0 10px; line-height:1.5; }
+.field-with-help { display:flex; align-items:center; gap:2px; }
 @media (max-width: 760px) {
   .app-shell { display:block; }
   .side-nav { position:sticky; top:49px; z-index:2; height:auto; display:flex; overflow-x:auto; gap:5px; padding:8px; border-right:0; border-bottom:1px solid var(--border); }
@@ -147,6 +164,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   <span class="badge" id="streamBadge">SSE idle</span>
   <span class="meta" id="headerMeta">experimental control surface</span>
   <span class="meta" id="clockMeta"></span>
+  <button type="button" id="btnHelp" style="height: 40px; margin-left: auto;" title="Ajuda e quick start">? Ajuda</button>
 </header>
 <div class="app-shell">
 <nav class="side-nav" aria-label="Navegação principal">
@@ -160,9 +178,22 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 </nav>
 <main>
   <div class="view-heading"><h2 id="viewTitle">Visão geral</h2><p id="viewDescription">Acompanhe o estado essencial do EON e aja sobre o que precisa de atenção.</p></div>
+  <div id="welcomeBanner" class="welcome-banner" hidden>
+    <button type="button" class="welcome-close" id="welcomeClose" aria-label="Fechar">×</button>
+    <h3>👋 Bem-vindo ao motor-autonomo</h3>
+    <p>Este painel controla o runtime epistemológico. Comece por aqui:</p>
+    <div class="welcome-steps">
+      <button type="button" class="welcome-step" data-view-target="home"><span class="step-num">1</span> Carregar missão</button>
+      <button type="button" class="welcome-step" data-view-target="models"><span class="step-num">2</span> Cadastrar provedor</button>
+      <button type="button" class="welcome-step" data-view-target="monitor"><span class="step-num">3</span> Ver timeline</button>
+      <button type="button" class="welcome-step" data-view-target="knowledge"><span class="step-num">4</span> Explorar conhecimento</button>
+    </div>
+    <p style="margin-top:8px;font-size:12px;color:var(--muted)">Dúvidas? Consulte <span class="shortcut-chip">docs/quick-start.md</span> e <span class="shortcut-chip">docs/dashboard.md</span> no projeto.</p>
+  </div>
   <div>
     <section data-view="home mission">
       <h2>Contexto</h2>
+      <div class="section-help">Digite o ID da missão e clique em <strong>Atualizar</strong> para ver o estado. Use <strong>Conectar timeline</strong> para receber eventos em tempo real.</div>
       <div class="row">
         <label>mission_id
           <input id="missionId" value="` + mission + `" placeholder="mission_..." spellcheck="false"/>
@@ -175,6 +206,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
     <section data-view="home mission">
       <h2>Overview</h2>
+      <div class="section-help">Resumo do estado da missão: status, revisão ativa, perguntas em aberto e últimos eventos.</div>
       <div id="overview" class="muted">carregue uma missão</div>
       <div class="ops" id="missionOps" style="margin-top:10px">
         <button type="button" id="btnPause" class="warn">Pause dispatch</button>
@@ -185,8 +217,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="cmdErr"></div>
     </section>
     <section data-view="mission advanced" class="technical">
-      <h2>Emenda de missão (FR-AUTH-004)</h2>
-      <p class="hint">Preview puro (diff + impacto) e accept append-only. Nunca muta a revisão ativa in-place; candidate_revision = base+1. No-op e impacto bloqueado falham fechados. Agenda só reconcilia após accept.</p>
+      <h2>Emenda de missão (FR-AUTH-004) <span class="help-tip" data-tip="Cria uma nova revisão da missão sem alterar a atual. O preview mostra o diff antes de aplicar." tabindex="0">?</span></h2>
+      <details><summary class="hint" style="cursor:pointer">Como funciona a emenda de missão</summary>
+      <p class="hint" style="margin-top:8px">Preview puro (diff + impacto) e accept append-only. Nunca muta a revisão ativa in-place; candidate_revision = base+1. No-op e impacto bloqueado falham fechados. Agenda só reconcilia após accept.</p>
+      </details>
       <div class="row">
         <label>base_revision
           <input id="amendBase" type="number" min="1" value="1"/>
@@ -244,6 +278,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
     <section data-view="home monitor">
       <h2>Alertas / telemetria</h2>
+      <div class="section-help">Sinais de saúde do sistema: alertas derivados e métricas de runtime.</div>
       <p class="hint">Sinais derivados e postura OTel (FR-CTRL-007). Nunca canônicos, nunca autoritativos para o kernel. Retention limita buffers de export descartáveis, não retenção de store.</p>
       <div id="alertsBox" class="muted">carregue overview ou /alerts</div>
       <div id="telemetryBox" class="prebox muted" style="margin-top:8px">telemetria não carregada</div>
@@ -255,11 +290,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
     <section data-view="home mission">
       <h2>Perguntas pendentes</h2>
+      <div class="section-help">Perguntas que o sistema faz ao operador. Responda pela aba Missão.</div>
       <div id="questions" class="list muted">nenhuma carregada</div>
     </section>
     <section data-view="knowledge advanced">
-      <h2>Frontier / higiene</h2>
-      <p class="hint">Browse somente-leitura do reservatório de WorkOpportunity e dry-run de PlanFrontierReservoirHygiene. Nenhuma transição de higiene é aplicada da UI; compactação permanece com a família local frontier_management.</p>
+      <h2>Frontier / higiene <span class="help-tip" data-tip="WorkOpportunity são candidatos de trabalho. Higiene compacta oportunidades resolvidas." tabindex="0">?</span></h2>
+      <details><summary class="hint" style="cursor:pointer">O que é frontier e higiene</summary>
+      <p class="hint" style="margin-top:8px">Browse somente-leitura do reservatório de WorkOpportunity e dry-run de PlanFrontierReservoirHygiene. Nenhuma transição de higiene é aplicada da UI; compactação permanece com a família local frontier_management.</p>
+      </details>
       <div id="frontHygiene" class="muted">carregue hygiene dry-run</div>
       <div class="row" style="margin-top:10px">
         <label>status
@@ -289,7 +327,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
     </section>
     <section data-view="knowledge">
       <h2>Conhecimento</h2>
-      <p class="hint">Browse somente-leitura de sources, claims, evidence e artifacts. Conteúdo livre chega redigido pela Control API; snapshot bytes não são exportados. Mutações canônicas não passam por aqui.</p>
+      <div class="section-help">Explore as evidências, fontes e artefatos que o sistema coletou.</div>
+      <details><summary class="hint" style="cursor:pointer">Detalhes sobre conhecimento</summary>
+      <p class="hint" style="margin-top:8px">Browse somente-leitura de sources, claims, evidence e artifacts. Conteúdo livre chega redigido pela Control API; snapshot bytes não são exportados. Mutações canônicas não passam por aqui.</p>
+      </details>
       <div id="knowCatalog" class="muted">carregue o catálogo</div>
       <div class="row" style="margin-top:10px">
         <label>coleção
@@ -330,8 +371,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div id="knowDetail" class="prebox muted" hidden></div>
     </section>
     <section data-view="knowledge advanced">
-      <h2>Commits / provider</h2>
-      <p class="hint">Browse somente-leitura de commits canônicos (GET /commits) e perfil de capacidades do provider (FR-MODEL-005). Probe é orçamentado e não inventa features; secrets nunca aparecem.</p>
+      <h2>Commits / provider <span class="help-tip" data-tip="Commits são pontos canônicos de estado. Provider profile mostra capacidades declaradas do modelo." tabindex="0">?</span></h2>
+      <details><summary class="hint" style="cursor:pointer">O que são commits e provider profile</summary>
+      <p class="hint" style="margin-top:8px">Browse somente-leitura de commits canônicos (GET /commits) e perfil de capacidades do provider (FR-MODEL-005). Probe é orçamentado e não inventa features; secrets nunca aparecem.</p>
+      </details>
       <div class="row">
         <label>mission_revision_id
           <input id="commitRev" placeholder="revision_..." spellcheck="false" style="min-width:180px"/>
@@ -376,8 +419,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
       <div class="errbox" id="resourceErr"></div>
     </section>
     <section data-view="monitor advanced">
-      <h2>Inspetor de execução</h2>
-      <p class="hint">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem. Projeções bounded sinalizam explicitamente quando a auditoria está incompleta.</p>
+      <h2>Inspetor de execução <span class="help-tip" data-tip="Digite o ID de uma operação, commit ou comando para investigar detalhes de execução." tabindex="0">?</span></h2>
+      <details><summary class="hint" style="cursor:pointer">O que é o inspetor</summary>
+      <p class="hint" style="margin-top:8px">Correlação somente-leitura de operation/commit/command. Conteúdo bruto de modelo chega redigido e limitado pela Control API; hashes e IDs oficiais permanecem. Projeções bounded sinalizam explicitamente quando a auditoria está incompleta.</p>
+      </details>
       <div class="row">
         <label>tipo
           <select id="inspKind">
@@ -2258,6 +2303,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
   el("btnRefresh").addEventListener("click", refresh);
   el("btnConnect").addEventListener("click", connectStream);
+  if (el("btnHelp")) {
+    el("btnHelp").addEventListener("click", function () {
+      const b = el("welcomeBanner");
+      if (b) b.hidden = !b.hidden;
+    });
+  }
+  if (el("welcomeClose")) {
+    el("welcomeClose").addEventListener("click", function () {
+      const b = el("welcomeBanner");
+      if (b) b.hidden = true;
+      try { localStorage.setItem("eon_hide_welcome", "1"); } catch (_) {}
+    });
+  }
+  try {
+    if (!localStorage.getItem("eon_hide_welcome") && el("welcomeBanner")) {
+      el("welcomeBanner").hidden = false;
+    }
+  } catch (_) {}
   el("btnAnswer").addEventListener("click", submitAnswer);
   el("btnPause").addEventListener("click", function () { submitMissionCommand("PAUSE_MISSION"); });
   el("btnResume").addEventListener("click", function () { submitMissionCommand("RESUME_MISSION"); });
