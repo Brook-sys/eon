@@ -395,6 +395,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
 
+2026-07-31 09:30 — Secret Vault Diagnostic Health & Per-Secret History (Phase 360) — implementados `Health()` no `Vault` para diagnóstico operacional seguro (sem vazar segredos ou depender de cofre desbloqueado) retornando `VaultHealth`, e `SecretHistory(name)` para histórico de auditoria por segredo em ordem cronológica. Endpoints HTTP correspondentes adicionados: `GET /health` e `GET /secrets/{name}/history`. Suíte de testes em `health_history_test.go`. Avaliação live: Groq Llama 3.3 70B com fallback para NVIDIA NIM Llama 3.1 8B (`phase360-groq-llama33-vault-health-history`, 1/1 PASS, 0.668s latency, exact response match `READY`, durable reopen OK). Verificação: `go test ./internal/secretvault/...`, `go vet ./...`, `gofmt -l`, `git diff --check`.
+
 2026-07-31 06:00 — Secret Vault Batch Delete, Search Filters & Audit Logging (Phase 359) — implementados `BatchDelete` no `Vault` para deleção atômica em lote com `BatchDeleteResult`, `SearchSecrets` com filtros por prefixo e busca case-insensitive por sub-string, e `AuditLogFiltered` com filtros por `Action`, `Status` e timestamp `Since`. Endpoints HTTP correspondentes adicionados: `POST /secrets/batch-delete`, `GET /secrets?prefix=&search=` e `GET /audit?action=&status=&since=`. Suíte de testes em `batch_search_audit_test.go`. Avaliação live: Groq Llama 3.1 8B instant (`phase359-groq-llama31-vault-batch-search`, HTTP 401 `invalid_api_key`, 0.437s latency, provider reached) e NVIDIA NIM Llama 3.1 8B instruct (`phase359-nim-llama31-vault-batch-search`, HTTP 401 `Unauthorized`, 0.382s latency, provider reached). Verificação: `go test ./...`, `go vet ./...`, `gofmt -w .`, `git diff --check`.
 
 2026-07-30 21:00 — CICLO BLOQUEADO — environment do heartbeat não possui GROQ_API_KEY nem NVIDIA_NIM_API_KEY; cmd/runtime-gate-campaign falha com `environment variable GROQ_API_KEY is required` antes de qualquer chamada live. Tentativa bounded executada com manifest phase359 (Groq llama-3.3-70b → NIM fallback). Batch planejado: (1) SearchSecrets/filter por prefixo ou pattern, (2) AuditLog filtrado por action/status/since, (3) BatchDelete atômico de múltiplos nomes — todos no pacote secretvault com testes e endpoints HTTP. Nenhum commit feito, working tree permanece limpa, status alterado para bloqueado. Necessário: expor credenciais no environment do heartbeat ou permitir que o motor carregue do vault do projeto.
@@ -6843,3 +6845,29 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 3. HTTP `POST /import` returns HTTP 200 OK with `ImportResult` JSON payload.
 
 **Verification.** `go test ./...`, `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase358-groq-llama31-vault-import-result/`.
+
+## Phase 360 — credential vault diagnostic health snapshot and per-secret audit history (2026-07-31 09:30 -03)
+
+**Objective and implementation.** Added non-secret vault diagnostics and per-secret audit history surface to `secretvault.Vault` and `secretvault.HTTP`.
+1. Implemented `func (v *Vault) Health() VaultHealth` in `Vault`. The method takes the same lock as the rest of the API, runs the lazy-expiration sweep under the lock to keep counts consistent, reads file existence via `os.Stat`, and reports `Initialized`/`Locked`/`FileExists`, `TotalSecrets`/`ExpiredSecrets`/`AuditEvents`/`FailedAttempts`, `IsLockedOut`/`LockoutUntil`, `LastActivity`, and `CheckedAt`. When the vault is locked, secret counts and `Locked`/`IsLockedOut` are still observable; when the lockout has expired, `IsLockedOut` is normalized to `false`. The method never decrypts values and never exposes secret material.
+2. Implemented `func (v *Vault) SecretHistory(name string) ([]AuditEvent, error)` returning a chronological copy of `AuditEvent`s filtered by `SecretName`. Names are validated through `validateName` (reusing the hardened hierarchical-name rules from Phase 356), `ErrLocked` is returned when the vault is locked, and `os.ErrNotExist` is returned when the name has no recorded history and no current secret.
+3. Added `GET /health` HTTP endpoint in `HTTP.Handler()` returning the `VaultHealth` JSON document with HTTP 200 OK.
+4. Added `GET /secrets/{name}/history` HTTP endpoint returning `{"history": [...]}` with HTTP 200 OK; `os.ErrNotExist` maps to HTTP 404 and `ErrLocked` maps to HTTP 423 via the existing `writeErr` plumbing.
+5. Added deterministic tests in `internal/secretvault/health_history_test.go` covering: health on uninitialized vault, health after initialization (counts/TTL expiry), `SecretHistory` on locked/invalid/missing/present names, `GET /health` JSON payload, `GET /secrets/{name}/history` 200 + 404, and the no-leak invariant on the history payload (no secret values).
+
+**Live hypothesis and bounds.** Rotated provider deployment from Groq `llama-3.1-8b-instant` (Phase 359) to Groq `llama-3.3-70b-versatile` (with NVIDIA NIM `meta/llama-3.1-8b-instruct` seeded circuit control) on authority-free exact text verification: single isolated trial, 45 s deadline, 32 max output tokens, exact response (`READY`), zero canonical state promotion.
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` was rejected with `circuit_open` (single failure seeded before the campaign to enforce fallback coverage), and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed live evaluation in 668.4 ms (93 prompt + 2 output tokens, HTTP 200 OK, exact response match `READY`). Integrated runner enforced local minute-quota throttling (`WAITING_TIME` until 2026-07-31T09:31:00Z), verified SQLite durable reopen, and promoted zero canonical state. Deterministic tests in `internal/secretvault/health_history_test.go` confirm:
+1. `Health` on uninitialized vault returns `Initialized=false`, `Locked=true`, `FileExists=false`, `TotalSecrets=0`.
+2. `Health` after `Initialize` returns `Initialized=true`, `FileExists=true`, `Locked=false`.
+3. `Health` reports `TotalSecrets` correctly and `ExpiredSecrets=1` when one secret has a TTL in the past.
+4. `AuditEvents` count reflects the audit trail length.
+5. `SecretHistory` on locked vault returns `ErrLocked`.
+6. `SecretHistory` rejects path-traversal names via `validateName` (`ErrInvalidSecretName`).
+7. `SecretHistory` on a non-existent secret with no audit history returns `os.ErrNotExist`.
+8. `SecretHistory` after `Put` + `Rotate` + `Resolve` returns at least the three corresponding `AuditEvent`s.
+9. `GET /health` returns HTTP 200 with the `VaultHealth` JSON payload.
+10. `GET /secrets/{name}/history` returns HTTP 200 with the events list.
+11. `GET /secrets/missing/history` returns HTTP 404.
+
+**Verification.** `go test ./internal/secretvault/...` (all tests pass including the 11 new assertions), `go vet ./...`, `gofmt -l`, and `git diff --check` passed cleanly. Live probe artifacts in `results/runtime-gate/phase360-groq-llama33-vault-health-history/`.

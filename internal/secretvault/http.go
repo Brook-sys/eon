@@ -36,6 +36,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
 	mux.HandleFunc("DELETE /secrets/{name}", h.delete)
 	mux.HandleFunc("POST /resolve", h.resolveBatch)
+	mux.HandleFunc("GET /health", h.health)
+	mux.HandleFunc("GET /secrets/{name}/history", h.secretHistory)
 	return localOnly(mux)
 }
 
@@ -295,6 +297,17 @@ func (h HTTP) resolveBatch(w http.ResponseWriter, r *http.Request) {
 	}
 	results := h.Vault.ResolveAll(q.Names)
 	write(w, http.StatusOK, results)
+}
+func (h HTTP) health(w http.ResponseWriter, _ *http.Request) {
+	write(w, http.StatusOK, h.Vault.Health())
+}
+func (h HTTP) secretHistory(w http.ResponseWriter, r *http.Request) {
+	events, err := h.Vault.SecretHistory(r.PathValue("name"))
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"history": events})
 }
 func decode(w http.ResponseWriter, r *http.Request, d any) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 20<<10)

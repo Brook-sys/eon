@@ -786,6 +786,85 @@ func (v *Vault) SearchSecrets(prefix, substring string) ([]SecretEntry, error) {
 	return entries, nil
 }
 
+// VaultHealth provides an operational diagnostic snapshot of the vault
+// without exposing any secret values. It is safe to call on locked or
+// uninitialized vaults; secret counts are reported as zero when locked.
+type VaultHealth struct {
+	Initialized    bool      `json:"initialized"`
+	Locked         bool      `json:"locked"`
+	FileExists     bool      `json:"file_exists"`
+	TotalSecrets   int       `json:"total_secrets"`
+	ExpiredSecrets int       `json:"expired_secrets"`
+	AuditEvents    int       `json:"audit_events"`
+	FailedAttempts int       `json:"failed_attempts"`
+	IsLockedOut    bool      `json:"is_locked_out"`
+	LockoutUntil   time.Time `json:"lockout_until,omitempty"`
+	LastActivity   time.Time `json:"last_activity,omitempty"`
+	CheckedAt      time.Time `json:"checked_at"`
+}
+
+// Health returns a non-secret diagnostic snapshot of the vault. It does not
+// attempt to decrypt secrets or expose any secret value. Counts and audit
+// size are safe to expose at any lock state.
+func (v *Vault) Health() VaultHealth {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	_, err := os.Stat(v.path)
+	h := VaultHealth{
+		Initialized:    err == nil,
+		Locked:         len(v.key) == 0,
+		FileExists:     err == nil,
+		AuditEvents:    len(v.audit),
+		FailedAttempts: v.failedCount,
+		IsLockedOut:    v.isLockedOutLocked(),
+		LockoutUntil:   v.lockedUntil,
+		LastActivity:   v.lastUsed,
+		CheckedAt:      v.now(),
+	}
+	if h.IsLockedOut && !v.lockedUntil.IsZero() && v.now().After(v.lockedUntil) {
+		h.IsLockedOut = false
+	}
+	if len(v.key) == 0 {
+		return h
+	}
+	now := v.now()
+	for _, r := range v.data.Secrets {
+		h.TotalSecrets++
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			h.ExpiredSecrets++
+		}
+	}
+	return h
+}
+
+// SecretHistory returns a copy of audit events recorded for the given
+// secret name, in chronological order. The vault must be unlocked. Returns
+// os.ErrNotExist when the secret does not exist and has no recorded
+// history.
+func (v *Vault) SecretHistory(name string) ([]AuditEvent, error) {
+	if err := validateName(name); err != nil {
+		return nil, err
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if len(v.key) == 0 {
+		return nil, ErrLocked
+	}
+	res := make([]AuditEvent, 0)
+	for _, evt := range v.audit {
+		if evt.SecretName == name {
+			res = append(res, evt)
+		}
+	}
+	if len(res) == 0 {
+		if _, ok := v.data.Secrets[name]; !ok {
+			return nil, os.ErrNotExist
+		}
+	}
+	return res, nil
+}
+
 // AuditFilter holds optional filters for AuditLogFiltered.
 type AuditFilter struct {
 	Action string

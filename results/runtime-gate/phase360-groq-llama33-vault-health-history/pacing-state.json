@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase360-groq-llama33-vault-health-history",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-07-31T09:30:48.675102845Z"
+}
