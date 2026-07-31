@@ -27,6 +27,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /import", h.importVault)
 	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
+	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
@@ -60,6 +61,10 @@ type secretRequest struct {
 }
 
 type resolveRequest struct {
+	Names []string `json:"names"`
+}
+
+type batchDeleteRequest struct {
 	Names []string `json:"names"`
 }
 
@@ -142,14 +147,26 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, res)
 }
-func (h HTTP) auditLog(w http.ResponseWriter, _ *http.Request) {
-	write(w, http.StatusOK, h.Vault.AuditLog())
+func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
+	filter := AuditFilter{
+		Action: strings.TrimSpace(r.URL.Query().Get("action")),
+		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+	}
+	if since := strings.TrimSpace(r.URL.Query().Get("since")); since != "" {
+		parsed, err := time.Parse(time.RFC3339, since)
+		if err != nil {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "since must be RFC3339"}})
+			return
+		}
+		filter.Since = parsed
+	}
+	write(w, http.StatusOK, h.Vault.AuditLogFiltered(filter))
 }
 func (h HTTP) stats(w http.ResponseWriter, _ *http.Request) {
 	write(w, http.StatusOK, h.Vault.Stats())
 }
-func (h HTTP) listSecrets(w http.ResponseWriter, _ *http.Request) {
-	entries, err := h.Vault.ListSecrets()
+func (h HTTP) listSecrets(w http.ResponseWriter, r *http.Request) {
+	entries, err := h.Vault.SearchSecrets(strings.TrimSpace(r.URL.Query().Get("prefix")), strings.TrimSpace(r.URL.Query().Get("search")))
 	if err != nil {
 		writeErr(w, err)
 		return
@@ -239,6 +256,22 @@ func (h HTTP) deleteAllSecrets(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"deleted": deleted})
+}
+func (h HTTP) batchDelete(w http.ResponseWriter, r *http.Request) {
+	var q batchDeleteRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Names) == 0 || len(q.Names) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "names must contain 1 to 100 secret names"}})
+		return
+	}
+	result, err := h.Vault.BatchDelete(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
 }
 func (h HTTP) delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Vault.Delete(r.PathValue("name")); err != nil {

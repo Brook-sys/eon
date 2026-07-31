@@ -686,6 +686,135 @@ func (v *Vault) DeleteAll() (int, error) {
 	return count, nil
 }
 
+// BatchDeleteResult holds the outcome of deleting multiple secrets atomically.
+type BatchDeleteResult struct {
+	Deleted []string `json:"deleted"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// BatchDelete deletes multiple secrets by name in a single atomic write.
+// Names that do not exist are silently skipped (recorded in Errors as a
+// warning). The vault must be unlocked. All deletions persist in one write;
+// if the write fails, no deletions are committed.
+func (v *Vault) BatchDelete(names []string) (BatchDeleteResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_delete", "", "failure")
+		return BatchDeleteResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_delete", "", "failure")
+		return BatchDeleteResult{}, err
+	}
+	result := BatchDeleteResult{Deleted: []string{}}
+	var validNames []string
+	for _, name := range names {
+		if err := validateName(name); err != nil {
+			result.Errors = append(result.Errors, name+": invalid name")
+			continue
+		}
+		if _, ok := v.data.Secrets[name]; !ok {
+			result.Errors = append(result.Errors, name+": not found")
+			continue
+		}
+		validNames = append(validNames, name)
+	}
+	if len(validNames) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("batch_delete", "", "success")
+		return result, nil
+	}
+	for _, name := range validNames {
+		delete(v.data.Secrets, name)
+		result.Deleted = append(result.Deleted, name)
+	}
+	sort.Strings(result.Deleted)
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("batch_delete", "", "success")
+	} else {
+		v.recordAuditLocked("batch_delete", "", "failure")
+		return BatchDeleteResult{}, err
+	}
+	return result, nil
+}
+
+// SearchSecrets returns metadata for secrets matching the given filter.
+// If prefix is non-empty, only secrets whose name starts with the prefix
+// (case-sensitive) are returned. If substring is non-empty and prefix is
+// empty, only secrets whose name contains the substring (case-insensitive)
+// are returned. If both are empty, all secrets are returned (equivalent to
+// ListSecrets). Results are sorted by name.
+func (v *Vault) SearchSecrets(prefix, substring string) ([]SecretEntry, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("search", "", "failure")
+		return nil, ErrLocked
+	}
+	now := v.now()
+	entries := make([]SecretEntry, 0, len(v.data.Secrets))
+	lowerSub := strings.ToLower(substring)
+	for name, r := range v.data.Secrets {
+		if prefix != "" && !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if prefix == "" && substring != "" && !strings.Contains(strings.ToLower(name), lowerSub) {
+			continue
+		}
+		e := SecretEntry{
+			Name:      name,
+			CreatedAt: r.CreatedAt,
+			UpdatedAt: r.UpdatedAt,
+			ExpiresAt: r.ExpiresAt,
+		}
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			e.Expired = true
+		}
+		entries = append(entries, e)
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name < entries[j].Name })
+	v.lastUsed = v.now()
+	v.recordAuditLocked("search", "", "success")
+	return entries, nil
+}
+
+// AuditFilter holds optional filters for AuditLogFiltered.
+type AuditFilter struct {
+	Action string
+	Status string
+	Since  time.Time
+}
+
+// AuditLogFiltered returns audit events matching the given filters. Empty
+// filter fields match all values. Since filters events at or after the given
+// time. The result is a copy; the internal audit log is not modified.
+func (v *Vault) AuditLogFiltered(filter AuditFilter) []AuditEvent {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	res := make([]AuditEvent, 0, len(v.audit))
+	for _, evt := range v.audit {
+		if filter.Action != "" && evt.Action != filter.Action {
+			continue
+		}
+		if filter.Status != "" && evt.Status != filter.Status {
+			continue
+		}
+		if !filter.Since.IsZero() && evt.Timestamp.Before(filter.Since) {
+			continue
+		}
+		res = append(res, evt)
+	}
+	return res
+}
+
 // PurgeExpired removes all expired secrets from the vault and persists the
 // change. The vault must be unlocked. Returns the number of secrets removed.
 func (v *Vault) PurgeExpired() (int, error) {
