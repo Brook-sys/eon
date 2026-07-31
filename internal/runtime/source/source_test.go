@@ -49,3 +49,13 @@ func TestSequenceRandomSourceFailsWhenExhausted(t *testing.T) {
 		t.Fatal("Uint64() did not report sequence exhaustion")
 	}
 }
+
+func TestConstantRandomSource(t *testing.T) {
+	src := NewConstantRandomSource(42)
+	for i := 0; i < 10; i++ {
+		got, err := src.Uint64()
+		if err != nil || got != 42 {
+			t.Fatalf("Uint64() = %d, %v; want 42, nil", got, err)
+		}
+	}
+}

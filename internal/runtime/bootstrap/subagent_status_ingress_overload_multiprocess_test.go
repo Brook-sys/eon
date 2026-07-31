@@ -126,7 +126,7 @@ func TestSubagentStatusIngressOverloadLeavesPendingAndResumesBoundedly(t *testin
 	}
 	recovery := kernel.SubagentStatusIngressWorker{
 		Store: store, Manager: manager, Clock: clock, Batch: mixedIngressReceiptCount,
-		LeaseTTL: mixedIngressLeaseTTL, RetryPolicy: policy, RetrySleeper: retry.SystemSleeper{}, RetryJitter: source.NewSequenceRandomSource(0, 0),
+		LeaseTTL: mixedIngressLeaseTTL, RetryPolicy: policy, RetrySleeper: retry.SystemSleeper{}, RetryJitter: source.NewConstantRandomSource(0),
 	}
 	processed, recoveryReport, err := recovery.ApplyPendingWithRetryReport(context.Background())
 	if err != nil {
@@ -207,7 +207,7 @@ func TestSubagentStatusIngressOverloadMultiprocessHelper(t *testing.T) {
 		// heterogeneous worker configurations without adding a claim/offset API.
 		Store: store, Manager: manager, Clock: clock, Batch: worker + 1, LeaseTTL: mixedIngressLeaseTTL,
 		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{},
-		RetryJitter: source.NewSequenceRandomSource(uint64(jitterOffset), uint64(jitterOffset)),
+		RetryJitter: source.NewConstantRandomSource(uint64(jitterOffset)),
 	}
 	processed, report, runErr := runner.ApplyPendingWithRetryReport(context.Background())
 	result := overloadIngressProcessReport{

@@ -375,7 +375,7 @@ func TestSubagentStatusIngressSustainedMultiprocessHelper(t *testing.T) {
 	runner := kernel.SubagentStatusIngressWorker{
 		Store: observedStore, Manager: manager, Clock: clock, Batch: 1, LeaseTTL: mixedIngressLeaseTTL,
 		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{},
-		RetryJitter: source.NewSequenceRandomSource(uint64(worker*3), uint64(worker*3)),
+		RetryJitter: source.NewConstantRandomSource(uint64(worker * 3)),
 	}
 	started := time.Now()
 	processed, report, runErr := runner.ApplyPendingWithRetryReport(context.Background())

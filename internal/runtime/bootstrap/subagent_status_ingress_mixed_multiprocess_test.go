@@ -283,7 +283,7 @@ func TestSubagentStatusIngressMixedMultiprocessHelper(t *testing.T) {
 	// all three followers together requires four serial CAS winners, which cannot
 	// fit a three-attempt caller budget and is characterized as overload instead.
 	jitterOffset := time.Duration(worker*3) * time.Millisecond
-	jitter := source.NewSequenceRandomSource(uint64(jitterOffset), uint64(jitterOffset))
+	jitter := source.NewConstantRandomSource(uint64(jitterOffset))
 	var sleeper retry.Sleeper = retry.SystemSleeper{}
 	if worker != 0 {
 		sleeper = &mixedIngressLeaderBarrierSleeper{leaderDone: predecessorDonePath}

@@ -194,7 +194,7 @@ func TestSubagentStatusIngressWorkerSubprocessHelper(t *testing.T) {
 	waitForIngressWorkerFile(t, startPath, 5*time.Second)
 	worker := kernel.SubagentStatusIngressWorker{
 		Store: store, Manager: manager, Clock: clock, Batch: 4,
-		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{}, RetryJitter: source.NewSequenceRandomSource(0, 0),
+		RetryPolicy: kernel.DefaultSubagentStatusIngressRetryPolicy(), RetrySleeper: retry.SystemSleeper{}, RetryJitter: source.NewConstantRandomSource(0),
 	}
 	started := time.Now()
 	processed, report, runErr := worker.ApplyPendingWithRetryReport(context.Background())

@@ -170,3 +170,16 @@ func (s *SequenceRandomSource) Uint64() (uint64, error) {
 	s.next++
 	return value, nil
 }
+
+// ConstantRandomSource returns a fixed uint64 value indefinitely.
+type ConstantRandomSource struct {
+	value uint64
+}
+
+func NewConstantRandomSource(value uint64) ConstantRandomSource {
+	return ConstantRandomSource{value: value}
+}
+
+func (c ConstantRandomSource) Uint64() (uint64, error) {
+	return c.value, nil
+}
