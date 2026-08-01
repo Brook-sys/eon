@@ -3,6 +3,7 @@ package secretvault
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -29,6 +30,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
 	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
+	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
+	mux.HandleFunc("POST /secrets/batch-metadata", h.batchMetadata)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
@@ -74,6 +77,14 @@ type batchDeleteRequest struct {
 
 type batchPutRequest struct {
 	Items []BatchPutItem `json:"items"`
+}
+
+type batchRotateRequest struct {
+	Items []BatchRotateItem `json:"items"`
+}
+
+type batchMetadataRequest struct {
+	Names []string `json:"names"`
 }
 
 type bulkTouchRequest struct {
@@ -171,6 +182,25 @@ func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		filter.Since = parsed
+	}
+	if until := strings.TrimSpace(r.URL.Query().Get("until")); until != "" {
+		parsed, err := time.Parse(time.RFC3339, until)
+		if err != nil {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "until must be RFC3339"}})
+			return
+		}
+		filter.Until = parsed
+	}
+	if limitStr := strings.TrimSpace(r.URL.Query().Get("limit")); limitStr != "" {
+		var lim int
+		if _, err := fmt.Sscanf(limitStr, "%d", &lim); err != nil || lim < 1 {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "limit must be a positive integer"}})
+			return
+		}
+		if lim > 1000 {
+			lim = 1000
+		}
+		filter.Limit = lim
 	}
 	write(w, http.StatusOK, h.Vault.AuditLogFiltered(filter))
 }
@@ -300,6 +330,38 @@ func (h HTTP) batchPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, result)
+}
+func (h HTTP) batchRotate(w http.ResponseWriter, r *http.Request) {
+	var q batchRotateRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 rotate items"}})
+		return
+	}
+	result, err := h.Vault.BatchRotate(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+func (h HTTP) batchMetadata(w http.ResponseWriter, r *http.Request) {
+	var q batchMetadataRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Names) == 0 || len(q.Names) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "names must contain 1 to 100 secret names"}})
+		return
+	}
+	results, err := h.Vault.BatchMetadata(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"metadata": results})
 }
 func (h HTTP) bulkTouch(w http.ResponseWriter, r *http.Request) {
 	var q bulkTouchRequest

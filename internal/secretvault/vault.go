@@ -968,6 +968,140 @@ func (v *Vault) BulkTouch(items []BulkTouchItem) (BulkTouchResult, error) {
 	return result, nil
 }
 
+// BatchRotateItem represents one secret to be rotated in a batch operation.
+// The secret must already exist in the vault. If TTL is non-zero, the secret
+// expiration is updated to now + TTL. If TTL is zero, existing expiration is preserved.
+type BatchRotateItem struct {
+	Name  string        `json:"name"`
+	Value string        `json:"value"`
+	TTL   time.Duration `json:"ttl,omitempty"`
+}
+
+// BatchRotateResult summarizes the outcome of a batch rotate operation.
+type BatchRotateResult struct {
+	Rotated []string `json:"rotated"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// BatchRotate updates values (and optional TTLs) for multiple existing secrets atomically.
+// Non-existent secrets or items failing validation are recorded in Errors and skipped.
+// The vault must be unlocked. All valid rotations persist in one write.
+func (v *Vault) BatchRotate(items []BatchRotateItem) (BatchRotateResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_rotate", "", "failure")
+		return BatchRotateResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_rotate", "", "failure")
+		return BatchRotateResult{}, err
+	}
+	now := v.now().UTC()
+	result := BatchRotateResult{Rotated: []string{}}
+	type validRotate struct {
+		name string
+		rec  record
+	}
+	rotations := make([]validRotate, 0, len(items))
+	for _, item := range items {
+		if err := validateName(item.Name); err != nil {
+			result.Errors = append(result.Errors, item.Name+": invalid name")
+			continue
+		}
+		if item.Value == "" || len(item.Value) > maxSecretSize {
+			result.Errors = append(result.Errors, item.Name+": invalid value")
+			continue
+		}
+		if item.TTL < 0 {
+			result.Errors = append(result.Errors, item.Name+": invalid ttl")
+			continue
+		}
+		r, ok := v.data.Secrets[item.Name]
+		if !ok {
+			result.Errors = append(result.Errors, item.Name+": not found")
+			continue
+		}
+		r.Value = item.Value
+		r.UpdatedAt = now
+		if item.TTL > 0 {
+			r.ExpiresAt = now.Add(item.TTL)
+		}
+		rotations = append(rotations, validRotate{name: item.Name, rec: r})
+	}
+	if len(rotations) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("batch_rotate", "", "success")
+		return result, nil
+	}
+	for _, rot := range rotations {
+		v.data.Secrets[rot.name] = rot.rec
+		result.Rotated = append(result.Rotated, rot.name)
+	}
+	sort.Strings(result.Rotated)
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("batch_rotate", "", "success")
+	} else {
+		v.recordAuditLocked("batch_rotate", "", "failure")
+		return BatchRotateResult{}, err
+	}
+	return result, nil
+}
+
+// BatchMetadataResult holds metadata for a requested secret without revealing its value.
+type BatchMetadataResult struct {
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+	Expired   bool      `json:"expired,omitempty"`
+	Error     string    `json:"error,omitempty"`
+}
+
+// BatchMetadata returns metadata for multiple secret names atomically without exposing secret values.
+// Non-existent or invalid names populate the Error field per entry.
+func (v *Vault) BatchMetadata(names []string) ([]BatchMetadataResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_metadata", "", "failure")
+		return nil, ErrLocked
+	}
+	now := v.now()
+	results := make([]BatchMetadataResult, 0, len(names))
+	for _, name := range names {
+		res := BatchMetadataResult{Name: name}
+		if err := validateName(name); err != nil {
+			res.Error = err.Error()
+			results = append(results, res)
+			continue
+		}
+		r, ok := v.data.Secrets[name]
+		if !ok {
+			res.Error = os.ErrNotExist.Error()
+			results = append(results, res)
+			continue
+		}
+		res.CreatedAt = r.CreatedAt
+		res.UpdatedAt = r.UpdatedAt
+		res.ExpiresAt = r.ExpiresAt
+		if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
+			res.Expired = true
+		}
+		results = append(results, res)
+	}
+	v.lastUsed = v.now()
+	v.recordAuditLocked("batch_metadata", "", "success")
+	return results, nil
+}
+
 // SearchSecrets returns metadata for secrets matching the given filter.
 // If prefix is non-empty, only secrets whose name starts with the prefix
 // (case-sensitive) are returned. If substring is non-empty and prefix is
@@ -1093,11 +1227,14 @@ type AuditFilter struct {
 	Action string
 	Status string
 	Since  time.Time
+	Until  time.Time
+	Limit  int
 }
 
 // AuditLogFiltered returns audit events matching the given filters. Empty
-// filter fields match all values. Since filters events at or after the given
-// time. The result is a copy; the internal audit log is not modified.
+// filter fields match all values. Since/Until filter events in the given time
+// window. Limit caps the number of returned events (0 means unlimited).
+// The result is a copy; the internal audit log is not modified.
 func (v *Vault) AuditLogFiltered(filter AuditFilter) []AuditEvent {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -1112,7 +1249,13 @@ func (v *Vault) AuditLogFiltered(filter AuditFilter) []AuditEvent {
 		if !filter.Since.IsZero() && evt.Timestamp.Before(filter.Since) {
 			continue
 		}
+		if !filter.Until.IsZero() && evt.Timestamp.After(filter.Until) {
+			continue
+		}
 		res = append(res, evt)
+	}
+	if filter.Limit > 0 && len(res) > filter.Limit {
+		res = res[:filter.Limit]
 	}
 	return res
 }
