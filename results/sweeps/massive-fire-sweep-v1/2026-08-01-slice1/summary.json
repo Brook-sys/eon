@@ -1,0 +1,10 @@
+{
+ "calls_ok": 0,
+ "calls_error": 3,
+ "latency_ms": {
+  "p50": null,
+  "p95": null,
+  "max": null
+ },
+ "by_model": {}
+}

@@ -1,0 +1,72 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "slice1: all 8 models x 3 tasks temp0.0 rep1 + 2 small models x3 extra reps extract-date",
+ "executed_at": "2026-08-01T22:04:34.087084+00:00",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 3,
+ "calls_ok": 0,
+ "calls_error": 3,
+ "trials": [
+  {
+   "i": 0,
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "extract-date",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cfa632070844c6e4",
+   "outcome": "error",
+   "error": {
+    "http_status": 403,
+    "latency_ms": 129.2,
+    "retry_after": null,
+    "error_class": "auth",
+    "error_body": "error code: 1010\n"
+   }
+  },
+  {
+   "i": 1,
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "synthesize-counterexample",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "925c21e85afcb398",
+   "outcome": "error",
+   "error": {
+    "http_status": 403,
+    "latency_ms": 108.3,
+    "retry_after": null,
+    "error_class": "auth",
+    "error_body": "error code: 1010\n"
+   }
+  },
+  {
+   "i": 2,
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "detect-conflict",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "a78c6a50df26140b",
+   "outcome": "error",
+   "error": {
+    "http_status": 403,
+    "latency_ms": 109.8,
+    "retry_after": null,
+    "error_class": "auth",
+    "error_body": "error code: 1010\n"
+   }
+  }
+ ]
+}

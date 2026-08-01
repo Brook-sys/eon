@@ -1,0 +1,68 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "2026-08-01-slice2",
+ "executed_at": "2026-08-01T22:45:41Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 63,
+ "calls_ok": 63,
+ "calls_error": 0,
+ "latency_ms": {
+  "p50": 515.4,
+  "p95": 952.4,
+  "max": 1206.6
+ },
+ "by_model": {
+  "groq/llama-3.3-70b-versatile": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 9
+  },
+  "groq/llama-3.1-8b-instant": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 3
+  },
+  "groq/openai/gpt-oss-20b": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 9
+  },
+  "groq/openai/gpt-oss-120b": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 9
+  },
+  "groq/qwen/qwen3.6-27b": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 0
+  },
+  "groq/allam-2-7b": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 6
+  },
+  "nvidia_nim/meta/llama-3.1-8b-instruct": {
+   "calls": 9,
+   "ok": 9,
+   "err": 0,
+   "correct": 6
+  }
+ }
+}
