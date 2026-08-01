@@ -1,0 +1,39 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-repair-extract",
+ "executed_at": "2026-08-01T23:23:05Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "max_tokens_per_call_actual": 128,
+ "calls_attempted": 24,
+ "calls_ok": 24,
+ "calls_error": 0,
+ "latency_ms": {
+  "p50": 422.1,
+  "p95": 616.6,
+  "max": 623.1
+ },
+ "by_model": {
+  "groq/llama-3.1-8b-instant": {
+   "calls": 12,
+   "ok": 12,
+   "err": 0,
+   "correct": 12
+  },
+  "groq/openai/gpt-oss-20b": {
+   "calls": 12,
+   "ok": 12,
+   "err": 0,
+   "correct": 9
+  }
+ }
+}

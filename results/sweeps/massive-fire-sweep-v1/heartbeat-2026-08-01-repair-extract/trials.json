@@ -1,0 +1,753 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-repair-extract",
+ "executed_at": "2026-08-01T23:23:05Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 24,
+ "calls_ok": 24,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 379.8,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 402.5,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 312.7,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 317.6,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 549.1,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 558.7,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 328.1,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 309.1,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 319.0,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 623.1,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 340.7,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 340.8,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 592.4,
+   "prompt_tokens": 238,
+   "completion_tokens": 110,
+   "total_tokens": 348,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 587.0,
+   "prompt_tokens": 238,
+   "completion_tokens": 110,
+   "total_tokens": 348,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 407.5,
+   "prompt_tokens": 238,
+   "completion_tokens": 110,
+   "total_tokens": 348,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 461.2,
+   "prompt_tokens": 238,
+   "completion_tokens": 116,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 391.8,
+   "prompt_tokens": 238,
+   "completion_tokens": 115,
+   "total_tokens": 353,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "repair-stale-claim",
+   "temperature": 0.7,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 419.3,
+   "prompt_tokens": 238,
+   "completion_tokens": 119,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 425.0,
+   "prompt_tokens": 209,
+   "completion_tokens": 126,
+   "total_tokens": 335,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 474.5,
+   "prompt_tokens": 209,
+   "completion_tokens": 126,
+   "total_tokens": 335,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 430.8,
+   "prompt_tokens": 209,
+   "completion_tokens": 126,
+   "total_tokens": 335,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 568.4,
+   "prompt_tokens": 209,
+   "completion_tokens": 128,
+   "total_tokens": 337,
+   "finish_reason": "length",
+   "response_text": "",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 597.0,
+   "prompt_tokens": 209,
+   "completion_tokens": 128,
+   "total_tokens": 337,
+   "finish_reason": "length",
+   "response_text": "DATE: 2025-11",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.7,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 427.8,
+   "prompt_tokens": 209,
+   "completion_tokens": 128,
+   "total_tokens": 337,
+   "finish_reason": "length",
+   "response_text": "DATE: 2025-",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  }
+ ]
+}

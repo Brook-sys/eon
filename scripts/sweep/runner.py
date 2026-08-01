@@ -109,6 +109,8 @@ def main():
     ap.add_argument("--temps", default="0.0")
     ap.add_argument("--reps", type=int, default=1)
     ap.add_argument("--tasks", default="")
+    ap.add_argument("--max-tokens", type=int, default=0,
+                    help="override max_tokens_per_call (0=use manifest limit)")
     args = ap.parse_args()
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -138,6 +140,9 @@ def main():
     if missing:
         sys.exit("provider id not in manifest: " + repr(missing))
 
+    max_tokens = args.max_tokens if args.max_tokens > 0 else L["max_tokens_per_call"]
+    if args.max_tokens > L["max_tokens_per_call"] * 4:
+        sys.exit(f"--max-tokens {args.max_tokens} exceeds 4x manifest limit {L['max_tokens_per_call']}")
     jobs = []
     for prov_id, model in ok_models:
         for task in task_list:
@@ -156,7 +161,7 @@ def main():
         nonlocal calls_ok
         prov_id, model, task, temp, rep = job
         r = call_model(providers[prov_id], model, task["prompt"], temp,
-                       L["max_tokens_per_call"], L["timeout_per_call_seconds"],
+                       max_tokens, L["timeout_per_call_seconds"],
                        budget, L["max_retries_per_call"])
         rec = {"provider": prov_id, "model": model, "task": task["id"], "temperature": temp,
                "rep": rep, "prompt_sha256": hashlib.sha256(task["prompt"].encode()).hexdigest()[:16],
@@ -195,6 +200,7 @@ def main():
         "slice": args.slice_name,
         "executed_at": now_iso(),
         "declared_limits": L,
+        "max_tokens_per_call_actual": max_tokens,
         "calls_attempted": len(results),
         "calls_ok": calls_ok,
         "calls_error": len(results) - calls_ok,

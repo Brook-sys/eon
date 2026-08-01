@@ -25,6 +25,22 @@
       "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines in this format.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.",
       "expected": {"conflict": "YES", "pair": "O-1/O-2"},
       "scoring": "exact_lines:CONFLICT,PAIR"
+    },
+    {
+      "id": "repair-stale-claim",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic repair agent. A cited claim view has become stale because new evidence arrived. You must produce the corrected view. Respond with EXACTLY three lines in this format.\nCLAIM: <id>\nSTATUS: <STALE|REPAIRED>\nEVIDENCE_COUNT: <integer>\n\nFacts:\n- Claim C-14 had 2 evidence links when its view was generated.\n- A new evidence link E-27 was added, making the total 3.\n- The view was marked stale because evidence delta exceeded the threshold.\n\nConstraints:\n- Report the claim ID, the new status after repair, and the total evidence count.\n- After repair, the status becomes REPAIRED.\n- The total evidence count is 3 (2 original + 1 new).\n- Output only the three lines, nothing else.",
+      "expected": {"claim": "C-14", "status": "REPAIRED", "evidence_count": "3"},
+      "scoring": "exact_lines:CLAIM,STATUS,EVIDENCE_COUNT"
+    },
+    {
+      "id": "extract-date-reinforced",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"DATE: \".\nYour second line MUST begin with the exact prefix \"SOURCE: \".\nDo not add explanations. Do not add markdown.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
+      "expected": {"date": "2025-11-03", "source": "S-17"},
+      "scoring": "exact_lines:DATE,SOURCE"
     }
   ]
 }
