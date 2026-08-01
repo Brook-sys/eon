@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "massive-fire-sweep-v1",
+  "limits": {
+    "max_calls_total": 480,
+    "max_calls_per_model": 60,
+    "concurrency": 2,
+    "timeout_per_call_seconds": 45,
+    "max_tokens_per_call": 256,
+    "inter_call_min_delay_ms": 250,
+    "retry_after_429_respect_header": true,
+    "max_retries_per_call": 2,
+    "budget_usd_ceiling": 0
+  },
+  "temperatures": [0.0, 0.3, 0.7, 1.0],
+  "repetitions": 5,
+  "providers": [
+    {
+      "id": "groq",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env": "GROQ_API_KEY",
+      "models": [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.6-27b"
+      ]
+    },
+    {
+      "id": "nvidia_nim",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "models": [
+        "meta/llama-3.1-8b-instruct",
+        "meta/llama-3.3-70b-instruct",
+        "mistralai/mistral-7b-instruct-v0.3",
+        "deepseek-ai/deepseek-v4-flash"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "name": "massive-fire-sweep-v1",
+  "tasks": [
+    {
+      "id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
+      "expected": {"date": "2025-11-03", "source": "S-17"},
+      "scoring": "exact_lines:DATE,SOURCE"
+    },
+    {
+      "id": "synthesize-counterexample",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic reasoner. Classify whether the evidence supports the universal claim, and identify the decisive observation. Respond with EXACTLY two lines in this format.\nSUPPORT: <YES|NO>\nOBSERVATION: <id>\n\nFacts:\n- Claim C-8: every measured restart resumed without duplicating an external effect.\n- Observation O-11: 29 measured restarts resumed with exactly one external effect.\n- Observation O-12: one measured restart produced two external effects after recovery.\n\nConstraints:\n- A single counterexample defeats the universal claim.\n- Output only the two lines, nothing else.",
+      "expected": {"support": "NO", "observation": "O-12"},
+      "scoring": "exact_lines:SUPPORT,OBSERVATION"
+    },
+    {
+      "id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines in this format.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.",
+      "expected": {"conflict": "YES", "pair": "O-1/O-2"},
+      "scoring": "exact_lines:CONFLICT,PAIR"
+    }
+  ]
+}
