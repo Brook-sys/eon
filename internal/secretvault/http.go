@@ -39,6 +39,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /secrets/{name}/exists", h.secretExists)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
+	mux.HandleFunc("POST /secrets/{name}/copy", h.copySecret)
+	mux.HandleFunc("POST /secrets/{name}/rename", h.renameSecret)
 	mux.HandleFunc("POST /purge-expired", h.purgeExpired)
 	mux.HandleFunc("DELETE /secrets", h.deleteAllSecrets)
 	mux.HandleFunc("PUT /secrets/{name}", h.put)
@@ -96,6 +98,14 @@ type batchExistsRequest struct {
 
 type bulkTouchRequest struct {
 	Items []BulkTouchItem `json:"items"`
+}
+
+type copyRequest struct {
+	Destination string `json:"destination"`
+}
+
+type renameRequest struct {
+	Destination string `json:"destination"`
 }
 
 func (h HTTP) status(w http.ResponseWriter, _ *http.Request) {
@@ -296,6 +306,36 @@ func (h HTTP) rotateSecret(w http.ResponseWriter, r *http.Request) {
 		err = h.Vault.Rotate(r.PathValue("name"), q.Value)
 	}
 	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusNoContent, nil)
+}
+func (h HTTP) copySecret(w http.ResponseWriter, r *http.Request) {
+	var q copyRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if q.Destination == "" {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "destination is required"}})
+		return
+	}
+	if err := h.Vault.CopySecret(r.PathValue("name"), q.Destination); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusCreated, map[string]any{"status": "created", "source": r.PathValue("name"), "destination": q.Destination})
+}
+func (h HTTP) renameSecret(w http.ResponseWriter, r *http.Request) {
+	var q renameRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if q.Destination == "" {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "destination is required"}})
+		return
+	}
+	if err := h.Vault.RenameSecret(r.PathValue("name"), q.Destination); err != nil {
 		writeErr(w, err)
 		return
 	}

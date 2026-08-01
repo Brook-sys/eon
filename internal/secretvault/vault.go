@@ -1168,6 +1168,117 @@ func (v *Vault) BatchMetadata(names []string) ([]BatchMetadataResult, error) {
 	return results, nil
 }
 
+// CopySecret atomically copies the value of an existing secret to a new
+// name. The destination record starts a fresh lifecycle: CreatedAt and
+// UpdatedAt are set to the current time. An overwrite of an existing
+// destination is allowed, matching the upsert semantics of Put; the
+// destination receives the source value verbatim, including any expiration
+// timestamp. Expired-but-not-yet-purged sources may still be copied so a
+// caller can rescue credentials before the next purge sweep, mirroring the
+// semantics of Exists, ListSecrets, and SecretMetadata. The copy is saved
+// as a single atomic file write so a crash cannot leave a partial state.
+func (v *Vault) CopySecret(srcName, dstName string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("copy", dstName, "failure")
+		return ErrLocked
+	}
+	if err := validateName(srcName); err != nil {
+		v.recordAuditLocked("copy", srcName, "failure")
+		return err
+	}
+	if err := validateName(dstName); err != nil {
+		v.recordAuditLocked("copy", dstName, "failure")
+		return err
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("copy", dstName, "failure")
+		return err
+	}
+	src, ok := v.data.Secrets[srcName]
+	if !ok {
+		v.recordAuditLocked("copy", srcName, "failure")
+		return os.ErrNotExist
+	}
+	now := v.now().UTC()
+	v.data.Secrets[dstName] = record{
+		Value:     src.Value,
+		CreatedAt: now,
+		UpdatedAt: now,
+		ExpiresAt: src.ExpiresAt,
+	}
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("copy", dstName, "success")
+	} else {
+		v.recordAuditLocked("copy", dstName, "failure")
+	}
+	return err
+}
+
+// RenameSecret atomically renames an existing secret from srcName to
+// dstName. The renamed record keeps its original CreatedAt; UpdatedAt is
+// advanced to the current time. An overwrite of an existing destination
+// is allowed, matching the upsert semantics of Put; the destination takes
+// the source value verbatim, including any expiration timestamp.
+// Expired-but-not-yet-purged sources may still be renamed so a caller can
+// reorganize credentials before the next purge sweep. The rename is saved
+// as a single atomic file write so a crash cannot leave a partial state.
+func (v *Vault) RenameSecret(srcName, dstName string) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("rename", dstName, "failure")
+		return ErrLocked
+	}
+	if err := validateName(srcName); err != nil {
+		v.recordAuditLocked("rename", srcName, "failure")
+		return err
+	}
+	if err := validateName(dstName); err != nil {
+		v.recordAuditLocked("rename", dstName, "failure")
+		return err
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("rename", dstName, "failure")
+		return err
+	}
+	src, ok := v.data.Secrets[srcName]
+	if !ok {
+		v.recordAuditLocked("rename", srcName, "failure")
+		return os.ErrNotExist
+	}
+	now := v.now().UTC()
+	dst := record{
+		Value:     src.Value,
+		CreatedAt: src.CreatedAt,
+		UpdatedAt: now,
+		ExpiresAt: src.ExpiresAt,
+	}
+	// If src == dst, this is effectively a metadata refresh (touch updatedAt);
+	// the delete is a no-op when the names are the same.
+	delete(v.data.Secrets, srcName)
+	v.data.Secrets[dstName] = dst
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("rename", dstName, "success")
+	} else {
+		v.recordAuditLocked("rename", dstName, "failure")
+	}
+	return err
+}
+
 // SearchSecrets returns metadata for secrets matching the given filter.
 // If prefix is non-empty, only secrets whose name starts with the prefix
 // (case-sensitive) are returned. If substring is non-empty and prefix is

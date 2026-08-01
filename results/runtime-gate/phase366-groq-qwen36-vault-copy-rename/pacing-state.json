@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase366-groq-qwen36-vault-copy-rename",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-01T19:04:43.460121231Z"
+}
