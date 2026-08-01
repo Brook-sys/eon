@@ -34,6 +34,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
 	mux.HandleFunc("POST /secrets/batch-metadata", h.batchMetadata)
 	mux.HandleFunc("POST /secrets/batch-exists", h.batchExists)
+	mux.HandleFunc("POST /secrets/batch-copy", h.batchCopy)
+	mux.HandleFunc("GET /secrets/expiring-soon", h.expiringSoon)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}/exists", h.secretExists)
@@ -102,6 +104,10 @@ type bulkTouchRequest struct {
 
 type copyRequest struct {
 	Destination string `json:"destination"`
+}
+
+type batchCopyRequest struct {
+	Items []BatchCopyItem `json:"items"`
 }
 
 type renameRequest struct {
@@ -463,6 +469,39 @@ func (h HTTP) batchExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"results": results})
+}
+func (h HTTP) batchCopy(w http.ResponseWriter, r *http.Request) {
+	var q batchCopyRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 copy items"}})
+		return
+	}
+	result, err := h.Vault.BatchCopy(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+func (h HTTP) expiringSoon(w http.ResponseWriter, r *http.Request) {
+	window := 24 * time.Hour
+	if raw := strings.TrimSpace(r.URL.Query().Get("window")); raw != "" {
+		dur, parseErr := time.ParseDuration(raw)
+		if parseErr != nil {
+			writeErr(w, ErrInvalidTTL)
+			return
+		}
+		window = dur
+	}
+	items, err := h.Vault.ExpiringSoon(window)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"window": window.String(), "items": items})
 }
 func (h HTTP) bulkTouch(w http.ResponseWriter, r *http.Request) {
 	var q bulkTouchRequest

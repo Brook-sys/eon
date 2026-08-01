@@ -1597,6 +1597,181 @@ func (v *Vault) RotateWithTTL(name, newValue string, ttl time.Duration) error {
 	return v.RotateWithExpiry(name, newValue, now.Add(ttl))
 }
 
+// BatchCopyItem describes one source→destination copy inside a BatchCopy
+// call. Both names are validated with the same rules as CopySecret.
+type BatchCopyItem struct {
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+}
+
+// BatchCopyResult summarizes a BatchCopy operation. Copied lists the
+// destination names actually written; Errors accumulates per-item failures
+// in the stable form "source: reason".
+type BatchCopyResult struct {
+	Copied []string `json:"copied"`
+	Errors []string `json:"errors,omitempty"`
+}
+
+// BatchCopy copies multiple secrets in a single atomic vault mutation.
+//
+// Each item copies Source verbatim (value and ExpiresAt) into Destination
+// with freshly stamped CreatedAt/UpdatedAt timestamps, matching the
+// single-copy semantics of CopySecret. Items with invalid names, missing
+// sources, or source==destination are reported in Errors without aborting
+// the remaining valid copies. When at least one copy succeeds the vault is
+// reloaded under the current key and persisted as one atomic file write, so
+// a crash cannot leave a partially saved destination set; the in-memory
+// state is only mutated when the save succeeds (save-and-commit discipline:
+// failures return the error and leave the in-memory map untouched for the
+// mutated names, mirroring BatchPut/BatchRotate). Expired-but-not-yet-purged
+// sources remain copyable so operators can rescue credentials before the
+// next purge sweep, exactly like CopySecret.
+func (v *Vault) BatchCopy(items []BatchCopyItem) (BatchCopyResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_copy", "", "failure")
+		return BatchCopyResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_copy", "", "failure")
+		return BatchCopyResult{}, err
+	}
+	now := v.now().UTC()
+	result := BatchCopyResult{Copied: []string{}}
+	type pendingCopy struct {
+		dst string
+		rec record
+	}
+	pending := make([]pendingCopy, 0, len(items))
+	seenDst := map[string]struct{}{}
+	for _, item := range items {
+		if err := validateName(item.Source); err != nil {
+			result.Errors = append(result.Errors, item.Source+": invalid source name")
+			continue
+		}
+		if err := validateName(item.Destination); err != nil {
+			result.Errors = append(result.Errors, item.Destination+": invalid destination name")
+			continue
+		}
+		if item.Source == item.Destination {
+			result.Errors = append(result.Errors, item.Destination+": source equals destination")
+			continue
+		}
+		if _, dup := seenDst[item.Destination]; dup {
+			result.Errors = append(result.Errors, item.Destination+": duplicate destination in batch")
+			continue
+		}
+		src, ok := v.data.Secrets[item.Source]
+		if !ok {
+			result.Errors = append(result.Errors, item.Source+": not found")
+			continue
+		}
+		seenDst[item.Destination] = struct{}{}
+		pending = append(pending, pendingCopy{dst: item.Destination, rec: record{
+			Value:     src.Value,
+			CreatedAt: now,
+			UpdatedAt: now,
+			ExpiresAt: src.ExpiresAt,
+		}})
+	}
+	if len(pending) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("batch_copy", "", "success")
+		return result, nil
+	}
+	// Stage the mutation in a copy of the map so a failed save cannot leave
+	// the in-memory state divergent from the on-disk vault. The original
+	// map is only replaced after saveWithCurrentKeyLocked succeeds; the
+	// helper serializes v.data, so we swap the map, save, and roll back the
+	// swap on error (the vault remains exclusively locked here, so no other
+	// goroutine can observe the transient state).
+	original := v.data.Secrets
+	staged := make(map[string]record, len(original)+len(pending))
+	for name, r := range original {
+		staged[name] = r
+	}
+	for _, p := range pending {
+		staged[p.dst] = p.rec
+	}
+	v.data.Secrets = staged
+	err := v.saveWithCurrentKeyLocked()
+	if err != nil {
+		v.data.Secrets = original
+		v.recordAuditLocked("batch_copy", "", "failure")
+		return BatchCopyResult{}, err
+	}
+	for _, p := range pending {
+		result.Copied = append(result.Copied, p.dst)
+	}
+	sort.Strings(result.Copied)
+	v.lastUsed = v.now()
+	v.recordAuditLocked("batch_copy", "", "success")
+	return result, nil
+}
+
+// ExpiringSoonItem reports one secret whose expiration timestamp falls
+// within the lookahead window, together with the remaining duration.
+// Secret values are never exposed.
+type ExpiringSoonItem struct {
+	Name      string    `json:"name"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Remaining string    `json:"remaining"`
+}
+
+// ExpiringSoon returns metadata for unlocked-vault secrets that carry an
+// expiration timestamp falling within (0, window] from the current time,
+// sorted by ExpiresAt ascending (ties broken by name) for deterministic
+// alerting. Secrets without expiration or already past it are excluded —
+// the latter remain visible via ListSecrets/SecretMetadata until purged —
+// and a non-positive window yields an empty result. The check is purely
+// in-memory: no reload or save, no per-name audit noise; a single
+// "expiring_soon" audit event marks the diagnostic sweep. Callers can use
+// this to schedule proactive rotation before credentials lapse.
+func (v *Vault) ExpiringSoon(window time.Duration) ([]ExpiringSoonItem, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("expiring_soon", "", "failure")
+		return nil, ErrLocked
+	}
+	res := []ExpiringSoonItem{}
+	if window > 0 {
+		now := v.now().UTC()
+		for name, r := range v.data.Secrets {
+			if r.ExpiresAt.IsZero() {
+				continue
+			}
+			exp := r.ExpiresAt.UTC()
+			if !now.Before(exp) {
+				continue
+			}
+			if exp.After(now.Add(window)) {
+				continue
+			}
+			res = append(res, ExpiringSoonItem{
+				Name:      name,
+				ExpiresAt: exp,
+				Remaining: exp.Sub(now).Round(time.Second).String(),
+			})
+		}
+		sort.Slice(res, func(i, j int) bool {
+			if !res[i].ExpiresAt.Equal(res[j].ExpiresAt) {
+				return res[i].ExpiresAt.Before(res[j].ExpiresAt)
+			}
+			return res[i].Name < res[j].Name
+		})
+	}
+	v.lastUsed = v.now()
+	v.recordAuditLocked("expiring_soon", "", "success")
+	return res, nil
+}
+
 func (v *Vault) ChangePassword(oldPassword, newPassword string) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
