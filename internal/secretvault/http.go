@@ -19,6 +19,7 @@ func (h HTTP) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", h.status)
 	mux.HandleFunc("GET /audit", h.auditLog)
+	mux.HandleFunc("GET /audit/summary", h.auditSummary)
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
 	mux.HandleFunc("POST /lock", h.lock)
@@ -203,6 +204,35 @@ func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
 		filter.Limit = lim
 	}
 	write(w, http.StatusOK, h.Vault.AuditLogFiltered(filter))
+}
+
+// auditSummary returns aggregate counters (total/matched events, per-action
+// and per-status distribution, distinct secret count, first/last timestamps)
+// for audit events matching the given query filters. It never exposes secret
+// values and works in any lock state. The `limit` parameter is ignored for
+// aggregation, keeping the summary complete.
+func (h HTTP) auditSummary(w http.ResponseWriter, r *http.Request) {
+	filter := AuditFilter{
+		Action: strings.TrimSpace(r.URL.Query().Get("action")),
+		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+	}
+	if since := strings.TrimSpace(r.URL.Query().Get("since")); since != "" {
+		parsed, err := time.Parse(time.RFC3339, since)
+		if err != nil {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "since must be RFC3339"}})
+			return
+		}
+		filter.Since = parsed
+	}
+	if until := strings.TrimSpace(r.URL.Query().Get("until")); until != "" {
+		parsed, err := time.Parse(time.RFC3339, until)
+		if err != nil {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "until must be RFC3339"}})
+			return
+		}
+		filter.Until = parsed
+	}
+	write(w, http.StatusOK, h.Vault.AuditSummary(filter))
 }
 func (h HTTP) stats(w http.ResponseWriter, _ *http.Request) {
 	write(w, http.StatusOK, h.Vault.Stats())

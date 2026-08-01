@@ -1231,6 +1231,65 @@ type AuditFilter struct {
 	Limit  int
 }
 
+// AuditSummary aggregates filtered audit events for operator diagnostics.
+// Counts expose action and status distribution without revealing secret
+// values, making the snapshot safe in any lock state.
+type AuditSummary struct {
+	Filter          AuditFilter    `json:"filter"`
+	TotalEvents     int            `json:"total_events"`
+	MatchedEvents   int            `json:"matched_events"`
+	Actions         map[string]int `json:"actions"`
+	Statuses        map[string]int `json:"statuses"`
+	DistinctSecrets int            `json:"distinct_secrets"`
+	FirstEventAt    time.Time      `json:"first_event_at,omitempty"`
+	LastEventAt     time.Time      `json:"last_event_at,omitempty"`
+}
+
+// AuditSummary returns aggregate counters for audit events matching the
+// given filter. It does not require the vault to be unlocked because it
+// inspects only in-memory audit metadata, never decrypted secret material.
+// The Limit filter field is ignored for aggregation: every matching event
+// contributes to the counters.
+func (v *Vault) AuditSummary(filter AuditFilter) AuditSummary {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	res := AuditSummary{
+		Filter:   filter,
+		Actions:  map[string]int{},
+		Statuses: map[string]int{},
+	}
+	res.TotalEvents = len(v.audit)
+	secretNames := map[string]struct{}{}
+	for _, evt := range v.audit {
+		if filter.Action != "" && evt.Action != filter.Action {
+			continue
+		}
+		if filter.Status != "" && evt.Status != filter.Status {
+			continue
+		}
+		if !filter.Since.IsZero() && evt.Timestamp.Before(filter.Since) {
+			continue
+		}
+		if !filter.Until.IsZero() && evt.Timestamp.After(filter.Until) {
+			continue
+		}
+		res.MatchedEvents++
+		res.Actions[evt.Action]++
+		res.Statuses[evt.Status]++
+		if evt.SecretName != "" {
+			secretNames[evt.SecretName] = struct{}{}
+		}
+		if res.FirstEventAt.IsZero() || evt.Timestamp.Before(res.FirstEventAt) {
+			res.FirstEventAt = evt.Timestamp
+		}
+		if res.LastEventAt.IsZero() || evt.Timestamp.After(res.LastEventAt) {
+			res.LastEventAt = evt.Timestamp
+		}
+	}
+	res.DistinctSecrets = len(secretNames)
+	return res
+}
+
 // AuditLogFiltered returns audit events matching the given filters. Empty
 // filter fields match all values. Since/Until filter events in the given time
 // window. Limit caps the number of returned events (0 means unlimited).

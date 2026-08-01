@@ -151,6 +151,151 @@ func TestVault_AuditLogFiltered(t *testing.T) {
 	}
 }
 
+func TestVault_AuditSummaryAndHTTP(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	vaultPath := filepath.Join(dir, "summary_vault.json")
+
+	t0 := time.Date(2026, 8, 1, 10, 0, 0, 0, time.UTC)
+	curr := t0
+	clock := func() time.Time { return curr }
+
+	v, err := NewWithClock(vaultPath, clock)
+	if err != nil {
+		t.Fatalf("NewWithClock failed: %v", err)
+	}
+	if err := v.Initialize("master-password-12345"); err != nil {
+		t.Fatalf("Initialize failed: %v", err)
+	}
+
+	curr = t0.Add(1 * time.Minute)
+	if err := v.Put("alpha", "value-alpha"); err != nil {
+		t.Fatalf("Put alpha failed: %v", err)
+	}
+	curr = t0.Add(2 * time.Minute)
+	if err := v.Put("beta", "value-beta"); err != nil {
+		t.Fatalf("Put beta failed: %v", err)
+	}
+	curr = t0.Add(3 * time.Minute)
+	if _, err := v.Resolve("missing"); err == nil {
+		t.Fatalf("expected Resolve missing to fail")
+	}
+	curr = t0.Add(4 * time.Minute)
+	if err := v.Delete("alpha"); err != nil {
+		t.Fatalf("Delete alpha failed: %v", err)
+	}
+
+	// Unfiltered summary
+	sum := v.AuditSummary(AuditFilter{})
+	if sum.MatchedEvents != sum.TotalEvents {
+		t.Fatalf("expected MatchedEvents=%d, got %d", sum.TotalEvents, sum.MatchedEvents)
+	}
+	if sum.TotalEvents < 5 { // initialize + 2 puts + 1 get(fail) + 1 delete
+		t.Fatalf("expected >=5 total events, got %d", sum.TotalEvents)
+	}
+	if sum.Actions["put"] != 2 {
+		t.Fatalf("expected 2 put events, got %d", sum.Actions["put"])
+	}
+	if sum.Statuses["failure"] < 1 {
+		t.Fatalf("expected >=1 failure status, got %d", sum.Statuses["failure"])
+	}
+	if sum.DistinctSecrets < 3 { // alpha, beta, missing (missing may or may not be recorded)
+		t.Fatalf("expected >=3 distinct secrets, got %d", sum.DistinctSecrets)
+	}
+	if sum.FirstEventAt.After(sum.LastEventAt) {
+		t.Fatalf("FirstEventAt %v after LastEventAt %v", sum.FirstEventAt, sum.LastEventAt)
+	}
+	if !sum.FirstEventAt.Equal(t0) {
+		t.Fatalf("expected FirstEventAt=%v, got %v", t0, sum.FirstEventAt)
+	}
+
+	// Filtered by action=put
+	putSum := v.AuditSummary(AuditFilter{Action: "put"})
+	if putSum.MatchedEvents != 2 {
+		t.Fatalf("expected 2 matched put events, got %d", putSum.MatchedEvents)
+	}
+	if len(putSum.Actions) != 1 || putSum.Actions["put"] != 2 {
+		t.Fatalf("expected only put action, got %+v", putSum.Actions)
+	}
+	if putSum.DistinctSecrets != 2 {
+		t.Fatalf("expected 2 distinct secrets in puts, got %d", putSum.DistinctSecrets)
+	}
+
+	// Filtered by status=failure
+	failSum := v.AuditSummary(AuditFilter{Status: "failure"})
+	if failSum.MatchedEvents < 1 {
+		t.Fatalf("expected >=1 matched failure events, got %d", failSum.MatchedEvents)
+	}
+	if len(failSum.Statuses) != 1 || failSum.Statuses["failure"] == 0 {
+		t.Fatalf("expected only failure status, got %+v", failSum.Statuses)
+	}
+
+	// Time window filter: only t0+1m..t0+2m (both puts)
+	winSum := v.AuditSummary(AuditFilter{Since: t0.Add(1 * time.Minute), Until: t0.Add(2 * time.Minute)})
+	if winSum.MatchedEvents != 2 {
+		t.Fatalf("expected 2 matched events in window, got %d", winSum.MatchedEvents)
+	}
+
+	// Limit field must be ignored by aggregation
+	limSum := v.AuditSummary(AuditFilter{Limit: 1})
+	if limSum.MatchedEvents != sum.MatchedEvents {
+		t.Fatalf("Limit must be ignored: expected %d, got %d", sum.MatchedEvents, limSum.MatchedEvents)
+	}
+
+	// Summary must not leak secret values
+	raw, _ := json.Marshal(sum)
+	if bytes.Contains(raw, []byte("value-alpha")) || bytes.Contains(raw, []byte("value-beta")) || bytes.Contains(raw, []byte("master-password")) {
+		t.Fatalf("AuditSummary leaked sensitive data: %s", raw)
+	}
+
+	// HTTP endpoint
+	srv := httptest.NewServer(HTTP{Vault: v}.Handler())
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/audit/summary")
+	if err != nil {
+		t.Fatalf("GET /audit/summary failed: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.StatusCode)
+	}
+	var httpSum AuditSummary
+	if err := json.NewDecoder(res.Body).Decode(&httpSum); err != nil {
+		t.Fatalf("decode summary failed: %v", err)
+	}
+	if httpSum.TotalEvents != sum.TotalEvents || httpSum.MatchedEvents != sum.MatchedEvents {
+		t.Fatalf("HTTP summary mismatch: %+v vs %+v", httpSum, sum)
+	}
+
+	// HTTP with filters
+	res2, err := http.Get(srv.URL + "/audit/summary?action=put&since=" + t0.UTC().Format(time.RFC3339))
+	if err != nil {
+		t.Fatalf("GET /audit/summary filtered failed: %v", err)
+	}
+	defer res2.Body.Close()
+	var filtSum AuditSummary
+	if err := json.NewDecoder(res2.Body).Decode(&filtSum); err != nil {
+		t.Fatalf("decode filtered summary failed: %v", err)
+	}
+	if filtSum.MatchedEvents != 2 {
+		t.Fatalf("expected 2 matched via HTTP, got %d", filtSum.MatchedEvents)
+	}
+
+	// Bad since/until should 400
+	for _, bad := range []string{"since=not-a-date", "until=oops"} {
+		badRes, err := http.Get(srv.URL + "/audit/summary?" + bad)
+		if err != nil {
+			t.Fatalf("GET with %s failed: %v", bad, err)
+		}
+		if badRes.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected 400 for %s, got %d", bad, badRes.StatusCode)
+		}
+		badRes.Body.Close()
+	}
+}
+
 func TestVault_BatchDelete(t *testing.T) {
 	t.Parallel()
 
