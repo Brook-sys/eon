@@ -1064,6 +1064,72 @@ type BatchMetadataResult struct {
 	Error     string    `json:"error,omitempty"`
 }
 
+// ExistsResult holds the outcome of a single name-existence check. It never
+// exposes secret values or metadata; callers learn only whether an
+// entry with that name is currently stored (expired entries still count as
+// existing until purged).
+type ExistsResult struct {
+	Name   string `json:"name"`
+	Exists bool   `json:"exists"`
+	Error  string `json:"error,omitempty"`
+}
+
+// BatchExists checks name existence for multiple secrets atomically without
+// exposing secret values or metadata. Invalid names populate Error per entry;
+// non-existent names report Exists=false with no Error. A record whose TTL has
+// elapsed but has not yet been purged still counts as existing, matching the
+// semantics of SecretMetadata and ListSecrets.
+func (v *Vault) BatchExists(names []string) ([]ExistsResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_exists", "", "failure")
+		return nil, ErrLocked
+	}
+	results := make([]ExistsResult, 0, len(names))
+	for _, name := range names {
+		res := ExistsResult{Name: name}
+		if err := validateName(name); err != nil {
+			res.Error = err.Error()
+			results = append(results, res)
+			continue
+		}
+		_, ok := v.data.Secrets[name]
+		res.Exists = ok
+		results = append(results, res)
+	}
+	v.lastUsed = v.now()
+	v.recordAuditLocked("batch_exists", "", "success")
+	return results, nil
+}
+
+// Exists reports whether a secret with the given name is currently stored,
+// without exposing its value or metadata. The vault must be unlocked. Unlike
+// SecretMetadata and Resolve, an expired-but-not-yet-purged record still
+// counts as existing — matching BatchExists, ListSecrets, and the purge
+// lifecycle — which makes Exists suitable as a cheap precheck before Put
+// conflict handling or Import planning. Invalid names return an error rather
+// than Exists=false so callers can distinguish a well-formed miss from
+// malformed input.
+func (v *Vault) Exists(name string) (bool, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("exists", name, "failure")
+		return false, ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("exists", name, "failure")
+		return false, err
+	}
+	_, ok := v.data.Secrets[name]
+	v.lastUsed = v.now()
+	v.recordAuditLocked("exists", name, "success")
+	return ok, nil
+}
+
 // BatchMetadata returns metadata for multiple secret names atomically without exposing secret values.
 // Non-existent or invalid names populate the Error field per entry.
 func (v *Vault) BatchMetadata(names []string) ([]BatchMetadataResult, error) {

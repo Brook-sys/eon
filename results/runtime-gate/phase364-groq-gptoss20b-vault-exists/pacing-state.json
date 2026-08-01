@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase364-groq-gptoss20b-vault-exists",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-01T16:30:28.358439886Z"
+}

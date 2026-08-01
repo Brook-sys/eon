@@ -33,8 +33,10 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
 	mux.HandleFunc("POST /secrets/batch-metadata", h.batchMetadata)
+	mux.HandleFunc("POST /secrets/batch-exists", h.batchExists)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
+	mux.HandleFunc("GET /secrets/{name}/exists", h.secretExists)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
 	mux.HandleFunc("POST /secrets/{name}/rotate", h.rotateSecret)
 	mux.HandleFunc("POST /purge-expired", h.purgeExpired)
@@ -85,6 +87,10 @@ type batchRotateRequest struct {
 }
 
 type batchMetadataRequest struct {
+	Names []string `json:"names"`
+}
+
+type batchExistsRequest struct {
 	Names []string `json:"names"`
 }
 
@@ -253,6 +259,14 @@ func (h HTTP) secretMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, entry)
 }
+func (h HTTP) secretExists(w http.ResponseWriter, r *http.Request) {
+	exists, err := h.Vault.Exists(r.PathValue("name"))
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"name": r.PathValue("name"), "exists": exists})
+}
 func (h HTTP) getSecret(w http.ResponseWriter, r *http.Request) {
 	val, err := h.Vault.Resolve(r.PathValue("name"))
 	if err != nil {
@@ -392,6 +406,23 @@ func (h HTTP) batchMetadata(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"metadata": results})
+}
+
+func (h HTTP) batchExists(w http.ResponseWriter, r *http.Request) {
+	var q batchExistsRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Names) == 0 || len(q.Names) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "names must contain 1 to 100 secret names"}})
+		return
+	}
+	results, err := h.Vault.BatchExists(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]any{"results": results})
 }
 func (h HTTP) bulkTouch(w http.ResponseWriter, r *http.Request) {
 	var q bulkTouchRequest

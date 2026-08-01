@@ -360,6 +360,21 @@ Do not copy only the main SQLite file while the runtime is writing. Use the veri
 
 ### 5. Enable an OpenAI-compatible model provider
 
+The supported way to keep Groq and NVIDIA NIM credentials locally is the
+untracked `.provider-secrets.env` file at the repository root (already covered
+by `.gitignore`). Load it once per shell before any live campaign:
+
+```bash
+# Load provider credentials once per shell
+set -a; source .provider-secrets.env; set +a
+```
+
+This file is intentionally not stacked in Git. Older development notes that
+claimed Groq/NVIDIA keys were unavailable were misleading: they were mistaking
+"not exported in the current process" for "absent from the project". The keys
+live in `.provider-secrets.env` and should be sourced (or exported via
+`set -a; source .provider-secrets.env; set +a`) before any live execution.
+
 Keep credentials in environment variables, never in committed files:
 
 ```bash

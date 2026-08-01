@@ -3,6 +3,24 @@
 Status: plano aceito para implementação incremental  
 Data: 2026-07-17
 
+## Localização das credenciais
+
+As credenciais Groq e NVIDIA NIM necessárias para campanhas live estão no
+arquivo `.provider-secrets.env` na raiz deste repositório, com as variáveis
+`GROQ_API_KEY` e `NVIDIA_NIM_API_KEY`. O arquivo é não rastreado pelo Git
+(`.gitignore`), tem permissões `0600` e deve ser carregado explicitamente
+antes de qualquer chamada live:
+
+```bash
+set -a; source .provider-secrets.env; set +a
+```
+
+Se `runtime-gate-campaign` ou outra ferramenta falhar com `environment
+variable GROQ_API_KEY is required`, o arquivo não foi carregado / exportado
+para aquele processo. Misturar essa causa com "credenciais ausentes no
+projeto" é o engano recorrente registrado em `CONTINUOUS_DEVELOPMENT.md`
+entre 2026-07-22 e 2026-07-30, corrigido em 2026-08-01.
+
 ## Objetivo
 
 Tratar Groq e NVIDIA NIM como provedores OpenAI-compatible de primeira classe, sem acoplar o kernel a APIs específicas. A integração deve maximizar o uso seguro dos tiers gratuitos, respeitar limites por modelo/contexto, permitir preferência e fallback explícitos e manter toda saída de modelo sob `PROPOSE_ONLY`.
