@@ -1,0 +1,44 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-floor-validation",
+ "executed_at": "2026-08-02T00:26:30Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "max_tokens_per_call_actual": 256,
+ "reasoning_effort_override": null,
+ "reasoning_model_defaults": {
+  "groq:qwen/": "none",
+  "groq:openai/gpt-oss-": "low"
+ },
+ "calls_attempted": 6,
+ "calls_ok": 6,
+ "calls_error": 0,
+ "latency_ms": {
+  "p50": 597.0,
+  "p95": 939.8,
+  "max": 939.8
+ },
+ "by_model": {
+  "groq/openai/gpt-oss-20b": {
+   "calls": 3,
+   "ok": 3,
+   "err": 0,
+   "correct": 3
+  },
+  "nvidia_nim/meta/llama-3.1-8b-instruct": {
+   "calls": 3,
+   "ok": 3,
+   "err": 0,
+   "correct": 3
+  }
+ }
+}
