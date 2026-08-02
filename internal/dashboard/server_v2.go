@@ -63,6 +63,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
 	mux.Handle("GET /dash/resources", http.HandlerFunc(s.handleResources))
+	mux.Handle("GET /dash/frontier", http.HandlerFunc(s.handleFrontier))
 	return mux
 }
 
@@ -103,5 +104,15 @@ func (s *V2Server) handleResources(w http.ResponseWriter, r *http.Request) {
 	component := views.Resources()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render resources: %v", err)
+	}
+}
+
+// handleFrontier serves the work-opportunity browse page fed by /frontier.
+func (s *V2Server) handleFrontier(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Frontier()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render frontier: %v", err)
 	}
 }

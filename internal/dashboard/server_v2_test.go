@@ -32,6 +32,9 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	inspectMux.HandleFunc("GET /resources", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"schema_version":1,"count":1,"resources":[{"resource":"groq:llama-3.3-70b","in_flight":2,"minute_count":47,"circuit_open":false}]}`))
 	})
+	inspectMux.HandleFunc("GET /frontier", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"schema_version":1,"mission_id":"m1","total":1,"items":[{"id":"op1","title":"gap-scan sweep","family":"gap_scan","status":"OPEN","depth":0,"priority":5,"risk":"LOW","created_at":"2026-08-02T00:00:00Z"}],"policy_version":"h1"}`))
+	})
 	controlMux := http.NewServeMux()
 	v2, err := NewV2(inspectMux, controlMux, nil)
 	if err != nil {
@@ -172,5 +175,29 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	if !strings.Contains(string(b), "groq:llama-3.3-70b") ||
 		!strings.Contains(string(b), "in_flight") {
 		t.Fatalf("/dash/api/resources body: %s", string(b))
+	}
+
+	// Frontier page is served with live-data wiring.
+	resp, err = srv.Client().Get(srv.URL + "/dash/frontier")
+	if err != nil {
+		t.Fatalf("get /dash/frontier: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK ||
+		!strings.Contains(string(b), "frontierState") ||
+		!strings.Contains(string(b), "/dash/api/frontier") {
+		t.Fatalf("/dash/frontier status=%d missing explorer markers", resp.StatusCode)
+	}
+
+	// Frontier proxy passes opportunity payload through unchanged.
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/frontier")
+	if err != nil {
+		t.Fatalf("get dash api frontier: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "gap-scan sweep") || !strings.Contains(string(b), "policy_version") {
+		t.Fatalf("/dash/api/frontier body: %s", string(b))
 	}
 }
