@@ -1,0 +1,80 @@
+{
+ "probed_at": "2026-08-02T05:06:31Z",
+ "base_url": "https://integrate.api.nvidia.com/v1",
+ "task": "exact_text_READY",
+ "temperature": 0.0,
+ "max_tokens": 8,
+ "total_calls": 4,
+ "candidates": [
+  "meta/llama-3.1-70b-instruct",
+  "nvidia/llama-3.3-nemotron-super-49b-v1",
+  "deepseek-ai/deepseek-v4-pro",
+  "mistralai/mistral-nemotron"
+ ],
+ "results": [
+  {
+   "model": "meta/llama-3.1-70b-instruct",
+   "attempts": [
+    {
+     "http": 200,
+     "latency_ms": 9628,
+     "content": "READY",
+     "finish_reason": "stop",
+     "prompt_tokens": 40,
+     "completion_tokens": 2,
+     "status": "ok",
+     "attempt": 1
+    }
+   ],
+   "final_status": "ok"
+  },
+  {
+   "model": "nvidia/llama-3.3-nemotron-super-49b-v1",
+   "attempts": [
+    {
+     "http": 200,
+     "latency_ms": 626,
+     "content": "READY",
+     "finish_reason": "stop",
+     "prompt_tokens": 24,
+     "completion_tokens": 2,
+     "status": "ok",
+     "attempt": 1
+    }
+   ],
+   "final_status": "ok"
+  },
+  {
+   "model": "deepseek-ai/deepseek-v4-pro",
+   "attempts": [
+    {
+     "http": 200,
+     "latency_ms": 1010,
+     "content": "READY",
+     "finish_reason": "stop",
+     "prompt_tokens": 10,
+     "completion_tokens": 3,
+     "status": "ok",
+     "attempt": 1
+    }
+   ],
+   "final_status": "ok"
+  },
+  {
+   "model": "mistralai/mistral-nemotron",
+   "attempts": [
+    {
+     "http": 200,
+     "latency_ms": 817,
+     "content": "READY",
+     "finish_reason": "stop",
+     "prompt_tokens": 9,
+     "completion_tokens": 3,
+     "status": "ok",
+     "attempt": 1
+    }
+   ],
+   "final_status": "ok"
+  }
+ ]
+}
