@@ -45,6 +45,7 @@ var (
 	ErrInvalidImportMode     = errors.New("invalid import mode")
 	ErrSecretExpired         = errors.New("secret has expired")
 	ErrInvalidTTL            = errors.New("invalid secret ttl duration")
+	ErrInvalidExpiry         = errors.New("invalid absolute expiry timestamp")
 	pathLocks                sync.Map
 )
 
@@ -964,6 +965,145 @@ func (v *Vault) BulkTouch(items []BulkTouchItem) (BulkTouchResult, error) {
 	} else {
 		v.recordAuditLocked("bulk_touch", "", "failure")
 		return BulkTouchResult{}, err
+	}
+	return result, nil
+}
+
+// ExpireAt sets an absolute expiration timestamp for a single secret without
+// altering its value. A zero expiresAt clears the expiration. Returns
+// os.ErrNotExist if the secret does not exist, ErrLocked if the vault is
+// locked, or ErrInvalidExpiry when expiresAt is in the future beyond the
+// maximum representable time or otherwise cannot be represented.
+//
+// Unlike Touch (which computes an expiry relative to now), ExpireAt lets an
+// operator pin an absolute deadline — for example, exactly one rotation
+// window ahead, or an incident-driven revocation timestamp shared across a
+// cohort of secrets.
+func (v *Vault) ExpireAt(name string, expiresAt time.Time) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("expire_at", name, "failure")
+		return ErrLocked
+	}
+	if err := validateName(name); err != nil {
+		v.recordAuditLocked("expire_at", name, "failure")
+		return err
+	}
+	if expiresAt.Year() > 9999 {
+		v.recordAuditLocked("expire_at", name, "failure")
+		return ErrInvalidExpiry
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("expire_at", name, "failure")
+		return err
+	}
+	r, ok := v.data.Secrets[name]
+	if !ok {
+		v.recordAuditLocked("expire_at", name, "failure")
+		return os.ErrNotExist
+	}
+	now := v.now().UTC()
+	r.UpdatedAt = now
+	if expiresAt.IsZero() {
+		r.ExpiresAt = time.Time{}
+	} else {
+		r.ExpiresAt = expiresAt.UTC()
+	}
+	v.data.Secrets[name] = r
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("expire_at", name, "success")
+	} else {
+		v.recordAuditLocked("expire_at", name, "failure")
+	}
+	return err
+}
+
+// BatchExpireAtItem is one secret whose absolute expiration is to be set.
+type BatchExpireAtItem struct {
+	Name      string    `json:"name"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// BatchExpireAtResult summarizes the outcome of a batch expire-at operation.
+type BatchExpireAtResult struct {
+	Updated []string `json:"updated"`
+	Errors  []string `json:"errors,omitempty"`
+}
+
+// BatchExpireAt sets absolute expiration timestamps for multiple secrets
+// atomically in one write. A zero ExpiresAt clears the expiration for that
+// item. Items with an invalid name or that do not exist are recorded in
+// Errors and skipped; valid items are persisted together. The vault must be
+// unlocked. Expired-but-not-yet-purged secrets remain addressable, mirroring
+// Touch, CopySecret, and the other lifecycle operations.
+func (v *Vault) BatchExpireAt(items []BatchExpireAtItem) (BatchExpireAtResult, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.expireLocked()
+	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_expire_at", "", "failure")
+		return BatchExpireAtResult{}, ErrLocked
+	}
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_expire_at", "", "failure")
+		return BatchExpireAtResult{}, err
+	}
+	now := v.now().UTC()
+	result := BatchExpireAtResult{Updated: []string{}}
+	type validUpdate struct {
+		name string
+		rec  record
+	}
+	updates := make([]validUpdate, 0, len(items))
+	for _, item := range items {
+		if err := validateName(item.Name); err != nil {
+			result.Errors = append(result.Errors, item.Name+": invalid name")
+			continue
+		}
+		if item.ExpiresAt.Year() > 9999 {
+			result.Errors = append(result.Errors, item.Name+": invalid expiry")
+			continue
+		}
+		r, ok := v.data.Secrets[item.Name]
+		if !ok {
+			result.Errors = append(result.Errors, item.Name+": not found")
+			continue
+		}
+		r.UpdatedAt = now
+		if item.ExpiresAt.IsZero() {
+			r.ExpiresAt = time.Time{}
+		} else {
+			r.ExpiresAt = item.ExpiresAt.UTC()
+		}
+		updates = append(updates, validUpdate{name: item.Name, rec: r})
+	}
+	if len(updates) == 0 {
+		v.lastUsed = v.now()
+		v.recordAuditLocked("batch_expire_at", "", "success")
+		return result, nil
+	}
+	for _, u := range updates {
+		v.data.Secrets[u.name] = u.rec
+		result.Updated = append(result.Updated, u.name)
+	}
+	sort.Strings(result.Updated)
+	v.lastUsed = v.now()
+	err := v.saveWithCurrentKeyLocked()
+	if err == nil {
+		v.recordAuditLocked("batch_expire_at", "", "success")
+	} else {
+		v.recordAuditLocked("batch_expire_at", "", "failure")
+		return BatchExpireAtResult{}, err
 	}
 	return result, nil
 }

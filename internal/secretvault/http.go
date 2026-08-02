@@ -37,6 +37,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-copy", h.batchCopy)
 	mux.HandleFunc("GET /secrets/expiring-soon", h.expiringSoon)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
+	mux.HandleFunc("POST /secrets/batch-expire-at", h.batchExpireAt)
+	mux.HandleFunc("POST /secrets/{name}/expire-at", h.expireAtSecret)
 	mux.HandleFunc("GET /secrets/{name}/metadata", h.secretMetadata)
 	mux.HandleFunc("GET /secrets/{name}/exists", h.secretExists)
 	mux.HandleFunc("GET /secrets/{name}", h.getSecret)
@@ -100,6 +102,14 @@ type batchExistsRequest struct {
 
 type bulkTouchRequest struct {
 	Items []BulkTouchItem `json:"items"`
+}
+
+type expireAtRequest struct {
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+type batchExpireAtRequest struct {
+	Items []BatchExpireAtItem `json:"items"`
 }
 
 type copyRequest struct {
@@ -519,6 +529,35 @@ func (h HTTP) bulkTouch(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, result)
 }
+func (h HTTP) batchExpireAt(w http.ResponseWriter, r *http.Request) {
+	var q batchExpireAtRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 expire-at items"}})
+		return
+	}
+	result, err := h.Vault.BatchExpireAt(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+
+func (h HTTP) expireAtSecret(w http.ResponseWriter, r *http.Request) {
+	var q expireAtRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if err := h.Vault.ExpireAt(r.PathValue("name"), q.ExpiresAt); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusNoContent, nil)
+}
+
 func (h HTTP) delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Vault.Delete(r.PathValue("name")); err != nil {
 		writeErr(w, err)
