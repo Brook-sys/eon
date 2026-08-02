@@ -61,7 +61,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/api/", http.StripPrefix("/dash/api", s.Inspect))
 	mux.Handle("GET /dash/", http.HandlerFunc(s.handleOverview))
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
-
+	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
 	return mux
 }
 
@@ -82,5 +82,15 @@ func (s *V2Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	component := views.Events()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render events: %v", err)
+	}
+}
+
+// handleModels serves the model bindings and context-pressure posture page.
+func (s *V2Server) handleModels(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Models()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render models: %v", err)
 	}
 }

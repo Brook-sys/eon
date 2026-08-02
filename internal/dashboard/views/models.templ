@@ -1,0 +1,190 @@
+package views
+
+templ Models() {
+	@layout("Modelos", "/dash/models", []NavItem{
+		{Href: "/dash", Label: "Visão geral"},
+		{Href: "/dash/events", Label: "Eventos"},
+		{Href: "/dash/models", Label: "Modelos", Active: true},
+		{Href: "/dashboard", Label: "Dashboard legado", External: true},
+	}) {
+		<div x-data="modelsState()" x-init="start()" class="space-y-4">
+			<div class="flex items-center gap-3 text-sm">
+				<span class="inline-flex items-center gap-1.5">
+					<span
+						class="w-2 h-2 rounded-full"
+						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
+					></span>
+					<span x-text="connected ? 'Inspect API acessível' : 'sem resposta da Inspect API'"></span>
+				</span>
+				<span class="text-[var(--muted)]" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
+				<button
+					class="ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+					x-on:click="refresh()"
+				>↻ Atualizar</button>
+			</div>
+
+			@card("Bindings de modelo") {
+				<template x-if="(bindings ?? []).length === 0">
+					<p class="text-sm text-[var(--muted)]" x-text="note || 'Nenhum binding configurado (estado válido quando não há revisão MODELS ativa).'"></p>
+				</template>
+				<div class="overflow-x-auto" x-show="(bindings ?? []).length > 0">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-[var(--muted)] text-xs uppercase tracking-wider">
+								<th class="py-2 pr-3">Binding</th>
+								<th class="py-2 pr-3">Provider</th>
+								<th class="py-2 pr-3">Modelo</th>
+								<th class="py-2 pr-3">Ctx / MaxOut</th>
+								<th class="py-2 pr-3">Limits</th>
+								<th class="py-2 pr-3">Uso</th>
+								<th class="py-2">Pressão</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<template x-for="b in bindings" x-bind:key="b.binding_id">
+								<tr class="align-top">
+									<td class="py-2 pr-3 mono text-xs" x-text="short(b.binding_id, 10)"></td>
+									<td class="py-2 pr-3">
+										<div x-text="b.provider_id"></div>
+										<div class="text-xs text-[var(--muted)]" x-text="b.provider_kind"></div>
+									</td>
+									<td class="py-2 pr-3 mono text-xs" x-text="b.model_id"></td>
+									<td class="py-2 pr-3 text-xs">
+										<div x-text="fmtNum(b.context_tokens) + ' tok'"></div>
+										<div class="text-[var(--muted)]" x-text="'out ' + fmtNum(b.max_output_tokens)"></div>
+									</td>
+									<td class="py-2 pr-3 text-xs">
+										<div x-show="b.provider_limit && (b.provider_limit.max_concurrent > 0 || b.provider_limit.max_rps > 0)"
+											x-text="limitLabel(b.provider_limit)"></div>
+										<div x-show="b.binding_limit && (b.binding_limit.max_concurrent > 0 || b.binding_limit.max_rps > 0)"
+											class="text-[var(--muted)]" x-text="'bind ' + limitLabel(b.binding_limit)"></div>
+									</td>
+									<td class="py-2 pr-3 text-xs">
+										<template x-if="b.binding_usage || b.provider_usage">
+											<div x-text="usageLabel(b.binding_usage || b.provider_usage)"></div>
+										</template>
+										<template x-if="!(b.binding_usage || b.provider_usage)">
+											<span class="text-[var(--muted)]">—</span>
+										</template>
+									</td>
+									<td class="py-2 text-xs">
+										<template x-if="b.context_pressure">
+											<span x-bind:class="pressureClass(b.context_pressure)" x-text="pressureLabel(b.context_pressure)"></span>
+										</template>
+										<template x-if="!b.context_pressure">
+											<span class="text-[var(--muted)]">—</span>
+										</template>
+									</td>
+								</tr>
+							</template>
+						</tbody>
+					</table>
+				</div>
+			}
+
+			@card("Context pressure persistida") {
+				<template x-if="(pressures ?? []).length === 0">
+					<p class="text-sm text-[var(--muted)]" x-text="pressureNote || 'Nenhum binding com pressão persistida.'"></p>
+				</template>
+				<div class="overflow-x-auto" x-show="(pressures ?? []).length > 0">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-[var(--muted)] text-xs uppercase tracking-wider">
+								<th class="py-2 pr-3">Binding</th>
+								<th class="py-2 pr-3">Nível</th>
+								<th class="py-2 pr-3">Sucessos no nível</th>
+								<th class="py-2 pr-3">Redução ativa</th>
+								<th class="py-2">Atualizado</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<template x-for="p in pressures" x-bind:key="p.binding_id">
+								<tr>
+									<td class="py-2 pr-3 mono text-xs" x-text="short(p.binding_id, 10)"></td>
+									<td class="py-2 pr-3" x-text="p.level"></td>
+									<td class="py-2 pr-3" x-text="p.successes_at_level"></td>
+									<td class="py-2 pr-3">
+										<span x-bind:class="p.reduction_active ? 'text-[var(--warn)]' : 'text-[var(--muted)]'"
+											x-text="p.reduction_active ? 'sim (' + Math.round((p.reduction_fraction ?? 1) * 100) + '% do window)' : 'não'"></span>
+									</td>
+									<td class="py-2 text-xs text-[var(--muted)]" x-text="fmtTime(p.updated_at)"></td>
+								</tr>
+							</template>
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+
+		<script>
+			function modelsState() {
+				return {
+					connected: false,
+					observedAt: null,
+					bindings: [],
+					note: '',
+					pressures: [],
+					pressureNote: '',
+
+					get observedAgo() {
+						if (!this.observedAt) return '';
+						const s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);
+						return s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;
+					},
+
+					async refresh() {
+						try {
+							const [b, p] = await Promise.all([
+								fetch('/dash/api/model-bindings').then(r => r.json()),
+								fetch('/dash/api/model-context-pressures').then(r => r.json()),
+							]);
+							this.bindings = b?.bindings ?? [];
+							this.note = b?.note ?? '';
+							this.pressures = p?.pressures ?? [];
+							this.pressureNote = p?.note ?? '';
+							this.observedAt = Date.now();
+							this.connected = true;
+						} catch (e) { this.connected = false; }
+					},
+
+					fmtNum(v) { return v == null ? '–' : Number(v).toLocaleString('pt-BR'); },
+					short(s, n) { return (s ?? '').slice(0, n); },
+					fmtTime(t) {
+						if (!t) return '';
+						const d = new Date(t);
+						return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');
+					},
+					limitLabel(l) {
+						if (!l) return '';
+						const parts = [];
+						if (l.max_concurrent > 0) parts.push('conc ' + l.max_concurrent);
+						if (l.max_rps > 0) parts.push(l.max_rps + '/s');
+						return parts.join(' · ');
+					},
+					usageLabel(u) {
+						if (!u) return '';
+						if (u.in_flight != null) return u.in_flight + ' em voo';
+						if (u.tokens_used != null) return this.fmtNum(u.tokens_used) + ' tok';
+						return 'ativo';
+					},
+					pressureClass(p) {
+						if (!p) return 'text-[var(--muted)]';
+						if (p.reduction_active) return 'text-[var(--warn)]';
+						if (p.level > 0) return 'text-[var(--accent)]';
+						return 'text-[var(--ok)]';
+					},
+					pressureLabel(p) {
+						if (!p) return '';
+						const base = 'nível ' + p.level;
+						return p.reduction_active ? base + ' ↓' : base;
+					},
+
+					start() {
+						this.refresh();
+						setInterval(() => this.refresh(), 10000);
+					},
+				};
+			}
+		</script>
+	}
+}
