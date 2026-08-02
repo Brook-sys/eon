@@ -74,11 +74,13 @@ func (s *V2Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleEvents is an HTMX endpoint. It renders the events fragment
-// and will be polled by HTMX once live SSE wiring is done in Phase 2.
+// handleEvents serves the dedicated events explorer page with filters,
+// pagination and live tail fragment.
 func (s *V2Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	// Phase 2: fetch live events from inspect API and render snippet.
-	_, _ = w.Write([]byte(`<div class="text-[var(--muted)] p-4">Events endpoint online (SSE in Phase 2).</div>`))
+	component := views.Events()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render events: %v", err)
+	}
 }
