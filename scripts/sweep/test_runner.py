@@ -113,6 +113,49 @@ def test_reasoning_defaults_have_allowlisted_values():
         assert effort in {"none", "low", "medium", "high"}, (prefix, effort)
 
 
+def _load_tasks_manifest():
+    import json
+
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.json")
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def test_tasks_manifest_ids_unique_and_scoring_consistent():
+    doc = _load_tasks_manifest()
+    assert doc["schema_version"] == 1
+    tasks = doc["tasks"]
+    ids = [t["id"] for t in tasks]
+    assert len(ids) == len(set(ids)), ("duplicate task ids", ids)
+    for t in tasks:
+        assert t["scoring"].startswith("exact_lines:"), t["id"]
+        keys = t["scoring"].split(":", 1)[1].split(",")
+        assert sorted(k.lower() for k in keys) == sorted(t["expected"].keys()), t["id"]
+        assert t["operation"] in {"EXTRACT", "SYNTHESIZE", "CONFLICT", "REPAIR"}, t["id"]
+        assert t["format"] == "DELIMITED", t["id"]
+
+
+def test_tasks_manifest_every_expected_key_appears_in_prompt_header():
+    # Guard rail: each scored line label must be stated literally in the
+    # prompt as "KEY:" so weak models see the wire format, not a paraphrase.
+    doc = _load_tasks_manifest()
+    for t in doc["tasks"]:
+        keys = t["scoring"].split(":", 1)[1].split(",")
+        for k in keys:
+            assert (k + ":") in t["prompt"], (t["id"], k)
+
+
+def test_tasks_manifest_offline_oracle_self_scores_perfectly():
+    # The oracle response built from expected values must score 100% per task;
+    # catches expected/scoring drift without any live call.
+    doc = _load_tasks_manifest()
+    for t in doc["tasks"]:
+        keys = t["scoring"].split(":", 1)[1].split(",")
+        oracle = "\n".join(k + ": " + str(t["expected"][k.lower()]) for k in keys)
+        ok, fields = score_task(t, oracle)
+        assert ok, (t["id"], fields)
+
+
 def test_call_model_rejects_non_allowlisted_extra_body():
     import types
 

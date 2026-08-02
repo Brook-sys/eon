@@ -1,0 +1,531 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-new-tasks-validation-r3",
+ "executed_at": "2026-08-02T01:23:10Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 18,
+ "calls_ok": 18,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 430.4,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 465.5,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 334.9,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 348.9,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 348.6,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 391.6,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 443.8,
+   "prompt_tokens": 263,
+   "completion_tokens": 78,
+   "total_tokens": 341,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 500.7,
+   "prompt_tokens": 263,
+   "completion_tokens": 78,
+   "total_tokens": 341,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 503.7,
+   "prompt_tokens": 263,
+   "completion_tokens": 78,
+   "total_tokens": 341,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 375.9,
+   "prompt_tokens": 242,
+   "completion_tokens": 86,
+   "total_tokens": 328,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 518.4,
+   "prompt_tokens": 242,
+   "completion_tokens": 76,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 777.3,
+   "prompt_tokens": 242,
+   "completion_tokens": 76,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 727.7,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 736.9,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "detect-conflict-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "80659ec9e1d9dbdb",
+   "outcome": "ok",
+   "latency_ms": 847.4,
+   "prompt_tokens": 230,
+   "completion_tokens": 14,
+   "total_tokens": 244,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 680.0,
+   "prompt_tokens": 209,
+   "completion_tokens": 16,
+   "total_tokens": 225,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3,F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3,F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 705.8,
+   "prompt_tokens": 209,
+   "completion_tokens": 16,
+   "total_tokens": 225,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3,F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3,F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 746.8,
+   "prompt_tokens": 209,
+   "completion_tokens": 16,
+   "total_tokens": 225,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3,F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3,F-4",
+     "ok": false
+    }
+   }
+  }
+ ]
+}

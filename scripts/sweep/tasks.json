@@ -41,6 +41,22 @@
       "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"DATE: \".\nYour second line MUST begin with the exact prefix \"SOURCE: \".\nDo not add explanations. Do not add markdown.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
       "expected": {"date": "2025-11-03", "source": "S-17"},
       "scoring": "exact_lines:DATE,SOURCE"
+    },
+    {
+      "id": "detect-conflict-reinforced",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"CONFLICT: \".\nYour second line MUST begin with the exact prefix \"PAIR: \".\nObservation identifiers always keep their \"O-\" prefix verbatim (for example O-1, never the bare number 1).\nCONFLICT: <YES|NO>\nPAIR: <O-id>/<O-id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- The PAIR value must keep the O- prefix on both identifiers, joined by a single slash.\n- Output only the two lines, nothing else.",
+      "expected": {"conflict": "YES", "pair": "O-1/O-2"},
+      "scoring": "exact_lines:CONFLICT,PAIR"
+    },
+    {
+      "id": "synthesize-multi-factor",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "prompt": "You are a deterministic reasoner. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nVERDICT: <PASS|FAIL>\nFACTORS: <comma-separated factor ids, or NONE>\n\nFacts:\n- Checklist item F-3 requires the backup to be verified by decode before publication; the run log shows verification passed.\n- Checklist item F-4 requires the destination directory to be fsynced after the hard link; the run log contains no fsync record for the destination directory.\n- Checklist item F-5 requires the temporary file to be removed; the run log shows removal.\n\nConstraints:\n- The release gate passes only when every checklist item is satisfied.\n- List exactly the factor ids that are NOT satisfied, in ascending order, or NONE if all are satisfied.\n- Output only the two lines, nothing else.",
+      "expected": {"verdict": "FAIL", "factors": "F-4"},
+      "scoring": "exact_lines:VERDICT,FACTORS"
     }
   ]
 }
