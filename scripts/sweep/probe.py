@@ -22,7 +22,7 @@ for prov in manifest["providers"]:
         })
         t0 = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with urllib.request.urlopen(req, timeout=60) as r:
                 j = json.loads(r.read())
                 txt = (j.get("choices") or [{}])[0].get("message", {}).get("content", "").strip()[:40]
                 lat = round((time.monotonic() - t0) * 1000)

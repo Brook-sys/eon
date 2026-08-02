@@ -6928,3 +6928,19 @@ Evidência: `results/runtime-gate/phase267-groq-llama31-8b-semantic-json/`. Veri
 **Live hypothesis and bounds.** Rotated provider deployment relative to Phase 365: primary Groq `llama-3.3-70b-versatile` with a deliberately seeded open circuit (control for the fallback path), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated trial, 45 s deadline, 32 max output tokens, exact-response contract (`READY`), zero canonical state promotion.
 
 **Observed evidence and decision.** Groq `llama-3.3-70b-versatile` was rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 622.07 ms (HTTP 200, `finish_reason=stop`, 95 tokens/day counted, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by the local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted) with no second provider call and no permit leak. Deterministic verification: `go test ./internal/secretvault/... -count=1` ok (including persistence/reopen and audit assertions), `go vet ./internal/secretvault/...`, `gofmt -l` empty, `git diff --check` clean. Artifacts: `results/runtime-gate/phase366-groq-qwen36-vault-copy-rename/`. No binding preference was changed; the NIM deployment remains evidence-only for this exact-text contract.
+
+## Direcionamento do operador — 2026-08-01 23:25 (ampliação aprovada)
+
+Instruções do operador para intensificar campanhas live-fire (aprovado explicitamente):
+
+1. **Escala Groq ampliada:** de ~87 calls/ciclo para 1.500-3.000 calls/ciclo quando houver hipótese ativa; batches 10-20 trials/célula (modelo × tarefa × temperatura); cobrir todos os 6 modelos Groq disponíveis.
+2. **NIM seletivo e quota-ciente:** 1-2 modelos fortes novos por ciclo, 3-5 trials/modelo, cross-provider com Groq. NIM compartilha quota com OpenClaw — não esgotar.
+3. **Cenários adversos obrigatórios:** (a) prompt ambíguo, (b) contexto poluído, (c) formato sob pressão, (d) conteúdo conflitante, (e) prompt injection, (f) degradação de idioma (PT/EN), (g) budget starvation, (h) chain-of-thought poisoning.
+4. **Prompt improvement loop:** para cada falha, gerar 3 variações de prompt e medir se correção é real ou placebo.
+5. **Métricas obrigatórias:** taxa de falha por célula, P50/P95/P99 latência, 429/Retry-After, token efficiency, taxa de recovery em retry.
+6. **Prioridade:** (1º) cenários adiversos formato/prompt, (2º) modelos NIM grandes.
+
+Implementação:
+- `scripts/sweep/manifest.json`: `max_calls_total` 480→2000, `max_calls_per_model` 60→500, `concurrency` 2→3, `repetitions` 5→10; adicionados NIM `meta/llama-3.3-70b-instruct`, `nvidia/llama-3.1-nemotron-70b-instruct`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`.
+- `scripts/sweep/tasks.json`: 9→17 tarefas com 8 cenários adversos (`adv-*`).
+- `scripts/sweep/probe.py`: timeout 20→60s.

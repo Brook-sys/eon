@@ -2,9 +2,9 @@
   "schema_version": 1,
   "name": "massive-fire-sweep-v1",
   "limits": {
-    "max_calls_total": 480,
-    "max_calls_per_model": 60,
-    "concurrency": 2,
+    "max_calls_total": 2000,
+    "max_calls_per_model": 500,
+    "concurrency": 3,
     "timeout_per_call_seconds": 45,
     "max_tokens_per_call": 256,
     "inter_call_min_delay_ms": 250,
@@ -12,8 +12,13 @@
     "max_retries_per_call": 2,
     "budget_usd_ceiling": 0
   },
-  "temperatures": [0.0, 0.3, 0.7, 1.0],
-  "repetitions": 5,
+  "temperatures": [
+    0.0,
+    0.3,
+    0.7,
+    1.0
+  ],
+  "repetitions": 10,
   "providers": [
     {
       "id": "groq",
@@ -34,10 +39,9 @@
       "api_key_env": "NVIDIA_NIM_API_KEY",
       "models": [
         "meta/llama-3.1-8b-instruct",
-        "meta/llama-3.1-70b-instruct",
         "meta/llama-3.3-70b-instruct",
-        "meta/llama-3.2-1b-instruct",
-        "deepseek-ai/deepseek-v4-flash"
+        "nvidia/llama-3.1-nemotron-70b-instruct",
+        "nvidia/llama-3.3-nemotron-super-49b-v1.5"
       ]
     }
   ]
