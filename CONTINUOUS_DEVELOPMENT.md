@@ -6944,3 +6944,11 @@ Implementação:
 - `scripts/sweep/manifest.json`: `max_calls_total` 480→2000, `max_calls_per_model` 60→500, `concurrency` 2→3, `repetitions` 5→10; adicionados NIM `meta/llama-3.3-70b-instruct`, `nvidia/llama-3.1-nemotron-70b-instruct`, `nvidia/llama-3.3-nemotron-super-49b-v1.5`.
 - `scripts/sweep/tasks.json`: 9→17 tarefas com 8 cenários adversos (`adv-*`).
 - `scripts/sweep/probe.py`: timeout 20→60s.
+
+## Phase 368 — prompt helper for restated negated-list selection + sweep restated 70B/Qwen slice (2026-08-02 01:00 -03)
+
+**Objetivo e implementação.** Consolidação do lote deixado no working tree por um heartbeat anterior (interrupção antes do commit): helper determinístico `prompt.NegatedListConstraint`/`NegatedSetSelection` (`internal/prompt/negated_list.go`) que gera a regra restated de filtragem por negação ("list ONLY the items that FAILED; satisfied items MUST NOT appear") sem carregar resposta semântica, com validação fail-closed de entradas incoerentes e ordenação determinística do universo de candidatos. Testes de tabela em `negated_list_test.go` cobrem renderização, determinismo, token vazio default, rejeição fail-closed e integração com `prompt.Compiler` dentro de budget. Publicação do slice de sweep `restated-70b-qwen-2026-08-02` (summary + trials, 18 chamadas live declaradas: 17 ok, 1 erro provider; Groq llama-3.3-70b-versatile 6/6 correto, Groq qwen/qwen3.6-27b 6/6, NIM meta/llama-3.3-70b-instruct 5/6 com 1 erro provider).
+
+**Verificação.** `go test ./internal/prompt/`, suíte Go integral, `go vet ./internal/prompt/`, `gofmt -l` vazio, `git diff --check` limpo e greps de ausência de segredos nos artefatos executados neste ciclo.
+
+**Nota.** A fronteira de commit anterior falhou em fase adiantada; este heartbeat executou somente consolidação, verificação e publicação do lote existente, sem nova chamada live de modelo para não duplicar a evidência já registrada no sweep `restated-70b-qwen-2026-08-02` (executado às 03:30Z do mesmo dia, dentro do intervalo deste ciclo).
