@@ -1,0 +1,753 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-multi-model-floor",
+ "executed_at": "2026-08-01T23:48:36Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 24,
+ "calls_ok": 24,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 559.8,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 562.4,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 420.9,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 422.8,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 422.1,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 435.4,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 818.7,
+   "prompt_tokens": 192,
+   "completion_tokens": 256,
+   "total_tokens": 448,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic repair agent.\n   - **Task:** Produce a corrected view for a stale claim based on new evidence.\n   - **Output Format:** EXACTLY three lines:\n     CLAIM: <id>\n     STATUS: <STALE|REPAIRED>\n     EVIDENCE_COUNT: <integer>\n   - **Facts Provided:**\n     - Claim ID: C-14\n     - Original evidence count: 2\n     - New evidence added: E-27\n     - Total evidence count: 3\n     - View was marked stale due to evidence delta.\n   - **Constraints:**\n     - Report claim ID, new status after repair, total evidence count.\n     - After repair, status becomes REPAIRED.\n     - Total evidence count is 3.\n     - Output ONLY the three lines, nothing else.\n\n2.  **Map Facts to Output Format:**\n   - CLAIM: C-14\n   - STATUS: REPAIRED\n   - EVIDENCE_COUNT: 3\n\n3.  **Verify Constraints:**\n   - Exactly",
+   "scored_correct": false,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": null,
+     "ok": false
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": null,
+     "ok": false
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 819.2,
+   "prompt_tokens": 192,
+   "completion_tokens": 256,
+   "total_tokens": 448,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic repair agent.\n   - **Task:** Produce a corrected view for a stale claim based on new evidence.\n   - **Output Format:** EXACTLY three lines:\n     CLAIM: <id>\n     STATUS: <STALE|REPAIRED>\n     EVIDENCE_COUNT: <integer>\n   - **Facts Provided:**\n     - Claim ID: C-14\n     - Original evidence count: 2\n     - New evidence added: E-27\n     - Total evidence count: 3\n     - View was marked stale due to evidence delta.\n   - **Constraints:**\n     - Report claim ID, new status after repair, total evidence count.\n     - After repair, status becomes REPAIRED.\n     - Total evidence count is 3.\n     - Output ONLY the three lines, nothing else.\n\n2.  **Map Facts to Output Format:**\n   - CLAIM: C-14\n   - STATUS: REPAIRED\n   - EVIDENCE_COUNT: 3\n\n3.  **Verify Constraints:**\n   - Exactly",
+   "scored_correct": false,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": null,
+     "ok": false
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": null,
+     "ok": false
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 923.5,
+   "prompt_tokens": 192,
+   "completion_tokens": 256,
+   "total_tokens": 448,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic repair agent.\n   - **Task:** Produce a corrected view for a stale claim based on new evidence.\n   - **Output Format:** EXACTLY three lines:\n     CLAIM: <id>\n     STATUS: <STALE|REPAIRED>\n     EVIDENCE_COUNT: <integer>\n   - **Facts Provided:**\n     - Claim ID: C-14\n     - Original evidence count: 2\n     - New evidence added: E-27\n     - Total evidence count: 3\n     - View was marked stale due to evidence delta.\n   - **Constraints:**\n     - Report claim ID, new status after repair, total evidence count.\n     - After repair, status becomes REPAIRED.\n     - Total evidence count is 3.\n     - Output ONLY the three lines, nothing else.\n\n2.  **Map Facts to Output Format:**\n   - CLAIM: C-14\n   - STATUS: REPAIRED\n   - EVIDENCE_COUNT: 3\n\n3.  **Verify Constraints:**\n   - Exactly",
+   "scored_correct": false,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": null,
+     "ok": false
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": null,
+     "ok": false
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 912.3,
+   "prompt_tokens": 172,
+   "completion_tokens": 256,
+   "total_tokens": 428,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Output Format:** EXACTLY two lines.\n   - **Line 1:** Must begin with \"DATE: \" followed by an ISO date.\n   - **Line 2:** Must begin with \"SOURCE: \" followed by an ID.\n   - **Constraints:** No explanations, no markdown. Return original publication date of S-17. Output only the two lines.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later review didn't change original date.\n     - Source S-18 published on 2025-11-04.\n   - **Target:** Original publication date of S-17 -> 2025-11-03. Source ID -> S-17.\n\n2.  **Check Constraints:**\n   - First line: \"DATE: 2025-11-03\"\n   - Second line: \"SOURCE: S-17\"\n   - Exactly two lines? Yes.\n  ",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 915.5,
+   "prompt_tokens": 172,
+   "completion_tokens": 256,
+   "total_tokens": 428,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Output Format:** EXACTLY two lines.\n   - **Line 1:** Must begin with \"DATE: \" followed by an ISO date.\n   - **Line 2:** Must begin with \"SOURCE: \" followed by an ID.\n   - **Constraints:** No explanations, no markdown. Return original publication date of S-17. Output only the two lines.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later review didn't change original date.\n     - Source S-18 published on 2025-11-04.\n   - **Target:** Original publication date of S-17 -> 2025-11-03. Source ID -> S-17.\n\n2.  **Check Constraints:**\n   - First line: \"DATE: 2025-11-03\"\n   - Second line: \"SOURCE: S-17\"\n   - Exactly two lines? Yes.\n  ",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 919.4,
+   "prompt_tokens": 172,
+   "completion_tokens": 256,
+   "total_tokens": 428,
+   "finish_reason": "length",
+   "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Output Format:** EXACTLY two lines.\n   - **Line 1:** Must begin with \"DATE: \" followed by an ISO date.\n   - **Line 2:** Must begin with \"SOURCE: \" followed by an ID.\n   - **Constraints:** No explanations, no markdown. Return original publication date of S-17. Output only the two lines.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later review didn't change original date.\n     - Source S-18 published on 2025-11-04.\n   - **Target:** Original publication date of S-17 -> 2025-11-03. Source ID -> S-17.\n\n2.  **Check Constraints:**\n   - First line: \"DATE: 2025-11-03\"\n   - Second line: \"SOURCE: S-17\"\n   - Exactly two lines? Yes.\n  ",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 433.0,
+   "prompt_tokens": 199,
+   "completion_tokens": 27,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3 ",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 430.9,
+   "prompt_tokens": 199,
+   "completion_tokens": 27,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3 ",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 443.1,
+   "prompt_tokens": 199,
+   "completion_tokens": 27,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3 ",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 434.3,
+   "prompt_tokens": 186,
+   "completion_tokens": 25,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 530.1,
+   "prompt_tokens": 186,
+   "completion_tokens": 25,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 540.3,
+   "prompt_tokens": 186,
+   "completion_tokens": 25,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 780.4,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 822.8,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 754.1,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "repair-stale-claim",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "81b2c19627d514ee",
+   "outcome": "ok",
+   "latency_ms": 856.6,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3",
+   "scored_correct": true,
+   "field_results": {
+    "CLAIM": {
+     "expected": "C-14",
+     "got": "C-14",
+     "ok": true
+    },
+    "STATUS": {
+     "expected": "REPAIRED",
+     "got": "REPAIRED",
+     "ok": true
+    },
+    "EVIDENCE_COUNT": {
+     "expected": "3",
+     "got": "3",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 750.7,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "extract-date-reinforced",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "c5054bc2830be99b",
+   "outcome": "ok",
+   "latency_ms": 901.8,
+   "prompt_tokens": 175,
+   "completion_tokens": 16,
+   "total_tokens": 191,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  }
+ ]
+}

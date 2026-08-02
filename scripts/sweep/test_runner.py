@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Offline regression tests for scripts/sweep/runner.py scoring/parsing.
+
+Run: python3 scripts/sweep/test_runner.py  (stdlib only, no pytest needed)
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from runner import (  # noqa: E402
+    EXTRA_BODY_ALLOWLIST,
+    REASONING_MODEL_DEFAULTS,
+    call_model,
+    parse_lines,
+    reasoning_effort_for,
+    score_task,
+)
+
+
+def test_parse_lines_basic():
+    t = parse_lines("CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
+    assert t == {"CLAIM": "C-14", "STATUS": "REPAIRED", "EVIDENCE_COUNT": "3"}, t
+
+
+def test_parse_lines_strips_value_whitespace():
+    t = parse_lines("DATE:   2025-11-03  \nSOURCE:\tS-17", ["DATE", "SOURCE"])
+    assert t == {"DATE": "2025-11-03", "SOURCE": "S-17"}, t
+
+
+def test_parse_lines_ignores_non_matching():
+    t = parse_lines("CLAIMANT: X\nnote about CLAIM\nCLAIM: C-14", ["CLAIM"])
+    assert t == {"CLAIM": "C-14"}, t
+
+
+def test_parse_lines_empty_and_truncated():
+    assert parse_lines("", ["DATE", "SOURCE"]) == {}
+    assert parse_lines("DATE: 2025-", ["DATE", "SOURCE"]) == {"DATE": "2025-"}
+    # no line starting with SOURCE -> missing key
+    assert "SOURCE" not in parse_lines("DATE: 2025-11-03", ["DATE", "SOURCE"])
+
+
+def test_parse_lines_last_occurrence_wins():
+    # Document behavior: later duplicate key overwrites earlier one.
+    t = parse_lines("A: 1\nA: 2", ["A"])
+    assert t == {"A": "2"}, t
+
+
+def _task(expected):
+    keys = ",".join(k.upper() for k in expected)
+    return {"scoring": f"exact_lines:{keys}", "expected": expected}
+
+
+def test_score_exact_match():
+    ok, fields = score_task(_task({"claim": "C-14", "status": "REPAIRED"}),
+                            "CLAIM: C-14\nSTATUS: REPAIRED")
+    assert ok and all(f["ok"] for f in fields.values()), fields
+
+
+def test_score_truncated_fails_field():
+    # extract-date-reinforced truncation case: "DATE: 2025-11" without day
+    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+                            "DATE: 2025-11")
+    assert not ok
+    assert fields["DATE"] == {"expected": "2025-11-03", "got": "2025-11", "ok": False}
+    assert fields["SOURCE"]["got"] is None and not fields["SOURCE"]["ok"]
+
+
+def test_score_empty_response_fails_all():
+    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}), "")
+    assert not ok
+    assert all(not f["ok"] and f["got"] is None for f in fields.values())
+
+
+def test_score_case_sensitive_values():
+    ok, fields = score_task(_task({"status": "REPAIRED"}), "STATUS: repaired")
+    assert not ok and fields["STATUS"]["got"] == "repaired"
+
+
+def test_score_extra_lines_ignored():
+    ok, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+                       "I think...\nDATE: 2025-11-03\nSOURCE: S-17\n(trailing)")
+    assert ok
+
+
+def test_score_unknown_scoring_fails_closed():
+    ok, fields = score_task({"scoring": "contains:foo", "expected": {}}, "foo")
+    assert not ok and "error" in fields
+
+
+def test_reasoning_effort_explicit_override_wins():
+    assert reasoning_effort_for("groq", "qwen/qwen3.6-27b", "low") == "low"
+    assert reasoning_effort_for("groq", "llama-3.3-70b-versatile", "none") == "none"
+
+
+def test_reasoning_effort_defaults_for_known_reasoning_models():
+    assert reasoning_effort_for("groq", "qwen/qwen3.6-27b", None) == "none"
+    assert reasoning_effort_for("groq", "openai/gpt-oss-20b", None) == "low"
+    assert reasoning_effort_for("groq", "openai/gpt-oss-120b", None) == "low"
+
+
+def test_reasoning_effort_none_for_plain_models():
+    assert reasoning_effort_for("groq", "llama-3.3-70b-versatile", None) is None
+    assert reasoning_effort_for("groq", "llama-3.1-8b-instant", None) is None
+    assert reasoning_effort_for("nvidia_nim", "meta/llama-3.1-8b-instruct", None) is None
+
+
+def test_reasoning_defaults_have_allowlisted_values():
+    # Fail-closed contract: defaults may only use keys from the allowlist.
+    assert "reasoning_effort" in EXTRA_BODY_ALLOWLIST
+    for prefix, effort in REASONING_MODEL_DEFAULTS.items():
+        assert isinstance(prefix, str) and ":" in prefix
+        assert effort in {"none", "low", "medium", "high"}, (prefix, effort)
+
+
+def test_call_model_rejects_non_allowlisted_extra_body():
+    import types
+
+    prov = {"base_url": "http://127.0.0.1:1", "api_key_env": "DUMMY_KEY_FOR_TEST"}
+    os.environ["DUMMY_KEY_FOR_TEST"] = "x"
+    budget = [10.0]
+    r = call_model(prov, "m", "p", 0.0, 16, 1, budget, 0,
+                   extra_body={"stream": True})
+    assert r["ok"] is False
+    assert r["error_class"] == "config", r
+    assert "allowlist" in r["error_body"]
+    # function must be stdlib-only importable; stay defensive about its type
+    assert isinstance(call_model, types.FunctionType)
+
+
+def run_all():
+    g = dict(globals())
+    tests = sorted(n for n in g if n.startswith("test_"))
+    failed = 0
+    for name in tests:
+        try:
+            g[name]()
+            print(f"PASS {name}")
+        except AssertionError as e:
+            failed += 1
+            print(f"FAIL {name}: {e}")
+        except Exception as e:  # noqa: BLE001
+            failed += 1
+            print(f"ERROR {name}: {e!r}")
+    print(f"{len(tests) - failed}/{len(tests)} passed")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(run_all())

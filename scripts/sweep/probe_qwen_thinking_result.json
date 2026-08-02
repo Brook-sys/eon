@@ -1,0 +1,50 @@
+{
+ "probed_at": "2026-08-02T00:03:41Z",
+ "model": "qwen/qwen3.6-27b",
+ "results": [
+  {
+   "variant": "baseline_temp0_mt64",
+   "request": {
+    "temperature": 0.0,
+    "max_tokens": 64
+   },
+   "http_status": 200,
+   "latency_ms": 502.0,
+   "finish_reason": "length",
+   "completion_tokens": 64,
+   "has_reasoning_content": false,
+   "content": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Format:**\n     DATE: <iso-date>\n",
+   "correct": false
+  },
+  {
+   "variant": "effort_none_mt64",
+   "request": {
+    "temperature": 0.0,
+    "max_tokens": 64,
+    "reasoning_effort": "none"
+   },
+   "http_status": 200,
+   "latency_ms": 339.9,
+   "finish_reason": "stop",
+   "completion_tokens": 21,
+   "has_reasoning_content": false,
+   "content": "DATE: 2025-11-03\nSOURCE: S-17",
+   "correct": true
+  },
+  {
+   "variant": "effort_none_mt256",
+   "request": {
+    "temperature": 0.0,
+    "max_tokens": 256,
+    "reasoning_effort": "none"
+   },
+   "http_status": 200,
+   "latency_ms": 688.9,
+   "finish_reason": "stop",
+   "completion_tokens": 21,
+   "has_reasoning_content": false,
+   "content": "DATE: 2025-11-03\nSOURCE: S-17",
+   "correct": true
+  }
+ ]
+}

@@ -19,14 +19,26 @@ UA = "motor-autonomo-sweep/1.0 (python-urllib; bounded research sweep)"
 def now_iso():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-def call_model(prov, model, prompt, temperature, max_tokens, timeout, budget, retries):
-    """Single bounded chat.completions call with retry-after respect."""
+def call_model(prov, model, prompt, temperature, max_tokens, timeout, budget, retries,
+               extra_body=None):
+    """Single bounded chat.completions call with retry-after respect.
+
+    extra_body allows bounded pass-through of provider-specific request fields
+    (e.g. reasoning_effort). Only keys in EXTRA_BODY_ALLOWLIST are honored;
+    anything else is rejected fail-closed so the wire contract stays auditable.
+    """
     url = prov["base_url"].rstrip("/") + "/chat/completions"
     key = os.environ[prov["api_key_env"]]
     last_err = None
     for attempt in range(retries + 1):
         body = {"model": model, "messages": [{"role": "user", "content": prompt}],
                 "temperature": temperature, "max_tokens": max_tokens}
+        if extra_body:
+            unknown = set(extra_body) - EXTRA_BODY_ALLOWLIST
+            if unknown:
+                return {"ok": False, "error_class": "config",
+                        "error_body": "extra_body keys not allowlisted: " + repr(sorted(unknown))}
+            body.update(extra_body)
         req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={
             "Authorization": "Bearer " + key, "Content-Type": "application/json",
             "User-Agent": UA})
@@ -75,6 +87,33 @@ def call_model(prov, model, prompt, temperature, max_tokens, timeout, budget, re
             break
     return last_err
 
+# Provider-specific request fields the runner is allowed to pass through.
+# reasoning_effort: Groq/NIM extension; "none" disables thinking on hybrid
+# reasoning models (qwen3.x, gpt-oss) so bounded output budgets are not eaten
+# by raw thinking tokens (observed 2026-08-01: qwen/qwen3.6-27b truncated at
+# 256 tokens with finish_reason=length and 0/6 correct without it; with
+# effort=none the same task completes in 21 tokens with exact correct output).
+EXTRA_BODY_ALLOWLIST = {"reasoning_effort"}
+
+# Models observed to emit raw thinking into `content` unless explicitly
+# disabled. Entries are provider-scoped prefixes matched against model ids.
+REASONING_MODEL_DEFAULTS = {
+    "groq:qwen/": "none",
+    "groq:openai/gpt-oss-": "low",
+}
+
+def reasoning_effort_for(prov_id, model, override):
+    """Resolve the reasoning_effort to send, if any.
+    Explicit CLI override wins; otherwise provider-prefix default; else None.
+    """
+    if override is not None:
+        return override
+    prefix_key = prov_id + ":" + model
+    for prefix, effort in REASONING_MODEL_DEFAULTS.items():
+        if prefix_key.startswith(prefix):
+            return effort
+    return None
+
 def parse_lines(text, keys):
     """Parse expected KEY: value lines; exact prefix match, strip whitespace."""
     out = {}
@@ -111,6 +150,9 @@ def main():
     ap.add_argument("--tasks", default="")
     ap.add_argument("--max-tokens", type=int, default=0,
                     help="override max_tokens_per_call (0=use manifest limit)")
+    ap.add_argument("--reasoning-effort", default=None,
+                    help="explicit reasoning_effort for all models (e.g. none/low/medium/high); "
+                         "omit to use per-model defaults for known reasoning models")
     args = ap.parse_args()
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -143,6 +185,14 @@ def main():
     max_tokens = args.max_tokens if args.max_tokens > 0 else L["max_tokens_per_call"]
     if args.max_tokens > L["max_tokens_per_call"] * 4:
         sys.exit(f"--max-tokens {args.max_tokens} exceeds 4x manifest limit {L['max_tokens_per_call']}")
+    # Token floor: exact_lines tasks emit one line per expected key.
+    # Ensure budget is at least 6 tokens per field (empirical: "CLAIM: C-14\n" ~ 6)
+    # to avoid silent truncation (observed: gpt-oss-20b extract at 128 -> length).
+    req_keys = max((len(t.get("expected", {})) for t in task_list), default=1)
+    token_floor = 6 * req_keys
+    if max_tokens < token_floor:
+        print(f"[sweep] max_tokens {max_tokens} below floor {token_floor} for {req_keys} field lines; using floor")
+        max_tokens = token_floor
     jobs = []
     for prov_id, model in ok_models:
         for task in task_list:
@@ -160,12 +210,16 @@ def main():
     def run_one(job):
         nonlocal calls_ok
         prov_id, model, task, temp, rep = job
+        effort = reasoning_effort_for(prov_id, model, args.reasoning_effort)
+        extra = {"reasoning_effort": effort} if effort else None
         r = call_model(providers[prov_id], model, task["prompt"], temp,
                        max_tokens, L["timeout_per_call_seconds"],
-                       budget, L["max_retries_per_call"])
+                       budget, L["max_retries_per_call"], extra_body=extra)
         rec = {"provider": prov_id, "model": model, "task": task["id"], "temperature": temp,
                "rep": rep, "prompt_sha256": hashlib.sha256(task["prompt"].encode()).hexdigest()[:16],
                "outcome": "ok" if r.get("ok") else "error"}
+        if effort:
+            rec["reasoning_effort"] = effort
         if r.get("ok"):
             correct, fields = score_task(task, r["response_text"])
             rec.update({"latency_ms": r["latency_ms"], "prompt_tokens": r["prompt_tokens"],
@@ -201,6 +255,8 @@ def main():
         "executed_at": now_iso(),
         "declared_limits": L,
         "max_tokens_per_call_actual": max_tokens,
+        "reasoning_effort_override": args.reasoning_effort,
+        "reasoning_model_defaults": REASONING_MODEL_DEFAULTS,
         "calls_attempted": len(results),
         "calls_ok": calls_ok,
         "calls_error": len(results) - calls_ok,
