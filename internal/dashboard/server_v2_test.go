@@ -1,0 +1,94 @@
+package dashboard
+
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+)
+
+// TestV2RoutesServeOverviewAssetsAndAPI pins the /dash wiring added in the
+// dashboard-v2 scaffold: redirect, overview markers, embedded assets and the
+// /api/inspect proxy. It guards the bootstrap mux composition
+// (legacy "/" + "/dash/") against silent regressions.
+func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
+	inspectMux := http.NewServeMux()
+	inspectMux.HandleFunc("GET /missions", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"missions":[]}`))
+	})
+	inspectMux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+	inspectMux.HandleFunc("GET /overview", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"schema_version":1,"pending_commands":3}`))
+	})
+	controlMux := http.NewServeMux()
+	v2, err := NewV2(inspectMux, controlMux, nil)
+	if err != nil {
+		t.Fatalf("NewV2: %v", err)
+	}
+	srv := httptest.NewServer(v2.Handler())
+	defer srv.Close()
+
+	// /dash redirects to /dash/ and renders the overview shell.
+	resp, err := srv.Client().Get(srv.URL + "/dash")
+	if err != nil {
+		t.Fatalf("get /dash: %v", err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/dash/ status: %d", resp.StatusCode)
+	}
+	if !strings.Contains(string(body), "motor-autonomo") ||
+		!strings.Contains(string(body), "htmx.min.js") ||
+		!strings.Contains(string(body), "overviewState") ||
+		!strings.Contains(string(body), "/dash/api/events/stream") {
+		t.Fatalf("overview missing layout/live-data markers")
+	}
+
+	// Embedded assets are served under /dash/assets/.
+	for _, path := range []string{"/dash/assets/htmx.min.js", "/dash/assets/alpine.min.js", "/dash/assets/app.css"} {
+		resp, err := srv.Client().Get(srv.URL + path)
+		if err != nil {
+			t.Fatalf("get %s: %v", path, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("%s status: %d", path, resp.StatusCode)
+		}
+	}
+
+	// Inspect API is proxied under /api/inspect (legacy composition) and
+	// /dash/api (browser-safe same-origin v2).
+	resp, err = srv.Client().Get(srv.URL + "/api/inspect/missions")
+	if err != nil {
+		t.Fatalf("get api: %v", err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "missions") {
+		t.Fatalf("inspect proxy body: %s", string(b))
+	}
+
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/health")
+	if err != nil {
+		t.Fatalf("get dash api health: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(b), "ok") {
+		t.Fatalf("/dash/api/health status=%d body=%s", resp.StatusCode, string(b))
+	}
+
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/overview")
+	if err != nil {
+		t.Fatalf("get dash api overview: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "pending_commands") {
+		t.Fatalf("/dash/api/overview body: %s", string(b))
+	}
+}

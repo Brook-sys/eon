@@ -3,36 +3,38 @@ set -euo pipefail
 
 # Asset build pipeline for the motor-autonomo v2 dashboard.
 # Usage: ./tools/dashboard-assets/build.sh
-# Prereqs: templ binary at ~/go/bin/templ, tailwindcss standalone at this directory.
+# Prereqs: templ binary at $HOME/go/bin/templ, tailwindcss standalone in this directory.
+#
+# Layout:
+#   tools/dashboard-assets/{htmx,alpine}.min.js  — vendored JS, copied as-is
+#   tools/dashboard-assets/src/app.css           — Tailwind input
+#   internal/dashboard/assets/                   — generated output, embedded via go:embed
 
-PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$HERE/../.." && pwd)"
 TEMPL_BIN="${TEMPL_BIN:-$HOME/go/bin/templ}"
-TAILWIND_BIN="${TAILWIND_BIN:-$PROJECT_ROOT/tailwindcss}"
-DIST_DIR="$PROJECT_ROOT/../../internal/dashboard/assets/dist"
-SRC_DIR="$PROJECT_ROOT/../../internal/dashboard/assets/src"
+TAILWIND_BIN="${TAILWIND_BIN:-$HERE/tailwindcss}"
+OUT_DIR="$REPO_ROOT/internal/dashboard/assets"
 
-# Check binaries exist.
-[ -x "$TEMPL_BIN" ] || { echo "ERROR: templ binary not found at $TEMPL_BIN"; exit 1; }
+[ -x "$TEMPL_BIN" ]    || { echo "ERROR: templ binary not found at $TEMPL_BIN"; exit 1; }
 [ -x "$TAILWIND_BIN" ] || { echo "ERROR: tailwindcss not found at $TAILWIND_BIN"; exit 1; }
 
-mkdir -p "$DIST_DIR"
+mkdir -p "$OUT_DIR"
 
-# 1) Generate CSS.
+# 1) Generate CSS from Tailwind, scanning templ files for class usage.
 "$TAILWIND_BIN" \
-  --input "$SRC_DIR/app.css" \
-  --output "$DIST_DIR/app.css" \
-  --content "$PROJECT_ROOT/../../internal/dashboard/views/*.templ" \
+  --input "$HERE/src/app.css" \
+  --output "$OUT_DIR/app.css" \
+  --content "$REPO_ROOT/internal/dashboard/views/*.templ" \
   --minify
+echo "CSS built → $OUT_DIR/app.css"
 
-echo "CSS built → $DIST_DIR/app.css"
+# 2) Copy vendored JS (already minified).
+cp "$HERE/htmx.min.js" "$HERE/alpine.min.js" "$OUT_DIR/"
+echo "JS copied → $OUT_DIR/"
 
-# 2) Copy JS assets (already minified).
-cp "$PROJECT_ROOT/htmx.min.js" "$DIST_DIR/"
-cp "$PROJECT_ROOT/alpine.min.js" "$DIST_DIR/"
-echo "JS copied → $DIST_DIR/"
-
-# 3) Generate Templ Go code.
-(cd "$PROJECT_ROOT/../.." && "$TEMPL_BIN" generate)
+# 3) Generate Go code from templ templates.
+(cd "$REPO_ROOT" && "$TEMPL_BIN" generate)
 echo "Templ generated → internal/dashboard/views/"
 
 echo "OK"

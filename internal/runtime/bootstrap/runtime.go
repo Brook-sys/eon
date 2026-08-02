@@ -84,7 +84,7 @@ type Runtime struct {
 
 	Inspect   *inspect.API
 	Control   *control.API
-	Dashboard *dashboard.Server
+	Dashboard *dashboard.V2Server
 	Vault     *secretvault.Vault
 	Handler   http.Handler
 
@@ -286,9 +286,22 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 
 	var dash *dashboard.Server
+	var dashV2 *dashboard.V2Server
 	var vault *secretvault.Vault
 	var handler http.Handler
 	if opts.EnableDashboard {
+		// Templ-based v2 dashboard serves /dash/* with the same inspect/control
+		// APIs. Static assets are embedded; no external dir needed.
+		var err error
+		dashV2, err = dashboard.NewV2(inspectAPI.Handler(), controlAPI.Handler(), nil)
+		if err != nil {
+			_ = telemetry.Shutdown(ctx)
+			if closer != nil {
+				_ = closer.Close()
+			}
+			return nil, fmt.Errorf("dashboard v2: %w", err)
+		}
+
 		dash, err = dashboard.New(inspectAPI.Handler(), controlAPI.Handler())
 		if err != nil {
 			_ = telemetry.Shutdown(ctx)
@@ -298,6 +311,8 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			return nil, err
 		}
 		dash.DefaultMissionID = string(opts.MissionID)
+
+		// Vault setup (unchanged semantics).
 		vaultPath := opts.SQLitePath + ".credentials.vault"
 		if opts.SQLitePath == "" {
 			vaultPath = filepath.Join(os.TempDir(), "eon-memory.credentials.vault")
@@ -312,7 +327,14 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			return nil, fmt.Errorf("credential vault: %w", vaultErr)
 		}
 		dash.Vault = secretvault.HTTP{Vault: vault}.Handler()
-		handler = dash.Handler()
+
+		// Compose the two dashboards. Legacy handles /, /api/*, /healthz;
+		// the v2 Templ dashboard handles /dash/*.
+		mux := http.NewServeMux()
+		mux.Handle("/", dash.Handler())
+		mux.Handle("/api/", dash.Handler())
+		mux.Handle("/dash/", dashV2.Handler())
+		handler = mux
 	} else {
 		mux := http.NewServeMux()
 		mux.Handle("/api/inspect/", http.StripPrefix("/api/inspect", inspectAPI.Handler()))
@@ -464,7 +486,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		Cooldowns:                   cooldowns,
 		Inspect:                     inspectAPI,
 		Control:                     controlAPI,
-		Dashboard:                   dash,
+		Dashboard:                   dashV2,
 		Vault:                       vault,
 		Handler:                     handler,
 		TelegramAdapter:             telegramBits.Adapter,

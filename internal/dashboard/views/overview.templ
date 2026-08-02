@@ -4,51 +4,186 @@ templ Overview() {
 	@layout("Overview", "/dash", []NavItem{
 		{Href: "/dash", Label: "Visão geral", Active: true},
 		{Href: "/dash/events", Label: "Eventos"},
-		{Href: "/dash/pending", Label: "Pendentes"},
-		{Href: "/dashboard", Label: "Dashboard atual", External: true},
+		{Href: "/dashboard", Label: "Dashboard legado", External: true},
 	}) {
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-			@card("Missões ativas") {
-				<p class="text-3xl font-bold text-[var(--accent)]">–</p>
-				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
-			}
-			@card("Eventos hoje") {
-				<p class="text-3xl font-bold text-[var(--ok)]">–</p>
-				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
-			}
-			@card("Pendentes") {
-				<p class="text-3xl font-bold text-[var(--warn)]">–</p>
-				<p class="text-sm text-[var(--muted)]">Human Input Required</p>
-			}
-			@card("Erros 24h") {
-				<p class="text-3xl font-bold text-[var(--err)]">–</p>
-				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
+		<div x-data="overviewState()" x-init="start()" class="space-y-4">
+
+			<!-- Status de conexão -->
+			<div class="flex items-center gap-3 text-sm">
+				<span class="inline-flex items-center gap-1.5">
+					<span
+						class="w-2 h-2 rounded-full"
+						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
+					></span>
+					<span x-text="connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'"></span>
+				</span>
+				<span class="text-[var(--muted)]" x-show="generatedAt">
+					atualizado <span x-text="generatedAgo"></span>
+				</span>
+				<button
+					class="ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+					x-on:click="refresh()"
+				>↻ Atualizar</button>
+			</div>
+
+			<!-- Contadores operacionais -->
+			<div class="grid gap-4 grid-cols-2 lg:grid-cols-4">
+				@card("Comandos pendentes") {
+					<p class="text-3xl font-bold text-[var(--accent)]" x-text="fmt(ov.pending_commands)"></p>
+					<p class="text-xs text-[var(--muted)]">aguardando o kernel</p>
+				}
+				@card("Perguntas pendentes") {
+					<p class="text-3xl font-bold text-[var(--warn)]" x-text="fmt(ov.pending_operator_questions)"></p>
+					<p class="text-xs text-[var(--muted)]">human input required</p>
+				}
+				@card("Subagents evictos") {
+					<p class="text-3xl font-bold text-[var(--err)]" x-text="fmt(ov.evicted_subagents)"></p>
+					<p class="text-xs text-[var(--muted)]">lease perdido</p>
+				}
+				@card("Head de eventos") {
+					<p class="text-3xl font-bold text-[var(--ok)]" x-text="fmt(ov.event_head_sequence)"></p>
+					<p class="text-xs text-[var(--muted)]">sequência do log</p>
+				}
+			</div>
+
+			<!-- Saúde do runtime e alertas -->
+			<div class="grid gap-4 md:grid-cols-2">
+				@card("Runtime") {
+					<div class="space-y-1.5 text-sm">
+						<div class="flex justify-between">
+							<span class="text-[var(--muted)]">Health</span>
+							<span x-text="health.status ?? '—'"></span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-[var(--muted)]">Versão</span>
+							<span x-text="(ov.runtime && ov.runtime.version) ?? '—'"></span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-[var(--muted)]">Modo</span>
+							<span x-text="ov.process_mode ?? '—'"></span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-[var(--muted)]">Revisão de controle</span>
+							<span x-text="fmt(ov.control_revision)"></span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-[var(--muted)]">Missão</span>
+							<span x-text="(ov.mission && ov.mission.mission_id) ?? 'nenhuma'"></span>
+						</div>
+					</div>
+				}
+				@card("Alertas") {
+					<template x-if="alerts.length === 0">
+						<p class="text-sm text-[var(--muted)]">Nenhum alerta ativo.</p>
+					</template>
+					<ul class="space-y-1.5 text-sm" x-show="alerts.length > 0">
+						<template x-for="a in alerts.slice(0, 8)" x-bind:key="a.id ?? a.message">
+							<li class="flex gap-2 items-start">
+								@templ.Raw(`<span class="mt-0.5 w-2 h-2 shrink-0 rounded-full"
+									x-bind:class="({
+										critical:'bg-[var(--err)]', warning:'bg-[var(--warn)]',
+										info:'bg-[var(--accent)]'
+									})[a.severity] ?? 'bg-[var(--muted)]'"></span>`)
+								<span x-text="a.message ?? JSON.stringify(a)"></span>
+							</li>
+						</template>
+					</ul>
+				}
+			</div>
+
+			<!-- Feed de eventos ao vivo (SSE) -->
+			@card("Eventos ao vivo") {
+				<div class="flex items-center gap-2 mb-3 text-xs">
+					<span
+						class="inline-flex items-center gap-1"
+						x-bind:class="sseOn ? 'text-[var(--ok)]' : 'text-[var(--muted)]'"
+					>
+						<span
+							class="w-1.5 h-1.5 rounded-full"
+							x-bind:class="sseOn ? 'bg-[var(--ok)]' : 'bg-[var(--muted)]'"
+						></span>
+						<span x-text="sseOn ? 'SSE ativo' : 'SSE desconectado'"></span>
+					</span>
+					<span class="text-[var(--muted)] ml-auto" x-text="events.length + ' recentes'"></span>
+				</div>
+				<div class="mono text-xs space-y-1 max-h-80 overflow-y-auto">
+					<template x-if="events.length === 0">
+						<p class="text-[var(--muted)]">Aguardando eventos…</p>
+					</template>
+					<template x-for="e in events" x-bind:key="e.seq ?? Math.random()">
+						<div class="flex gap-2 items-baseline">
+							<span class="text-[var(--muted)] shrink-0" x-text="'#' + (e.sequence ?? '?')"></span>
+							<span
+								class="shrink-0 px-1 rounded"
+								x-bind:class="({
+									error: 'text-[var(--err)]',
+									warning: 'text-[var(--warn)]'
+								})[e.type] ?? 'text-[var(--accent)]'"
+								x-text="e.type"
+							></span>
+							<span class="truncate" x-text="e.summary ?? JSON.stringify(e).slice(0, 120)"></span>
+						</div>
+					</template>
+				</div>
 			}
 		</div>
 
-		@card("Atualizações recentes") {
-			<p class="text-sm text-[var(--muted)] mb-3">
-				Conectando via SSE. Quando a integração com Inspect API estiver pronta,
-				os eventos aparecerão aqui em tempo real.
-			</p>
-			<div id="events-feed" class="space-y-2 mono text-sm">
-				<div class="text-[var(--muted)]">Nenhum evento ainda. (SSE se conectará brevemente)</div>
-			</div>
-		}
+		<script>
+			function overviewState() {
+				return {
+					connected: false,
+					generatedAt: null,
+					ov: {},
+					health: {},
+					alerts: [],
+					events: [],
+					sseOn: false,
 
-		@card("Ações rápidas") {
-			<div class="flex gap-2 flex-wrap">
-				@badge("Disparar campanha", "info")
-				@badge("Ver fonte", "neutral")
-			</div>
-		}
+					get generatedAgo() {
+						if (!this.generatedAt) return '';
+						const s = Math.max(0, (Date.now() - this.generatedAt) / 1000 | 0);
+						return s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;
+					},
 
-		// Script placeholder pra Phase 2: SSE aqui.
-		@templ.Raw(`<script type="module">
-			const feed = document.getElementById('events-feed');
-			setTimeout(() => {
-				feed.innerHTML = '<div class="text-[var(--muted)]">Integração SSE pendente (Fase 2).</div>';
-			}, 2000);
-		</script>`)
+					fmt(v) { return v == null ? '–' : String(v); },
+
+					async refresh() {
+						try {
+							const [h, o, a] = await Promise.all([
+								fetch('/dash/api/health').then(r => r.json()),
+								fetch('/dash/api/overview').then(r => r.json()),
+								fetch('/dash/api/alerts').then(r => r.json()),
+							]);
+							this.health = h ?? {};
+							this.ov = o ?? {};
+							this.alerts = Array.isArray(a) ? a : (a?.alerts ?? []);
+							this.generatedAt = Date.now();
+							this.connected = true;
+						} catch (e) {
+							this.connected = false;
+						}
+					},
+
+					connectSSE() {
+						const es = new EventSource('/dash/api/events/stream');
+						es.onopen = () => { this.sseOn = true; };
+						es.onerror = () => { this.sseOn = false; };
+						es.onmessage = (m) => {
+							try {
+								const e = JSON.parse(m.data);
+								this.events.unshift(e);
+								if (this.events.length > 60) this.events.length = 60;
+							} catch {}
+						};
+					},
+
+					start() {
+						this.refresh();
+						setInterval(() => this.refresh(), 5000);
+						this.connectSSE();
+					},
+				};
+			}
+		</script>
 	}
 }

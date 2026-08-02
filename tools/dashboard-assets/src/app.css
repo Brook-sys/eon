@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/*
+  Dashboard v2 theme tokens. Consumed via var(--...) in templ components.
+  Keep in sync with the <style> block in views/layout.templ.
+*/
+@theme inline {
+  --color-dash-bg: #0f1419;
+  --color-dash-panel: #1a2332;
+  --color-dash-border: #2d3a4d;
+  --color-dash-text: #e7ecf3;
+  --color-dash-muted: #8b9bb4;
+  --color-dash-accent: #5b9fd4;
+  --color-dash-ok: #3d9a6a;
+  --color-dash-warn: #c9a227;
+  --color-dash-err: #c45c5c;
+}
+
+/* Monospace utility used by the events feed. */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
