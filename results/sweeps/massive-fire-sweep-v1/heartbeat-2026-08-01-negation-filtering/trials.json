@@ -1,0 +1,1457 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-01-negation-filtering",
+ "executed_at": "2026-08-02T02:26:17Z",
+ "declared_limits": {
+  "max_calls_total": 480,
+  "max_calls_per_model": 60,
+  "concurrency": 2,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 45,
+ "calls_ok": 41,
+ "calls_error": 4,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 517.4,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 529.5,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 351.7,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 344.5,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 413.3,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 416.3,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 379.7,
+   "prompt_tokens": 275,
+   "completion_tokens": 28,
+   "total_tokens": 303,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 424.1,
+   "prompt_tokens": 275,
+   "completion_tokens": 28,
+   "total_tokens": 303,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 339.7,
+   "prompt_tokens": 275,
+   "completion_tokens": 28,
+   "total_tokens": 303,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 613.3,
+   "prompt_tokens": 242,
+   "completion_tokens": 76,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 522.7,
+   "prompt_tokens": 242,
+   "completion_tokens": 76,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 380.4,
+   "prompt_tokens": 242,
+   "completion_tokens": 76,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 405.5,
+   "prompt_tokens": 332,
+   "completion_tokens": 32,
+   "total_tokens": 364,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 415.1,
+   "prompt_tokens": 332,
+   "completion_tokens": 32,
+   "total_tokens": 364,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 476.9,
+   "prompt_tokens": 332,
+   "completion_tokens": 32,
+   "total_tokens": 364,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 548.9,
+   "prompt_tokens": 307,
+   "completion_tokens": 88,
+   "total_tokens": 395,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 393.6,
+   "prompt_tokens": 307,
+   "completion_tokens": 88,
+   "total_tokens": 395,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 432.8,
+   "prompt_tokens": 242,
+   "completion_tokens": 41,
+   "total_tokens": 283,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 566.0,
+   "prompt_tokens": 307,
+   "completion_tokens": 88,
+   "total_tokens": 395,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 500.2,
+   "prompt_tokens": 242,
+   "completion_tokens": 41,
+   "total_tokens": 283,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 564.2,
+   "prompt_tokens": 242,
+   "completion_tokens": 41,
+   "total_tokens": 283,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 468.8,
+   "prompt_tokens": 332,
+   "completion_tokens": 30,
+   "total_tokens": 362,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 540.3,
+   "prompt_tokens": 332,
+   "completion_tokens": 30,
+   "total_tokens": 362,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 521.7,
+   "prompt_tokens": 332,
+   "completion_tokens": 30,
+   "total_tokens": 362,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 543.7,
+   "prompt_tokens": 307,
+   "completion_tokens": 73,
+   "total_tokens": 380,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 533.4,
+   "prompt_tokens": 307,
+   "completion_tokens": 73,
+   "total_tokens": 380,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 538.4,
+   "prompt_tokens": 307,
+   "completion_tokens": 73,
+   "total_tokens": 380,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 769.6,
+   "prompt_tokens": 209,
+   "completion_tokens": 16,
+   "total_tokens": 225,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3,F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3,F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 798.5,
+   "prompt_tokens": 209,
+   "completion_tokens": 16,
+   "total_tokens": 225,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3,F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3,F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 720.7,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 817.3,
+   "prompt_tokens": 209,
+   "completion_tokens": 17,
+   "total_tokens": 226,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 742.2,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 716.1,
+   "prompt_tokens": 301,
+   "completion_tokens": 13,
+   "total_tokens": 314,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4",
+   "scored_correct": true,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 872.5,
+   "prompt_tokens": 275,
+   "completion_tokens": 32,
+   "total_tokens": 307,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 906.4,
+   "prompt_tokens": 275,
+   "completion_tokens": 32,
+   "total_tokens": 307,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 925.8,
+   "prompt_tokens": 275,
+   "completion_tokens": 32,
+   "total_tokens": 307,
+   "finish_reason": "stop",
+   "response_text": "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-3, F-4",
+   "scored_correct": false,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "OK",
+     "ok": true
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-3, F-4",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 970.6,
+   "prompt_tokens": 184,
+   "completion_tokens": 13,
+   "total_tokens": 197,
+   "finish_reason": "stop",
+   "response_text": "FAIL\nF-3, F-4, F-5",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": null,
+     "ok": false
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "error",
+   "error": {
+    "http_status": 500,
+    "latency_ms": 964.3,
+    "retry_after": null,
+    "error_class": "server",
+    "error_body": "{\"type\":\"urn:inference-connection:problem-details:internal-server-error\", \"title\":\"Internal Server Error\", \"status\":500, \"detail\":\"Inference connection error while making inference request\"}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8b1b1cc196d7387d",
+   "outcome": "ok",
+   "latency_ms": 957.5,
+   "prompt_tokens": 184,
+   "completion_tokens": 13,
+   "total_tokens": 197,
+   "finish_reason": "stop",
+   "response_text": "FAIL\nF-3, F-4, F-5",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": null,
+     "ok": false
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "ok",
+   "latency_ms": 978.2,
+   "prompt_tokens": 276,
+   "completion_tokens": 16,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "VERDICT: FAIL\nFACTORS: F-4, F-5",
+   "scored_correct": false,
+   "field_results": {
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4, F-5",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "error",
+   "error": {
+    "latency_ms": 45332.2,
+    "error_class": "transport",
+    "error_body": "TimeoutError('The read operation timed out')"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 1031.1,
+   "prompt_tokens": 250,
+   "completion_tokens": 31,
+   "total_tokens": 281,
+   "finish_reason": "stop",
+   "response_text": "F3: FAIL\nF4: FAIL\nF5: FAIL\nVERDICT: FAIL\nFACTORS: F-4, F-5",
+   "scored_correct": false,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "FAIL",
+     "ok": false
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "FAIL",
+     "ok": false
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4, F-5",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-multi-factor-restated",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "b11a2ac2f7480cc7",
+   "outcome": "error",
+   "error": {
+    "latency_ms": 45330.8,
+    "error_class": "transport",
+    "error_body": "TimeoutError('The read operation timed out')"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "ok",
+   "latency_ms": 1024.3,
+   "prompt_tokens": 250,
+   "completion_tokens": 31,
+   "total_tokens": 281,
+   "finish_reason": "stop",
+   "response_text": "F3: FAIL\nF4: FAIL\nF5: FAIL\nVERDICT: FAIL\nFACTORS: F-4, F-5",
+   "scored_correct": false,
+   "field_results": {
+    "F3": {
+     "expected": "OK",
+     "got": "FAIL",
+     "ok": false
+    },
+    "F4": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "F5": {
+     "expected": "OK",
+     "got": "FAIL",
+     "ok": false
+    },
+    "VERDICT": {
+     "expected": "FAIL",
+     "got": "FAIL",
+     "ok": true
+    },
+    "FACTORS": {
+     "expected": "F-4",
+     "got": "F-4, F-5",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.2-1b-instruct",
+   "task": "synthesize-factor-trace",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "144a54a0c8116013",
+   "outcome": "error",
+   "error": {
+    "http_status": 500,
+    "latency_ms": 1055.5,
+    "retry_after": null,
+    "error_class": "server",
+    "error_body": "{\"type\":\"urn:inference-connection:problem-details:internal-server-error\", \"title\":\"Internal Server Error\", \"status\":500, \"detail\":\"Inference connection error while making inference request\"}"
+   }
+  }
+ ]
+}

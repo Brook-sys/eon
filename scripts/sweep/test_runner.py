@@ -156,6 +156,53 @@ def test_tasks_manifest_offline_oracle_self_scores_perfectly():
         assert ok, (t["id"], fields)
 
 
+def test_multi_factor_superset_wrong_answer_fails_both_fields():
+    # Live failure mode catalogued 2026-08-01 22:25: both llama-3.1-8b
+    # deployments deterministically answered "F-3,F-4" (listing a satisfied
+    # factor alongside the failed one) instead of "F-4". The scorer must
+    # reject the superset; it is a semantic filtering error, not a format
+    # error, so FACTORS mismatches and the trial is wrong.
+    doc = _load_tasks_manifest()
+    for tid in ("synthesize-multi-factor", "synthesize-multi-factor-restated"):
+        t = next(x for x in doc["tasks"] if x["id"] == tid)
+        ok, fields = score_task(t, "VERDICT: FAIL\nFACTORS: F-3,F-4")
+        assert not ok, (tid, fields)
+        assert fields["VERDICT"]["ok"] is True
+        assert fields["FACTORS"]["ok"] is False
+        assert fields["FACTORS"]["got"] == "F-3,F-4"
+
+
+def test_multi_factor_order_and_duplicates_are_scored_strictly():
+    # ascending order is part of the oracle string; reorder or duplicate
+    # ids must not silently pass (guard against scorer leniency drift).
+    doc = _load_tasks_manifest()
+    t = next(x for x in doc["tasks"] if x["id"] == "synthesize-multi-factor")
+    for bad in ("VERDICT: FAIL\nFACTORS: F-4,F-4", "VERDICT: FAIL\nFACTORS: "):
+        ok, fields = score_task(t, bad)
+        assert not ok, (bad, fields)
+    ok, _ = score_task(t, "VERDICT: FAIL\nFACTORS: F-4")
+    assert ok
+
+
+def test_factor_trace_per_line_scoring_isolates_the_gap():
+    # synthesize-factor-trace decomposes the judgement: a model can get the
+    # per-factor lines right and still fail the final filtering line. The
+    # scorer must expose that split so analysis can separate comprehension
+    # (F lines) from negation filtering (FACTORS).
+    doc = _load_tasks_manifest()
+    t = next(x for x in doc["tasks"] if x["id"] == "synthesize-factor-trace")
+    ok, fields = score_task(
+        t, "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-3,F-4")
+    assert not ok
+    per_line_ok = all(fields[k]["ok"] for k in ("F3", "F4", "F5", "VERDICT"))
+    assert per_line_ok, fields
+    assert fields["FACTORS"]["ok"] is False
+    # full oracle passes
+    oracle = "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4"
+    ok_all, _ = score_task(t, oracle)
+    assert ok_all
+
+
 def test_call_model_rejects_non_allowlisted_extra_body():
     import types
 

@@ -1,62 +1,109 @@
 {
-  "schema_version": 1,
-  "name": "massive-fire-sweep-v1",
-  "tasks": [
-    {
-      "id": "extract-date",
-      "operation": "EXTRACT",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
-      "expected": {"date": "2025-11-03", "source": "S-17"},
-      "scoring": "exact_lines:DATE,SOURCE"
-    },
-    {
-      "id": "synthesize-counterexample",
-      "operation": "SYNTHESIZE",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic reasoner. Classify whether the evidence supports the universal claim, and identify the decisive observation. Respond with EXACTLY two lines in this format.\nSUPPORT: <YES|NO>\nOBSERVATION: <id>\n\nFacts:\n- Claim C-8: every measured restart resumed without duplicating an external effect.\n- Observation O-11: 29 measured restarts resumed with exactly one external effect.\n- Observation O-12: one measured restart produced two external effects after recovery.\n\nConstraints:\n- A single counterexample defeats the universal claim.\n- Output only the two lines, nothing else.",
-      "expected": {"support": "NO", "observation": "O-12"},
-      "scoring": "exact_lines:SUPPORT,OBSERVATION"
-    },
-    {
-      "id": "detect-conflict",
-      "operation": "CONFLICT",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines in this format.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.",
-      "expected": {"conflict": "YES", "pair": "O-1/O-2"},
-      "scoring": "exact_lines:CONFLICT,PAIR"
-    },
-    {
-      "id": "repair-stale-claim",
-      "operation": "REPAIR",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic repair agent. A cited claim view has become stale because new evidence arrived. You must produce the corrected view. Respond with EXACTLY three lines in this format.\nCLAIM: <id>\nSTATUS: <STALE|REPAIRED>\nEVIDENCE_COUNT: <integer>\n\nFacts:\n- Claim C-14 had 2 evidence links when its view was generated.\n- A new evidence link E-27 was added, making the total 3.\n- The view was marked stale because evidence delta exceeded the threshold.\n\nConstraints:\n- Report the claim ID, the new status after repair, and the total evidence count.\n- After repair, the status becomes REPAIRED.\n- The total evidence count is 3 (2 original + 1 new).\n- Output only the three lines, nothing else.",
-      "expected": {"claim": "C-14", "status": "REPAIRED", "evidence_count": "3"},
-      "scoring": "exact_lines:CLAIM,STATUS,EVIDENCE_COUNT"
-    },
-    {
-      "id": "extract-date-reinforced",
-      "operation": "EXTRACT",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"DATE: \".\nYour second line MUST begin with the exact prefix \"SOURCE: \".\nDo not add explanations. Do not add markdown.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
-      "expected": {"date": "2025-11-03", "source": "S-17"},
-      "scoring": "exact_lines:DATE,SOURCE"
-    },
-    {
-      "id": "detect-conflict-reinforced",
-      "operation": "CONFLICT",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"CONFLICT: \".\nYour second line MUST begin with the exact prefix \"PAIR: \".\nObservation identifiers always keep their \"O-\" prefix verbatim (for example O-1, never the bare number 1).\nCONFLICT: <YES|NO>\nPAIR: <O-id>/<O-id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- The PAIR value must keep the O- prefix on both identifiers, joined by a single slash.\n- Output only the two lines, nothing else.",
-      "expected": {"conflict": "YES", "pair": "O-1/O-2"},
-      "scoring": "exact_lines:CONFLICT,PAIR"
-    },
-    {
-      "id": "synthesize-multi-factor",
-      "operation": "SYNTHESIZE",
-      "format": "DELIMITED",
-      "prompt": "You are a deterministic reasoner. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nVERDICT: <PASS|FAIL>\nFACTORS: <comma-separated factor ids, or NONE>\n\nFacts:\n- Checklist item F-3 requires the backup to be verified by decode before publication; the run log shows verification passed.\n- Checklist item F-4 requires the destination directory to be fsynced after the hard link; the run log contains no fsync record for the destination directory.\n- Checklist item F-5 requires the temporary file to be removed; the run log shows removal.\n\nConstraints:\n- The release gate passes only when every checklist item is satisfied.\n- List exactly the factor ids that are NOT satisfied, in ascending order, or NONE if all are satisfied.\n- Output only the two lines, nothing else.",
-      "expected": {"verdict": "FAIL", "factors": "F-4"},
-      "scoring": "exact_lines:VERDICT,FACTORS"
-    }
-  ]
+ "schema_version": 1,
+ "name": "massive-fire-sweep-v1",
+ "tasks": [
+  {
+   "id": "extract-date",
+   "operation": "EXTRACT",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+   },
+   "scoring": "exact_lines:DATE,SOURCE"
+  },
+  {
+   "id": "synthesize-counterexample",
+   "operation": "SYNTHESIZE",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic reasoner. Classify whether the evidence supports the universal claim, and identify the decisive observation. Respond with EXACTLY two lines in this format.\nSUPPORT: <YES|NO>\nOBSERVATION: <id>\n\nFacts:\n- Claim C-8: every measured restart resumed without duplicating an external effect.\n- Observation O-11: 29 measured restarts resumed with exactly one external effect.\n- Observation O-12: one measured restart produced two external effects after recovery.\n\nConstraints:\n- A single counterexample defeats the universal claim.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "support": "NO",
+    "observation": "O-12"
+   },
+   "scoring": "exact_lines:SUPPORT,OBSERVATION"
+  },
+  {
+   "id": "detect-conflict",
+   "operation": "CONFLICT",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines in this format.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "conflict": "YES",
+    "pair": "O-1/O-2"
+   },
+   "scoring": "exact_lines:CONFLICT,PAIR"
+  },
+  {
+   "id": "repair-stale-claim",
+   "operation": "REPAIR",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic repair agent. A cited claim view has become stale because new evidence arrived. You must produce the corrected view. Respond with EXACTLY three lines in this format.\nCLAIM: <id>\nSTATUS: <STALE|REPAIRED>\nEVIDENCE_COUNT: <integer>\n\nFacts:\n- Claim C-14 had 2 evidence links when its view was generated.\n- A new evidence link E-27 was added, making the total 3.\n- The view was marked stale because evidence delta exceeded the threshold.\n\nConstraints:\n- Report the claim ID, the new status after repair, and the total evidence count.\n- After repair, the status becomes REPAIRED.\n- The total evidence count is 3 (2 original + 1 new).\n- Output only the three lines, nothing else.",
+   "expected": {
+    "claim": "C-14",
+    "status": "REPAIRED",
+    "evidence_count": "3"
+   },
+   "scoring": "exact_lines:CLAIM,STATUS,EVIDENCE_COUNT"
+  },
+  {
+   "id": "extract-date-reinforced",
+   "operation": "EXTRACT",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"DATE: \".\nYour second line MUST begin with the exact prefix \"SOURCE: \".\nDo not add explanations. Do not add markdown.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+   },
+   "scoring": "exact_lines:DATE,SOURCE"
+  },
+  {
+   "id": "detect-conflict-reinforced",
+   "operation": "CONFLICT",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"CONFLICT: \".\nYour second line MUST begin with the exact prefix \"PAIR: \".\nObservation identifiers always keep their \"O-\" prefix verbatim (for example O-1, never the bare number 1).\nCONFLICT: <YES|NO>\nPAIR: <O-id>/<O-id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- The PAIR value must keep the O- prefix on both identifiers, joined by a single slash.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "conflict": "YES",
+    "pair": "O-1/O-2"
+   },
+   "scoring": "exact_lines:CONFLICT,PAIR"
+  },
+  {
+   "id": "synthesize-multi-factor",
+   "operation": "SYNTHESIZE",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic reasoner. Read the facts, obey constraints, and respond with EXACTLY two lines in this format.\nVERDICT: <PASS|FAIL>\nFACTORS: <comma-separated factor ids, or NONE>\n\nFacts:\n- Checklist item F-3 requires the backup to be verified by decode before publication; the run log shows verification passed.\n- Checklist item F-4 requires the destination directory to be fsynced after the hard link; the run log contains no fsync record for the destination directory.\n- Checklist item F-5 requires the temporary file to be removed; the run log shows removal.\n\nConstraints:\n- The release gate passes only when every checklist item is satisfied.\n- List exactly the factor ids that are NOT satisfied, in ascending order, or NONE if all are satisfied.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "verdict": "FAIL",
+    "factors": "F-4"
+   },
+   "scoring": "exact_lines:VERDICT,FACTORS"
+  },
+  {
+   "id": "synthesize-multi-factor-restated",
+   "operation": "SYNTHESIZE",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic reasoner. Read the facts, obey constraints, and respond with EXACTLY two lines.\nYour first line MUST begin with the exact prefix \"VERDICT: \".\nYour second line MUST begin with the exact prefix \"FACTORS: \".\nVERDICT: <PASS|FAIL>\nFACTORS: <comma-separated factor ids of FAILED items only, or NONE>\n\nFacts:\n- Checklist item F-3 requires the backup to be verified by decode before publication; the run log shows verification passed. F-3 IS satisfied.\n- Checklist item F-4 requires the destination directory to be fsynced after the hard link; the run log contains no fsync record for the destination directory. F-4 IS NOT satisfied.\n- Checklist item F-5 requires the temporary file to be removed; the run log shows removal. F-5 IS satisfied.\n\nConstraints:\n- The release gate passes only when every checklist item is satisfied, so VERDICT is FAIL whenever any item is not satisfied.\n- FACTORS must list ONLY the ids of items that are NOT satisfied (the failed items). Do NOT list satisfied items.\n- Satisfied items (F-3, F-5) must NOT appear in FACTORS. Only the failed item belongs there.\n- Output only the two lines, nothing else.",
+   "expected": {
+    "verdict": "FAIL",
+    "factors": "F-4"
+   },
+   "scoring": "exact_lines:VERDICT,FACTORS"
+  },
+  {
+   "id": "synthesize-factor-trace",
+   "operation": "SYNTHESIZE",
+   "format": "DELIMITED",
+   "prompt": "You are a deterministic auditor. Evaluate each checklist item one by one, then give the gate verdict. Respond with EXACTLY five lines in this format.\nF3: <OK|FAIL>\nF4: <OK|FAIL>\nF5: <OK|FAIL>\nVERDICT: <PASS|FAIL>\nFACTORS: <comma-separated ids of FAIL lines above, or NONE>\n\nFacts:\n- Checklist item F-3 requires the backup to be verified by decode before publication; the run log shows verification passed.\n- Checklist item F-4 requires the destination directory to be fsynced after the hard link; the run log contains no fsync record for the destination directory.\n- Checklist item F-5 requires the temporary file to be removed; the run log shows removal.\n\nConstraints:\n- Mark each F line OK only if the run log shows its requirement was fulfilled; otherwise mark FAIL.\n- VERDICT is PASS only when all three F lines are OK.\n- FACTORS lists exactly the ids of the lines you marked FAIL, ascending, with the F- prefix verbatim (for example F-4), or NONE.\n- Output only the five lines, nothing else.",
+   "expected": {
+    "f3": "OK",
+    "f4": "FAIL",
+    "f5": "OK",
+    "verdict": "FAIL",
+    "factors": "F-4"
+   },
+   "scoring": "exact_lines:F3,F4,F5,VERDICT,FACTORS"
+  }
+ ]
 }
