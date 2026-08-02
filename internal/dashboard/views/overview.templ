@@ -1,0 +1,54 @@
+package views
+
+templ Overview() {
+	@layout("Overview", "/dash", []NavItem{
+		{Href: "/dash", Label: "Visão geral", Active: true},
+		{Href: "/dash/events", Label: "Eventos"},
+		{Href: "/dash/pending", Label: "Pendentes"},
+		{Href: "/dashboard", Label: "Dashboard atual", External: true},
+	}) {
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+			@card("Missões ativas") {
+				<p class="text-3xl font-bold text-[var(--accent)]">–</p>
+				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
+			}
+			@card("Eventos hoje") {
+				<p class="text-3xl font-bold text-[var(--ok)]">–</p>
+				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
+			}
+			@card("Pendentes") {
+				<p class="text-3xl font-bold text-[var(--warn)]">–</p>
+				<p class="text-sm text-[var(--muted)]">Human Input Required</p>
+			}
+			@card("Erros 24h") {
+				<p class="text-3xl font-bold text-[var(--err)]">–</p>
+				<p class="text-sm text-[var(--muted)]">via Inspect API</p>
+			}
+		</div>
+
+		@card("Atualizações recentes") {
+			<p class="text-sm text-[var(--muted)] mb-3">
+				Conectando via SSE. Quando a integração com Inspect API estiver pronta,
+				os eventos aparecerão aqui em tempo real.
+			</p>
+			<div id="events-feed" class="space-y-2 mono text-sm">
+				<div class="text-[var(--muted)]">Nenhum evento ainda. (SSE se conectará brevemente)</div>
+			</div>
+		}
+
+		@card("Ações rápidas") {
+			<div class="flex gap-2 flex-wrap">
+				@badge("Disparar campanha", "info")
+				@badge("Ver fonte", "neutral")
+			</div>
+		}
+
+		// Script placeholder pra Phase 2: SSE aqui.
+		@templ.Raw(`<script type="module">
+			const feed = document.getElementById('events-feed');
+			setTimeout(() => {
+				feed.innerHTML = '<div class="text-[var(--muted)]">Integração SSE pendente (Fase 2).</div>';
+			}, 2000);
+		</script>`)
+	}
+}

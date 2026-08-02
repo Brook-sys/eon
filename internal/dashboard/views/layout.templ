@@ -1,0 +1,109 @@
+package views
+
+// NavItem for dashboard v2 navigation links.
+type NavItem struct {
+	Href     string
+	Label    string
+	Active   bool
+	External bool
+}
+
+templ sidebar(items []NavItem) {
+	<nav class="w-52 shrink-0 border-r border-[var(--border)] flex flex-col gap-1 pt-1">
+		for _, item := range items {
+			<a
+				href={item.Href}
+				class={
+					"px-3 py-2 rounded-md text-sm transition-colors",
+					templ.KV("text-[var(--text)] bg-[var(--panel)] border-[var(--accent)]", item.Active),
+					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-[#243247]", !item.Active),
+				}
+				if item.External {
+					target="_blank" rel="noopener noreferrer"
+				}
+			>{item.Label}</a>
+		}
+	</nav>
+}
+
+templ badge(label, kind string) {
+	<span class={
+		"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border",
+		templ.KV("border-[var(--ok)] text-[var(--ok)]", kind == "success"),
+		templ.KV("border-[var(--warn)] text-[var(--warn)]", kind == "warning"),
+		templ.KV("border-[var(--err)] text-[var(--err)]", kind == "error"),
+		templ.KV("border-[var(--accent)] text-[var(--accent)]", kind == "info"),
+		templ.KV("border-[var(--border)] text-[var(--muted)]", kind == "neutral"),
+	}>{label}</span>
+}
+
+templ card(title string) {
+	<section class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 mb-4">
+		<h3 class="text-[var(--muted)] text-xs font-semibold uppercase tracking-widest mb-3">{title}</h3>
+		{ children... }
+	</section>
+}
+
+templ layout(title string, currentPath string, nav []NavItem) {
+	<!doctype html>
+	<html lang="pt-BR">
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<meta name="color-scheme" content="dark"/>
+		<title>motor-autonomo — {title}</title>
+		<script src="/dash/assets/htmx.min.js" defer></script>
+		<script src="/dash/assets/alpine.min.js" defer></script>
+		<link rel="stylesheet" href="/dash/assets/app.css"/>
+		<style>
+			:root {
+				--bg: #0f1419;
+				--panel: #1a2332;
+				--border: #2d3a4d;
+				--text: #e7ecf3;
+				--muted: #8b9bb4;
+				--accent: #5b9fd4;
+				--ok: #3d9a6a;
+				--warn: #c9a227;
+				--err: #c45c5c;
+				--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+				--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+			}
+			* { box-sizing: border-box; }
+			body {
+				margin: 0; background: var(--bg); color: var(--text);
+				font: 14px / 1.5 var(--sans);
+			}
+			a { text-decoration: none; color: inherit; }
+			pre, code, .mono { font-family: var(--mono); font-size: 13px; }
+			html { scrollbar-color: #3a4f6a transparent; }
+		</style>
+	</head>
+	<body class="min-h-screen">
+		<div class="flex min-h-screen">
+			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-4 gap-4">
+				<div class="flex items-center gap-2">
+					<div class="w-8 h-8 rounded-md flex items-center justify-center bg-[var(--accent)] text-white font-bold text-sm">
+						M
+					</div>
+					<div>
+						<div class="text-sm font-semibold">motor-autonomo</div>
+						<div class="text-xs text-[var(--muted)]">operator dashboard</div>
+					</div>
+				</div>
+				<hr class="border-[var(--border)]" />
+				@sidebar(nav)
+				<div class="mt-auto pt-4 border-t border-[var(--border)] text-xs text-[var(--muted)]">
+					v0
+				</div>
+			</aside>
+			<main class="flex-1 p-6 max-w-6xl">
+				<header class="mb-6">
+					<h1 class="text-xl font-semibold">{title}</h1>
+				</header>
+				{ children... }
+			</main>
+		</div>
+	</body>
+	</html>
+}

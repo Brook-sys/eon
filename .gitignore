@@ -4,3 +4,4 @@
 /cmd/runtime-gate-campaign/runtime-gate-campaign
 scripts/sweep/__pycache__/
 scripts/sweep/probe-last.json
+tools/dashboard-assets/tailwindcss

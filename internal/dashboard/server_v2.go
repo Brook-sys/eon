@@ -1,0 +1,81 @@
+package dashboard
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
+	"motor-autonomo/internal/dashboard/views"
+)
+
+// V2Server serves the Templ-based dashboard pages under /dash.
+// It composes with the existing Server for legacy /api routes.
+type V2Server struct {
+	// Inspect/Control are the same handlers used by the existing dashboard.
+	Inspect http.Handler
+	Control http.Handler
+	// Vault is an optional localhost-only write-only credential surface.
+	Vault http.Handler
+	// APIBase is the browser-visible prefix for fetch/EventSource calls.
+	APIBase string
+	// Logger receives dashboard lifecycle messages.
+	Logger *log.Logger
+}
+
+func NewV2(inspectAPI, controlAPI http.Handler, logger *log.Logger) (*V2Server, error) {
+	if inspectAPI == nil || controlAPI == nil {
+		return nil, fmt.Errorf("dashboard v2 requires inspect and control handlers")
+	}
+	if logger == nil {
+		logger = log.New(os.Stderr, "[dash] ", log.LstdFlags)
+	}
+	return &V2Server{
+		Inspect: inspectAPI,
+		Control: controlAPI,
+		APIBase: "/api",
+		Logger:  logger,
+	}, nil
+}
+
+// Handler returns the v2 mux.
+func (s *V2Server) Handler() http.Handler {
+	base := strings.TrimRight(s.APIBase, "/")
+	if base == "" {
+		base = "/api"
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle(base+"/inspect/", http.StripPrefix(base+"/inspect", s.Inspect))
+	mux.Handle(base+"/control/", http.StripPrefix(base+"/control", s.Control))
+	if s.Vault != nil {
+		mux.Handle(base+"/vault/", http.StripPrefix(base+"/vault", s.Vault))
+	}
+
+	// /dash → layout shell + pages.
+	mux.Handle("GET /dash", http.RedirectHandler("/dash/", http.StatusMovedPermanently))
+	mux.Handle("GET /dash/assets/", http.StripPrefix("/dash/assets", assetsHandler{}))
+	mux.Handle("GET /dash/", http.HandlerFunc(s.handleOverview))
+	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
+
+	return mux
+}
+
+func (s *V2Server) handleOverview(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Overview()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render overview: %v", err)
+	}
+}
+
+// handleEvents is an HTMX endpoint. It renders the events fragment
+// and will be polled by HTMX once live SSE wiring is done in Phase 2.
+func (s *V2Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	// Phase 2: fetch live events from inspect API and render snippet.
+	_, _ = w.Write([]byte(`<div class="text-[var(--muted)] p-4">Events endpoint online (SSE in Phase 2).</div>`))
+}
