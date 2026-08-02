@@ -1,0 +1,140 @@
+package views
+
+templ Resources() {
+	@layout("Recursos", "/dash/resources", []NavItem{
+		{Href: "/dash", Label: "Visão geral"},
+		{Href: "/dash/events", Label: "Eventos"},
+		{Href: "/dash/models", Label: "Modelos"},
+		{Href: "/dash/resources", Label: "Recursos", Active: true},
+		{Href: "/dashboard", Label: "Dashboard legado", External: true},
+	}) {
+		<div x-data="resourcesState()" x-init="start()" class="space-y-4">
+			<div class="flex items-center gap-3 text-sm">
+				<span class="inline-flex items-center gap-1.5">
+					<span
+						class="w-2 h-2 rounded-full"
+						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
+					></span>
+					<span x-show="connected">Inspect API acessível</span>
+					<span x-show="!connected">sem resposta da Inspect API</span>
+				</span>
+				<span class="text-[var(--muted)]" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
+				<button
+					class="ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+					x-on:click="refresh()"
+				>↻ Atualizar</button>
+			</div>
+
+			<div class="grid gap-4 md:grid-cols-3 mb-1">
+				@card("Recursos monitorados") {
+					<p class="text-3xl font-bold text-[var(--accent)]" x-text="resources.length"></p>
+					<p class="text-xs text-[var(--muted)]">com linha persistida</p>
+				}
+				@card("Em voo agora") {
+					<p class="text-3xl font-bold text-[var(--ok)]" x-text="sumInFlight()"></p>
+					<p class="text-xs text-[var(--muted)]">soma de in_flight</p>
+				}
+				@card("Circuitos abertos") {
+					<p class="text-3xl font-bold text-[var(--err)]" x-text="openCircuits().length"></p>
+					<p class="text-xs text-[var(--muted)]">gate bloqueado</p>
+				}
+			</div>
+
+			@card("ResourceGate") {
+				<template x-if="resources.length === 0">
+					<p class="text-sm text-[var(--muted)]" x-text="note || 'Nenhuma linha persistida ainda (válido quando nenhum gate foi exercido).'"></p>
+				</template>
+				<div class="overflow-x-auto" x-show="resources.length > 0">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-[var(--muted)] text-xs uppercase tracking-wider">
+								<th class="py-2 pr-3">Recurso</th>
+								<th class="py-2 pr-3">Em voo</th>
+								<th class="py-2 pr-3">Último min</th>
+								<th class="py-2 pr-3">Hoje</th>
+								<th class="py-2 pr-3">Tokens/min</th>
+								<th class="py-2 pr-3">Falhas cons.</th>
+								<th class="py-2 pr-3">Circuito</th>
+								<th class="py-2">Última falha</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-[var(--border)]">
+							<template x-for="r in resources" x-bind:key="r.resource">
+								<tr class="align-top">
+									<td class="py-2 pr-3 mono text-xs" x-text="r.resource"></td>
+									<td class="py-2 pr-3" x-text="r.in_flight ?? 0"></td>
+									<td class="py-2 pr-3" x-text="r.minute_count ?? 0"></td>
+									<td class="py-2 pr-3" x-text="r.day_count ?? 0"></td>
+									<td class="py-2 pr-3" x-text="fmtNum(r.token_minute_count)"></td>
+									<td class="py-2 pr-3">
+										<span x-bind:class="(r.consecutive_failures ?? 0) > 0 ? 'text-[var(--warn)] font-semibold' : ''"
+											x-text="r.consecutive_failures ?? 0"></span>
+									</td>
+									<td class="py-2 pr-3">
+										<template x-if="r.circuit_open">
+											<span class="px-2 py-0.5 rounded-full text-xs border border-[var(--err)] text-[var(--err)]" x-text="'aberto ' + openUntilShort(r.circuit_open_until)"></span>
+										</template>
+										<template x-if="!r.circuit_open">
+											<span class="text-[var(--ok)] text-xs">fechado</span>
+										</template>
+									</td>
+									<td class="py-2 text-xs text-[var(--muted)]" x-text="fmtTime(r.last_failure_at)"></td>
+								</tr>
+							</template>
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+
+		<script>
+			function resourcesState() {
+				return {
+					connected: false,
+					observedAt: null,
+					resources: [],
+					note: '',
+
+					get observedAgo() {
+						if (!this.observedAt) return '';
+						const s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);
+						return s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;
+					},
+
+					async refresh() {
+						try {
+							const d = await fetch('/dash/api/resources').then(r => r.json());
+							this.resources = d?.resources ?? [];
+							this.note = d?.note ?? '';
+							this.observedAt = Date.now();
+							this.connected = true;
+						} catch (e) { this.connected = false; }
+					},
+
+					sumInFlight() { return this.resources.reduce((a, r) => a + (r.in_flight ?? 0), 0); },
+					openCircuits() { return this.resources.filter(r => r.circuit_open); },
+
+					fmtNum(v) { return v == null ? '–' : Number(v).toLocaleString('pt-BR'); },
+					fmtTime(t) {
+						if (!t) return '';
+						const d = new Date(t);
+						return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');
+					},
+					openUntilShort(t) {
+						if (!t) return '';
+						const d = new Date(t);
+						if (isNaN(d)) return '';
+						const now = Date.now();
+						const sec = Math.max(0, (d.getTime() - now) / 1000 | 0);
+						return sec > 0 ? `(+${sec}s)` : '';
+					},
+
+					start() {
+						this.refresh();
+						setInterval(() => this.refresh(), 5000);
+					},
+				};
+			}
+		</script>
+	}
+}

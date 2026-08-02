@@ -62,6 +62,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/", http.HandlerFunc(s.handleOverview))
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
+	mux.Handle("GET /dash/resources", http.HandlerFunc(s.handleResources))
 	return mux
 }
 
@@ -92,5 +93,15 @@ func (s *V2Server) handleModels(w http.ResponseWriter, r *http.Request) {
 	component := views.Models()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render models: %v", err)
+	}
+}
+
+// handleResources serves the ResourceGate posture page fed by /resources.
+func (s *V2Server) handleResources(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Resources()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render resources: %v", err)
 	}
 }

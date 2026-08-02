@@ -29,6 +29,9 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	inspectMux.HandleFunc("GET /model-bindings", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"schema_version":1,"count":1,"bindings":[{"binding_id":"b1","provider_id":"groq","model_id":"llama-3.3-70b-versatile"}]}`))
 	})
+	inspectMux.HandleFunc("GET /resources", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"schema_version":1,"count":1,"resources":[{"resource":"groq:llama-3.3-70b","in_flight":2,"minute_count":47,"circuit_open":false}]}`))
+	})
 	controlMux := http.NewServeMux()
 	v2, err := NewV2(inspectMux, controlMux, nil)
 	if err != nil {
@@ -144,5 +147,30 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(b), "llama-3.3-70b-versatile") {
 		t.Fatalf("/dash/api/model-bindings body: %s", string(b))
+	}
+
+	// Resources page is served with live-data wiring.
+	resp, err = srv.Client().Get(srv.URL + "/dash/resources")
+	if err != nil {
+		t.Fatalf("get /dash/resources: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK ||
+		!strings.Contains(string(b), "resourcesState") ||
+		!strings.Contains(string(b), "/dash/api/resources") {
+		t.Fatalf("/dash/resources status=%d missing posture markers", resp.StatusCode)
+	}
+
+	// Resources proxy passes through gate payload (in_flight, counts, circuit).
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/resources")
+	if err != nil {
+		t.Fatalf("get dash api resources: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "groq:llama-3.3-70b") ||
+		!strings.Contains(string(b), "in_flight") {
+		t.Fatalf("/dash/api/resources body: %s", string(b))
 	}
 }
