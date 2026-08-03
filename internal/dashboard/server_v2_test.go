@@ -38,6 +38,21 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	inspectMux.HandleFunc("GET /alerts", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"schema_version":1,"total":2,"critical":1,"warnings":1,"alerts":[{"code":"telemetry.disabled","severity":"info","summary":"otel off"},{"code":"resource.unsettled_receipts","severity":"warning","summary":"2 receipts unsettled"}]}`))
 	})
+	inspectMux.HandleFunc("GET /knowledge", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"schema_version":1,"sources":3,"observations":12,"claims":4,"artifacts":2,"evidence_links":5}`))
+	})
+	inspectMux.HandleFunc("GET /knowledge/sources", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[{"id":"s1","locator":"https://example.com/doc","kind":"http_fetch","versions":2,"observed_at":"2026-08-01T00:00:00Z"}],"total":1,"offset":0,"limit":25}`))
+	})
+	inspectMux.HandleFunc("GET /knowledge/observations", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[{"id":"o1","statement":"temperature rising","provenance":"primary","source_fragment_id":"f1"}],"total":1,"offset":0,"limit":25}`))
+	})
+	inspectMux.HandleFunc("GET /knowledge/claims", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[{"id":"c1","proposition":"store is reliable","version":1,"supports":2,"contradicts":0,"without_evidence":false}],"total":1,"offset":0,"limit":25}`))
+	})
+	inspectMux.HandleFunc("GET /knowledge/artifacts", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"items":[{"id":"a1","kind":"report","content_ref":"sha256://abc","content_bytes":1024,"dependency_count":1,"base_commit_id":"c0","stale":false}],"total":1,"offset":0,"limit":25}`))
+	})
 	controlMux := http.NewServeMux()
 	v2, err := NewV2(inspectMux, controlMux, nil)
 	if err != nil {
@@ -227,5 +242,40 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	if !strings.Contains(string(b), "telemetry.disabled") ||
 		!strings.Contains(string(b), "resource.unsettled_receipts") {
 		t.Fatalf("/dash/api/alerts body: %s", string(b))
+	}
+
+	// Knowledge page is served with live-data wiring.
+	resp, err = srv.Client().Get(srv.URL + "/dash/knowledge")
+	if err != nil {
+		t.Fatalf("get /dash/knowledge: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK ||
+		!strings.Contains(string(b), "knowledgeState") ||
+		!strings.Contains(string(b), "/dash/api/knowledge") {
+		t.Fatalf("/dash/knowledge status=%d missing knowledge markers", resp.StatusCode)
+	}
+
+	// Knowledge catalog proxy passes summary payload through unchanged.
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/knowledge")
+	if err != nil {
+		t.Fatalf("get dash api knowledge: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "sources") || !strings.Contains(string(b), "observations") {
+		t.Fatalf("/dash/api/knowledge body: %s", string(b))
+	}
+
+	// Knowledge sources list proxy preserves paging fields.
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/knowledge/sources?offset=0&limit=5")
+	if err != nil {
+		t.Fatalf("get dash api knowledge/sources: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "example.com/doc") || !strings.Contains(string(b), "http_fetch") {
+		t.Fatalf("/dash/api/knowledge/sources body: %s", string(b))
 	}
 }

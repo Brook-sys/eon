@@ -65,6 +65,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/resources", http.HandlerFunc(s.handleResources))
 	mux.Handle("GET /dash/frontier", http.HandlerFunc(s.handleFrontier))
 	mux.Handle("GET /dash/alerts", http.HandlerFunc(s.handleAlerts))
+	mux.Handle("GET /dash/knowledge", http.HandlerFunc(s.handleKnowledge))
 	return mux
 }
 
@@ -125,5 +126,15 @@ func (s *V2Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
 	component := views.Alerts()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render alerts: %v", err)
+	}
+}
+
+// handleKnowledge serves the knowledge catalog page fed by /knowledge endpoints.
+func (s *V2Server) handleKnowledge(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Knowledge()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render knowledge: %v", err)
 	}
 }
