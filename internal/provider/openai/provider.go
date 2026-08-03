@@ -139,8 +139,9 @@ type Error struct {
 	// Reason is a short, non-sensitive diagnostic label that distinguishes
 	// which validation condition triggered INVALID_RESPONSE (e.g.
 	// "json_unmarshal_failed", "choices_count", "role_not_assistant",
-	// "empty_content", "negative_usage"). It never contains response body
-	// text or any other potentially sensitive payload.
+	// "empty_content", "reasoning_budget_exhausted", "negative_usage"). It
+	// never contains response body text or any other potentially sensitive
+	// payload.
 	Reason string
 	// RetryAfter is the earliest safe retry delay declared by the provider.
 	// It is parsed only from the standard Retry-After header; response bodies
@@ -175,7 +176,8 @@ func (e *Error) RetryableFailure() bool { return e.Retryable }
 
 // DiagnosticReason returns a short, non-sensitive label that classifies which
 // validation condition triggered the error (e.g. "json_unmarshal_failed",
-// "empty_content"). It never contains response body text.
+// "empty_content", "reasoning_budget_exhausted"). It never contains response
+// body text.
 func (e *Error) DiagnosticReason() string { return e.Reason }
 
 // New creates an OpenAI-compatible chat completions adapter. Optional Option
@@ -294,6 +296,14 @@ type chatResponse struct {
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
+		// CompletionTokensDetails carries the provider-reported breakdown of
+		// completion usage. Reasoning-capable deployments (e.g. Groq
+		// gpt-oss-20b/120b) report internal reasoning consumption here; the
+		// adapter only uses the non-sensitive counter to distinguish a
+		// reasoning-eaten token budget from a semantically empty answer.
+		CompletionTokensDetails struct {
+			ReasoningTokens int `json:"reasoning_tokens"`
+		} `json:"completion_tokens_details"`
 	} `json:"usage"`
 }
 
@@ -388,7 +398,17 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "role_not_assistant"}
 	}
 	if decoded.Choices[0].Message.Content == "" && len(decoded.Choices[0].Message.ToolCalls) == 0 {
-		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "empty_content"}
+		// Distinguish a reasoning-eaten completion budget from a genuinely
+		// empty semantic answer (Phase 369 live evidence: Groq gpt-oss-20b
+		// with max_tokens 8–32 returns finish_reason=length, empty content,
+		// and all completion tokens consumed as internal reasoning). The
+		// reason label lets callers retry once with a higher budget instead
+		// of misclassifying the failure as a provider/semantic error.
+		reason := "empty_content"
+		if decoded.Choices[0].FinishReason == "length" && decoded.Usage.CompletionTokensDetails.ReasoningTokens > 0 {
+			reason = "reasoning_budget_exhausted"
+		}
+		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: reason}
 	}
 	if decoded.Usage.PromptTokens < 0 || decoded.Usage.CompletionTokens < 0 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidResponse, Reason: "negative_usage"}

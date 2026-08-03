@@ -1,0 +1,1041 @@
+{
+  "started_at": "2026-08-02T08:08:09Z",
+  "config": {
+    "models": [
+      "llama-3.1-8b-instant",
+      "qwen/qwen3.6-27b",
+      "llama-3.3-70b-versatile"
+    ],
+    "trials": 5,
+    "max_tokens": 220,
+    "temp": 0.9,
+    "pages": [
+      "overview-empty",
+      "cortex-empty",
+      "audit-empty"
+    ]
+  },
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "calls": [
+        {
+          "ok": true,
+          "latencies_ms": 624,
+          "text": "```json\n{\n  \"title\": \"Motormestre: Painel de Status em Branco\",\n  \"body\": \"Você ainda não tem dados a serem exibidos aqui. Por favor, verifique se o sistema foi configurado corretamente e se os sensores estão funcionando corretamente.\",\n  \"action_hint\": \"Verifique os sensores ou consulte a documentação para aprender a configurar o sistema\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 95,
+          "trial": 0,
+          "model": "llama-3.1-8b-instant",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Motormestre: Painel de Status em Branco",
+            "body": "Você ainda não tem dados a serem exibidos aqui. Por favor, verifique se o sistema foi configurado corretamente e se os sensores estão funcionando corretamente.",
+            "action_hint": "Verifique os sensores ou consulte a documentação para aprender a configurar o sistema"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 39,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 443,
+          "text": "```json\n{\n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Aqui você encontrará informações detalhadas sobre o status do motor autônomo, como condições de saúde e desempenho.\",\n  \"action_hint\": \"Clique para carregar dados ou verifique se o sistema está funcionando corretamente\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 78,
+          "trial": 1,
+          "model": "llama-3.1-8b-instant",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Nenhum dado disponível",
+            "body": "Aqui você encontrará informações detalhadas sobre o status do motor autônomo, como condições de saúde e desempenho.",
+            "action_hint": "Clique para carregar dados ou verifique se o sistema está funcionando corretamente"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 22,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 490,
+          "text": "```json\n{\n  \"title\": \"O motor autónomo ainda não está em operação.\",\n  \"body\": \"Nenhum dado está disponível porque o motor ainda não foi iniciado ou não tem dados a compartilhar.\",\n  \"action_hint\": \"Comece a operar o motor autónomo para coletar dados.\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 75,
+          "trial": 2,
+          "model": "llama-3.1-8b-instant",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "O motor autónomo ainda não está em operação.",
+            "body": "Nenhum dado está disponível porque o motor ainda não foi iniciado ou não tem dados a compartilhar.",
+            "action_hint": "Comece a operar o motor autónomo para coletar dados."
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 44,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 415,
+          "text": "{\n  \"title\": \"Nenhuma informação disponível\",\n  \"body\": \"Não há dados atuais para o painel de status do motor autônomo.\",\n  \"action_hint\": null\n}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 45,
+          "trial": 3,
+          "model": "llama-3.1-8b-instant",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Nenhuma informação disponível",
+            "body": "Não há dados atuais para o painel de status do motor autônomo.",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 29,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 471,
+          "text": "```json\n{\n  \"title\": \"Não há dados disponíveis\",\n  \"body\": \"O painel de status está vazio porque não há dados para exibir.\",\n  \"action_hint\": \"Verifique se os dados estão sendo coletados corretamente ou se há problemas com a conexão.\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 67,
+          "trial": 4,
+          "model": "llama-3.1-8b-instant",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Não há dados disponíveis",
+            "body": "O painel de status está vazio porque não há dados para exibir.",
+            "action_hint": "Verifique se os dados estão sendo coletados corretamente ou se há problemas com a conexão."
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 450,
+          "text": "```json\n{\n  \"title\": \"Nenhum run recente encontrado\",\n  \"body\": \"Nenhum run foi realizado recentemente. Clique em 'Iniciar nova corrida' para começar.\",\n  \"action_hint\": \"Iniciar nova corrida\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 60,
+          "trial": 0,
+          "model": "llama-3.1-8b-instant",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhum run recente encontrado",
+            "body": "Nenhum run foi realizado recentemente. Clique em 'Iniciar nova corrida' para começar.",
+            "action_hint": "Iniciar nova corrida"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 29,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 478,
+          "text": "```json\n{\n  \"title\": \"Ainda não foi executado nenhum run\",\n  \"body\": \"Aqui você poderá visualizar os resultados dos runs executados pela plataforma.\",\n  \"action_hint\": \"\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 49,
+          "trial": 1,
+          "model": "llama-3.1-8b-instant",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Ainda não foi executado nenhum run",
+            "body": "Aqui você poderá visualizar os resultados dos runs executados pela plataforma.",
+            "action_hint": ""
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 34,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 457,
+          "text": "```json\n{\n  \"title\": \"Nenhum resultado encontrado\",\n  \"body\": \"Nenhuma execução foi realizada no Cortex ainda.\",\n  \"action_hint\": \"Clique para começar uma corrida\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 50,
+          "trial": 2,
+          "model": "llama-3.1-8b-instant",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhum resultado encontrado",
+            "body": "Nenhuma execução foi realizada no Cortex ainda.",
+            "action_hint": "Clique para começar uma corrida"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 27,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 472,
+          "text": "{\n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Essa página exibe os runs recentes realizados pelo motor-autônomo. Aqui você encontrará a lista de corridas mais recentes\",\n  \"action_hint\": \"execute um run para começar\"\n}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 64,
+          "trial": 3,
+          "model": "llama-3.1-8b-instant",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhum dado disponível",
+            "body": "Essa página exibe os runs recentes realizados pelo motor-autônomo. Aqui você encontrará a lista de corridas mais recentes",
+            "action_hint": "execute um run para começar"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 22,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 409,
+          "text": "```json\n{\n  \"title\": \"Nenhuma corrida recente\",\n  \"body\": \"Aqui listamos as suas corridas mais recentes. Você pode começar uma nova corrida clicando no botão 'Iniciar corrida' abaixo.\",\n  \"action_hint\": \"Iniciar corrida\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 69,
+          "trial": 4,
+          "model": "llama-3.1-8b-instant",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhuma corrida recente",
+            "body": "Aqui listamos as suas corridas mais recentes. Você pode começar uma nova corrida clicando no botão 'Iniciar corrida' abaixo.",
+            "action_hint": "Iniciar corrida"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 23,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 375,
+          "text": "```json\n{\n  \"title\": \"Nenhum registro encontrado\",\n  \"body\": \"Clique em 'Novo evento' para começar a registrar sua trilha de decisões\",\n  \"action_hint\": \"Novo evento\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 53,
+          "trial": 0,
+          "model": "llama-3.1-8b-instant",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhum registro encontrado",
+            "body": "Clique em 'Novo evento' para começar a registrar sua trilha de decisões",
+            "action_hint": "Novo evento"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 26,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 453,
+          "text": "{\n    \"title\": \"Sem dados para visualizar\",\n    \"body\": \"Nenhuma trilha de eventos e decisões foi adicionada ao histórico de auditoria.\",\n    \"action_hint\": \"Adicione uma nova trilha de eventos e decisões\"\n}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 58,
+          "trial": 1,
+          "model": "llama-3.1-8b-instant",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Sem dados para visualizar",
+            "body": "Nenhuma trilha de eventos e decisões foi adicionada ao histórico de auditoria.",
+            "action_hint": "Adicione uma nova trilha de eventos e decisões"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 25,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 612,
+          "text": "```json\n{\n  \"title\": \"Não há auditorias registradas\",\n  \"body\": \"Aqui você pode visualizar e gerenciar trilhas de eventos e decisões de auditorias realizadas no sistema.\",\n  \"action_hint\": null\n}\n```",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 57,
+          "trial": 2,
+          "model": "llama-3.1-8b-instant",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Não há auditorias registradas",
+            "body": "Aqui você pode visualizar e gerenciar trilhas de eventos e decisões de auditorias realizadas no sistema.",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 29,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 472,
+          "text": "```json\n{\n  \"title\": \"Nenhuma auditoria encontrada\",\n  \"body\": \"Aqui você verá todos os registros de auditoria relacionados à sua trilha de eventos e decisões.\",\n  \"action_hint\": \"Crie sua primeira auditoria para começar\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 64,
+          "trial": 3,
+          "model": "llama-3.1-8b-instant",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhuma auditoria encontrada",
+            "body": "Aqui você verá todos os registros de auditoria relacionados à sua trilha de eventos e decisões.",
+            "action_hint": "Crie sua primeira auditoria para começar"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": true,
+            "title_len": 28,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 463,
+          "text": "```json\n{\n  \"title\": \"Nenhuma auditoria encontrada\",\n  \"body\": \"Essa página exibe as auditorias realizadas na plataforma. Clique em 'Nova auditoria' para iniciar um novo processo.\",\n  \"action_hint\": \"Nova auditoria\"\n}\n```",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 62,
+          "trial": 4,
+          "model": "llama-3.1-8b-instant",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhuma auditoria encontrada",
+            "body": "Essa página exibe as auditorias realizadas na plataforma. Clique em 'Nova auditoria' para iniciar um novo processo.",
+            "action_hint": "Nova auditoria"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 28,
+            "keys_ok": false
+          }
+        }
+      ],
+      "stats": {
+        "calls_ok": 15,
+        "json_valid": 15,
+        "json_invalid": 0,
+        "placeholder_hits": 1,
+        "p50_ms": 463,
+        "p95_ms": 612,
+        "min_ms": 375,
+        "max_ms": 624
+      }
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "calls": [
+        {
+          "ok": true,
+          "latencies_ms": 872,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for the page \"visão geral (overview) — painel de status do motor autonomo\" (Overview — Autonomous Engine Status Dashboard)\n   - **Format:** Raw JSON only, no markdown, no comments\n   - **Keys Required:** \"title\", \"body\", \"action_hint\"\n   - **Constraints for \"title\":** Short string, honest and direct tone, no emoji, no false promises\n   - **Constraints for \"body\":** Short sentence explaining what will appear here when there's data\n   - **Constraints for \"action_hint\":** Optional short string or null\n   - **Prohibited:** TODO, lorem ipsum, placeholder text\n\n2.  **Deconstruct Context & Requirements:**\n   - *Page:* Overview / Autonomous Engine Status Dashboard\n   - *Empty State:* No data yet (likely because the engine hasn't run, no missions/flights/operations,",
+          "finish": "length",
+          "input_tokens": 141,
+          "output_tokens": 220,
+          "trial": 0,
+          "model": "qwen/qwen3.6-27b",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1053,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian) - pt-BR\n   - **Context:** Empty state for the 'visão geral (overview) — painel de status do motor autonomo' page of the dashboard 'motor-autonomo'\n   - **Output Format:** RAW JSON only, no markdown, no comments\n   - **Required Keys:** \"title\", \"body\", \"action_hint\"\n   - **Constraints:**\n     - \"title\": short string, honest & direct tone, no emoji, no false promises\n     - \"body\": short sentence explaining what will appear here when there's data\n     - \"action_hint\": short optional string or null\n     - No TODO, lorem ipsum, or placeholder text\n     - Respond ONLY with the raw JSON object\n\n2.  **Deconstruct Context:**\n   - Dashboard: \"motor-autonomo\" (autonomous engine)\n   - Page: \"visão geral (overview) — painel de status do motor",
+          "finish": "length",
+          "input_tokens": 141,
+          "output_tokens": 220,
+          "trial": 1,
+          "model": "qwen/qwen3.6-27b",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian) - pt-BR\n   - *"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1308,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context:** Micro-copy for an \"empty state\" on the page \"visão geral (overview) — painel de status do motor autonomo\" of a dashboard called \"motor-autonomo\".\n   - **Output Format:** RAW JSON object only, no markdown, no comments.\n   - **Required Keys:** \n     - `\"title\"`: Short string, honest and direct tone, no emoji, no false promises.\n     - `\"body\"`: Short sentence explaining what will appear here when there's data.\n     - `\"action_hint\"`: Optional short string or null.\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Context & Requirements:**\n   - **Page:** Overview / Status panel for an autonomous engine (\"motor autonomo\").\n   - **State:** Empty state (no data yet).\n   - **Tone:** Honest, direct",
+          "finish": "length",
+          "input_tokens": 141,
+          "output_tokens": 220,
+          "trial": 2,
+          "model": "qwen/qwen3.6-27b",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 924,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context:** Empty state for \"Overview\" page in \"Autonomous Motor Status Dashboard\"\n   - **Output Format:** Raw JSON only, no markdown, no comments\n   - **Keys Required:** Exactly `\"title\"`, `\"body\"`, `\"action_hint\"`\n   - **Constraints for `title`:** Short string, honest/direct tone, no emojis, no false promises\n   - **Constraints for `body`:** Short sentence explaining what will appear here when there's data\n   - **Constraints for `action_hint`:` Optional short string or `null`\n   - **Negative Constraints:** No TODO, no lorem ipsum, no placeholder text\n   - **Output Only:** Raw JSON object\n\n2.  **Deconstruct Requirements & Brainstorming (Mental):**\n   - *Title:* Needs to be honest, direct, short. Something like \"Sem dados disponíveis\" or \"Nenhum status registrado\"",
+          "finish": "length",
+          "input_tokens": 141,
+          "output_tokens": 220,
+          "trial": 3,
+          "model": "qwen/qwen3.6-27b",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 871,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context:** Empty state for the \"visao geral (overview) — painel de status do motor autonomo\" (Overview — Autonomous Engine Status Dashboard) page.\n   - **Output Format:** Raw JSON object only, no markdown, no comments.\n   - **Required Keys:** \n     - `\"title\"`: Short string, honest and direct tone, no emoji, no false promises.\n     - `\"body\"`: Short sentence explaining what will appear here when there's data.\n     - `\"action_hint\"`: Optional short string or null.\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Context & Requirements:**\n   - *Page:* Dashboard overview for an \"autonomous engine\" status. This implies monitoring, metrics, health checks, operational status, etc.\n   - *Empty State:* No data has been ingested, configured, or collected",
+          "finish": "length",
+          "input_tokens": 141,
+          "output_tokens": 220,
+          "trial": 4,
+          "model": "qwen/qwen3.6-27b",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 879,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazil)\n   - **Context:** Empty state for the page \"cortex — centro de operacoes cognitivas / runs recentes\" in a dashboard called \"motor-autonomo\"\n   - **Format:** Raw JSON object only, no markdown, no comments\n   - **Keys:** Exactly \"title\", \"body\", \"action_hint\"\n   - **Constraints:**\n     - `title`: Short string, honest and direct tone, no emoji, no false promises\n     - `body`: Short sentence explaining what will appear here when there's data\n     - `action_hint`: Short optional string or null\n     - No TODO, lorem ipsum, or placeholder text\n     - Output ONLY the JSON\n\n2.  **Deconstruct Context & Requirements:**\n   - Platform: \"motor-autonomo\" (autonomous engine/dashboard)\n   - Section: \"cortex — centro de operacoes cognitivas / runs recentes\" (cortex — cognitive",
+          "finish": "length",
+          "input_tokens": 139,
+          "output_tokens": 220,
+          "trial": 0,
+          "model": "qwen/qwen3.6-27b",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazil)\n   - **Context:**"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1117,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context:** Empty state for the page 'cortex — centro de operacoes cognitivas / runs recentes' in the dashboard of 'motor-autonomo'\n   - **Output Format:** RAW JSON only, no markdown, no comments\n   - **Keys Required:** \"title\", \"body\", \"action_hint\"\n   - **Constraints:**\n     - \"title\": short string, honest and direct tone, no emoji, no false promises\n     - \"body\": one short sentence explaining what will appear here when there's data\n     - \"action_hint\": optional short string or null\n     - No TODO, lorem ipsum, or placeholder text\n     - Respond ONLY with the raw JSON object\n\n2.  **Deconstruct Context & Requirements:**\n   - *Page:* \"cortex — centro de operacoes cognitivas / runs recentes\" (Cortex - Cognitive Operations Center / Recent Runs)\n   - *Product",
+          "finish": "length",
+          "input_tokens": 139,
+          "output_tokens": 220,
+          "trial": 1,
+          "model": "qwen/qwen3.6-27b",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian)\n   - **Context"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1235,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for a page named \"cortex — centro de operacoes cognitivas / runs recentes\" in a dashboard called \"motor-autonomo\"\n   - **Output Format:** RAW JSON only, no markdown, no comments\n   - **Required Keys:** \"title\", \"body\", \"action_hint\"\n   - **Constraints:**\n     - \"title\": Short string, honest/direct tone, no emoji, no false promises\n     - \"body\": Short sentence explaining what will appear here when there's data\n     - \"action_hint\": Short optional string or null\n     - No TODO, lorem ipsum, or placeholder text\n     - Respond APENAS (ONLY) with the raw JSON object\n\n2.  **Deconstruct Context & Requirements:**\n   - Page name: \"cortex — centro de operacoes cognitivas / runs recentes\"\n   - Dashboard: \"motor-autonom",
+          "finish": "length",
+          "input_tokens": 139,
+          "output_tokens": 220,
+          "trial": 2,
+          "model": "qwen/qwen3.6-27b",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 814,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for a page named \"cortex — centro de operacoes cognitivas / runs recentes\" in a dashboard called \"motor-autonomo\"\n   - **Output Format:** Raw JSON object only, no markdown, no comments\n   - **Required Keys:** \n     - `title`: Short string, honest/direct tone, no emoji, no false promises\n     - `body`: Short sentence explaining what will appear here when there is data\n     - `action_hint`: Optional short string or `null`\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text\n\n2.  **Deconstruct Context:**\n   - \"cortex\" seems to be a module/section name\n   - \"centro de operacoes cognitivas\" = cognitive operations center\n   - \"runs recentes\" = recent runs (likely AI/ML model runs, automation executions, or processing jobs",
+          "finish": "length",
+          "input_tokens": 139,
+          "output_tokens": 220,
+          "trial": 3,
+          "model": "qwen/qwen3.6-27b",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 892,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for a page called \"cortex — centro de operacoes cognitivas / runs recentes\" (cortex — cognitive operations center / recent runs) in a dashboard for \"motor-autonomo\" (autonomous engine/motor).\n   - **Output Format:** Raw JSON object only, no markdown, no comments.\n   - **Required Keys:** \n     - \"title\": short string, honest/direct tone, no emoji, no false promises\n     - \"body\": one short sentence explaining what will appear here when there is data\n     - \"action_hint\": optional short string or null\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Context & Requirements:**\n   - *Page Name/Concept:* \"cortex — centro de operacoes cognitivas / runs recentes\" suggests a system that tracks recent execution runs or cognitive operations",
+          "finish": "length",
+          "input_tokens": 139,
+          "output_tokens": 220,
+          "trial": 4,
+          "model": "qwen/qwen3.6-27b",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 981,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for the page \"auditoria — trilha de eventos e decisoes\" (audit — event and decision trail) in the dashboard of \"motor-autonomo\" (autonomous engine/agent).\n   - **Format:** ONLY a raw JSON object, no markdown, no comments.\n   - **Keys Required:** \n     - `title` (short string, honest/direct tone, no emoji, no false promises)\n     - `body` (one short sentence explaining what will appear here when there's data)\n     - `action_hint` (optional short string or null)\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Requirements & Brainstorming (Mental):**\n   - *Title:* Needs to be honest, direct, short. Something like \"Nenhum evento registrado\", \"Auditoria",
+          "finish": "length",
+          "input_tokens": 138,
+          "output_tokens": 220,
+          "trial": 0,
+          "model": "qwen/qwen3.6-27b",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1000,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for a page named \"auditoria — trilha de eventos e decisoes\" (audit — trail of events and decisions) in a dashboard for \"motor-autonomo\" (autonomous engine/motor, likely an AI/automation system).\n   - **Output Format:** RAW JSON ONLY, no markdown, no comments.\n   - **Required Keys:** \"title\", \"body\", \"action_hint\"\n   - **Constraints:**\n     - `title`: Short string, honest and direct tone, no emoji, no false promises.\n     - `body`: One short sentence explaining what will appear here when there's data.\n     - `action_hint`: Optional short string or null.\n     - No TODO, lorem ipsum, or placeholder text.\n     - Respond ONLY with the raw JSON.\n\n2.  **Deconstruct Requirements & Brainstorming (Internal):**\n  ",
+          "finish": "length",
+          "input_tokens": 138,
+          "output_tokens": 220,
+          "trial": 1,
+          "model": "qwen/qwen3.6-27b",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 823,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for the page 'auditoria — trilha de eventos e decisoes' (audit - trail of events and decisions) in a dashboard for 'motor-autonomo' (autonomous engine/system).\n   - **Output Format:** ONLY a raw JSON object, no markdown, no comments.\n   - **Required Keys:** \n     - `\"title\"`: Short string, honest and direct tone, no emoji, no false promises.\n     - `\"body\"`: Short sentence explaining what will appear here when there is data.\n     - `\"action_hint\"`: Optional short string or null.\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Context & Requirements:**\n   - **Page:** Audit trail for events and decisions (likely logs, records of system actions, decisions made by the autonomous engine, timestamps, etc.)\n",
+          "finish": "length",
+          "input_tokens": 138,
+          "output_tokens": 220,
+          "trial": 2,
+          "model": "qwen/qwen3.6-27b",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 792,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **Context:** Empty state for the page \"auditoria — trilha de eventos e decisoes\" in the \"motor-autonomo\" dashboard.\n   - **Output Format:** Raw JSON only, no markdown, no comments.\n   - **Required Keys:** \"title\", \"body\", \"action_hint\"\n   - **Constraints for \"title\":** Short string, honest and direct tone, no emoji, no false promises.\n   - **Constraints for \"body\":** Short sentence explaining what will appear here when there is data.\n   - **Constraints for \"action_hint\":** Optional short string or null.\n   - **Prohibitions:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Context & Requirements:**\n   - *Page:* \"Auditoria — Trilha de Eventos e Decisões\" (Audit — Event and Decision Trail)\n",
+          "finish": "length",
+          "input_tokens": 138,
+          "output_tokens": 220,
+          "trial": 3,
+          "model": "qwen/qwen3.6-27b",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Brazilian Portuguese (pt-BR)\n   - **C"
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 1332,
+          "text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian - pt-BR)\n   - **Context:** Empty state for a page named \"auditoria — trilha de eventos e decisoes\" (audit — event and decision trail) in a dashboard called \"motor-autonomo\" (autonomous engine/motor).\n   - **Output Format:** RAW JSON object ONLY, no markdown, no comments.\n   - **Required Keys:** \n     - `\"title\"`: Short string, honest and direct tone, no emoji, no false promises.\n     - `\"body\"`: Short sentence explaining what will appear here when there is data.\n     - `\"action_hint\"`: Optional short string or null.\n   - **Constraints:** No TODO, no lorem ipsum, no placeholder text.\n\n2.  **Deconstruct Requirements:**\n   - *Title:* Needs to be honest, direct, Portuguese, short. Something like \"Nenhum evento registrado ainda\" or \"Sem registros de auditor",
+          "finish": "length",
+          "input_tokens": 138,
+          "output_tokens": 220,
+          "trial": 4,
+          "model": "qwen/qwen3.6-27b",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "analysis": {
+            "json_valid": false,
+            "category": "invalid_json",
+            "raw_head": "<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Language:** Portuguese (Brazilian - pt-BR)\n   - *"
+          }
+        }
+      ],
+      "stats": {
+        "calls_ok": 15,
+        "json_valid": 0,
+        "json_invalid": 15,
+        "placeholder_hits": 0,
+        "p50_ms": 924,
+        "p95_ms": 1308,
+        "min_ms": 792,
+        "max_ms": 1332
+      }
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "calls": [
+        {
+          "ok": true,
+          "latencies_ms": 565,
+          "text": "{\"title\": \"Nenhum dado disponível\", \"body\": \"Aqui você verá uma visão geral do status do motor autônomo quando houver dados para exibir\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 46,
+          "trial": 0,
+          "model": "llama-3.3-70b-versatile",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Nenhum dado disponível",
+            "body": "Aqui você verá uma visão geral do status do motor autônomo quando houver dados para exibir",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 22,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 545,
+          "text": "{\"title\": \"Nenhum dado disponível\", \"body\": \"Aqui você verá o resumo do desempenho do motor autônomo quando houver dados para exibir.\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 48,
+          "trial": 1,
+          "model": "llama-3.3-70b-versatile",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Nenhum dado disponível",
+            "body": "Aqui você verá o resumo do desempenho do motor autônomo quando houver dados para exibir.",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 22,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 478,
+          "text": "{\"title\": \"Nenhum dado disponível\", \"body\": \"Aqui você verá uma visão geral do status do motor autônomo quando houver dados para exibir\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 46,
+          "trial": 2,
+          "model": "llama-3.3-70b-versatile",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Nenhum dado disponível",
+            "body": "Aqui você verá uma visão geral do status do motor autônomo quando houver dados para exibir",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 22,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 501,
+          "text": "{\"title\": \"Sem dados\", \"body\": \"Aqui você verá uma visão geral do status do motor autônomo quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 41,
+          "trial": 3,
+          "model": "llama-3.3-70b-versatile",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Sem dados",
+            "body": "Aqui você verá uma visão geral do status do motor autônomo quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 9,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 548,
+          "text": "{\"title\": \"Sem dados para exibir\", \"body\": \"Aqui você vera um resumo dos dados do motor autonomo quando disponiveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 178,
+          "output_tokens": 39,
+          "trial": 4,
+          "model": "llama-3.3-70b-versatile",
+          "page": "visao geral (overview) — painel de status do motor autonomo",
+          "page_id": "overview-empty",
+          "parsed": {
+            "title": "Sem dados para exibir",
+            "body": "Aqui você vera um resumo dos dados do motor autonomo quando disponiveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 21,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 570,
+          "text": "{\"title\": \"Nenhum Run Recente\", \"body\": \"Aqui aparecerão as últimas execuções do Motor Autônomo\", \"action_hint\": \"Execute um run para visualizar os resultados\"}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 47,
+          "trial": 0,
+          "model": "llama-3.3-70b-versatile",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhum Run Recente",
+            "body": "Aqui aparecerão as últimas execuções do Motor Autônomo",
+            "action_hint": "Execute um run para visualizar os resultados"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 18,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 571,
+          "text": "{\"title\": \"Nenhuma execução recente\", \"body\": \"Aqui serão exibidas as execuções do Cortex mais recentes\", \"action_hint\": \"Inicie uma nova execução para ver os resultados\"}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 49,
+          "trial": 1,
+          "model": "llama-3.3-70b-versatile",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhuma execução recente",
+            "body": "Aqui serão exibidas as execuções do Cortex mais recentes",
+            "action_hint": "Inicie uma nova execução para ver os resultados"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 459,
+          "text": "{\"title\": \"Nenhuma Execução Recente\", \"body\": \"Aqui serão exibidas as execuções recentes do Motor Autônomo quando disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 44,
+          "trial": 2,
+          "model": "llama-3.3-70b-versatile",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhuma Execução Recente",
+            "body": "Aqui serão exibidas as execuções recentes do Motor Autônomo quando disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 550,
+          "text": "{\"title\": \"Nenhuma execução recente\", \"body\": \"Aqui aparecerão as últimas execuções do Motor Autônomo\", \"action_hint\": \"Execute uma operação para visualizar os resultados\"}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 49,
+          "trial": 3,
+          "model": "llama-3.3-70b-versatile",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Nenhuma execução recente",
+            "body": "Aqui aparecerão as últimas execuções do Motor Autônomo",
+            "action_hint": "Execute uma operação para visualizar os resultados"
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 537,
+          "text": "{\"title\": \"Sem Runs Recentemente\", \"body\": \"Aqui aparecerão os runs recentes do centro de operações cognitivas quando disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 177,
+          "output_tokens": 41,
+          "trial": 4,
+          "model": "llama-3.3-70b-versatile",
+          "page": "cortex — centro de operacoes cognitivas / runs recentes",
+          "page_id": "cortex-empty",
+          "parsed": {
+            "title": "Sem Runs Recentemente",
+            "body": "Aqui aparecerão os runs recentes do centro de operações cognitivas quando disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 21,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 538,
+          "text": "{\"title\": \"Nenhum evento encontrado\", \"body\": \"Aqui você verá a trilha de eventos e decisões da auditoria quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 44,
+          "trial": 0,
+          "model": "llama-3.3-70b-versatile",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhum evento encontrado",
+            "body": "Aqui você verá a trilha de eventos e decisões da auditoria quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 565,
+          "text": "{\"title\": \"Nenhuma auditoria registrada\", \"body\": \"Aqui você verá um histórico de eventos e decisões quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 43,
+          "trial": 1,
+          "model": "llama-3.3-70b-versatile",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhuma auditoria registrada",
+            "body": "Aqui você verá um histórico de eventos e decisões quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 28,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 512,
+          "text": "{\"title\": \"Nenhuma Auditoria Registrada\", \"body\": \"Aqui serão exibidos os registros de auditoria, trilha de eventos e decisões quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 49,
+          "trial": 2,
+          "model": "llama-3.3-70b-versatile",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhuma Auditoria Registrada",
+            "body": "Aqui serão exibidos os registros de auditoria, trilha de eventos e decisões quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 28,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 469,
+          "text": "{\"title\": \"Nenhuma auditoria registrada\", \"body\": \"Aqui você verá o histórico de eventos e decisões da auditoria quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 46,
+          "trial": 3,
+          "model": "llama-3.3-70b-versatile",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhuma auditoria registrada",
+            "body": "Aqui você verá o histórico de eventos e decisões da auditoria quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 28,
+            "keys_ok": false
+          }
+        },
+        {
+          "ok": true,
+          "latencies_ms": 429,
+          "text": "{\"title\": \"Nenhum evento registrado\", \"body\": \"Aqui serão exibidos os eventos e decisões da auditoria quando houver dados disponíveis\", \"action_hint\": null}",
+          "finish": "stop",
+          "input_tokens": 174,
+          "output_tokens": 42,
+          "trial": 4,
+          "model": "llama-3.3-70b-versatile",
+          "page": "auditoria — trilha de eventos e decisoes",
+          "page_id": "audit-empty",
+          "parsed": {
+            "title": "Nenhum evento registrado",
+            "body": "Aqui serão exibidos os eventos e decisões da auditoria quando houver dados disponíveis",
+            "action_hint": null
+          },
+          "analysis": {
+            "json_valid": true,
+            "category": "valid",
+            "placeholder": false,
+            "title_len": 24,
+            "keys_ok": false
+          }
+        }
+      ],
+      "stats": {
+        "calls_ok": 15,
+        "json_valid": 15,
+        "json_invalid": 0,
+        "placeholder_hits": 0,
+        "p50_ms": 538,
+        "p95_ms": 570,
+        "min_ms": 429,
+        "max_ms": 571
+      }
+    }
+  ],
+  "completed_at": "2026-08-02T08:08:48Z"
+}

@@ -146,6 +146,48 @@ func TestProviderClassifiesBoundedFailuresWithoutLeakingBody(t *testing.T) {
 	}
 }
 
+func TestProviderClassifiesReasoningEatenBudgetSeparatelyFromEmptyContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		rawBody string
+		reason  string
+	}{
+		{
+			name:    "reasoning consumed the whole budget",
+			rawBody: `{"id":"chatcmpl-r1","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"length"}],"usage":{"prompt_tokens":94,"completion_tokens":32,"completion_tokens_details":{"reasoning_tokens":30}}}`,
+			reason:  "reasoning_budget_exhausted",
+		},
+		{
+			name:    "empty content without reasoning or truncation",
+			rawBody: `{"id":"chatcmpl-r2","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"stop"}],"usage":{"prompt_tokens":94,"completion_tokens":0}}`,
+			reason:  "empty_content",
+		},
+		{
+			name:    "length finish without reasoning tokens stays empty_content",
+			rawBody: `{"id":"chatcmpl-r3","choices":[{"index":0,"message":{"role":"assistant","content":""},"finish_reason":"length"}],"usage":{"prompt_tokens":94,"completion_tokens":32}}`,
+			reason:  "empty_content",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := fakeserver.New(fakeserver.Exchange{RawBody: test.rawBody})
+			defer server.Close()
+			provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "test", Model: "fixture", Client: server.Client()})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = provider.Complete(context.Background(), port.CompletionRequest{Prompt: "bounded", MaxOutputTokens: 32})
+			var providerError *openai.Error
+			if !errors.As(err, &providerError) || providerError.Kind != openai.ErrorInvalidResponse {
+				t.Fatalf("unexpected error: %#v", err)
+			}
+			if providerError.DiagnosticReason() != test.reason {
+				t.Fatalf("diagnostic reason = %q, want %q", providerError.DiagnosticReason(), test.reason)
+			}
+		})
+	}
+}
+
 func TestProviderRejectsInvalidConfigurationAndRequest(t *testing.T) {
 	if _, err := openai.New(openai.Config{BaseURL: "file:///tmp/model", Model: "fixture"}); err == nil {
 		t.Fatal("expected invalid URL error")

@@ -1,0 +1,33 @@
+[
+  {
+    "model": "openai/gpt-oss-20b",
+    "max_tokens": 8,
+    "purpose": "reproduce-reasoning-eaten",
+    "ok": false,
+    "latency_ms": 281,
+    "error_kind": "INVALID_RESPONSE",
+    "error_reason": "reasoning_budget_exhausted"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "max_tokens": 8,
+    "purpose": "exact-text-control",
+    "ok": true,
+    "finish_reason": "stop",
+    "text_prefix": "READY",
+    "input_tokens": 40,
+    "output_tokens": 2,
+    "latency_ms": 210
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "max_tokens": 8,
+    "purpose": "exact-text-70b-control",
+    "ok": true,
+    "finish_reason": "stop",
+    "text_prefix": "READY",
+    "input_tokens": 40,
+    "output_tokens": 2,
+    "latency_ms": 289
+  }
+]

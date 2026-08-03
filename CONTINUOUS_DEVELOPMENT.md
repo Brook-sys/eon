@@ -6952,3 +6952,17 @@ Implementação:
 **Verificação.** `go test ./internal/prompt/`, suíte Go integral, `go vet ./internal/prompt/`, `gofmt -l` vazio, `git diff --check` limpo e greps de ausência de segredos nos artefatos executados neste ciclo.
 
 **Nota.** A fronteira de commit anterior falhou em fase adiantada; este heartbeat executou somente consolidação, verificação e publicação do lote existente, sem nova chamada live de modelo para não duplicar a evidência já registrada no sweep `restated-70b-qwen-2026-08-02` (executado às 03:30Z do mesmo dia, dentro do intervalo deste ciclo).
+
+## Phase 370 — reasoning-eaten budget adapter classification + dashboard-v2 wiring probe + copy-quality campaign (2026-08-02 14:00 -03)
+
+**Adapter.** `internal/provider/openai/provider.go` agora distingue `reasoning_budget_exhausted` de `empty_content` quando `finish_reason=length`, conteúdo vazio e `completion_tokens_details.reasoning_tokens > 0`. A classe `reasoning_budget_exhausted` permite que callers repliquem com budget ampliado (×4) sem confundir com falha semântica. Documentação dos campos `Error.Reason` e `DiagnosticReason()` atualizada. Três novos testes de tabela cobrem: (a) reasoning consome todo o budget → `reasoning_budget_exhausted`; (b) conteúdo vazio sem reasoning → `empty_content`; (c) `finish_reason=length` sem reasoning tokens → `empty_content` (negação do gatilho).
+
+**Dashboard-v2 wiring (H1, offline).** `httptest` confirma que o bootstrap composto serve shell templ (`/dash/`), assets embutidos (`/dash/assets/htmx.min.js`), vault (`/api/vault/health`) e inspect (`/api/inspect/health`) no mesmo mux in-memory. 6/6 sub-checks passing.
+
+**Live probes (H2+H3).** 3 chamadas Groq authenticated: `openai/gpt-oss-20b` `max_tokens=8` → 200, 281 ms, `INVALID_RESPONSE reason=reasoning_budget_exhausted` (reproduz Phase 369); controles `llama-3.1-8b-instant` e `llama-3.3-70b-versatile` em mesmo budget → 200, `finish_reason=stop`, texto `READY`. Latência p95 289 ms; zero 429; zero retries.
+
+**Copy-quality campaign.** 45 chamadas Groq (3 modelos × 3 páginas empty-state × 5 trials), `max_tokens=220`, temperatura 0.9. `llama-3.3-70b-versatile` 15/15 JSON válido, zero Markdown fences, p95 570 ms. `llama-3.1-8b-instant` 12/15 envolvem JSON em fence `\`\`\`json`, p95 624 ms. `qwen/qwen3.6-27b` 0/15 válido — todas consumiram 220 tokens em shadow reasoning sem produzir JSON. Decisão: dashboard-v2 copy generation binds to `llama-3.3-70b-versatile`; `qwen/qwen3.6-27b` excluído de contratos JSON bounded ≤512 tokens até caracterização do thinking-budget floor.
+
+**Verificação.** `go test ./internal/provider/openai/...` ok; suíte Go integral ok; `go vet ./internal/provider/openai/`; `gofmt -l` vazio; `git diff --check` limpo; greps de segredos nos artefatos limpos.
+
+**Artefatos.** `results/runtime-gate/phase370-dashboard-v2-wiring/REPORT.md` + `live-reasoning-repro.json` (3 trials sanitizados); `results/dashboard-v2/2026-08-02/copy-quality/REPORT.md` + `copy-quality-results.json` + `probe_ui_copy.py` (runs from env, no hardcoded secrets).
