@@ -28,22 +28,26 @@ templ Overview() {
 
 			<!-- Contadores operacionais -->
 			<div class="grid gap-4 grid-cols-2 lg:grid-cols-4">
-				@card("Comandos pendentes") {
-					<p class="text-3xl font-bold text-[var(--accent)]" x-text="fmt(ov.pending_commands)"></p>
-					<p class="text-xs text-[var(--muted)]">aguardando o kernel</p>
-				}
-				@card("Perguntas pendentes") {
-					<p class="text-3xl font-bold text-[var(--warn)]" x-text="fmt(ov.pending_operator_questions)"></p>
-					<p class="text-xs text-[var(--muted)]">human input required</p>
-				}
-				@card("Subagents evictos") {
-					<p class="text-3xl font-bold text-[var(--err)]" x-text="fmt(ov.evicted_subagents)"></p>
-					<p class="text-xs text-[var(--muted)]">lease perdido</p>
-				}
-				@card("Head de eventos") {
-					<p class="text-3xl font-bold text-[var(--ok)]" x-text="fmt(ov.event_head_sequence)"></p>
-					<p class="text-xs text-[var(--muted)]">sequência do log</p>
-				}
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
+					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Comandos pendentes</div>
+					<div class="text-3xl font-bold text-[var(--accent)] font-mono tracking-tight my-0.5" x-text="fmt(ov.pending_commands)"></div>
+					<div class="text-xs text-[var(--muted)] mt-1">aguardando o kernel</div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
+					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Perguntas pendentes</div>
+					<div class="text-3xl font-bold text-[var(--warn)] font-mono tracking-tight my-0.5" x-text="fmt(ov.pending_operator_questions)"></div>
+					<div class="text-xs text-[var(--muted)] mt-1">human input required</div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
+					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Subagents evictos</div>
+					<div class="text-3xl font-bold text-[var(--err)] font-mono tracking-tight my-0.5" x-text="fmt(ov.evicted_subagents)"></div>
+					<div class="text-xs text-[var(--muted)] mt-1">lease perdido</div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
+					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Head de eventos</div>
+					<div class="text-3xl font-bold text-[var(--ok)] font-mono tracking-tight my-0.5" x-text="fmt(ov.event_head_sequence)"></div>
+					<div class="text-xs text-[var(--muted)] mt-1">sequência do log</div>
+				</div>
 			</div>
 
 			<!-- Saúde do runtime e alertas -->

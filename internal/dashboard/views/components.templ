@@ -1,0 +1,59 @@
+package views
+
+import "fmt"
+
+templ StatCard(label string, value string, sub string, tone string) {
+	<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
+		<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">{ label }</div>
+		<div class="text-2xl font-bold font-mono tracking-tight my-0.5" style={ fmt.Sprintf("color:%s", tone) }>
+			{ value }
+		</div>
+		if sub != "" {
+			<div class="text-xs text-[var(--muted)] mt-1">{ sub }</div>
+		}
+	</div>
+}
+
+templ StatusDot(ok bool, label string) {
+	<div class="inline-flex items-center gap-2 text-xs font-mono">
+		if ok {
+			<span class="w-2 h-2 rounded-full bg-[var(--ok)] animate-pulse"></span>
+			<span class="text-[var(--text)]">{ label }</span>
+		} else {
+			<span class="w-2 h-2 rounded-full bg-[var(--err)]"></span>
+			<span class="text-[var(--err)]">{ label }</span>
+		}
+	</div>
+}
+
+templ EmptyState(msg string) {
+	<div class="p-8 text-center border border-dashed border-[var(--border)] rounded-lg bg-[var(--panel)]">
+		<div class="text-sm text-[var(--muted)] font-mono">{ msg }</div>
+	</div>
+}
+
+templ Pager(prefix string, current int, total int, hasPrev bool, hasNext bool) {
+	<div class="flex items-center justify-between mt-4 text-xs font-mono text-[var(--muted)] pt-3 border-t border-[var(--border)]">
+		<div>Página { fmt.Sprintf("%d", current) }</div>
+		<div class="flex items-center gap-2">
+			if hasPrev {
+				<button class="px-2.5 py-1 bg-[var(--panel-2)] hover:bg-[var(--border)] text-[var(--text)] rounded border border-[var(--border)] transition-colors">
+					&larr; Anterior
+				</button>
+			} else {
+				<button disabled class="px-2.5 py-1 bg-[var(--panel)] text-[var(--muted)] opacity-50 rounded border border-[var(--border)] cursor-not-allowed">
+					&larr; Anterior
+				</button>
+			}
+			if hasNext {
+				<button class="px-2.5 py-1 bg-[var(--panel-2)] hover:bg-[var(--border)] text-[var(--text)] rounded border border-[var(--border)] transition-colors">
+					Próxima &rarr;
+				</button>
+			} else {
+				<button disabled class="px-2.5 py-1 bg-[var(--panel)] text-[var(--muted)] opacity-50 rounded border border-[var(--border)] cursor-not-allowed">
+					Próxima &rarr;
+				</button>
+			}
+		</div>
+	</div>
+}
