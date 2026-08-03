@@ -242,6 +242,67 @@ func TestProviderEmitsJSONObjectResponseFormatWhenRequested(t *testing.T) {
 	}
 }
 
+func TestProviderEmitsPrefillAssistantAsTrailingAssistantMessage(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{
+		ExpectedPrefillAssistant: "{",
+		ResponseText:             `"title":"x"}`,
+		ResponseModel:            "fixture",
+		FinishReason:             "stop",
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt: "return json", MaxOutputTokens: 64, Temperature: 0,
+		PrefillAssistant: "{",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Text != `"title":"x"}` {
+		t.Fatalf("text = %q", result.Text)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 {
+		t.Fatalf("requests = %d", len(requests))
+	}
+	if requests[0].PrefillAssistant != "{" {
+		t.Fatalf("prefill = %q", requests[0].PrefillAssistant)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("failures: %v", failures)
+	}
+}
+
+func TestProviderOmitsPrefillMessageWhenUnset(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{
+		ResponseText:  "ok",
+		ResponseModel: "fixture",
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), Model: "fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt: "return text", MaxOutputTokens: 16, Temperature: 0,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 {
+		t.Fatalf("requests = %d", len(requests))
+	}
+	if requests[0].PrefillAssistant != "" {
+		t.Fatalf("unexpected prefill %q", requests[0].PrefillAssistant)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("failures: %v", failures)
+	}
+}
+
 func TestProviderRejectsUnknownResponseFormat(t *testing.T) {
 	provider, err := openai.New(openai.Config{BaseURL: "http://example.test", Model: "fixture"})
 	if err != nil {

@@ -172,6 +172,53 @@ func TestSelectAdaptationPlanNeverPresumesCapabilities(t *testing.T) {
 	}
 }
 
+func TestSelectAdaptationPlanPrefillAssistant(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC)
+
+	// Unconfirmed prefill must never emit a prefill fragment, even with
+	// confirmed JSON mode and an explicit JSON preference.
+	profile := BaselineDeclaredProfile("local", "tiny", MaxOutputDialectLegacy, 4096, now)
+	profile.SupportsJSONMode = true
+	profile.Source = CapabilityProbed
+	plan := SelectAdaptationPlan(AdaptationSelectionInput{Profile: profile, PreferJSON: true})
+	if plan.PrefillAssistant != "" {
+		t.Fatalf("unconfirmed prefill must stay empty: %+v", plan)
+	}
+
+	// Confirmed JSON mode + confirmed prefill attaches the structural opener.
+	profile.SupportsPrefill = true
+	plan = SelectAdaptationPlan(AdaptationSelectionInput{Profile: profile, PreferJSON: true})
+	if plan.Level != AdaptationAssistedJSON || plan.ResponseFormat != ResponseFormatJSONObject {
+		t.Fatalf("confirmed JSON plan: %+v", plan)
+	}
+	if plan.PrefillAssistant != "{" {
+		t.Fatalf("prefill opener expected: %+v", plan)
+	}
+
+	// JSON-mode unavailable + confirmed prefill stays at baseline with the
+	// structural opener instead of fencing cleanup downstream.
+	plain := BaselineDeclaredProfile("local", "tiny", MaxOutputDialectLegacy, 4096, now)
+	plain.SupportsPrefill = true
+	plain.Source = CapabilityProbed
+	plan = SelectAdaptationPlan(AdaptationSelectionInput{Profile: plain, PreferJSON: true})
+	if plan.Level != AdaptationBaseline || plan.ResponseFormat != ResponseFormatNone {
+		t.Fatalf("prefill without JSON mode stays baseline: %+v", plan)
+	}
+	if plan.PrefillAssistant != "{" || plan.Reason != "prefill_confirmed_json_unavailable" {
+		t.Fatalf("prefill baseline plan: %+v", plan)
+	}
+
+	// Demotion always clears prefill: after an enrichment failure the kernel
+	// must fall back to the plainest contract still confirmed.
+	prev := AdaptationPlan{Level: AdaptationAssistedJSON, ResponseFormat: ResponseFormatJSONObject, PrefillAssistant: "{", Reason: "json_mode_confirmed"}
+	next := PlanAfterDemotion(prev, profile)
+	if next.PrefillAssistant != "" {
+		t.Fatalf("demotion must clear prefill: %+v", next)
+	}
+}
+
 func TestDemoteAdaptationAndShouldDemote(t *testing.T) {
 	t.Parallel()
 

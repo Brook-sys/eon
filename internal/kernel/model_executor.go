@@ -569,6 +569,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	}
 	request := compiled.Request
 	request.ResponseFormat = plan.ResponseFormat
+	request.PrefillAssistant = plan.PrefillAssistant
 	usingFallback := false
 	var lastCompletion port.CompletionResult
 	var lastErr error
@@ -666,6 +667,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			request = compiled.Request
 			request.ResponseFormat = plan.ResponseFormat
+			request.PrefillAssistant = plan.PrefillAssistant
 			plan.Reason = "context_pressure_reduction"
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
@@ -791,6 +793,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				}
 				request = compiled.Request
 				request.ResponseFormat = plan.ResponseFormat
+				request.PrefillAssistant = plan.PrefillAssistant
 				continue
 			}
 			// The failure taxonomy's TRY_NEXT_BINDING disposition is operational,
@@ -846,6 +849,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			if domain.ShouldDemote(plan.Level, failClass) && budget.ModelCallsUsed < maxCalls {
 				plan = domain.PlanAfterDemotion(plan, profile)
 				request.ResponseFormat = plan.ResponseFormat
+				request.PrefillAssistant = plan.PrefillAssistant
 				_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 				continue
 			}
@@ -984,6 +988,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					}
 					request = compiled.Request
 					request.ResponseFormat = plan.ResponseFormat
+					request.PrefillAssistant = plan.PrefillAssistant
 					compileInput = nextInput
 					continue
 				}
@@ -1030,6 +1035,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				}
 				request = compiled.Request
 				request.ResponseFormat = plan.ResponseFormat
+				request.PrefillAssistant = plan.PrefillAssistant
 				compileInput = nextInput
 
 				continue

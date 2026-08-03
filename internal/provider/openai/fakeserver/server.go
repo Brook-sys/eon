@@ -17,6 +17,10 @@ type Exchange struct {
 	ExpectedPrompt         string
 	ExpectedModel          string
 	ExpectedMaxOutputField string
+	// ExpectedPrefillAssistant is the trailing assistant-role content the caller
+	// must have sent (for adapter prefill contract tests). Empty means no
+	// prefill message is expected (legacy single-user-message strictness).
+	ExpectedPrefillAssistant string
 	// ExpectedResponseFormat is the response_format.type value when set
 	// (for example "json_object"). Empty means the field must be absent.
 	ExpectedResponseFormat string
@@ -45,7 +49,10 @@ type Request struct {
 	Temperature     float64
 	Authorization   string
 	ResponseFormat  string
-	ToolCalls       []struct {
+	// PrefillAssistant captures the trailing assistant message content when the
+	// caller appended one (adapter prefill contract evidence).
+	PrefillAssistant string
+	ToolCalls        []struct {
 		Name      string
 		Arguments string
 	}
@@ -116,9 +123,25 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if decodeErr == nil {
 		trailingErr = decoder.Decode(&struct{}{})
 	}
-	if decodeErr != nil || trailingErr != io.EOF || len(body.Messages) != 1 || body.Messages[0].Role != "user" {
+	if decodeErr != nil || trailingErr != io.EOF || len(body.Messages) == 0 || body.Messages[0].Role != "user" {
 		// Keep the externally asserted failure stable and free of request/body
 		// details. Tests need deterministic classification, not decoder text.
+		s.failures = append(s.failures, "invalid Chat Completions request")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	prefill := ""
+	switch len(body.Messages) {
+	case 1:
+		// baseline single user message
+	case 2:
+		if body.Messages[1].Role != "assistant" {
+			s.failures = append(s.failures, "invalid Chat Completions request")
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
+		prefill = body.Messages[1].Content
+	default:
 		s.failures = append(s.failures, "invalid Chat Completions request")
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -142,6 +165,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens,
 		MaxOutputField: maxOutputField, Temperature: body.Temperature,
 		Authorization: r.Header.Get("Authorization"), ResponseFormat: responseFormat,
+		PrefillAssistant: prefill,
 	}
 	s.requests = append(s.requests, req)
 	if len(s.script) == 0 {
@@ -159,6 +183,12 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if exchange.ExpectedMaxOutputField != "" && exchange.ExpectedMaxOutputField != req.MaxOutputField {
 		s.failures = append(s.failures, fmt.Sprintf("max output field mismatch: got %q", req.MaxOutputField))
+	}
+	if exchange.ExpectedPrefillAssistant != "" && exchange.ExpectedPrefillAssistant != req.PrefillAssistant {
+		s.failures = append(s.failures, fmt.Sprintf("prefill assistant mismatch: got %q", req.PrefillAssistant))
+	}
+	if exchange.ExpectedPrefillAssistant == "" && req.PrefillAssistant != "" {
+		s.failures = append(s.failures, fmt.Sprintf("unexpected prefill assistant %q", req.PrefillAssistant))
 	}
 	if exchange.RequireResponseFormat && req.ResponseFormat == "" {
 		s.failures = append(s.failures, "expected response_format, got none")

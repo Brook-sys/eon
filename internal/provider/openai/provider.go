@@ -332,7 +332,11 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	if strings.TrimSpace(request.Prompt) == "" || request.MaxOutputTokens < 0 || request.Temperature < 0 || request.Temperature > 2 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
-	chatReq := chatRequest{Model: p.model, Messages: []chatMessage{{Role: "user", Content: request.Prompt}}, Temperature: request.Temperature, Tools: tools}
+	messages := []chatMessage{{Role: "user", Content: request.Prompt}}
+	if prefill := strings.TrimSpace(request.PrefillAssistant); prefill != "" {
+		messages = append(messages, chatMessage{Role: "assistant", Content: prefill})
+	}
+	chatReq := chatRequest{Model: p.model, Messages: messages, Temperature: request.Temperature, Tools: tools}
 	if p.maxOutputField == MaxOutputTokensCompletion {
 		chatReq.MaxCompletionTokens = request.MaxOutputTokens
 	} else {

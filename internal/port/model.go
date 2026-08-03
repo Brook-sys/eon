@@ -19,6 +19,15 @@ type CompletionRequest struct {
 	// Empty means baseline text→text. Adapters MUST ignore unknown values
 	// safely or reject without inventing capabilities.
 	ResponseFormat domain.ResponseFormatHint
+	// PrefillAssistant is an optional opening fragment for the assistant reply.
+	// When non-empty, adapters that support provider prefill (e.g. Groq/NIM
+	// chat-completions) emit a trailing assistant message with this exact
+	// content so the model is forced to continue from it. V2 of the Phase 371
+	// prompt-variations campaign showed this is the only variation that
+	// eliminates Markdown fences on llama-3.1-8b-instant without trading strict
+	// JSON validity, and it carries no semantic answer when the prefix is a
+	// pure structural opener like "{" or "[".
+	PrefillAssistant string
 }
 
 type CompletionResult struct {

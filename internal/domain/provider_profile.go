@@ -59,6 +59,11 @@ type ProviderProfile struct {
 	SupportsJSONSchema bool `json:"supports_json_schema"`
 	SupportsTools      bool `json:"supports_tools"`
 	SupportsSeed       bool `json:"supports_seed"`
+	// SupportsPrefill is true only after declaration, probe or operator override
+	// confirms the provider accepts a trailing assistant-role message that the
+	// model continues from (Phase 371 B evidence on Groq chat completions).
+	// False means the kernel will not select plans that depend on prefill.
+	SupportsPrefill bool `json:"supports_prefill,omitempty"`
 	// TextToTextConfirmed is true only after a successful probe or equivalent
 	// contract evidence that plain text completion works.
 	TextToTextConfirmed bool `json:"text_to_text_confirmed"`
@@ -131,6 +136,7 @@ func BaselineDeclaredProfile(name, model string, dialect MaxOutputDialect, conte
 		SupportsJSONSchema:   false,
 		SupportsTools:        false,
 		SupportsSeed:         false,
+		SupportsPrefill:      false,
 		TextToTextConfirmed:  false,
 		MaxContextTokens:     contextTokens,
 		MaxOutputTokens:      0,

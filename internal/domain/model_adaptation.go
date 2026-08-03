@@ -225,6 +225,13 @@ func (p ContextBudgetPolicy) EffectiveContextTokens() int {
 type AdaptationPlan struct {
 	Level          AdaptationLevel    `json:"level"`
 	ResponseFormat ResponseFormatHint `json:"response_format,omitempty"`
+	// PrefillAssistant is an optional opening fragment that the adapter emits as
+	// a trailing assistant-role message for the model to continue from. It is
+	// selected only when the profile explicitly confirms prefill support and the
+	// operation contract demands a strict structural opening (FR-MODEL-006;
+	// Phase 371 B showed a lone "{" opener eliminates Markdown fences on
+	// llama-3.1-8b-instant without trading JSON validity or latency).
+	PrefillAssistant string `json:"prefill_assistant,omitempty"`
 	// ContextTokens is the effective compiler window (FR-MODEL-007).
 	ContextTokens int `json:"context_tokens,omitempty"`
 	// Reason is a short machine-oriented code for audit (no free-form prose).
@@ -272,7 +279,8 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 	}
 
 	// Assisted JSON only when the profile explicitly confirms JSON mode.
-	// Unreliable/unknown must not be presumed available.
+	// Unreliable/unknown must not be presumed available. When prefill is also
+	// confirmed, a structural opener is attached (Phase 371 B evidence).
 	if in.PreferJSON && in.Profile.SupportsJSONMode {
 		level := AdaptationAssistedJSON
 		reason := "json_mode_confirmed"
@@ -280,12 +288,28 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 			level = AdaptationExpandedContext
 			reason = "json_mode_confirmed_expanded_context"
 		}
-		return AdaptationPlan{
+		plan := AdaptationPlan{
 			Level:          level,
 			ResponseFormat: ResponseFormatJSONObject,
 			ContextTokens:  effectiveCtx,
 			Reason:         reason,
 			Reversible:     true,
+		}
+		if in.Profile.SupportsPrefill {
+			plan.PrefillAssistant = "{"
+		}
+		return plan
+	}
+
+	// JSON-shaped output without provider JSON mode may still benefit from a
+	// confirmed prefill opener; stay at BASELINE level with the prefill hint.
+	if in.PreferJSON && in.Profile.SupportsPrefill {
+		return AdaptationPlan{
+			Level:            AdaptationBaseline,
+			PrefillAssistant: "{",
+			ContextTokens:    effectiveCtx,
+			Reason:           "prefill_confirmed_json_unavailable",
+			Reversible:       true,
 		}
 	}
 
