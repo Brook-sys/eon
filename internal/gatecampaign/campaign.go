@@ -41,7 +41,12 @@ type RuntimeGateCampaignManifest struct {
 	SeedPrimaryCircuitSeconds int                    `json:"seed_primary_circuit_seconds"`
 	EarlyStopRepeatedFailures int                    `json:"early_stop_repeated_failures,omitempty"`
 	InterTrialDelaySeconds    int                    `json:"inter_trial_delay_seconds,omitempty"`
-	Bindings                  []RuntimeGateBinding   `json:"bindings"`
+	// BudgetRetry, when true, allows the runner to retry once internally with a
+	// scaled MaxOutputTokens when the provider reports reasoning-budget
+	// exhaustion. The retry does not count as a second external call against
+	// MaxCalls because it is the same bounded probe with a corrected budget.
+	BudgetRetry bool                 `json:"budget_retry,omitempty"`
+	Bindings    []RuntimeGateBinding `json:"bindings"`
 }
 
 type RuntimeGateBinding struct {
@@ -178,41 +183,43 @@ type RuntimeGateUsage struct {
 }
 
 type RuntimeGateCampaignReport struct {
-	SchemaVersion         int                         `json:"schema_version"`
-	Name                  string                      `json:"name"`
-	StartedAt             time.Time                   `json:"started_at"`
-	CompletedAt           time.Time                   `json:"completed_at"`
-	MaxCalls              int                         `json:"max_calls"`
-	ExternalCalls         int                         `json:"external_calls"`
-	SeededCircuit         domain.ResourceID           `json:"seeded_circuit"`
-	SelectedProviderID    string                      `json:"selected_provider_id"`
-	SelectedBindingID     string                      `json:"selected_binding_id"`
-	RouteRejected         map[string]string           `json:"route_rejected,omitempty"`
-	ProviderSucceeded     bool                        `json:"provider_succeeded"`
-	ProviderLatency       time.Duration               `json:"provider_latency"`
-	ProviderErrorClass    string                      `json:"provider_error_class,omitempty"`
-	ProviderHTTPStatus    int                         `json:"provider_http_status,omitempty"`
-	ProviderRetryAfter    time.Duration               `json:"provider_retry_after,omitempty"`
-	ProviderErrorReason   string                      `json:"provider_error_reason,omitempty"`
-	ObservedInputTokens   int                         `json:"observed_input_tokens,omitempty"`
-	ObservedOutputTokens  int                         `json:"observed_output_tokens,omitempty"`
-	FinishReason          port.CompletionFinishReason `json:"finish_reason,omitempty"`
-	ResponseBytes         int                         `json:"response_bytes,omitempty"`
-	ResponseSHA256        string                      `json:"response_sha256,omitempty"`
-	ExpectedResponseSet   bool                        `json:"expected_response_set"`
-	ExpectedResponseMatch bool                        `json:"expected_response_match"`
-	StructuralComparison  *StructuralComparison       `json:"structural_comparison,omitempty"`
-	ResponseJSONValid     bool                        `json:"response_json_valid,omitempty"`
-	ResponseFramingClass  string                      `json:"response_framing_class,omitempty"`
-	SecondAcquireReason   string                      `json:"second_acquire_reason"`
-	SecondAcquireWait     *time.Time                  `json:"second_acquire_wait_until,omitempty"`
-	OperationState        domain.OperationalState     `json:"operation_state"`
-	CommitID              domain.CommitID             `json:"commit_id,omitempty"`
-	CanonicalEntityStored bool                        `json:"canonical_entity_stored,omitempty"`
-	SchemaAdherence       *SchemaAdherenceReport      `json:"schema_adherence,omitempty"`
-	ExecutionError        string                      `json:"execution_error,omitempty"`
-	Usages                []RuntimeGateUsage          `json:"usages"`
-	DurableReopen         bool                        `json:"durable_reopen"`
+	SchemaVersion           int                         `json:"schema_version"`
+	Name                    string                      `json:"name"`
+	StartedAt               time.Time                   `json:"started_at"`
+	CompletedAt             time.Time                   `json:"completed_at"`
+	MaxCalls                int                         `json:"max_calls"`
+	ExternalCalls           int                         `json:"external_calls"`
+	SeededCircuit           domain.ResourceID           `json:"seeded_circuit"`
+	SelectedProviderID      string                      `json:"selected_provider_id"`
+	SelectedBindingID       string                      `json:"selected_binding_id"`
+	RouteRejected           map[string]string           `json:"route_rejected,omitempty"`
+	ProviderSucceeded       bool                        `json:"provider_succeeded"`
+	ProviderLatency         time.Duration               `json:"provider_latency"`
+	ProviderErrorClass      string                      `json:"provider_error_class,omitempty"`
+	ProviderHTTPStatus      int                         `json:"provider_http_status,omitempty"`
+	ProviderRetryAfter      time.Duration               `json:"provider_retry_after,omitempty"`
+	ProviderErrorReason     string                      `json:"provider_error_reason,omitempty"`
+	ObservedInputTokens     int                         `json:"observed_input_tokens,omitempty"`
+	ObservedOutputTokens    int                         `json:"observed_output_tokens,omitempty"`
+	FinishReason            port.CompletionFinishReason `json:"finish_reason,omitempty"`
+	ResponseBytes           int                         `json:"response_bytes,omitempty"`
+	ResponseSHA256          string                      `json:"response_sha256,omitempty"`
+	ExpectedResponseSet     bool                        `json:"expected_response_set"`
+	ExpectedResponseMatch   bool                        `json:"expected_response_match"`
+	StructuralComparison    *StructuralComparison       `json:"structural_comparison,omitempty"`
+	ResponseJSONValid       bool                        `json:"response_json_valid,omitempty"`
+	ResponseFramingClass    string                      `json:"response_framing_class,omitempty"`
+	SecondAcquireReason     string                      `json:"second_acquire_reason"`
+	SecondAcquireWait       *time.Time                  `json:"second_acquire_wait_until,omitempty"`
+	OperationState          domain.OperationalState     `json:"operation_state"`
+	CommitID                domain.CommitID             `json:"commit_id,omitempty"`
+	CanonicalEntityStored   bool                        `json:"canonical_entity_stored,omitempty"`
+	SchemaAdherence         *SchemaAdherenceReport      `json:"schema_adherence,omitempty"`
+	ExecutionError          string                      `json:"execution_error,omitempty"`
+	BudgetRetryAttempted    bool                        `json:"budget_retry_attempted,omitempty"`
+	BudgetRetryOutputTokens int                         `json:"budget_retry_output_tokens,omitempty"`
+	Usages                  []RuntimeGateUsage          `json:"usages"`
+	DurableReopen           bool                        `json:"durable_reopen"`
 }
 
 // SchemaAdherenceReport evaluates ProposedChangeSet JSON at the field level,
@@ -250,18 +257,22 @@ type RuntimeGateCampaignRunner struct {
 }
 
 type boundedCallRecorder struct {
-	max       int
-	calls     int
-	bindingID string
-	latency   time.Duration
-	result    port.CompletionResult
-	err       error
+	max               int
+	calls             int
+	bindingID         string
+	latency           time.Duration
+	result            port.CompletionResult
+	err               error
+	budgetRetried     bool
+	budgetRetryTokens int
 }
 
 type recordedProvider struct {
-	bindingID string
-	provider  port.ModelProvider
-	recorder  *boundedCallRecorder
+	bindingID   string
+	provider    port.ModelProvider
+	recorder    *boundedCallRecorder
+	budgetRetry bool
+	maxCeiling  int
 }
 
 func (p recordedProvider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
@@ -273,6 +284,27 @@ func (p recordedProvider) Complete(ctx context.Context, request port.CompletionR
 	started := time.Now()
 	p.recorder.result, p.recorder.err = p.provider.Complete(ctx, request)
 	p.recorder.latency = time.Since(started)
+	// Budget retry: if the provider reports reasoning-budget exhaustion,
+	// retry once with scaled MaxOutputTokens. This is the same bounded probe
+	// (does not consume a second external call), just with a corrected budget.
+	if p.budgetRetry && p.recorder.err != nil {
+		if ok, newBudget := ShouldRetryWithHigherBudget(p.recorder.err, request.MaxOutputTokens, p.maxCeiling); ok {
+			// Reset the call counter: retrying the same probe with more budget
+			// is not a second external call.
+			p.recorder.calls--
+			retryRequest := request
+			retryRequest.MaxOutputTokens = newBudget
+			retryStarted := time.Now()
+			retryResult, retryErr := p.provider.Complete(ctx, retryRequest)
+			p.recorder.latency = time.Since(retryStarted)
+			p.recorder.calls++
+			// Track the retry in the report fields via the recorder.
+			p.recorder.budgetRetried = true
+			p.recorder.budgetRetryTokens = newBudget
+			p.recorder.result = retryResult
+			p.recorder.err = retryErr
+		}
+	}
 	return p.recorder.result, p.recorder.err
 }
 
@@ -306,9 +338,10 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		return RuntimeGateCampaignReport{}, errors.New("runtime gate model executor was not enabled")
 	}
 	recorder := &boundedCallRecorder{max: manifest.MaxCalls}
+	maxBudget := 1024 // per Validate() constraint
 	executor.Providers = make(map[string]port.ModelProvider, len(r.Providers))
 	for bindingID, provider := range r.Providers {
-		executor.Providers[bindingID] = recordedProvider{bindingID: bindingID, provider: provider, recorder: recorder}
+		executor.Providers[bindingID] = recordedProvider{bindingID: bindingID, provider: provider, recorder: recorder, budgetRetry: manifest.BudgetRetry, maxCeiling: maxBudget}
 	}
 	execution, executionErr := executor.Execute(ctx, "operation_runtime_gate")
 	if recorder.calls != manifest.MaxCalls {
@@ -351,10 +384,12 @@ func (r RuntimeGateCampaignRunner) Run(ctx context.Context, manifest RuntimeGate
 		MaxCalls: manifest.MaxCalls, ExternalCalls: recorder.calls,
 		SeededCircuit:      domain.ModelBindingResource(primary.BindingID),
 		SelectedProviderID: selected.ProviderRef, SelectedBindingID: selected.ID,
-		RouteRejected:       map[string]string{primary.BindingID: "circuit_open"},
-		ProviderLatency:     recorder.latency,
-		SecondAcquireReason: secondResult.SkipReason,
-		CommitID:            execution.CommitID,
+		RouteRejected:           map[string]string{primary.BindingID: "circuit_open"},
+		ProviderLatency:         recorder.latency,
+		SecondAcquireReason:     secondResult.SkipReason,
+		CommitID:                execution.CommitID,
+		BudgetRetryAttempted:    recorder.budgetRetried,
+		BudgetRetryOutputTokens: recorder.budgetRetryTokens,
 	}
 	if recorder.err == nil {
 		report.ProviderSucceeded = true
@@ -433,17 +468,19 @@ func (r RuntimeGateCampaignRunner) buildFailedTrialReport(
 		}
 	}
 	report := RuntimeGateCampaignReport{
-		SchemaVersion:      RuntimeGateCampaignSchemaVersion,
-		Name:               manifest.Name,
-		StartedAt:          started,
-		MaxCalls:           manifest.MaxCalls,
-		ExternalCalls:      recorder.calls,
-		SeededCircuit:      domain.ModelBindingResource(primary.BindingID),
-		SelectedProviderID: selected.ProviderRef,
-		SelectedBindingID:  selected.ID,
-		RouteRejected:      map[string]string{primary.BindingID: "circuit_open"},
-		ProviderLatency:    recorder.latency,
-		ExecutionError:     executionErr.Error(),
+		SchemaVersion:           RuntimeGateCampaignSchemaVersion,
+		Name:                    manifest.Name,
+		StartedAt:               started,
+		MaxCalls:                manifest.MaxCalls,
+		ExternalCalls:           recorder.calls,
+		SeededCircuit:           domain.ModelBindingResource(primary.BindingID),
+		SelectedProviderID:      selected.ProviderRef,
+		SelectedBindingID:       selected.ID,
+		RouteRejected:           map[string]string{primary.BindingID: "circuit_open"},
+		ProviderLatency:         recorder.latency,
+		ExecutionError:          executionErr.Error(),
+		BudgetRetryAttempted:    recorder.budgetRetried,
+		BudgetRetryOutputTokens: recorder.budgetRetryTokens,
 	}
 	if recorder.err == nil {
 		report.ProviderSucceeded = true
@@ -993,7 +1030,7 @@ func WriteRuntimeGateCampaignArtifacts(directory string, report RuntimeGateCampa
 		structuralMismatched = report.StructuralComparison.FieldsMismatched
 		structuralAbsent = report.StructuralComparison.FieldsAbsent
 	}
-	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider error reason: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Structural comparison configured: `%t`\n- Structural overall match: `%t`\n- Structural fields matched/mismatched/absent: %d/%d/%d\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderErrorReason, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, structuralConfigured, structuralMatch, structuralMatched, structuralMismatched, structuralAbsent, report.ResponseJSONValid, report.ResponseFramingClass, report.SecondAcquireReason)
+	fmt.Fprintf(&md, "# Runtime provider gate campaign\n\n- Name: `%s`\n- External calls: %d/%d\n- Seeded circuit: `%s`\n- Selected route: `%s` / `%s`\n- Provider success: `%t`\n- Provider latency: `%s`\n- Provider error class: `%s`\n- Provider error reason: `%s`\n- Provider HTTP status: %d\n- Provider Retry-After: `%s`\n- Finish reason: `%s`\n- Response bytes: %d\n- Response SHA-256: `%s`\n- Expected response configured: `%t`\n- Expected response exact match: `%t`\n- Structural comparison configured: `%t`\n- Structural overall match: `%t`\n- Structural fields matched/mismatched/absent: %d/%d/%d\n- Response JSON valid: `%t`\n- Response framing class: `%s`\n- Budget retry attempted: `%t`\n- Budget retry output tokens: %d\n- Second acquire: `%s`", report.Name, report.ExternalCalls, report.MaxCalls, report.SeededCircuit, report.SelectedProviderID, report.SelectedBindingID, report.ProviderSucceeded, report.ProviderLatency, report.ProviderErrorClass, report.ProviderErrorReason, report.ProviderHTTPStatus, report.ProviderRetryAfter, report.FinishReason, report.ResponseBytes, report.ResponseSHA256, report.ExpectedResponseSet, report.ExpectedResponseMatch, structuralConfigured, structuralMatch, structuralMatched, structuralMismatched, structuralAbsent, report.ResponseJSONValid, report.ResponseFramingClass, report.BudgetRetryAttempted, report.BudgetRetryOutputTokens, report.SecondAcquireReason)
 	if report.SecondAcquireWait != nil {
 		fmt.Fprintf(&md, " until `%s`", report.SecondAcquireWait.UTC().Format(time.RFC3339))
 	}
