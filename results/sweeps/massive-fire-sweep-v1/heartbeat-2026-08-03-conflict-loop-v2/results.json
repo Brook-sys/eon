@@ -1,0 +1,260 @@
+{
+ "hypothesis": "post-facts restatement / noise-label demotion / minimal 1-shot rescue allam-2-7b from bare-value collapse on adv-conflicting-data",
+ "baseline": "allam-2-7b 0/5 on v1-explicit-pair (v1-baseline-6models slice)",
+ "declared_bounds": {
+  "max_calls": 20,
+  "models": [
+   "allam-2-7b"
+  ],
+  "temp": 0.0
+ },
+ "variants": {
+  "v1-restate-post": {
+   "correct": 5,
+   "live": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 398.4,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 2,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 399.9,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 3,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 386.4,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 4,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 385.3,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 5,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 378.7,
+     "finish_reason": "stop"
+    }
+   ]
+  },
+  "v2-noise-label": {
+   "correct": 0,
+   "live": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": false,
+     "got": {
+      "PAIR": "O-1/O-2"
+     },
+     "text": "YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 386.7,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 2,
+     "correct": false,
+     "got": {
+      "PAIR": "O-1/O-2"
+     },
+     "text": "YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 394.8,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 3,
+     "correct": false,
+     "got": {
+      "PAIR": "O-1/O-2"
+     },
+     "text": "YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 384.0,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 4,
+     "correct": false,
+     "got": {
+      "PAIR": "O-1/O-2"
+     },
+     "text": "YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 380.7,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 5,
+     "correct": false,
+     "got": {
+      "PAIR": "O-1/O-2"
+     },
+     "text": "YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 377.7,
+     "finish_reason": "stop"
+    }
+   ]
+  },
+  "v3-minishot": {
+   "correct": 5,
+   "live": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 384.1,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 2,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 393.9,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 3,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 385.0,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 4,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 378.3,
+     "finish_reason": "stop"
+    },
+    {
+     "rep": 5,
+     "correct": true,
+     "got": {
+      "CONFLICT": "YES",
+      "PAIR": "O-1/O-2"
+     },
+     "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+     "latency_ms": 382.1,
+     "finish_reason": "stop"
+    }
+   ]
+  }
+ },
+ "nim_control": {
+  "model": "meta/llama-3.1-8b-instruct",
+  "variant": "v1-restate-post",
+  "note": "cross-provider control declared in script bounds, executed after the Groq loop",
+  "correct": 2,
+  "live": 5,
+  "trials": [
+   {
+    "rep": 1,
+    "correct": false,
+    "got": {
+     "CONFLICT": "NO",
+     "PAIR": "O-1/O-2"
+    },
+    "text": "CONFLICT: NO\nPAIR: O-1/O-2",
+    "latency_ms": 776.9,
+    "finish_reason": "stop",
+    "total_tokens": 294
+   },
+   {
+    "rep": 2,
+    "correct": true,
+    "got": {
+     "CONFLICT": "YES",
+     "PAIR": "O-1/O-2"
+    },
+    "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+    "latency_ms": 763.1,
+    "finish_reason": "stop",
+    "total_tokens": 294
+   },
+   {
+    "rep": 3,
+    "correct": false,
+    "got": {
+     "CONFLICT": "NO",
+     "PAIR": "O-1/O-2"
+    },
+    "text": "CONFLICT: NO\nPAIR: O-1/O-2",
+    "latency_ms": 1077.0,
+    "finish_reason": "stop",
+    "total_tokens": 294
+   },
+   {
+    "rep": 4,
+    "correct": false,
+    "got": {
+     "CONFLICT": "NO",
+     "PAIR": "O-1/O-2"
+    },
+    "text": "CONFLICT: NO\nPAIR: O-1/O-2",
+    "latency_ms": 691.6,
+    "finish_reason": "stop",
+    "total_tokens": 294
+   },
+   {
+    "rep": 5,
+    "correct": true,
+    "got": {
+     "CONFLICT": "YES",
+     "PAIR": "O-1/O-2"
+    },
+    "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+    "latency_ms": 742.1,
+    "finish_reason": "stop",
+    "total_tokens": 294
+   }
+  ]
+ }
+}

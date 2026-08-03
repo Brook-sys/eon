@@ -110,12 +110,20 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source.\n- Output only the two lines, nothing else.\n\nNote: The primary source might be ambiguous. If unsure, still answer.",
+   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source.\n- Output only the two lines, nothing else.\n\nNote: \"primary source\" refers to the first source introduced in the Facts. Resolve any ambiguity and commit to one labeled answer. Reminder: every line MUST start with its label (`DATE:` or `SOURCE:`) followed by one space, then the value. Do not emit a bare date or id, and do not emit explanatory prose.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
    },
-   "scoring": "exact_lines:DATE,SOURCE"
+   "scoring": "exact_lines:DATE,SOURCE",
+   "prompt_promotion": {
+    "applied": "2026-08-03",
+    "variant": "v1-resolve-commit",
+    "evidence_slice": "heartbeat-2026-08-03-prompt-loops-adv",
+    "baseline_sha256": "bdf8197238064bf2",
+    "promoted_sha256": "0af7c7de943c867c",
+    "improvement": "0/10 -> 5/5 (llama-3.3-70b-versatile, 5-rep loop); regression check: llama-3.1-8b-instant 5/5 baseline retained on v1"
+   }
   },
   {
    "id": "adv-context-pollution",
@@ -146,12 +154,20 @@
    "operation": "CONFLICT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n- O-3 measured the service at 10:00 and found latency p95=121ms. O-3 is consistent with O-1.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.",
+   "prompt": "You are a deterministic classifier. Decide whether two observations conflict about the same measured property. Respond with EXACTLY two lines.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nQuestion: do O-1 and O-2 conflict with each other?\n\nFacts:\n- O-1 measured the service at 10:00 and found latency p95=120ms.\n- O-2 measured the same service and configuration at 10:00 and found latency p95=410ms.\n- O-3 measured the service at 10:00 and found latency p95=121ms. O-3 is consistent with O-1.\n\nConstraints:\n- CONFLICT is YES only when the same property, subject, configuration, and time disagree.\n- Output only the two lines, nothing else.\n- The PAIR line must name the two compared observations with their full identifiers: the O- prefix is part of the id (for example O-1/O-2, never 1/2).",
    "expected": {
     "conflict": "YES",
     "pair": "O-1/O-2"
    },
-   "scoring": "exact_lines:CONFLICT,PAIR"
+   "scoring": "exact_lines:CONFLICT,PAIR",
+   "prompt_promotion": {
+    "applied": "2026-08-03",
+    "variant": "v1-explicit-pair",
+    "evidence_slice": "heartbeat-2026-08-03-prompt-loops-adv",
+    "baseline_sha256": "360c5ebe9783e9ef",
+    "promoted_sha256": "cc311b42b065008a",
+    "improvement": "0/10 -> 5/5 (llama-3.1-8b-instant, 5-rep loop); allam-2-7b remains 2/10 on v0 and needs v2 noise-label demotion — kept as known-boundary task (see loop report)"
+   }
   },
   {
    "id": "adv-prompt-injection",

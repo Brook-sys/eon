@@ -1,0 +1,4995 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-03-v1-baseline-6models",
+ "executed_at": "2026-08-03T20:48:40Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 180,
+ "calls_ok": 167,
+ "calls_error": 13,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 412.4,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 428.9,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 427.8,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 402.5,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 421.2,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 424.3,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 304.4,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 407.1,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 405.9,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 280.3,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 648.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 50,
+   "total_tokens": 251,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints, I must prioritize the two-line contract, but I will briefly explain that I'm extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 654.1,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 637.1,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 568.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 50,
+   "total_tokens": 251,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints, I must prioritize the two-line contract, but I will briefly explain that I'm extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 610.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 608.5,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 635.2,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 646.7,
+   "prompt_tokens": 201,
+   "completion_tokens": 50,
+   "total_tokens": 251,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints, I must prioritize the two-line contract, but I will briefly explain that I'm extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 532.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 50,
+   "total_tokens": 251,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints, I must prioritize the two-line contract, but I will briefly explain that I'm extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 349.6,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 388.2,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 559.2,
+   "prompt_tokens": 201,
+   "completion_tokens": 54,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "Given the constraints and the information provided, I must prioritize the two-line contract, but I will briefly explain that I am extracting the publication date of S-17 as per the given facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 380.5,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 368.3,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 367.7,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 392.5,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 382.9,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 410.8,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 303.1,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 349.4,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 273.8,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 285.4,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 310.9,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 279.0,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 278.6,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 293.6,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 280.3,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 383.2,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 300.6,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 380.0,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 305.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 315.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 379.9,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 334.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 319.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 301.8,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 361.7,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 363.8,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 287.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 287.0,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 380.3,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 387.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 387.4,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 391.2,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 395.5,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 312.8,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 382.9,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 367.7,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 404.4,
+   "prompt_tokens": 229,
+   "completion_tokens": 64,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 403.8,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 377.7,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 355.0,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 322.2,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 98.0,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5950, Requested 257. Please try again in 2.07s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 395.0,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 284.1,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 328.6,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 409.1,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 419.5,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 552.3,
+   "prompt_tokens": 229,
+   "completion_tokens": 62,
+   "total_tokens": 291,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 370.4,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 371.0,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 401.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 435.8,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 481.7,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 412.5,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 478.7,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 481.3,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 349.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 359.8,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 468.9,
+   "prompt_tokens": 234,
+   "completion_tokens": 79,
+   "total_tokens": 313,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 430.1,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 365.4,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 101.5,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7929, Requested 345. Please try again in 2.055s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 95.8,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7908, Requested 339. Please try again in 1.8525s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 448.3,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 92.9,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7916, Requested 354. Please try again in 2.025s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 689.7,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 442.7,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 460.9,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 539.7,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 423.2,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 111.0,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7949, Requested 357. Please try again in 2.295s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 381.9,
+   "prompt_tokens": 275,
+   "completion_tokens": 82,
+   "total_tokens": 357,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 443.4,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 524.3,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 495.4,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 545.3,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 425.3,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 516.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 585.7,
+   "prompt_tokens": 229,
+   "completion_tokens": 63,
+   "total_tokens": 292,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 425.4,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 414.7,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 512.7,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 541.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 427.1,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 420.6,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 504.3,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 565.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 379.2,
+   "prompt_tokens": 234,
+   "completion_tokens": 59,
+   "total_tokens": 293,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 499.0,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 575.6,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 470.1,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 97.8,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7941, Requested 334. Please try again in 2.0625s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 511.5,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 442.8,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 98.5,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7912, Requested 338. Please try again in 1.875s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "low",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 102.8,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-120b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7881, Requested 358. Please try again in 1.7925s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 824.8,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 382.7,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 487.0,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 463.5,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 509.1,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 577.4,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 545.1,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 653.0,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 652.9,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 316.5,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 318.0,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 713.0,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 900.2,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 767.2,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 660.8,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 554.9,
+   "prompt_tokens": 275,
+   "completion_tokens": 83,
+   "total_tokens": 358,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 392.5,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 424.2,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 473.6,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 620.0,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 775.7,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 605.8,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 708.5,
+   "prompt_tokens": 199,
+   "completion_tokens": 50,
+   "total_tokens": 249,
+   "finish_reason": "stop",
+   "response_text": "The precedence rule states that the two-line contract outranks the explanation request, so I will omit the reasoning and output only the required lines.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 307.8,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 667.3,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 511.6,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 286.8,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 290.6,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 467.5,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 793.0,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 326.0,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 368.5,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 395.6,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 390.2,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 394.1,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 390.3,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 391.4,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 388.9,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 387.3,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 402.2,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 394.8,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 390.6,
+   "prompt_tokens": 211,
+   "completion_tokens": 25,
+   "total_tokens": 236,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 391.8,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 414.5,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 408.7,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 388.2,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 395.9,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 402.1,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 394.9,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 401.1,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 397.8,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "6b246c19289e2346",
+   "outcome": "ok",
+   "latency_ms": 402.2,
+   "prompt_tokens": 216,
+   "completion_tokens": 25,
+   "total_tokens": 241,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 371.9,
+   "prompt_tokens": 256,
+   "completion_tokens": 3,
+   "total_tokens": 259,
+   "finish_reason": "stop",
+   "response_text": "NO ",
+   "scored_correct": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": null,
+     "ok": false
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 92.9,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `allam-2-7b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5894, Requested 281. Please try again in 1.75s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 117.3,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `allam-2-7b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5882, Requested 281. Please try again in 1.63s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 370.2,
+   "prompt_tokens": 256,
+   "completion_tokens": 3,
+   "total_tokens": 259,
+   "finish_reason": "stop",
+   "response_text": "NO ",
+   "scored_correct": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": null,
+     "ok": false
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 94.6,
+    "retry_after": 3,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `allam-2-7b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5948, Requested 281. Please try again in 2.29s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 377.4,
+   "prompt_tokens": 256,
+   "completion_tokens": 3,
+   "total_tokens": 259,
+   "finish_reason": "stop",
+   "response_text": "NO ",
+   "scored_correct": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": null,
+     "ok": false
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 93.3,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `allam-2-7b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5872, Requested 281. Please try again in 1.529999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 377.8,
+   "prompt_tokens": 256,
+   "completion_tokens": 3,
+   "total_tokens": 259,
+   "finish_reason": "stop",
+   "response_text": "NO ",
+   "scored_correct": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": null,
+     "ok": false
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 383.6,
+   "prompt_tokens": 256,
+   "completion_tokens": 3,
+   "total_tokens": 259,
+   "finish_reason": "stop",
+   "response_text": "NO ",
+   "scored_correct": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": null,
+     "ok": false
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 97.6,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `allam-2-7b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5908, Requested 281. Please try again in 1.89s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  }
+ ]
+}
