@@ -1,0 +1,1731 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-03-fix-baseline-verification",
+ "executed_at": "2026-08-03T06:49:54Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 60,
+ "calls_ok": 60,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 501.8,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 505.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 509.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 430.9,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 437.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 442.9,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 348.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 338.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 343.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 352.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 420.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 425.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 462.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 409.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 417.0,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 398.7,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 406.2,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 413.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 306.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 481.3,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 502.7,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 465.9,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 369.0,
+   "prompt_tokens": 236,
+   "completion_tokens": 66,
+   "total_tokens": 302,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 437.3,
+   "prompt_tokens": 236,
+   "completion_tokens": 66,
+   "total_tokens": 302,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 368.9,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 346.7,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 361.8,
+   "prompt_tokens": 236,
+   "completion_tokens": 66,
+   "total_tokens": 302,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 365.5,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 402.5,
+   "prompt_tokens": 236,
+   "completion_tokens": 66,
+   "total_tokens": 302,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 385.7,
+   "prompt_tokens": 236,
+   "completion_tokens": 65,
+   "total_tokens": 301,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 490.4,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 536.6,
+   "prompt_tokens": 236,
+   "completion_tokens": 82,
+   "total_tokens": 318,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 532.2,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 491.2,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 486.5,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 489.5,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 528.8,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 529.3,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 490.9,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-120b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "low",
+   "latency_ms": 499.2,
+   "prompt_tokens": 236,
+   "completion_tokens": 83,
+   "total_tokens": 319,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 359.9,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 366.7,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 356.0,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 648.7,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 629.4,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 322.3,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 344.4,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 344.5,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 323.0,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 332.1,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 427.6,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 411.8,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 410.4,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 407.9,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 409.5,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 6,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 409.4,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 7,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 407.8,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 8,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 420.1,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 9,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 412.7,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "allam-2-7b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 10,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 409.0,
+   "prompt_tokens": 223,
+   "completion_tokens": 25,
+   "total_tokens": 248,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  }
+ ]
+}

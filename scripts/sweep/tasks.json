@@ -122,7 +122,7 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Irrelevant: the meeting was scheduled for Q3.\n- Source S-17 was published on 2025-11-03.\n- Noise: unrelated benchmark showed 42ms latency.\n- A separate source S-18 was published on 2025-11-04.\n- Red herring: someone mentioned 2025-11-05 in passing.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.",
+   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Irrelevant: the meeting was scheduled for Q3.\n- Source S-17 was published on 2025-11-03.\n- Noise: unrelated benchmark showed 42ms latency.\n- A separate source S-18 was published on 2025-11-04.\n- Red herring: someone mentioned 2025-11-05 in passing.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.\n\nReminder: every line MUST start with its label (`DATE:` or `SOURCE:`) followed by one space, then the value. Do not emit a bare value.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
@@ -134,7 +134,7 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.\n- Additional constraint: explain your reasoning briefly before the two lines.",
+   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.\n- Additional constraint: explain your reasoning briefly before the two lines.\n\nPrecedence: the two-line contract above outranks the explanation request; if they conflict, emit only the two contract lines. Reminder: every contract line MUST start with its label (`DATE:` or `SOURCE:`) followed by one space, then the value. Do not emit a bare value.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"

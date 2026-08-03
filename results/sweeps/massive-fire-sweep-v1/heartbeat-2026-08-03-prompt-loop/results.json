@@ -1,0 +1,129 @@
+{
+ "model": "llama-3.1-8b-instant",
+ "hypothesis": "bare-value line1 on adv-context-pollution is prompt-formattable",
+ "results": {
+  "v1-restated-prefix": {
+   "correct": 5,
+   "n": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 421.5
+    },
+    {
+     "rep": 2,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 361.1
+    },
+    {
+     "rep": 3,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 294.4
+    },
+    {
+     "rep": 4,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 308.0
+    },
+    {
+     "rep": 5,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 308.6
+    }
+   ]
+  },
+  "v2-checklist": {
+   "correct": 5,
+   "n": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 293.3
+    },
+    {
+     "rep": 2,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 298.9
+    },
+    {
+     "rep": 3,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 297.4
+    },
+    {
+     "rep": 4,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 295.5
+    },
+    {
+     "rep": 5,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 292.2
+    }
+   ]
+  },
+  "v3-fewshot": {
+   "correct": 5,
+   "n": 5,
+   "trials": [
+    {
+     "rep": 1,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 306.4
+    },
+    {
+     "rep": 2,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 387.1
+    },
+    {
+     "rep": 3,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 290.1
+    },
+    {
+     "rep": 4,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 423.0
+    },
+    {
+     "rep": 5,
+     "correct": true,
+     "why": "l1=OK l2=OK",
+     "text": "DATE: 2025-11-03\nSOURCE: S-17",
+     "latency_ms": 299.8
+    }
+   ]
+  }
+ }
+}

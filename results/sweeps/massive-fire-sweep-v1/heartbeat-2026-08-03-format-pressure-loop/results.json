@@ -1,0 +1,292 @@
+{
+ "task": "adv-format-pressure",
+ "hypothesis": "v0/v1/v2 >= baseline; v2 sandbox protects contract lines when contradiction kept",
+ "results": {
+  "llama-3.3-70b-versatile": {
+   "v0-conflict-resolved": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 0,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 355.4,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 387.9,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 437.5,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 395.1,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 421.2,
+      "finish_reason": "stop"
+     }
+    ]
+   },
+   "v1-restated-conflict": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "Given the constraints, I must prioritize the two-line output contract, but I will briefly explain that I am extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 561.3,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "Given the constraints, I must prioritize the two-line output contract, but I will briefly explain that I am extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 572.2,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "Given the constraints, I must prioritize the two-line output contract, but I will briefly explain that I'm extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 571.1,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "Given the constraints, I must prioritize the two-line output contract, but I will briefly explain that I'm extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 581.0,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "Given the constraints, I must prioritize the two-line output contract, but I will briefly explain that I am extracting the publication date of S-17 based on the provided facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 559.2,
+      "finish_reason": "stop"
+     }
+    ]
+   },
+   "v2-sandbox-reasoning": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 0,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "REASONING: The task requires extracting the original publication date of source S-17 and its identifier, which are directly provided in the facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 548.0,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "REASONING: The task requires extracting the original publication date of source S-17 and its identifier.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 458.5,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "REASONING: The task requires extracting the original publication date of source S-17 and its identifier.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 504.7,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "REASONING: The task requires extracting the original publication date of source S-17 and its identifier.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 505.8,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "REASONING: The task requires extracting the original publication date and source ID of S-17, which is directly provided in the facts.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 573.9,
+      "finish_reason": "stop"
+     }
+    ]
+   }
+  },
+  "llama-3.1-8b-instant": {
+   "v0-conflict-resolved": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 0,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 345.8,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 346.0,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 287.5,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 301.6,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 388.9,
+      "finish_reason": "stop"
+     }
+    ]
+   },
+   "v1-restated-conflict": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 0,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 310.0,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 352.4,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 401.2,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 404.7,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=0",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 395.5,
+      "finish_reason": "stop"
+     }
+    ]
+   },
+   "v2-sandbox-reasoning": {
+    "correct": 5,
+    "n": 5,
+    "unparsed_extra_lines": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "REASONING: The original publication date of S-17 is required.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 403.8,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 2,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "REASONING: The original publication date of S-17 is required.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 317.4,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 3,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "REASONING: The original publication date of S-17 is required.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 324.4,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 4,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "REASONING: The original publication date of S-17 is required.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 352.1,
+      "finish_reason": "stop"
+     },
+     {
+      "rep": 5,
+      "correct": true,
+      "why": "DATE=OK SOURCE=OK extra_lines=1",
+      "text": "REASONING: The original publication date of S-17 is required.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+      "latency_ms": 322.4,
+      "finish_reason": "stop"
+     }
+    ]
+   }
+  }
+ }
+}

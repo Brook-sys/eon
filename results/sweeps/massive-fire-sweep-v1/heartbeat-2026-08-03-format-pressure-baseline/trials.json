@@ -1,0 +1,301 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "heartbeat-2026-08-03-format-pressure-baseline",
+ "executed_at": "2026-08-03T09:26:10Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 10,
+ "calls_ok": 10,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 680.0,
+   "prompt_tokens": 141,
+   "completion_tokens": 64,
+   "total_tokens": 205,
+   "finish_reason": "length",
+   "response_text": "To extract the original publication date of S-17, we need to look at the provided facts and identify the date associated with S-17, which is 2025-11-03. \nThe publication date of S-17 is 2025-11-03, and this will be returned as the result",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 685.1,
+   "prompt_tokens": 141,
+   "completion_tokens": 64,
+   "total_tokens": 205,
+   "finish_reason": "length",
+   "response_text": "To extract the original publication date of S-17, we need to look at the provided facts and identify the date associated with S-17, which is 2025-11-03. \nThe publication date of S-17 is 2025-11-03, and this will be returned as the result",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 726.7,
+   "prompt_tokens": 141,
+   "completion_tokens": 64,
+   "total_tokens": 205,
+   "finish_reason": "length",
+   "response_text": "To extract the original publication date of S-17, we need to look at the provided facts and identify the date associated with S-17, which is 2025-11-03. \nThe publication date of S-17 is 2025-11-03, and this will be returned as the result",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 400.7,
+   "prompt_tokens": 141,
+   "completion_tokens": 49,
+   "total_tokens": 190,
+   "finish_reason": "stop",
+   "response_text": "Reasoning: The constraint specifies to return the original publication date of S-17, which is the only date related to source S-17 in the given facts.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 642.4,
+   "prompt_tokens": 141,
+   "completion_tokens": 64,
+   "total_tokens": 205,
+   "finish_reason": "length",
+   "response_text": "To extract the original publication date of S-17, we need to look at the provided facts and identify the date associated with S-17, which is 2025-11-03. \nThe publication date of S-17 is 2025-11-03.\nThe source S-17 was published before",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 651.5,
+   "prompt_tokens": 141,
+   "completion_tokens": 64,
+   "total_tokens": 205,
+   "finish_reason": "length",
+   "response_text": "To extract the original publication date of S-17, we need to look at the provided facts and identify the date associated with S-17, which is 2025-11-03. \nThe publication date of S-17 is 2025-11-03, and this will be returned as the result",
+   "scored_correct": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": null,
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": null,
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 377.3,
+   "prompt_tokens": 141,
+   "completion_tokens": 49,
+   "total_tokens": 190,
+   "finish_reason": "stop",
+   "response_text": "Reasoning: The constraint specifies to return the original publication date of S-17, which is the only date related to source S-17 in the given facts.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 398.3,
+   "prompt_tokens": 141,
+   "completion_tokens": 49,
+   "total_tokens": 190,
+   "finish_reason": "stop",
+   "response_text": "Reasoning: The constraint specifies to return the original publication date of S-17, which is the only date related to source S-17 in the given facts.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 408.4,
+   "prompt_tokens": 141,
+   "completion_tokens": 49,
+   "total_tokens": 190,
+   "finish_reason": "stop",
+   "response_text": "Reasoning: The constraint specifies to return the original publication date of S-17, which is the only date related to source S-17 in the given facts.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "085cecce263f5202",
+   "outcome": "ok",
+   "latency_ms": 377.2,
+   "prompt_tokens": 141,
+   "completion_tokens": 49,
+   "total_tokens": 190,
+   "finish_reason": "stop",
+   "response_text": "Reasoning: The constraint specifies to return the original publication date of S-17, which is the only date related to source S-17 in the given facts.\n\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  }
+ ]
+}
