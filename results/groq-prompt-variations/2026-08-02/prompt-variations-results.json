@@ -1,0 +1,360 @@
+{
+ "started_at": "2026-08-03T02:45:39Z",
+ "config": {
+  "model": "llama-3.1-8b-instant",
+  "max_tokens": 220,
+  "temp": 0.9,
+  "trials": 5,
+  "variants": [
+   "v0-baseline",
+   "v1-negation-restatement",
+   "v2-prefilled-assistant",
+   "v3-few-shot-poison"
+  ]
+ },
+ "variants": [
+  {
+   "variant": "v0-baseline",
+   "trials": [
+    {
+     "ok": true,
+     "latency_ms": 595,
+     "variant": "v0-baseline",
+     "trial": 0,
+     "text": "```json\n{\n  \"title\": \"Aguarde, dados a serem carregados\",\n  \"body\": \"Nenhum dado de status foi registrado ainda. Aguarde alguns minutos e, se o problema persistir, verifique a conexão com o veículo.\",\n  \"action_hint\": null\n}\n```\n\n```json\n{\n  \"title\": \"Nenhum dado de status disponível\",\n  \"body\": \"Aqui você verá os status de operação do motor autônomo em tempo real.\",\n  \"action_hint\": null\n}\n```",
+     "finish": "stop",
+     "output_tokens": 121,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": true,
+      "keys_ok": true,
+      "title_len": 33
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 478,
+     "variant": "v0-baseline",
+     "trial": 1,
+     "text": "{\n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Inicie um motor autonomo ou aguarde que os dados sejam atualizados.\",\n  \"action_hint\": \"Inicie um motor autonomo\"\n}",
+     "finish": "stop",
+     "output_tokens": 51,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 22
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 440,
+     "variant": "v0-baseline",
+     "trial": 2,
+     "text": "```json\n{\n  \"title\": \"Ainda não há dados disponíveis\",\n  \"body\": \"O painel de status está aguardando os primeiros dados do motor autônomo. Acompanhe o monitoramento em breve.\",\n  \"action_hint\": \"Confira se o motor autônomo está conectado e rodando corretamente.\"\n}\n```",
+     "finish": "stop",
+     "output_tokens": 77,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": true,
+      "keys_ok": true,
+      "title_len": 30
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 409,
+     "variant": "v0-baseline",
+     "trial": 3,
+     "text": "```json\n{\n  \"title\": \"Não há dados no momento.\",\n  \"body\": \"Essa página mostra o status atual do seu motor autônomo. Aqui você pode ver os últimos resultados e informações importantes.\",\n  \"action_hint\": \"Experimente atualizar a página para ver os dados mais recentes.\"\n}\n```",
+     "finish": "stop",
+     "output_tokens": 69,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": true,
+      "keys_ok": true,
+      "title_len": 24
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 723,
+     "variant": "v0-baseline",
+     "trial": 4,
+     "text": "```json\n{\n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Não há informações para exibir no momento. Avisos e status do motor serão exibidos aqui.\",\n  \"action_hint\": null\n}\n```\n\nE uma outra opção, se houver alguma operação que o usuário possa realizar aqui:\n\n```json\n{\n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Não há informações para exibir no momento. Avisos e status do motor serão exibidos aqui.\",\n  \"action_hint\": \"Comece a coletar dados ou atualize as configurações para ver algo aqui\"\n}\n```",
+     "finish": "stop",
+     "output_tokens": 145,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": true,
+      "keys_ok": true,
+      "title_len": 22
+     }
+    }
+   ],
+   "summary": {
+    "valid": 5,
+    "trials": 5,
+    "fence_strip_needed": 4,
+    "p50_ms": 478,
+    "p95_ms": 723
+   }
+  },
+  {
+   "variant": "v1-negation-restatement",
+   "trials": [
+    {
+     "ok": true,
+     "latency_ms": 359,
+     "variant": "v1-negation-restatement",
+     "trial": 0,
+     "text": "{\n  \"title\": \"Ainda não há dados\",\n  \"body\": \"Selecione um período para visualizar a visão geral do painel de status do motor autônomo.\",\n  \"action_hint\": \"Selecione um período\"\n}",
+     "finish": "stop",
+     "output_tokens": 54,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 18
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 440,
+     "variant": "v1-negation-restatement",
+     "trial": 1,
+     "text": "{\n  \"title\": \"Painel de status vazio\",\n  \"body\": \"Esse painel não tem dados porque o motor autônomo ainda não iniciou ou não está em operação.\",\n  \"action_hint\": \"Inicie o motor autônomo ou volte para a página de configuração\"\n}",
+     "finish": "stop",
+     "output_tokens": 68,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 22
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 474,
+     "variant": "v1-negation-restatement",
+     "trial": 2,
+     "text": "{\n  \"title\": \"Nenhuma informação disponível\",\n  \"body\": \"Esta área será preenchida com informações detalhadas sobre o status do motor autônomo após a inicialização ou quando houver dados disponíveis\",\n  \"action_hint\": \"Inicie o motor ou aguarde até que possamos fornecer informações\"\n}",
+     "finish": "stop",
+     "output_tokens": 74,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 29
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 384,
+     "variant": "v1-negation-restatement",
+     "trial": 3,
+     "text": "{\n  \"title\": \"Sem dados disponíveis\",\n  \"body\": \"Clique em 'Atualizar' para obter a visão geral das condições do motor autonomo\",\n  \"action_hint\": \"Atualizar\"",
+     "finish": "stop",
+     "output_tokens": 48,
+     "analysis": {
+      "category": "no_valid_json",
+      "needs_fence_strip": false,
+      "head": "{\n  \"title\": \"Sem dados disponíveis\",\n  \"body\": \"Clique em 'Atualizar' para obter a visão "
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 370,
+     "variant": "v1-negation-restatement",
+     "trial": 4,
+     "text": "{\n    \"title\": \"Sem dados disponíveis\",\n    \"body\": \"Nenhum dado foi registrado ainda. Vamos começar a coletar dados!\",\n    \"action_hint\": \"Adicione um novo registro\"",
+     "finish": "stop",
+     "output_tokens": 48,
+     "analysis": {
+      "category": "no_valid_json",
+      "needs_fence_strip": false,
+      "head": "{\n    \"title\": \"Sem dados disponíveis\",\n    \"body\": \"Nenhum dado foi registrado ainda. Vam"
+     }
+    }
+   ],
+   "summary": {
+    "valid": 3,
+    "trials": 5,
+    "fence_strip_needed": 0,
+    "p50_ms": 384,
+    "p95_ms": 474
+   }
+  },
+  {
+   "variant": "v2-prefilled-assistant",
+   "trials": [
+    {
+     "ok": true,
+     "latency_ms": 403,
+     "variant": "v2-prefilled-assistant",
+     "trial": 0,
+     "text": " \n  \"title\": \"Nenhum dado disponível\",\n  \"body\": \"Ainda não coletamos dados suficientes para exibir uma visão geral do painel de status.\",\n  \"action_hint\": \"Verifique se os sensores estão conectados corretamente e se o veículo está em movimento.\"\n}",
+     "finish": "stop",
+     "output_tokens": 72,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 22
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 374,
+     "variant": "v2-prefilled-assistant",
+     "trial": 1,
+     "text": " \n\t\"title\": \"Sem dados disponíveis\",\n\t\"body\": \"Nenhum dado foi registrado ou o motor está desligado\",\n\t\"action_hint\": \"Verifique se o motor está ligado e tente atualizar a página\"\n}",
+     "finish": "stop",
+     "output_tokens": 53,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 21
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 509,
+     "variant": "v2-prefilled-assistant",
+     "trial": 2,
+     "text": " \n  \"title\": \"Sem dados de monitoramento\",\n  \"body\": \"Nenhum dado de monitoramento do motor-autônomo foi encontrado. Para visualizar informações, certifique-se de que o sistema está funcionando e os dados estão sendo transmitidos corretamente.\",\n  \"action_hint\": \"Verifique a conexão com o motor-autônomo\" \n}",
+     "finish": "stop",
+     "output_tokens": 79,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 26
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 416,
+     "variant": "v2-prefilled-assistant",
+     "trial": 3,
+     "text": " \"title\": \"Nenhuma informação disponível\", \n  \"body\": \"Aqui você encontrará informações detalhadas sobre o status do motor autônomo, incluindo temperatura, pressão e outros parâmetros críticos. \", \n  \"action_hint\": \"Verifique se os sensores estão conectados corretamente\" }",
+     "finish": "stop",
+     "output_tokens": 75,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 29
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 403,
+     "variant": "v2-prefilled-assistant",
+     "trial": 4,
+     "text": " \n  \"title\": \"Motor Autônomo sem dados\",\n  \"body\": \"Nenhum dado disponível. Inicie o motor ou verifique se há comunicação com os sensores.\",\n  \"action_hint\": null \n}",
+     "finish": "stop",
+     "output_tokens": 51,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 24
+     }
+    }
+   ],
+   "summary": {
+    "valid": 5,
+    "trials": 5,
+    "fence_strip_needed": 0,
+    "p50_ms": 403,
+    "p95_ms": 509
+   }
+  },
+  {
+   "variant": "v3-few-shot-poison",
+   "trials": [
+    {
+     "ok": true,
+     "latency_ms": 452,
+     "variant": "v3-few-shot-poison",
+     "trial": 0,
+     "text": "{\"title\": \"Nenhuma informação disponível\", \"body\": \"Esse painel mostrará dados do motor autônomo quando estiver online e funcionando corretamente.\", \"action_hint\": null}",
+     "finish": "stop",
+     "output_tokens": 46,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 29
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 420,
+     "variant": "v3-few-shot-poison",
+     "trial": 1,
+     "text": "{\n\"title\": \"Painel de status vazio\",\n\"body\": \"Nenhuma informação disponível sobre o status do motor autônomo.\",\n\"action_hint\": null\n}",
+     "finish": "stop",
+     "output_tokens": 40,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 22
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 663,
+     "variant": "v3-few-shot-poison",
+     "trial": 2,
+     "text": "{\"title\":\"Sem dados disponíveis no painel de status\", \"body\":\"Aqui você verá informações sobre o funcionamento do motor autônomo.\", \"action_hint\":null}",
+     "finish": "stop",
+     "output_tokens": 39,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 41
+     }
+    },
+    {
+     "ok": true,
+     "latency_ms": 377,
+     "variant": "v3-few-shot-poison",
+     "trial": 3,
+     "text": "{\"title\":\"Este painel não contém dados por enquanto\", \"body\":\"Clique em 'Carregar Dados' para obter atualizações do status do motor autônomo\", \"action_hint\":null}",
+     "finish": "stop",
+     "output_tokens": 46,
+     "analysis": {
+      "category": "valid_json",
+      "needs_fence_strip": false,
+      "keys_ok": true,
+      "title_len": 41
+     }
+    },
+    {
+     "ok": false,
+     "latency_ms": 117,
+     "variant": "v3-few-shot-poison",
+     "trial": 4,
+     "http_status": 429,
+     "error": "{\"error\":{\"message\":\"Rate limit reached for model `llama-3.1-8b-instant` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 6000, Used 5738, Re",
+     "retry_after": "2",
+     "analysis": {
+      "category": "http_error"
+     }
+    }
+   ],
+   "summary": {
+    "valid": 4,
+    "trials": 5,
+    "fence_strip_needed": 0,
+    "p50_ms": 452,
+    "p95_ms": 663
+   }
+  }
+ ]
+}
