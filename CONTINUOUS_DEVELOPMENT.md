@@ -374,6 +374,20 @@ Não contam como várias melhorias mudanças cosméticas repetidas, subdivisões
 - [x] `DONE` Exigir preview explícito antes de habilitar um preset qualificado.
   - Evidência: `ModelPreset.PreviewEnablement` só produz candidato quando a revisão MODELS ativa contém exatamente o provider e binding evidence-backed instalados e ainda desabilitados; drift, ausência e binding já habilitado bloqueiam sem mutação. A Control API expõe somente preview não autoritativo com evidência, riscos de chamadas externas/quota/cooldown/credencial e payload candidato; o dashboard não aplica diretamente e orienta copiar o candidato para o lifecycle normal draft → validate → apply. Testes domain/HTTP comprovam instalação desabilitada prévia, enablement isolado e ausência de novo draft durante o preview.
 
+### Dashboard v2 — melhoria progressiva de UI/UX (`[dash-ux]`)
+
+Backlog aprovado para execução incremental em heartbeats. **Documento canônico de etapas:** `docs/ui/ROADMAP.md`. **Referência obrigatória de tokens/componentes/padrões:** `docs/ui/DESIGN_SYSTEM.md`. Itens são cortados para caber em 2–4 ciclos por etapa; ao pegar um item, registrar tag `[dash-ux Etapa X.Y]` no registro de ciclos.
+
+- [ ] `READY` Etapa 0 — Fundação: `tailwind.config.js` versionado + target `make assets` reproduzível; tokens nomeados no Tailwind; componentes C3 `statCard`, C5 `pager`, C8 `statusDot`, C9 `emptyState`; refactor das 7 páginas para consumi-los (visual idêntico, diff de markers idêntico).
+- [ ] `READY` Etapa 1 — Polish visual: tipografia/números pt-BR/`tabular-nums`, focus-visible, hover uniforme, tooltips em IDs truncados, badges com mapa severity→cor centralizado.
+- [ ] `READY` Etapa 2 — HTMX fragmentos: handlers `/dash/partials/<recurso>` renderizando Templ server-side, `hx-get`+spinner em todas as listas, pager/filtros via querystring sem Alpine de offset, banners de erro padronizados.
+- [ ] `READY` Etapa 3 — Live via SSE: proxy `/dash/api/events/stream` + `hx-sse` na página de eventos, badge "ao vivo", fallback para polling 5s.
+- [ ] `READY` Etapa 4 — Drill-down: `/dash/events/{id}`, detalhes de knowledge (source/claim/observation), `/dash/commits` + `/dash/commits/{id}`.
+- [ ] `BLOCKED(autorização)` Etapa 5 — Ações do operador (mutações Control API via HTMX + toast + confirmação). Requer decisão explícita do usuário — v2 é read-only por decisão documentada.
+- [ ] `READY` Etapa 6 — Atalhos de teclado (`g e`, `g k`, `?` cheatsheet) + reescrita de `docs/dashboard.md` para a v2 com guia "como adicionar página nova".
+
+Regras deste bloco: stack fixa Go+Templ+Tailwind+HTMX+Alpine (zero runtime JS adicional, zero CDN, zero SPA); anti-objetivos no §7 do DESIGN_SYSTEM; nenhuma cor fora da tabela de tokens; pages individuais < ~350 linhas Templ após refactors.
+
 ## Política de seleção
 
 Entre itens `READY`, escolher nesta ordem:
@@ -394,6 +408,8 @@ YYYY-MM-DD HH:MM — ITEM — RESULTADO — VERIFICAÇÃO — COMMIT/NEXT
 ```
 
 Não transformar este arquivo em log detalhado; Git contém o histórico completo.
+
+2026-08-03 18:15 — `[dash-ux planejamento]` — aprovado roadmap de UI/UX do dashboard v2 em `docs/ui/`: `DESIGN_SYSTEM.md` (tokens cor/tipografia/espaçamento, 12 componentes C1–C12, 10 padrões de UX, arquitetura SSR+HTMX+Alpine+SSE, floor de acessibilidade, anti-objetivos) e `ROADMAP.md` (7 etapas 0–6, 2–4 ciclos cada, com verificação e conhecimento necessário por etapa). Insight-chave da análise: `app.css` atual era build órfão sem config versionada, páginas duplicam tabela+filtro+pager 4×, e decisão arquitetural tomada foi coexistir proxy JSON (`/dash/api/*`) com novos fragmentos HTML (`/dash/partials/*`) em vez de JSON+template no cliente. Etapa 5 (mutações) fica `BLOCKED` até autorização explícita. Verificação desta mudança: inspeção estrutural dos docs, links relativos conferidos, `git diff --check`. Probe live deste ciclo: pendente no heartbeat seguinte que iniciar Etapa 0. Próximo: Etapa 0.1 (tailwind.config + make assets).
 
 2026-08-03 — Prompt-improvement loops adversários concluídos (fecha ciclo interrompido do adv-baseline-a) — 80 chamadas live reais Groq (2 loops × 40, temp 0.0, max_tokens 48, 5 reps/célula, sem retry). **adv-ambiguous-instruction**: llama-3.3-70b-versatile 0/5 → **5/5** com qualquer variante decisiva; falha era formato (respondia prosa correta ignorando DATE:/SOURCE:); variante v1 resolve-commit promovida. **Few-shot regressão in vivo**: llama-3.1-8b-instant caiu de 5/5 baseline → 0/5 com few-shot (poisoning cenário adverso nº 8 confirmado — modelo copia bloco de fatos do exemplar). **adv-conflicting-data**: llama-3.1-8b-instant 0/5 (dois modos simultâneos: `CONFLICT: NO` aceitando hint do decoy + stripping de prefixo `O-`) → **5/5** em v1/v2/v3; allam-2-7b 0/5 em v0 e v1 (bare `NO`), **5/5** apenas em v2 noise-label e v3 few-shot — modelo ≤7B exige demover explicitamente observação decoy. Decisões registradas: (a) formato sob ambiguidade exige commitment explícito; (b) par/nomenclatura explícitos + restatement de prefixo fecham falha semântica e de formato juntas; (c) few-shot não é contra-medida universal. Verificação: `run_tests_stdlib.py` 22/22, JSON decodificado, `git diff --check`. Próximo: rerun do adv-baseline com prompts v1 promovidos (0/10 → alvo ≥8/10); cobrir cenários adversos restantes (prompt injection nos dados, PT/EN misturado, budget starvation, CoT poisoning). Commit `3f6e009`.
 
