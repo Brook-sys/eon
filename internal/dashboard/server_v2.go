@@ -64,6 +64,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
 	mux.Handle("GET /dash/resources", http.HandlerFunc(s.handleResources))
 	mux.Handle("GET /dash/frontier", http.HandlerFunc(s.handleFrontier))
+	mux.Handle("GET /dash/alerts", http.HandlerFunc(s.handleAlerts))
 	return mux
 }
 
@@ -114,5 +115,15 @@ func (s *V2Server) handleFrontier(w http.ResponseWriter, r *http.Request) {
 	component := views.Frontier()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render frontier: %v", err)
+	}
+}
+
+// handleAlerts serves the dedicated alerts page fed by /alerts.
+func (s *V2Server) handleAlerts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.Alerts()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render alerts: %v", err)
 	}
 }

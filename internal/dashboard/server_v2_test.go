@@ -35,6 +35,9 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	inspectMux.HandleFunc("GET /frontier", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"schema_version":1,"mission_id":"m1","total":1,"items":[{"id":"op1","title":"gap-scan sweep","family":"gap_scan","status":"OPEN","depth":0,"priority":5,"risk":"LOW","created_at":"2026-08-02T00:00:00Z"}],"policy_version":"h1"}`))
 	})
+	inspectMux.HandleFunc("GET /alerts", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"schema_version":1,"total":2,"critical":1,"warnings":1,"alerts":[{"code":"telemetry.disabled","severity":"info","summary":"otel off"},{"code":"resource.unsettled_receipts","severity":"warning","summary":"2 receipts unsettled"}]}`))
+	})
 	controlMux := http.NewServeMux()
 	v2, err := NewV2(inspectMux, controlMux, nil)
 	if err != nil {
@@ -199,5 +202,30 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(b), "gap-scan sweep") || !strings.Contains(string(b), "policy_version") {
 		t.Fatalf("/dash/api/frontier body: %s", string(b))
+	}
+
+	// Alerts page is served with live-data wiring.
+	resp, err = srv.Client().Get(srv.URL + "/dash/alerts")
+	if err != nil {
+		t.Fatalf("get /dash/alerts: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK ||
+		!strings.Contains(string(b), "alertsState") ||
+		!strings.Contains(string(b), "/dash/api/alerts") {
+		t.Fatalf("/dash/alerts status=%d missing alerts markers", resp.StatusCode)
+	}
+
+	// Alerts proxy passes snapshot through unchanged.
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/alerts")
+	if err != nil {
+		t.Fatalf("get dash api alerts: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(b), "telemetry.disabled") ||
+		!strings.Contains(string(b), "resource.unsettled_receipts") {
+		t.Fatalf("/dash/api/alerts body: %s", string(b))
 	}
 }
