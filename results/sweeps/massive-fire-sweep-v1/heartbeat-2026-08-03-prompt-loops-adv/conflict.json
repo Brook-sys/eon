@@ -1,0 +1,443 @@
+{
+ "campaign": "prompt-loop-adv-conflicting-data",
+ "executed_at": "2026-08-03T18:24:45Z",
+ "hypothesis": "explicit-pair + prefix-preservation recovers CONFLICT/PAIR on weak models",
+ "declared_bounds": {
+  "max_calls": 40,
+  "models": [
+   "llama-3.1-8b-instant",
+   "allam-2-7b"
+  ],
+  "variants": [
+   "v0-baseline",
+   "v1-explicit-pair",
+   "v2-noise-label",
+   "v3-fewshot"
+  ],
+  "reps_per_cell": 5,
+  "temperature": 0.0,
+  "max_tokens": 48,
+  "timeout_s": 45,
+  "retry_on_semantic_failure": 0
+ },
+ "total_calls": 40,
+ "latency_ms": {
+  "p50": 373.4,
+  "p95": 406.6,
+  "n": 40
+ },
+ "results": {
+  "llama-3.1-8b-instant": {
+   "v0-baseline": {
+    "correct": 0,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 368.9,
+      "finish_reason": "stop",
+      "text": "CONFLICT: NO\nPAIR: 1/2",
+      "correct": false,
+      "why": "CONFLICT='NO' PAIR='1/2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 350.9,
+      "finish_reason": "stop",
+      "text": "CONFLICT: NO\nPAIR: 1/2",
+      "correct": false,
+      "why": "CONFLICT='NO' PAIR='1/2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 411.1,
+      "finish_reason": "stop",
+      "text": "CONFLICT: NO\nPAIR: 1/2",
+      "correct": false,
+      "why": "CONFLICT='NO' PAIR='1/2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 358.0,
+      "finish_reason": "stop",
+      "text": "CONFLICT: NO\nPAIR: 1/2",
+      "correct": false,
+      "why": "CONFLICT='NO' PAIR='1/2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 349.9,
+      "finish_reason": "stop",
+      "text": "CONFLICT: NO\nPAIR: 1/2",
+      "correct": false,
+      "why": "CONFLICT='NO' PAIR='1/2'"
+     }
+    ]
+   },
+   "v1-explicit-pair": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 375.9,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 313.6,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 363.2,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 364.7,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 366.3,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     }
+    ]
+   },
+   "v2-noise-label": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 323.3,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 310.7,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 290.2,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 372.8,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 364.8,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     }
+    ]
+   },
+   "v3-fewshot": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 306.3,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 290.0,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 311.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 292.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 295.1,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     }
+    ]
+   }
+  },
+  "allam-2-7b": {
+   "v0-baseline": {
+    "correct": 0,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 389.4,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 373.6,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 376.1,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 372.7,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 388.6,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     }
+    ]
+   },
+   "v1-explicit-pair": {
+    "correct": 0,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 369.9,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 380.3,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 373.4,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 373.8,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 377.2,
+      "finish_reason": "stop",
+      "text": "NO ",
+      "correct": false,
+      "why": "CONFLICT=None PAIR=None"
+     }
+    ]
+   },
+   "v2-noise-label": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 392.9,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 384.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 390.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 391.2,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 406.6,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     }
+    ]
+   },
+   "v3-fewshot": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 399.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 386.0,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 399.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 389.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 385.4,
+      "finish_reason": "stop",
+      "text": "CONFLICT: YES\nPAIR: O-1/O-2 ",
+      "correct": true,
+      "why": "CONFLICT='YES' PAIR='O-1/O-2'"
+     }
+    ]
+   }
+  }
+ }
+}

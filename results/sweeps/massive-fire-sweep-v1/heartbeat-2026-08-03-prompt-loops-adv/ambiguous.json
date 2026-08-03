@@ -1,0 +1,443 @@
+{
+ "campaign": "prompt-loop-adv-ambiguous-instruction",
+ "executed_at": "2026-08-03T18:09:31Z",
+ "hypothesis": "Prompt-improvement loop for adv-ambiguous-instruction failure on llama-3.3-70b-versatile.",
+ "declared_bounds": {
+  "max_calls": 30,
+  "models": [
+   "llama-3.3-70b-versatile",
+   "llama-3.1-8b-instant"
+  ],
+  "variants": [
+   "v0-baseline",
+   "v1-resolve-commit",
+   "v2-decisive",
+   "v3-fewshot"
+  ],
+  "reps_per_cell": 5,
+  "temperature": 0.0,
+  "max_tokens": 48,
+  "timeout_s": 45,
+  "retry_on_semantic_failure": 0
+ },
+ "total_calls": 40,
+ "latency_ms": {
+  "p50": 364.6,
+  "p95": 808.4,
+  "n": 40
+ },
+ "results": {
+  "llama-3.3-70b-versatile": {
+   "v0-baseline": {
+    "correct": 0,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 641.8,
+      "finish_reason": "stop",
+      "text": "The primary source is considered to be S-17 based on the given information.\nThe publication date of the primary source S-17 is 2025-11-03.",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 880.7,
+      "finish_reason": "stop",
+      "text": "The primary source is considered to be S-17 based on the given information.\nThe publication date of the primary source S-17 is 2025-11-03.",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 808.4,
+      "finish_reason": "stop",
+      "text": "The primary source is considered to be S-17 based on the given information.\nThe publication date of the primary source S-17 is 2025-11-03.",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 541.8,
+      "finish_reason": "stop",
+      "text": "The primary source is considered to be S-17 based on the given information.\nThe publication date of the primary source S-17 is 2025-11-03.",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 566.6,
+      "finish_reason": "stop",
+      "text": "The primary source is considered to be S-17 based on the given information.\nThe publication date of the primary source S-17 is 2025-11-03.",
+      "correct": false,
+      "why": "l1=None l2=None"
+     }
+    ]
+   },
+   "v1-resolve-commit": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 486.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 364.6,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 384.2,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 295.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 369.2,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   },
+   "v2-decisive": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 476.3,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 283.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 396.5,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 288.9,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 373.8,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   },
+   "v3-fewshot": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 364.9,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 414.2,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 447.5,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 378.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 360.1,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   }
+  },
+  "llama-3.1-8b-instant": {
+   "v0-baseline": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 278.2,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 357.3,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 349.9,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 349.3,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 356.9,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   },
+   "v1-resolve-commit": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 335.9,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 280.8,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 280.6,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 355.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 357.6,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   },
+   "v2-decisive": {
+    "correct": 5,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 308.7,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 356.5,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 271.0,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 353.1,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 326.8,
+      "finish_reason": "stop",
+      "text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "why": "l1='2025-11-03' l2='S-17'"
+     }
+    ]
+   },
+   "v3-fewshot": {
+    "correct": 0,
+    "n": 5,
+    "trials": [
+     {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 321.1,
+      "finish_reason": "length",
+      "text": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 385.0,
+      "finish_reason": "length",
+      "text": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 414.7,
+      "finish_reason": "length",
+      "text": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 405.8,
+      "finish_reason": "length",
+      "text": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source",
+      "correct": false,
+      "why": "l1=None l2=None"
+     },
+     {
+      "rep": 5,
+      "ok": true,
+      "latency_ms": 412.3,
+      "finish_reason": "length",
+      "text": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the publication date of the primary source",
+      "correct": false,
+      "why": "l1=None l2=None"
+     }
+    ]
+   }
+  }
+ }
+}
