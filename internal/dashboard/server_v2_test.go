@@ -152,6 +152,16 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	// Events proxy passes the paginated inspect payload through unchanged.
 	resp, err = srv.Client().Get(srv.URL + "/dash/api/events?limit=5")
 
+	// Event detail route check
+	resp, err = srv.Client().Get(srv.URL + "/dash/events/42")
+	if err != nil {
+		t.Fatalf("get /dash/events/42: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(b), "Evento #42") {
+		t.Fatalf("/dash/events/42 status=%d body=%s", resp.StatusCode, string(b))
+	}
 	// Models page is served with live-data wiring.
 	resp, err = srv.Client().Get(srv.URL + "/dash/models")
 	if err != nil {

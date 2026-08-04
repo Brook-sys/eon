@@ -1,0 +1,61 @@
+package views
+
+templ EventDetail(id string) {
+	@layout("Detalhes do Evento", "/dash/events", []NavItem{
+		{Href: "/dash", Label: "Visão geral"},
+		{Href: "/dash/events", Label: "Eventos", Active: true},
+	}) {
+		<div class="space-y-4">
+			<div class="flex items-center gap-3">
+				<a href="/dash/events" class="px-2.5 py-1 text-xs font-mono bg-[var(--panel-2)] hover:bg-[var(--border)] text-[var(--text)] rounded border border-[var(--border)] transition-colors">
+					&larr; Voltar para Eventos
+				</a>
+				<h1 class="text-xl font-bold font-mono text-[var(--text)]">Evento #{ id }</h1>
+			</div>
+
+			@card("Payload e Metadados do Evento") {
+				<div id="event-detail-container" x-data="{ eventData: null, loading: true, error: null }" x-init={ "fetch('/dash/api/events?limit=100').then(r => r.json()).then(d => { const evs = d.events ?? []; eventData = evs.find(e => String(e.sequence) === '" + id + "' || String(e.event_id) === '" + id + "') ?? null; loading = false; }).catch(e => { error = e.message; loading = false; })" }>
+					<template x-if="loading">
+						<p class="text-sm font-mono text-[var(--muted)]">Carregando detalhes do evento #{ id }…</p>
+					</template>
+					<template x-if="error">
+						<div class="p-3 bg-[var(--err)]/10 border border-[var(--err)] text-[var(--err)] text-xs font-mono rounded">
+							Erro ao carregar evento: <span x-text="error"></span>
+						</div>
+					</template>
+					<template x-if="!loading && !eventData && !error">
+						<div class="p-8 text-center border border-dashed border-[var(--border)] rounded-lg bg-[var(--panel)]">
+							<div class="text-sm text-[var(--muted)] font-mono">Evento #{ id } não foi encontrado no histórico recente.</div>
+						</div>
+					</template>
+					<template x-if="eventData">
+						<div class="space-y-3 font-mono text-xs">
+							<div class="grid grid-cols-2 gap-4 p-3 bg-[var(--bg)] rounded border border-[var(--border)]">
+								<div>
+									<span class="text-[var(--muted)] uppercase tracking-wider block text-[10px]">Sequência</span>
+									<span class="text-[var(--accent)] font-bold text-sm" x-text="'#' + eventData.sequence"></span>
+								</div>
+								<div>
+									<span class="text-[var(--muted)] uppercase tracking-wider block text-[10px]">Tipo (Kind)</span>
+									<span class="text-[var(--text)] font-bold" x-text="eventData.kind"></span>
+								</div>
+								<div>
+									<span class="text-[var(--muted)] uppercase tracking-wider block text-[10px]">Namespace</span>
+									<span class="text-[var(--muted)]" x-text="eventData.namespace || '—'"></span>
+								</div>
+								<div>
+									<span class="text-[var(--muted)] uppercase tracking-wider block text-[10px]">Data / Hora</span>
+									<span class="text-[var(--muted)]" x-text="new Date(eventData.occurred_at).toLocaleString('pt-BR')"></span>
+								</div>
+							</div>
+							<div class="p-3 bg-[var(--bg)] rounded border border-[var(--border)]">
+								<span class="text-[var(--muted)] uppercase tracking-wider block text-[10px] mb-2">Payload Completo (JSON)</span>
+								<pre class="overflow-x-auto text-[var(--text)] whitespace-pre-wrap break-all" x-text="JSON.stringify(eventData, null, 2)"></pre>
+							</div>
+						</div>
+					</template>
+				</div>
+			}
+		</div>
+	}
+}

@@ -61,6 +61,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/api/", http.StripPrefix("/dash/api", s.Inspect))
 	mux.Handle("GET /dash/", http.HandlerFunc(s.handleOverview))
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
+	mux.Handle("GET /dash/events/", http.HandlerFunc(s.handleEventDetail))
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
 	mux.Handle("GET /dash/resources", http.HandlerFunc(s.handleResources))
 	mux.Handle("GET /dash/frontier", http.HandlerFunc(s.handleFrontier))
@@ -85,6 +86,20 @@ func (s *V2Server) handleOverview(w http.ResponseWriter, r *http.Request) {
 	component := views.Overview()
 	if err := component.Render(r.Context(), w); err != nil {
 		s.Logger.Printf("render overview: %v", err)
+	}
+}
+
+func (s *V2Server) handleEventDetail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	id := strings.TrimPrefix(r.URL.Path, "/dash/events/")
+	if id == "" {
+		http.Redirect(w, r, "/dash/events", http.StatusFound)
+		return
+	}
+	component := views.EventDetail(id)
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render event detail: %v", err)
 	}
 }
 
