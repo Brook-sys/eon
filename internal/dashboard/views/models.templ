@@ -587,13 +587,16 @@ templ Models() {
 					},
 
 					async createModelsDraft(modelsPayload, note) {
+						if (!modelsPayload.version) {
+							modelsPayload.version = "v1";
+						}
 						const draftRes = await fetch('/dash/api/control/config/drafts', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({
 								scope: 'MODELS',
-								payload: { models: modelsPayload },
-								note: note || 'Draft alterado via dashboard v2'
+								reason: note || 'Draft alterado via dashboard v2',
+								models: modelsPayload
 							})
 						});
 						const draft = await draftRes.json();
