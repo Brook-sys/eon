@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase372-groq-llama33-vault-batch-purge",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-04T07:45:09.783693037Z"
+}
