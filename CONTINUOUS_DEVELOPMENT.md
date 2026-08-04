@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 374 — credential vault BatchRename capability, HTTP endpoint & live campaign (2026-08-04 07:45 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with atomic multi-secret rename `BatchRename` and HTTP endpoint `POST /secrets/batch-rename`.
+1. Implemented `func (v *Vault) BatchRename(items []BatchRenameItem) (BatchRenameResult, error)`: validates each source name existence, destination validity, self-rename, collision within batch/vault; stages changes in-memory; persists updated vault data atomically with a single disk write; records per-item failures without cancelling valid items; logs audit events (`batch_rename`).
+2. Added HTTP endpoint: `POST /secrets/batch-rename` accepting 1-100 items and returning `BatchRenameResult` (HTTP 200 OK).
+3. Added unit tests in `internal/secretvault/batch_rename_test.go` covering batch rename validation, missing source handling, duplicate destination protection, locked vault rejection, and HTTP surface.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `llama-3.3-70b-versatile` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 660.56 ms (HTTP status 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase374-groq-llama33-vault-batch-rename/`.
+
 ## Phase 373 — credential vault SearchSecrets prefix and substring combination fix & live campaign (2026-08-04 07:05 -03)
 
 **Objective and implementation.** Corrected filtering logic in `secretvault.Vault.SearchSecrets` when both `prefix` and `substring` filters are specified simultaneously.
