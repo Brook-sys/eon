@@ -1,162 +1,129 @@
-# Design System — `motor-autonomo` Dashboard (v2)
+# Design System — `motor-autonomo` Dashboard v2
 
-**Status:** proposto
-**Data:** 2026-08-03
-**Escopo:** todas as páginas `/dash/*` (v2 Templ). O dashboard legado (`/dashboard`, SPA inline) fica congelado; não recebe melhorias visuais.
-
----
-
-## 1. Stack consolidada
-
-| Camada | Tecnologia | Papel |
-|---|---|---|
-| Templates | **Templ** (Go) | Renderização server-side, type-safe, compilada |
-| Estilo | **Tailwind CSS v4** (CLI, build local) | Utility-first sobre tokens CSS |
-| Reatividade mínima | **Alpine.js** (vendor, ~15 KB) | Estado local de componente (filtros, tabs, toggles) |
-| Interação servidor | **HTMX** (vendor, ~14 KB) | Troca de fragmentos HTML sem SPA |
-| Tempo real | **SSE** (`/events/stream` → futuro proxy `/dash/api/events/stream`) | Live tail, contadores ao vivo |
-| Fontes | system font stack + JetBrains Mono (vendor woff2) para dados técnicos |
-
-> **Regra de ouro:** nenhum runtime JS além de Alpine+HTMX. Nenhum framework SPA. Nenhum CSS escrito à mão fora dos tokens do §2.
-
-Estado atual: `layout.templ` já carrega `htmx.min.js` e `alpine.min.js` de `/dash/assets/` (vendor local, zero CDN). O Tailwind hoje é um **build pré-gerado** (`internal/dashboard/assets/app.css`, Tailwind v4.3.3) com classes arbitrárias `[var(--token)]`. Faltam: (a) config declarada no repo, (b) tokens nomeados no Tailwind, (c) componentes reutilizáveis além de `badge`/`card`.
+**Status:** Ativo / Produção
+**Versão:** 2.1.0 (Design System Standarized & System Architecture Enforced)
+**Escopo:** Todas as superfícies operacionais sob `/dash/*` (Go Templ + Alpine.js + HTMX + Tailwind CSS v4)
 
 ---
 
-## 2. Tokens de design (single source of truth)
+## 1. Princípios de Design & Arquitetura de Sistema
 
-Os tokens são **CSS custom properties** definidos uma única vez em `layout.templ`. Toda a UI consome `var(--token)` via classes Tailwind arbitrárias ou, após a Etapa 2 do roadmap, via classes semânticas (`bg-panel`, `text-muted`).
+O Design System do **`motor-autonomo`** é construído sob os princípios de **Observabilidade de Alta Fidelidade**, **Resiliência Server-First**, e **Interface Dark-First de Precisão Operacional** (inspirado na estética e UX do Vercel, Linear e Supabase).
 
-### 2.1 Cor (dark theme único, sem light mode por ora)
+### 1.1 Princípios Fundamentais
 
-| Token | Valor | Uso |
-|---|---|---|
-| `--bg` | `#0f1419` | fundo da página |
-| `--panel` | `#1a2332` | cards, sidebar, superfícies elevadas |
-| `--panel-2` | `#243247` | hover, superfícies aninhadas (hoje hardcoded no sidebar) |
-| `--border` | `#2d3a4d` | bordas, divisores |
-| `--text` | `#e7ecf3` | texto primário |
-| `--muted` | `#8b9bb4` | texto secundário, labels, metadados |
-| `--accent` | `#5b9fd4` | ações primárias, links, estado ativo, info |
-| `--ok` | `#3d9a6a` | sucesso, healthy, PASS |
-| `--warn` | `#c9a227` | aviso, degraded, retry |
-| `--err` | `#c45c5c` | erro, critical, FAIL, stale |
-
-**Semântica obrigatória:** severity `critical`→`--err`, `warning`→`--warn`, `info`→`--accent`; status `healthy/ok/pass`→`--ok`, `degraded`→`--warn`, `unhealthy/fail`→`--err`. Nenhuma cor fora desta tabela (exceção: `--panel-2`, já em uso).
-
-### 2.2 Tipografia
-
-| Token | Valor | Uso |
-|---|---|---|
-| `--sans` | system stack | texto geral |
-| `--mono` | `ui-monospace, SFMono, Menlo, Consolas` | IDs, hashes, timestamps, JSON, locators |
-| escala | `text-xs` (12px) meta/uppercase; `text-sm` (14px) corpo; `text-xl` (20px) título de página; `text-2xl` (24px) número KPI | — |
-
-Regras: 14px é o corpo padrão; números de KPI em `text-2xl font-bold`; labels de card em `text-xs uppercase tracking-widest text-[var(--muted)]` (já padronizado no componente `card`).
-
-### 2.3 Espaçamento e forma
-
-- Grid de 4px (spacing Tailwind padrão). Densidades: `p-3` compacto (tabelas), `p-4` padrão (cards), `p-6` relaxado (página).
-- Raios: `rounded-md` (6px) controles; `rounded-lg` (8px) cards; `rounded-full` apenas badges/pills.
-- Sombras: nenhuma no dark theme (bordas fazem a hierarquia).
-- Larguras: sidebar fixa `w-52`; conteúdo `max-w-6xl`; tabelas sempre em `.overflow-x-auto`.
-
-### 2.4 Elevação e foco
-
-- Hierarquia por cor de fundo: `bg` < `panel` < `panel-2` (hover/ativo).
-- Foco de teclado: `outline` 1px `--accent` (adicionar na Etapa 2; hoje inexistente).
-- Transições: `transition-colors` 150ms em hover de links/botões. Nada mais animado além disso e do spinner de loading.
+1. **Clareza Informacional Sem Poluição Visual:**
+   - Evita cards aninhados pesados, bordas duplicadas ou sombras chamativas.
+   - Utiliza contraste sutil de fundo (`--bg` vs `--panel` vs `--panel-sub`), tipografia precisa e indicadores de estado coloridos (`--ok`, `--warn`, `--err`, `--accent`).
+2. **Resiliência e Recuperação Transparente:**
+   - A interface monitora proativamente a conectividade com as APIs do runtime (`/dash/api/control/` e `/dash/api/inspect/`).
+   - Notifica o operador instantaneamente via Toast ou Banners sobre desconexões ou retries sem travar a navegação.
+3. **Desempenho Server-Side Type-Safe com Templ:**
+   - Todo o HTML é compilado em Go via Templ, garantindo tempo de resposta sub-milissegundo para a primeira pintura (SSR).
+   - Interações dinâmicas são orquestradas por Alpine.js (~15 KB) e HTMX (~14 KB) sem peso de frameworks SPA.
+4. **Navegação Eficiente e Atalhos de Teclado:**
+   - Atalhos globais sem interferir em campos de formulário ou `input/textarea`.
+   - Atalho `?` abre o cheatsheet interativo de navegação rápida em qualquer página.
+5. **Acessibilidade e Usabilidade em Telas de Operação:**
+   - Suporte completo a navegação por teclado (`Tab`, `:focus-visible` com anel de foco `--accent`).
+   - Rótulos ARIA semânticos (`role="navigation"`, `role="main"`, `aria-label`).
+   - Cópia em 1-clique de payloads JSON, IDs de missão e comandos com feedback tátil.
 
 ---
 
-## 3. Componentes (biblioteca Templ)
+## 2. Tokens de Design (Single Source of Truth)
 
-Estado atual: apenas `badge(label, kind)` e `card(title)`, ambos em `layout.templ`. Roadmap de componentes (cada um entra com teste de render e uso em ≥1 página):
+Os tokens do Design System são definidos como **CSS Custom Properties** globais em `layout.templ` e consumidos diretamente por classes Tailwind CSS e componentes Templ.
 
-| # | Componente | Assinatura | Motivação |
+### 2.1 Cores e Modos (Dark Theme Operacional)
+
+```css
+:root {
+    /* Superfícies & Fundos */
+    --bg: #090d16;             /* Fundo da página principal */
+    --panel: #111726;          /* Superfície de cards e painéis */
+    --panel-sub: #172033;      /* Sub-painéis, caixas de código e inputs */
+    --panel-hover: #1e293b;    /* Hover de elementos clicáveis */
+
+    /* Bordas e Divisores */
+    --border: rgba(255, 255, 255, 0.08);       /* Bordas padrão */
+    --border-subtle: rgba(255, 255, 255, 0.04);/* Divisores internos leves */
+    --border-focus: rgba(56, 189, 248, 0.5);   /* Anel de foco ativo */
+
+    /* Tipografia e Textos */
+    --text: #f1f5f9;           /* Texto primário de alto contraste */
+    --muted: #94a3b8;          /* Texto secundário e labels */
+    --subtle: #64748b;         /* Texto terciário e timestamps antigos */
+
+    /* Accent & Severidades Semânticas */
+    --accent: #38bdf8;         /* Ações primárias, links, info, seleção */
+    --accent-subtle: rgba(56, 189, 248, 0.15);
+    --ok: #34d399;             /* Sucesso, saudável, PASS, ativo */
+    --warn: #fbbf24;           /* Alertas, degradação, retries */
+    --err: #f87171;            /* Erros críticos, falhas, bloqueios */
+
+    /* Tipografia Stack */
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+```
+
+### 2.2 Mapeamento de Severidades Semânticas
+
+| Severidade / Status | Token CSS | Amostra Hex | Uso Recomendado |
 |---|---|---|---|
-| C1 | `card` (existente) | `card(title)` | ok, manter |
-| C2 | `badge` (existente) | `badge(label, kind)` | adicionar kind `info` já existe; documentar mapeamento severity→kind |
-| C3 | `statCard` | `statCard(label, value, sub, tone)` | KPIs hoje duplicados 4× por página (overview, knowledge) |
-| C4 | `dataTable` | cabeçalho + slots de linha + empty state | eliminar `<table>` repetido 7×; empty state padronizado |
-| C5 | `pager` | `pager(prefix)` | bloco Anterior/Próxima + "x–y de z" idêntico em 4 páginas |
-| C6 | `filterBar` | slots de filtro + botão buscar + contador | barra idêntica em frontier/knowledge/events |
-| C7 | `tabBar` | `tabBar(tabs)` | hoje só em knowledge; será reusada em detalhes |
-| C8 | `statusDot` | `statusDot(ok, labels)` | ponto verde/vermelho "Inspect API acessível" repetido em toda página |
-| C9 | `emptyState` | `emptyState(msg)` | mensagem + ação opcional |
-| C10 | `spinner` / `skeleton` | HTMX `hx-indicator` + placeholder shimmer | feedback de carregamento uniforme |
-| C11 | `toast` | região fixa + `showToast(msg, kind)` | feedback de ações do operador (Etapa 5, Control API) |
-| C12 | `kbdHint` | `kbd("g")` `kbd("k")` | atalhos de teclado (Etapa 6) |
+| `healthy` / `ok` / `pass` / `success` | `--ok` | `#34d399` | Runtime operacional, teste OK, missão ativa |
+| `warning` / `warn` / `degraded` / `retry` | `--warn` | `#fbbf24` | Pressão de contexto alta, alerta amarelo |
+| `critical` / `err` / `unhealthy` / `fail` | `--err` | `#f87171` | Falha de API, cofre bloqueado, erro de runtime |
+| `info` / `notice` | `--accent` | `#38bdf8` | Informação neutra, estado ativo de nav |
+| `neutral` | `--muted` | `#94a3b8` | Metadados genéricos, inativo |
 
-Componentes server-side puros (C1–C9) são funções Templ; os que têm estado (C10–C12) trazem um micro-script Alpine inline documentado.
+### 2.3 Tipografia e Escala
+
+- **Corpo da Página:** `14px / 1.5` (`var(--sans)`).
+- **Labels de Seção:** `11px uppercase tracking-wider` (`var(--muted)` font-bold).
+- **Valores KPI / Stat:** `24px (text-2xl)` ou `30px (text-3xl)` (`var(--mono)` font-bold).
+- **Elementos Técnicos (IDs, Hashes, JSON, Logs):** `12px` (`var(--mono)`).
 
 ---
 
-## 4. Padrões de UX (obrigatórios em toda página)
+## 3. Biblioteca de Componentes Templ (`internal/dashboard/views/components.templ`)
 
-1. **Estado de conexão sempre visível** no topo (status dot + "atualizado há Xs" + botão atualizar).
-2. **Números reconhecíveis:** `1.234.567` (locale pt-BR), timestamps em `dd/mm hh:mm:ss`, durações humanizadas (`1,2s`, `350ms`, `2min atrás`).
-3. **IDs técnicos truncados** a 8 chars com `title` tooltip full + fonte mono.
-4. **Toda tabela tem:** cabeçalho `uppercase text-xs`, linhas `divide-y`, empty state explícito, paginação quando aplicável.
-5. **Links internos navegam a entidade:** locator→fonte, run_id/event_id→detalhe, commit→commits. (Hoje nenhuma página tem drill-down; é a principal lacuna de UX.)
-6. **Feedback de carregamento:** HTMX `hx-indicator` com spinner; nunca trocar conteúdo sem indicador.
-7. **Polling unificado:** 5s para KPIs/listas; SSE para eventos ao vivo quando a Etapa 4 entregar o proxy. Nenhuma página inventa intervalo próprio.
-8. **Erros da Inspect API** aparecem como banner no topo (não só o dot vermelho) com a mensagem retornada.
-9. **Ações destrutivas** (Etapa 5) exigem confirmação (modal Alpine ou `confirm()` estilizado) e terminam em toast.
-10. **Responsividade mínima:** sidebar colapsa para ícones/topbar abaixo de 768px; grids de KPI vão de 4→2 colunas (`md:`). Dashboard é desktop-first, mas não pode quebrar em tablet.
+Toda a interface v2 consome componentes Templ reutilizáveis e fortemente tipados.
 
----
-
-## 5. Arquitetura de interação
-
-```
-Browser ──GET /dash/<página>──▶ V2Server ──Templ──▶ HTML completo (SSR)
-   │                                                    │ Alpine: estado local (filtros, tabs)
-   ├──HTMX hx-get /dash/api/... ──proxy──▶ Inspect API ─┘ hx-swap em fragmentos
-   └──SSE /dash/api/events/stream ────────▶ (Etapa 4) contadores e live tail
-```
-
-- **Navegação entre páginas:** link `<a>` clássico com SSR completo (sem `hx-boost` inicialmente; avaliar boost na Etapa 6 se houver ganho perceptível).
-- **Filtros e paginação:** Alpine atualiza estado + dispara `htmx.trigger` no container da tabela, que faz `hx-get` com querystring. A tabela retorna é **fragmento Templ** renderizado por novos handlers `/dash/partials/<recurso>` (Etapa 3) em vez de JSON+template no cliente.
-- **Mutações (Etapa 5):** HTMX `hx-post` → `/dash/control/...` → proxy para Control API → resposta é fragmento com toast + `HX-Trigger` para recarregar a lista afetada.
-
-> Decisão-chave: o proxy atual `/dash/api/*` devolve **JSON** (ótimo para os testes e reuso). A Etapa 3 adiciona `/dash/partials/*` que devolve **HTML** para o HTMX. Os dois coexistem: JSON para dados brutos/testes, HTML para interação.
+| Componente | Assinatura | Descrição / Uso |
+|---|---|---|
+| `Card` | `card(title string)` | Conteiner com borda sutil, título em uppercase e padding responsivo |
+| `StatCard` | `statCard(label, value, sub, tone)` | Exibição de KPI/métrica individual com destaque visual |
+| `StatusDot` | `statusDot(ok bool, label string)` | Indicador de pulso verde/vermelho com rótulo semântico |
+| `Badge` | `badge(label, kind string)` | Pill de status (`success`, `warning`, `error`, `info`, `neutral`) |
+| `AlertBanner` | `alertBanner(title, msg, kind)` | Caixa de alerta em destaque no topo das páginas |
+| `EmptyState` | `emptyState(msg string)` | Estado vazio padronizado com borda pontilhada e mensagem explicativa |
+| `Pager` | `pager(prefix string, current, total int, hasPrev, hasNext bool)` | Barra de paginação uniforme com estados desabilitados |
+| `Kbd` | `kbd(key string)` | Tecla de atalho visual padronizada (`<kbd>g</kbd>`) |
+| `LoadingSkeleton` | `loadingSkeleton(rows int)` | Animação de carregamento (shimmer) para tabelas e listas |
+| `CopyButton` | `copyButton(text string)` | Botão compacto para cópia de JSON/IDs com feedback de toast |
 
 ---
 
-## 6. Acessibilidade (floor mínimo)
+## 4. Atalhos de Teclado Nativos (`layout.templ`)
 
-- `lang="pt-BR"` (já existe).
-- Todo controle com `<label>` associado (hoje parcial: labels envolvem inputs, ok, mas faltam `for`/`id` em alguns).
-- Navegação por teclado: ordem de tab natural; foco visível (§2.4); atalhos documentados (Etapa 6).
-- Contraste: todos os pares texto/fundo da tabela §2.1 ≥ 4.5:1 (verificar `--muted` sobre `--panel`: #8b9bb4/#1a2332 ≈ 7:1, ok).
-- Tabelas com `<th scope>`, badges com texto (nunca cor pura como único sinal).
-- `aria-live="polite"` na região de toast e no contador de eventos SSE.
+O dashboard v2 inclui navegação global por teclado ativada quando o usuário pressiona a sequência correspondente (fora de campos de formulário):
 
----
-
-## 7. Anti-objetivos (não fazer)
-
-- ❌ SPA, React/Vue, bundler JS, npm no runtime
-- ❌ CSS custom fora dos tokens (nada de `#243247` solto — vira `--panel-2`)
-- ❌ light mode / theme switcher (fora de escopo)
-- ❌ gráficos canvas/SVG custom (fora de escopo; se um dia precisar, sparkline SVG inline mínima)
-- ❌ WebSockets (SSE é suficiente e já existe)
-- ❌ frameworks CSS adicionais (Bootstrap etc.)
-- ❌ mexer no dashboard legado `/dashboard`
+- <kbd>g</kbd> <kbd>o</kbd> → Ir para **Visão Geral** (`/dash`)
+- <kbd>g</kbd> <kbd>e</kbd> → Ir para **Eventos** (`/dash/events`)
+- <kbd>g</kbd> <kbd>m</kbd> → Ir para **Modelos & LLMs** (`/dash/models`)
+- <kbd>g</kbd> <kbd>r</kbd> → Ir para **Recursos & Gates** (`/dash/resources`)
+- <kbd>g</kbd> <kbd>f</kbd> → Ir para **Fronteira & Ações** (`/dash/frontier`)
+- <kbd>g</kbd> <kbd>a</kbd> → Ir para **Alertas & Telemetria** (`/dash/alerts`)
+- <kbd>g</kbd> <kbd>k</kbd> → Ir para **Conhecimento** (`/dash/knowledge`)
+- <kbd>?</kbd> → Abrir / Fechar o **Cheatsheet de Atalhos**
 
 ---
 
-## 8. Referência rápida do que já está conforme
+## 5. Diretrizes de Qualidade e Manutenibilidade
 
-- Sidebar com estado ativo, `card`, `badge`, tokens cor/espacamento nas 7 páginas, HTMX+Alpine vendor locais, zero CDN, proxy same-origin (`/dash/api/*`) funcionando e testado.
-
-## 9. Lacunas conhecidas (baseline 2026-08-03)
-
-1. 4 handlers duplicam estrutura idêntica de tabela+filtro+pager (events, frontier, alerts, knowledge).
-2. Nenhum drill-down entidade→detalhe (endpoints `/events/{id}`, `/knowledge/*/{id}` existem na Inspect API e não têm página).
-3. Polling manual via `fetch()` em Alpine; sem indicador de loading; sem tratamento de erro além do dot.
-4. `handleEventStream` (SSE) existe na Inspect API mas não está exposto no dashboard v2.
-5. Sem foco visível, sem atalhos, sem toasts, sem confirmações (porque ainda não há mutações na v2).
-6. `app.css` é build órfão: sem `tailwind.config` no repo, regenerar exige adivinhar o comando.
-7. Documentação do operador (`docs/dashboard.md`) descreve apenas a SPA legada.
+1. **Compilação Templ Obrigatória:** Qualquer alteração em arquivos `.templ` exige a execução de `templ generate ./internal/dashboard/views/`.
+2. **Check de Formatação:** O código gerado deve passar limpo por `git diff --check`.
+3. **Testes Unitários de Componentes:** Novos componentes devem ter casos de teste correspondentes em `components_test.go`.
+4. **Respeito às Regras de Execução:** Toda iteração de sistema exige validação com a suíte de testes Go (`go test ./...`) e inferência live obrigatória (Regra 6).

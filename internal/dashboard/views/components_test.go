@@ -33,6 +33,42 @@ func TestComponentsRender(t *testing.T) {
 		}
 	})
 
+	t.Run("Badge", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := Badge("Passou", "success").Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("Badge.Render falhou: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "Passou") || !strings.Contains(out, "bg-[var(--ok)]/10") {
+			t.Errorf("Badge output inesperado: %s", out)
+		}
+	})
+
+	t.Run("Card", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := Card("Título do Card").Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("Card.Render falhou: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "Título do Card") {
+			t.Errorf("Card output inesperado: %s", out)
+		}
+	})
+
+	t.Run("AlertBanner", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := AlertBanner("Atenção", "Mensagem de teste de erro", "error").Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("AlertBanner.Render falhou: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "Atenção") || !strings.Contains(out, "Mensagem de teste de erro") || !strings.Contains(out, "bg-[var(--err)]/10") {
+			t.Errorf("AlertBanner output inesperado: %s", out)
+		}
+	})
+
 	t.Run("EmptyState", func(t *testing.T) {
 		var buf bytes.Buffer
 		err := EmptyState("Nenhum evento encontrado").Render(ctx, &buf)
@@ -41,6 +77,51 @@ func TestComponentsRender(t *testing.T) {
 		}
 		if !strings.Contains(buf.String(), "Nenhum evento encontrado") {
 			t.Errorf("EmptyState output inesperado: %s", buf.String())
+		}
+	})
+
+	t.Run("Kbd", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := Kbd("g").Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("Kbd.Render falhou: %v", err)
+		}
+		if !strings.Contains(buf.String(), "g") || !strings.Contains(buf.String(), "<kbd") {
+			t.Errorf("Kbd output inesperado: %s", buf.String())
+		}
+	})
+
+	t.Run("LoadingSkeleton", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := LoadingSkeleton(3).Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("LoadingSkeleton.Render falhou: %v", err)
+		}
+		if !strings.Contains(buf.String(), "animate-pulse") {
+			t.Errorf("LoadingSkeleton output inesperado: %s", buf.String())
+		}
+	})
+
+	t.Run("CopyButton", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := CopyButton("texto_para_copiar").Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("CopyButton.Render falhou: %v", err)
+		}
+		if !strings.Contains(buf.String(), "texto_para_copiar") || !strings.Contains(buf.String(), "Copiar") {
+			t.Errorf("CopyButton output inesperado: %s", buf.String())
+		}
+	})
+
+	t.Run("Pager", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := Pager("/dash/events", 1, 5, false, true).Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("Pager.Render falhou: %v", err)
+		}
+		out := buf.String()
+		if !strings.Contains(out, "Página") || !strings.Contains(out, "Próxima &rarr;") {
+			t.Errorf("Pager output inesperado: %s", out)
 		}
 	})
 
