@@ -29,6 +29,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /import", h.importVault)
 	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
+	mux.HandleFunc("POST /secrets/batch-purge-expired", h.batchPurgeExpired)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
 	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
@@ -410,6 +411,23 @@ func (h HTTP) deleteAllSecrets(w http.ResponseWriter, _ *http.Request) {
 	}
 	write(w, http.StatusOK, map[string]any{"deleted": deleted})
 }
+type batchPurgeRequest struct {
+	Names []string `json:"names"`
+}
+
+func (h HTTP) batchPurgeExpired(w http.ResponseWriter, r *http.Request) {
+	var q batchPurgeRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	result, err := h.Vault.BatchPurgeExpired(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+
 func (h HTTP) batchDelete(w http.ResponseWriter, r *http.Request) {
 	var q batchDeleteRequest
 	if !decode(w, r, &q) {
