@@ -3,22 +3,162 @@ package views
 templ Models() {
 	@layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")) {
 		<div x-data="modelsState()" x-init="start()" class="space-y-4">
+			<!-- Bar de Conexão e Ações -->
 			<div class="flex items-center gap-3 text-sm">
 				<span class="inline-flex items-center gap-1.5">
 					<span
 						class="w-2 h-2 rounded-full"
 						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
 					></span>
-					<span x-text="connected ? 'Inspect API acessível' : 'sem resposta da Inspect API'"></span>
+					<span x-text="connected ? 'Inspect & Control API acessíveis' : 'sem resposta das APIs'"></span>
 				</span>
 				<span class="text-[var(--muted)]" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
-				<button
-					class="ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
-					x-on:click="refresh()"
-				>↻ Atualizar</button>
+				<div class="ml-auto flex gap-2">
+					<button
+						type="button"
+						class="px-3 py-1 rounded bg-[var(--accent)] text-white font-medium text-xs flex items-center gap-1.5 hover:opacity-90"
+						x-on:click="openAddModal()"
+					>
+						+ Adicionar Modelo / Provedor
+					</button>
+					<button
+						class="px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] text-xs"
+						x-on:click="refresh()"
+					>↻ Atualizar</button>
+				</div>
 			</div>
 
-			@card("Bindings de modelo") {
+			<!-- Form / Modal para Adicionar ou Editar Provedor/Modelo -->
+			<div x-show="showForm" class="p-4 rounded-lg bg-[var(--panel)] border border-[var(--accent)] space-y-3" style="display:none;">
+				<div class="flex justify-between items-center pb-2 border-b border-[var(--border)]">
+					<h3 class="font-bold text-sm text-[var(--text)]" x-text="formIsEdit ? 'Editar Provedor & Modelo: ' + form.id : 'Adicionar Novo Provedor & Modelo LLM'"></h3>
+					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)]" x-on:click="showForm = false">✕ Fechar</button>
+				</div>
+				<form x-on:submit.prevent="submitForm()" class="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 text-xs">
+					<div>
+						<label class="block text-[var(--muted)] mb-1">ID do Provedor (Slug)</label>
+						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Tipo de Provedor</label>
+						<select x-model="form.kind" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)]">
+							<option value="openai_compatible">OpenAI Compatible (Groq / NIM / Ollama)</option>
+						</select>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Base URL do Endpoint</label>
+						<input type="url" x-model="form.base_url" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">ID do Modelo Exato</label>
+						<input type="text" x-model="form.model_id" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Janela de Contexto (tokens)</label>
+						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Máx. Output Tokens</label>
+						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Concorrência Máxima</label>
+						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] mb-1">Prioridade do Binding</label>
+						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+					</div>
+					<div class="md:col-span-2">
+						<label class="block text-[var(--muted)] mb-1">Nome da Var de Ambiente de API Key</label>
+						<input type="text" x-model="form.api_key_env" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
+					</div>
+					<div class="md:col-span-2">
+						<label class="block text-[var(--muted)] mb-1">Chave / API Secret (salva no Cofre local)</label>
+						<input type="password" x-model="form.secret_value" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
+					</div>
+					<div class="md:col-span-4 flex items-center gap-3 pt-2">
+						<button type="submit" class="px-4 py-1.5 rounded bg-[var(--accent)] text-white font-medium text-xs hover:opacity-90" x-bind:disabled="formSubmitting">
+							<span x-text="formIsEdit ? 'Salvar Alterações do Modelo' : 'Adicionar Modelo ao Catálogo'"></span>
+						</button>
+						<button type="button" class="px-3 py-1.5 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]" x-on:click="showForm = false">Cancelar</button>
+						<span x-show="formMsg" class="text-xs font-mono" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
+					</div>
+				</form>
+			</div>
+
+			<!-- Status do Cofre de Credenciais -->
+			<div class="p-3 rounded-lg bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-xs gap-2">
+				<div class="flex items-center gap-2">
+					<span class="font-medium text-[var(--text)]">Cofre de Credenciais Local:</span>
+					<span class="font-mono text-[var(--muted)]" x-text="vaultState"></span>
+				</div>
+				<div class="flex items-center gap-2" x-data="{ vPass: '' }">
+					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-36"/>
+					<button type="button" class="px-2 py-1 rounded bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 font-medium" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
+				</div>
+			</div>
+
+			<!-- Gestão de Provedores & Modelos Configurados -->
+			@card("Gestão de Provedores e Modelos Registrados") {
+				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
+					<p class="text-sm text-[var(--muted)]">Nenhum provedor configurado no catálogo ativo.</p>
+				</template>
+				<div class="space-y-3" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+					<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
+						<div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/50 space-y-2">
+							<div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+								<div>
+									<span class="font-bold text-sm text-[var(--text)] font-mono" x-text="p.id"></span>
+									<span class="ml-2 text-xs text-[var(--muted)]" x-text="p.kind + ' · ' + p.base_url"></span>
+								</div>
+								<div class="flex items-center gap-2">
+									<button
+										type="button"
+										class="px-2 py-1 rounded border border-[var(--border)] text-xs text-[var(--text)] hover:bg-[var(--panel)]"
+										x-on:click="editProvider(p.id)"
+									>
+										✎ Editar
+									</button>
+									<button
+										type="button"
+										class="px-2 py-1 rounded text-xs border font-medium"
+										x-bind:class="isProviderEnabled(p.id) ? 'border-[var(--warn)]/40 text-[var(--warn)] bg-[var(--warn)]/10 hover:bg-[var(--warn)]/20' : 'border-[var(--ok)]/40 text-[var(--ok)] bg-[var(--ok)]/10 hover:bg-[var(--ok)]/20'"
+										x-on:click="toggleProvider(p.id)"
+									>
+										<span x-text="isProviderEnabled(p.id) ? '⏸ Desativar' : '▶ Ativar'"></span>
+									</button>
+									<button
+										type="button"
+										class="px-2 py-1 rounded border border-[var(--err)]/40 text-[var(--err)] bg-[var(--err)]/10 hover:bg-[var(--err)]/20 text-xs font-medium"
+										x-on:click="removeProvider(p.id)"
+									>
+										🗑 Remover
+									</button>
+								</div>
+							</div>
+							<!-- Bindings do Provedor -->
+							<div class="space-y-1.5 pl-2">
+								<template x-for="b in getProviderBindings(p.id)" x-bind:key="b.id">
+									<div class="flex flex-wrap items-center justify-between text-xs py-1 px-2 rounded bg-[var(--panel)] border border-[var(--border)]">
+										<div class="flex items-center gap-2">
+											<span class="w-2 h-2 rounded-full" x-bind:class="b.enabled ? 'bg-[var(--ok)]' : 'bg-[var(--muted)]'"></span>
+											<span class="font-mono font-medium text-[var(--text)]" x-text="b.model_id"></span>
+											<span class="text-[var(--muted)]" x-text="'(Ctx: ' + fmtNum(b.context_tokens) + ' tok | Out: ' + fmtNum(b.max_output_tokens) + ' tok)'"></span>
+										</div>
+										<div class="flex items-center gap-3">
+											<span class="text-[var(--muted)]" x-text="'Prio: ' + b.priority"></span>
+											<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold font-mono" x-bind:class="b.enabled ? 'bg-[var(--ok)]/20 text-[var(--ok)]' : 'bg-[var(--muted)]/20 text-[var(--muted)]'" x-text="b.enabled ? 'ATIVO' : 'INATIVO'"></span>
+										</div>
+									</div>
+								</template>
+							</div>
+						</div>
+					</template>
+				</div>
+			}
+
+			@card("Bindings de modelo (Status Runtime)") {
 				<template x-if="(bindings ?? []).length === 0">
 					<p class="text-sm text-[var(--muted)]" x-text="note || 'Nenhum binding configurado (estado válido quando não há revisão MODELS ativa).'"></p>
 				</template>
@@ -120,6 +260,29 @@ templ Models() {
 					note: '',
 					pressures: [],
 					pressureNote: '',
+					// Estado de Configuração de Modelos (Control API)
+					cfgActiveRevision: 0,
+					cfgPayload: { providers: [], bindings: [] },
+					vaultState: 'Desconhecido',
+
+					// Form de adição/edição
+					showForm: false,
+					formIsEdit: false,
+					formSubmitting: false,
+					formMsg: '',
+					formIsErr: false,
+					form: {
+						id: '',
+						kind: 'openai_compatible',
+						base_url: 'https://api.groq.com/openai/v1',
+						model_id: '',
+						context_tokens: 131072,
+						max_output_tokens: 8192,
+						max_concurrent: 2,
+						priority: 10,
+						api_key_env: 'GROQ_API_KEY',
+						secret_value: ''
+					},
 
 					get observedAgo() {
 						if (!this.observedAt) return '';
@@ -129,17 +292,237 @@ templ Models() {
 
 					async refresh() {
 						try {
-							const [b, p] = await Promise.all([
+							const [b, p, activeRev] = await Promise.all([
 								fetch('/dash/api/model-bindings').then(r => r.json()),
 								fetch('/dash/api/model-context-pressures').then(r => r.json()),
+								fetch('/dash/api/control/config/revisions/active?scope=MODELS').then(r => r.json()).catch(() => ({}))
 							]);
 							this.bindings = b?.bindings ?? [];
 							this.note = b?.note ?? '';
 							this.pressures = p?.pressures ?? [];
 							this.pressureNote = p?.note ?? '';
+
+							// Config active payload
+							const rev = activeRev?.revision || activeRev;
+							if (rev && rev.payload) {
+								this.cfgActiveRevision = Number(rev.revision || 0);
+								this.cfgPayload = rev.payload.models || rev.payload || { providers: [], bindings: [] };
+								if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
+								if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
+							}
+
+							await this.refreshVaultStatus();
 							this.observedAt = Date.now();
 							this.connected = true;
 						} catch (e) { this.connected = false; }
+					},
+
+					async refreshVaultStatus() {
+						try {
+							const res = await fetch('/dash/api/vault/status');
+							const s = await res.json();
+							if (!s.initialized) this.vaultState = 'Não inicializado';
+							else if (s.locked) this.vaultState = 'Bloqueado';
+							else this.vaultState = 'Desbloqueado (' + (s.secrets || []).length + ' credenciais)';
+						} catch (err) {
+							this.vaultState = 'Indisponível';
+						}
+					},
+
+					async unlockVault(pass) {
+						if (!pass) return;
+						try {
+							const statusRes = await fetch('/dash/api/vault/status');
+							const s = await statusRes.json();
+							const endpoint = s.initialized ? '/dash/api/vault/unlock' : '/dash/api/vault/initialize';
+							const res = await fetch(endpoint, {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({ password: pass })
+							});
+							if (!res.ok) throw new Error('Falha ao desbloquear');
+							await this.refreshVaultStatus();
+							alert('Cofre desbloqueado com sucesso!');
+						} catch (err) {
+							alert('Erro no cofre: ' + err.message);
+						}
+					},
+
+					openAddModal() {
+						this.formIsEdit = false;
+						this.form = {
+							id: '',
+							kind: 'openai_compatible',
+							base_url: 'https://api.groq.com/openai/v1',
+							model_id: '',
+							context_tokens: 131072,
+							max_output_tokens: 8192,
+							max_concurrent: 2,
+							priority: 10,
+							api_key_env: 'GROQ_API_KEY',
+							secret_value: ''
+						};
+						this.formMsg = '';
+						this.showForm = true;
+					},
+
+					editProvider(id) {
+						const p = (this.cfgPayload.providers || []).find(x => x.id === id);
+						const b = (this.cfgPayload.bindings || []).find(x => x.provider_ref === id);
+						if (!p) return;
+						this.formIsEdit = true;
+						this.form = {
+							id: p.id,
+							kind: p.kind || 'openai_compatible',
+							base_url: p.base_url || '',
+							model_id: b ? b.model_id : '',
+							context_tokens: b ? b.context_tokens : 8192,
+							max_output_tokens: b ? b.max_output_tokens : 1024,
+							max_concurrent: (p.global_limit && p.global_limit.max_concurrent) || 1,
+							priority: b ? b.priority : 10,
+							api_key_env: p.api_key_env || 'EON_PROVIDER_API_KEY',
+							secret_value: ''
+						};
+						this.formMsg = '';
+						this.showForm = true;
+					},
+
+					isProviderEnabled(id) {
+						const bs = (this.cfgPayload.bindings || []).filter(b => b.provider_ref === id);
+						return bs.some(b => b.enabled);
+					},
+
+					getProviderBindings(id) {
+						return (this.cfgPayload.bindings || []).filter(b => b.provider_ref === id);
+					},
+
+					async toggleProvider(id) {
+						const next = JSON.parse(JSON.stringify(this.cfgPayload));
+						const bs = next.bindings.filter(b => b.provider_ref === id);
+						const turnOn = !bs.some(b => b.enabled);
+						bs.forEach(b => { b.enabled = turnOn; });
+						await this.createModelsDraft(next, (turnOn ? "Ativar modelos " : "Desativar modelos ") + id);
+					},
+
+					async removeProvider(id) {
+						if (!confirm("Remover o provedor " + id + " e seus modelos do próximo catálogo?")) return;
+						const next = JSON.parse(JSON.stringify(this.cfgPayload));
+						next.providers = next.providers.filter(p => p.id !== id);
+						next.bindings = next.bindings.filter(b => b.provider_ref !== id);
+						await this.createModelsDraft(next, "Remover provedor " + id + " via dashboard");
+					},
+
+					modelLimit(resource, maxConcurrent) {
+						return {
+							resource: resource,
+							max_concurrent: maxConcurrent,
+							max_per_minute: 0,
+							max_per_day: 0,
+							max_tokens_per_minute: 0,
+							failure_threshold: 3,
+							cooldown_base: 30000000000,
+							cooldown_max: 300000000000,
+							reserved_for_critical: 0
+						};
+					},
+
+					async submitForm() {
+						if (this.form.max_output_tokens >= this.form.context_tokens) {
+							this.formMsg = 'Máx output tokens deve ser menor que a janela de contexto.';
+							this.formIsErr = true;
+							return;
+						}
+						this.formSubmitting = true;
+						this.formMsg = 'Enviando rascunho de alteração...';
+						this.formIsErr = false;
+
+						try {
+							const id = this.form.id.trim();
+							const next = JSON.parse(JSON.stringify(this.cfgPayload));
+							if (!Array.isArray(next.providers)) next.providers = [];
+							if (!Array.isArray(next.bindings)) next.bindings = [];
+
+							const p = {
+								id: id,
+								kind: this.form.kind,
+								base_url: this.form.base_url.trim(),
+								api_key_env: this.form.api_key_env.trim(),
+								timeout: 45000000000,
+								max_response_bytes: 1048576,
+								global_limit: this.modelLimit("model-provider:" + id, Number(this.form.max_concurrent))
+							};
+							const bindingID = id + "-primary";
+							const b = {
+								id: bindingID,
+								provider_ref: id,
+								model_id: this.form.model_id.trim(),
+								enabled: true,
+								priority: Number(this.form.priority),
+								context_tokens: Number(this.form.context_tokens),
+								max_output_tokens: Number(this.form.max_output_tokens),
+								max_output_dialect: "max_tokens",
+								limit: this.modelLimit("model-binding:" + bindingID, 1)
+							};
+
+							const pi = next.providers.findIndex(x => x.id === id);
+							if (pi >= 0) next.providers[pi] = p; else next.providers.push(p);
+
+							const bi = next.bindings.findIndex(x => x.provider_ref === id);
+							if (bi >= 0) {
+								b.id = next.bindings[bi].id;
+								b.limit.resource = "model-binding:" + b.id;
+								next.bindings[bi] = b;
+							} else next.bindings.push(b);
+
+							next.version = "models.dashboard." + Date.now();
+
+							// Se informou API Secret, salvar no Cofre
+							if (this.form.secret_value.trim()) {
+								await fetch('/dash/api/vault/secrets/' + encodeURIComponent("provider/" + id + "/api-key"), {
+									method: 'PUT',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ value: this.form.secret_value.trim() })
+								});
+							}
+
+							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar modelo " : "Adicionar modelo ") + id);
+							this.showForm = false;
+						} catch (err) {
+							this.formMsg = 'Erro: ' + err.message;
+							this.formIsErr = true;
+						} finally {
+							this.formSubmitting = false;
+						}
+					},
+
+					async createModelsDraft(nextModelsPayload, reason) {
+						// 1. Criar Draft
+						const draftRes = await fetch('/dash/api/control/config/drafts', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({
+								schema_version: 1,
+								scope: "MODELS",
+								based_on_revision: this.cfgActiveRevision,
+								reason: reason,
+								applicability: "NEXT_CYCLE",
+								models: nextModelsPayload
+							})
+						});
+						const draftData = await draftRes.json();
+						if (!draftRes.ok) throw new Error(draftData.error?.message || draftData.message || ('HTTP ' + draftRes.status));
+
+						const draftID = draftData.draft?.id;
+						if (draftID) {
+							// 2. Validar e Auto-Aplicar Draft
+							await fetch('/dash/api/control/config/drafts/' + encodeURIComponent(draftID) + '/validate', { method: 'POST' });
+							const applyRes = await fetch('/dash/api/control/config/drafts/' + encodeURIComponent(draftID) + '/apply', { method: 'POST' });
+							if (!applyRes.ok) {
+								const applyData = await applyRes.json();
+								throw new Error('Draft criado, mas falha ao aplicar: ' + (applyData.error?.message || applyRes.statusText));
+							}
+						}
+						await this.refresh();
 					},
 
 					fmtNum(v) { return v == null ? '–' : Number(v).toLocaleString('pt-BR'); },

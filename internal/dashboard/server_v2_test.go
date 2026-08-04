@@ -58,6 +58,10 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 		_, _ = w.Write([]byte(`{"items":[{"id":"a1","kind":"report","content_ref":"sha256://abc","content_bytes":1024,"dependency_count":1,"base_commit_id":"c0","stale":false}],"total":1,"offset":0,"limit":25}`))
 	})
 	controlMux := http.NewServeMux()
+	controlMux.HandleFunc("POST /commands", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"schema_version":1,"command_id":"cmd-1","accepted":true}`))
+	})
 	v2, err := NewV2(inspectMux, controlMux, nil)
 	if err != nil {
 		t.Fatalf("NewV2: %v", err)
@@ -147,6 +151,17 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("/dash/api/events/stream status=%d, expected 200", resp.StatusCode)
+	}
+
+	// Control API proxy check under /dash/api/control/
+	resp, err = srv.Client().Post(srv.URL + "/dash/api/control/commands", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatalf("post dash api control commands: %v", err)
+	}
+	b, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted || !strings.Contains(string(b), "cmd-1") {
+		t.Fatalf("/dash/api/control/commands status=%d body=%s", resp.StatusCode, string(b))
 	}
 
 	// Events proxy passes the paginated inspect payload through unchanged.

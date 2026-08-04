@@ -56,10 +56,13 @@ func (s *V2Server) Handler() http.Handler {
 	// /dash → layout shell + pages.
 	mux.Handle("GET /dash", http.RedirectHandler("/dash/", http.StatusMovedPermanently))
 	mux.Handle("GET /dash/assets/", http.StripPrefix("/dash/assets", assetsHandler{}))
-	// dashAPIAddr proxies selected inspect reads under the dashboard origin so
-	// the browser never crosses ports. Read-only GET proxy; no mutation routes.
-	mux.Handle("GET /dash/api/", http.StripPrefix("/dash/api", s.Inspect))
-	mux.Handle("GET /dash/", http.HandlerFunc(s.handleOverview))
+	// Proxy inspect, control and vault endpoints under /dash/api/ so browser calls work seamlessly
+	mux.Handle("/dash/api/control/", http.StripPrefix("/dash/api/control", s.Control))
+	if s.Vault != nil {
+		mux.Handle("/dash/api/vault/", http.StripPrefix("/dash/api/vault", s.Vault))
+	}
+	mux.Handle("/dash/api/", http.StripPrefix("/dash/api", s.Inspect))
+	mux.Handle("GET /dash/{$}", http.HandlerFunc(s.handleOverview))
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
 	mux.Handle("GET /dash/events/", http.HandlerFunc(s.handleEventDetail))
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))

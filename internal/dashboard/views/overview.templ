@@ -46,6 +46,85 @@ templ Overview() {
 				</div>
 			</div>
 
+			<!-- Controle Operacional do Runtime e Missão -->
+			@card("Controle Operacional & Execução") {
+				<div class="space-y-3 text-sm">
+					<div class="flex flex-wrap items-center gap-3">
+						<span class="font-medium text-[var(--text)]">Estado do Despacho:</span>
+						<span
+							class="px-2 py-0.5 rounded text-xs font-mono font-semibold uppercase"
+							x-bind:class="ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)]/20 text-[var(--warn)]' : 'bg-[var(--ok)]/20 text-[var(--ok)]'"
+							x-text="ov.process_mode ?? 'STANDBY'"
+						></span>
+						<span class="text-xs text-[var(--muted)]" x-show="ov.mission && ov.mission.mission_id">
+							Missão: <strong x-text="ov.mission.mission_id"></strong> (Rev <span x-text="ov.mission.active_revision"></span>)
+						</span>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border)]">
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded bg-[var(--warn)]/20 text-[var(--warn)] border border-[var(--warn)]/40 hover:bg-[var(--warn)]/30 font-medium text-xs flex items-center gap-1.5"
+							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode === 'PAUSED'"
+							x-on:click="pauseMission()"
+						>
+							⏸ Pausar Despacho
+						</button>
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded bg-[var(--ok)]/20 text-[var(--ok)] border border-[var(--ok)]/40 hover:bg-[var(--ok)]/30 font-medium text-xs flex items-center gap-1.5"
+							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode !== 'PAUSED'"
+							x-on:click="resumeMission()"
+						>
+							▶ Retomar Despacho
+						</button>
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded bg-[var(--err)]/20 text-[var(--err)] border border-[var(--err)]/40 hover:bg-[var(--err)]/30 font-medium text-xs flex items-center gap-1.5 ml-auto"
+							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id"
+							x-on:click="cancelMission()"
+						>
+							⏹ Cancelar Missão
+						</button>
+					</div>
+
+					<!-- Feedback de comandos -->
+					<div x-show="cmdStatus" class="mt-2 text-xs font-mono p-2 rounded bg-[var(--bg)] border border-[var(--border)]" x-bind:class="cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="cmdStatus"></div>
+				</div>
+			}
+
+			<!-- Perguntas Pendentes do Operador -->
+			<div x-show="questions && questions.length > 0">
+				@card("Perguntas Pendentes do Operador") {
+					<div class="space-y-3 text-sm">
+						<template x-for="q in questions" x-bind:key="q.id">
+							<div class="p-3 rounded border border-[var(--warn)]/40 bg-[var(--warn)]/5 space-y-2">
+								<div class="flex justify-between items-start">
+									<div class="font-medium text-[var(--text)]" x-text="q.prompt"></div>
+									<span class="text-xs font-mono text-[var(--muted)]" x-text="q.id"></span>
+								</div>
+								<div class="flex gap-2 items-center" x-data="{ ansText: '' }">
+									<input
+										type="text"
+										class="flex-1 px-3 py-1 text-xs rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)]"
+										placeholder="Digite sua resposta..."
+										x-model="ansText"
+										x-on:keydown.enter="submitAnswer(q, ansText)"
+									/>
+									<button
+										type="button"
+										class="px-3 py-1 rounded bg-[var(--accent)] text-white text-xs font-medium hover:opacity-90"
+										x-on:click="submitAnswer(q, ansText)"
+									>
+										Responder
+									</button>
+								</div>
+							</div>
+						</template>
+					</div>
+				}
+			</div>
+
 			<!-- Saúde do runtime e alertas -->
 			<div class="grid gap-4 md:grid-cols-2">
 				@card("Runtime") {
@@ -137,7 +216,11 @@ templ Overview() {
 					health: {},
 					alerts: [],
 					events: [],
+					questions: [],
 					sseOn: false,
+					cmdLoading: false,
+					cmdStatus: '',
+					cmdIsErr: false,
 
 					get generatedAgo() {
 						if (!this.generatedAt) return '';
@@ -149,18 +232,90 @@ templ Overview() {
 
 					async refresh() {
 						try {
-							const [h, o, a] = await Promise.all([
+							const [h, o, a, q] = await Promise.all([
 								fetch('/dash/api/health').then(r => r.json()),
 								fetch('/dash/api/overview').then(r => r.json()),
 								fetch('/dash/api/alerts').then(r => r.json()),
+								fetch('/dash/api/control/questions').then(r => r.json()).catch(() => ({ questions: [] }))
 							]);
 							this.health = h ?? {};
 							this.ov = o ?? {};
 							this.alerts = Array.isArray(a) ? a : (a?.alerts ?? []);
+							this.questions = q?.questions ?? [];
 							this.generatedAt = Date.now();
 							this.connected = true;
 						} catch (e) {
 							this.connected = false;
+						}
+					},
+
+					async submitCommand(kind, reason) {
+						if (!this.ov.mission || !this.ov.mission.mission_id) return;
+						this.cmdLoading = true;
+						this.cmdStatus = 'Enviando comando ' + kind + '...';
+						this.cmdIsErr = false;
+						try {
+							const payload = {
+								schema_version: 1,
+								idempotency_key: 'cmd-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+								actor_type: 'OPERATOR',
+								actor_id: 'dashboard-ui',
+								kind: kind,
+								target: { mission_id: this.ov.mission.mission_id },
+								expected_revision: Number(this.ov.mission.active_revision || 1),
+								reason: reason || ('comando ' + kind + ' via dashboard v2')
+							};
+							const res = await fetch('/dash/api/control/commands', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(payload)
+							});
+							const data = await res.json();
+							if (!res.ok) throw new Error(data.error?.message || data.message || ('HTTP ' + res.status));
+							this.cmdStatus = 'Comando ' + kind + ' enviado com sucesso! Receipt ID: ' + (data.command_id || 'OK');
+							await this.refresh();
+						} catch (err) {
+							this.cmdStatus = 'Erro ao enviar comando: ' + err.message;
+							this.cmdIsErr = true;
+						} finally {
+							this.cmdLoading = false;
+						}
+					},
+
+					pauseMission() {
+						this.submitCommand('PAUSE_MISSION', 'Pausa manual solicitada via painel v2');
+					},
+
+					resumeMission() {
+						this.submitCommand('RESUME_MISSION', 'Retomada manual solicitada via painel v2');
+					},
+
+					cancelMission() {
+						if (confirm('Tem certeza que deseja CANCELAR a missão ativa? Esta ação não pode ser desfeita.')) {
+							this.submitCommand('CANCEL_MISSION', 'Cancelamento manual solicitado via painel v2');
+						}
+					},
+
+					async submitAnswer(q, text) {
+						if (!text.trim()) return;
+						try {
+							const payload = {
+								schema_version: 1,
+								idempotency_key: 'ans-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+								expected_question_revision: q.revision || 1,
+								kind: 'TEXT',
+								text: text.trim()
+							};
+							const res = await fetch('/dash/api/control/questions/' + encodeURIComponent(q.id) + '/answers', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(payload)
+							});
+							const data = await res.json();
+							if (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));
+							await this.refresh();
+						} catch (err) {
+							alert('Erro ao responder pergunta: ' + err.message);
 						}
 					},
 

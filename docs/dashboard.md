@@ -11,7 +11,7 @@ No projeto existem duas superfícies:
 ## 1. Visão Geral do Painel v2 (`/dash/`)
 
 ### O que é
-A versão v2 do painel do operador traz uma arquitetura de componentes server-side (Templ) baseada no Design System oficial (`docs/ui/DESIGN_SYSTEM.md`). Ela fornece visualização em tempo real de eventos, posture de modelos LLM, uso de recursos, fonte de conhecimento e métricas do sistema com alinhamento numérico legível e suporte a atalhos de teclado.
+A versão v2 do painel do operador traz uma arquitetura de componentes server-side (Templ) baseada no Design System oficial (`docs/ui/DESIGN_SYSTEM.md`). Ela fornece visualização em tempo real e **controles operacionais completos** (pausar/retomar/cancelar missão, responder perguntas do operador, gerenciar/adicionar/remover provedores e modelos LLM, desbloquear cofre local), servindo proxies diretos sob `/dash/api/control/` e `/dash/api/vault/`.
 
 ### Como acessar
 Quando o runtime é iniciado com a flag `-dashboard=true` (padrão) e a flag `-listen` configurada (ex.: `127.0.0.1:8080`), o painel v2 fica acessível nas seguintes URLs do seu navegador:

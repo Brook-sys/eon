@@ -327,6 +327,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			return nil, fmt.Errorf("credential vault: %w", vaultErr)
 		}
 		dash.Vault = secretvault.HTTP{Vault: vault}.Handler()
+		dashV2.Vault = dash.Vault
 
 		// Compose the two dashboards. Legacy handles /, /api/*, /healthz;
 		// the v2 Templ dashboard handles /dash/*.
