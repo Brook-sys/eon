@@ -7011,6 +7011,16 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 373 — credential vault SearchSecrets prefix and substring combination fix & live campaign (2026-08-04 07:05 -03)
+
+**Objective and implementation.** Corrected filtering logic in `secretvault.Vault.SearchSecrets` when both `prefix` and `substring` filters are specified simultaneously.
+1. `SearchSecrets` previously skipped substring check when `prefix != ""` due to `if prefix == "" && substring != ""` logic. Fixed condition to `if substring != "" && !strings.Contains(strings.ToLower(name), lowerSub)` so both `prefix` prefix-matching and `substring` case-insensitive substring matching are evaluated independently and concurrently.
+2. Added unit test assertion in `internal/secretvault/batch_search_audit_test.go` confirming combined `prefix` + `substring` search (`SearchSecrets("prod/", "token")`) returns strictly matching items.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `qwen/qwen3.6-27b` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 626.39 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase373-groq-qwen36-vault-search-fix/`.
+
 ## Phase 372 — credential vault BatchPurgeExpired capability, HTTP endpoint & live campaign (2026-08-04 05:00 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with targeted multi-secret selective purge `BatchPurgeExpired` and HTTP endpoint `POST /secrets/batch-purge-expired`.
