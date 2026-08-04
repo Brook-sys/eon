@@ -81,6 +81,15 @@ func TestVault_SearchSecrets(t *testing.T) {
 		t.Fatalf("expected 5 entries for empty filters, got %d", len(entries))
 	}
 
+	// Search with prefix and substring combined
+	entries, err = v.SearchSecrets("prod/", "token")
+	if err != nil {
+		t.Fatalf("SearchSecrets(prod/, 'token') failed: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name != "prod/api/token" {
+		t.Fatalf("expected 1 entry 'prod/api/token' for prefix+substring, got %+v", entries)
+	}
+
 	// Verify expired secret in search
 	if err := v.PutWithTTL("temp/token", "val", 1*time.Minute); err != nil {
 		t.Fatalf("PutWithTTL failed: %v", err)

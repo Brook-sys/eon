@@ -1440,7 +1440,7 @@ func (v *Vault) SearchSecrets(prefix, substring string) ([]SecretEntry, error) {
 		if prefix != "" && !strings.HasPrefix(name, prefix) {
 			continue
 		}
-		if prefix == "" && substring != "" && !strings.Contains(strings.ToLower(name), lowerSub) {
+		if substring != "" && !strings.Contains(strings.ToLower(name), lowerSub) {
 			continue
 		}
 		e := SecretEntry{
