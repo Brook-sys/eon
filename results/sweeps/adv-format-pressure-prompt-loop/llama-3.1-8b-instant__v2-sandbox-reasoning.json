@@ -1,0 +1,125 @@
+{
+  "task": "adv-format-pressure__v2-sandbox-reasoning",
+  "variant": "v2-sandbox-reasoning",
+  "model": "llama-3.1-8b-instant",
+  "provider": "groq",
+  "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+  },
+  "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY three lines.\nREASONING: <one-sentence explanation>\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. A subsequent revision did not change original date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Explain your reasoning briefly on the REASONING line.\n- Line 1 MUST start with REASONING:, Line 2 MUST start with DATE:, Line 3 MUST start with SOURCE:.",
+  "n_correct": 5,
+  "reps_done": 5,
+  "trials": [
+    {
+      "rep": 0,
+      "ok": true,
+      "latency_ms": 415.6806468963623,
+      "finish_reason": "stop",
+      "prompt_tokens": 176,
+      "completion_tokens": 34,
+      "response_text": "REASONING: The original publication date of S-17 is given as a fact.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 466.36056900024414,
+      "finish_reason": "stop",
+      "prompt_tokens": 176,
+      "completion_tokens": 34,
+      "response_text": "REASONING: The original publication date of S-17 is given as a fact.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 337.24141120910645,
+      "finish_reason": "stop",
+      "prompt_tokens": 176,
+      "completion_tokens": 34,
+      "response_text": "REASONING: The original publication date of S-17 is given as a fact.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 423.8107204437256,
+      "finish_reason": "stop",
+      "prompt_tokens": 176,
+      "completion_tokens": 34,
+      "response_text": "REASONING: The original publication date of S-17 is given as a fact.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 415.1127338409424,
+      "finish_reason": "stop",
+      "prompt_tokens": 176,
+      "completion_tokens": 34,
+      "response_text": "REASONING: The original publication date of S-17 is given as a fact.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    }
+  ]
+}

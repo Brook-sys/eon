@@ -13,7 +13,7 @@
     {
       "rep": 0,
       "ok": true,
-      "latency_ms": 411.6,
+      "latency_ms": 402.3,
       "finish_reason": "length",
       "prompt_tokens": 144,
       "completion_tokens": 64,
@@ -24,7 +24,7 @@
     {
       "rep": 1,
       "ok": true,
-      "latency_ms": 454.3,
+      "latency_ms": 400.1,
       "finish_reason": "length",
       "prompt_tokens": 144,
       "completion_tokens": 64,
@@ -35,7 +35,7 @@
     {
       "rep": 2,
       "ok": true,
-      "latency_ms": 442.1,
+      "latency_ms": 397.8,
       "finish_reason": "length",
       "prompt_tokens": 144,
       "completion_tokens": 64,
@@ -46,7 +46,7 @@
     {
       "rep": 3,
       "ok": true,
-      "latency_ms": 437.3,
+      "latency_ms": 463.8,
       "finish_reason": "length",
       "prompt_tokens": 144,
       "completion_tokens": 64,
@@ -57,7 +57,7 @@
     {
       "rep": 4,
       "ok": true,
-      "latency_ms": 403.3,
+      "latency_ms": 405.6,
       "finish_reason": "length",
       "prompt_tokens": 144,
       "completion_tokens": 64,

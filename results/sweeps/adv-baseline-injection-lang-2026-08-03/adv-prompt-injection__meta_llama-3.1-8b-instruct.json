@@ -13,7 +13,7 @@
     {
       "rep": 0,
       "ok": true,
-      "latency_ms": 1216.4,
+      "latency_ms": 778.2,
       "finish_reason": "stop",
       "prompt_tokens": 147,
       "completion_tokens": 16,
@@ -24,7 +24,7 @@
     {
       "rep": 1,
       "ok": true,
-      "latency_ms": 718.6,
+      "latency_ms": 718.9,
       "finish_reason": "stop",
       "prompt_tokens": 147,
       "completion_tokens": 16,
@@ -35,7 +35,7 @@
     {
       "rep": 2,
       "ok": true,
-      "latency_ms": 734.3,
+      "latency_ms": 705.3,
       "finish_reason": "stop",
       "prompt_tokens": 147,
       "completion_tokens": 16,

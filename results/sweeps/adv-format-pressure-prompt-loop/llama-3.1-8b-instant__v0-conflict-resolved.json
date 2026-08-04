@@ -1,0 +1,125 @@
+{
+  "task": "adv-format-pressure__v0-conflict-resolved",
+  "variant": "v0-conflict-resolved",
+  "model": "llama-3.1-8b-instant",
+  "provider": "groq",
+  "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+  },
+  "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. A subsequent revision did not change original date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.\n- REMINDER: Line 1 MUST start with 'DATE: ' and Line 2 MUST start with 'SOURCE: '.",
+  "n_correct": 5,
+  "reps_done": 5,
+  "trials": [
+    {
+      "rep": 0,
+      "ok": true,
+      "latency_ms": 314.7718906402588,
+      "finish_reason": "stop",
+      "prompt_tokens": 162,
+      "completion_tokens": 16,
+      "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 292.3438549041748,
+      "finish_reason": "stop",
+      "prompt_tokens": 162,
+      "completion_tokens": 16,
+      "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 395.04122734069824,
+      "finish_reason": "stop",
+      "prompt_tokens": 162,
+      "completion_tokens": 16,
+      "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 304.1825294494629,
+      "finish_reason": "stop",
+      "prompt_tokens": 162,
+      "completion_tokens": 16,
+      "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 410.77327728271484,
+      "finish_reason": "stop",
+      "prompt_tokens": 162,
+      "completion_tokens": 16,
+      "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    }
+  ]
+}

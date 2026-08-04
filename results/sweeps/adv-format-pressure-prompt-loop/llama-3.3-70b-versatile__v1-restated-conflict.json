@@ -1,0 +1,125 @@
+{
+  "task": "adv-format-pressure__v1-restated-conflict",
+  "variant": "v1-restated-conflict",
+  "model": "llama-3.3-70b-versatile",
+  "provider": "groq",
+  "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+  },
+  "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03. A subsequent revision did not change original date.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Explain your reasoning briefly in 1 sentence, then output the two lines.\n- PRECEDENCE CONTRACT: The two-line format (DATE: and SOURCE:) is ABSOLUTE. If reasoning conflicts with the two-line output requirement, DROP the reasoning and output ONLY the two lines:\n  DATE: <iso-date>\n  SOURCE: <id>",
+  "n_correct": 5,
+  "reps_done": 5,
+  "trials": [
+    {
+      "rep": 0,
+      "ok": true,
+      "latency_ms": 548.8393306732178,
+      "finish_reason": "stop",
+      "prompt_tokens": 196,
+      "completion_tokens": 48,
+      "response_text": "The original publication date of S-17 is returned because it was explicitly stated as 2025-11-03, which takes precedence over any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 1,
+      "ok": true,
+      "latency_ms": 589.4262790679932,
+      "finish_reason": "stop",
+      "prompt_tokens": 196,
+      "completion_tokens": 48,
+      "response_text": "The original publication date of S-17 is returned because it was explicitly stated as 2025-11-03, which takes precedence over any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 2,
+      "ok": true,
+      "latency_ms": 390.51270484924316,
+      "finish_reason": "stop",
+      "prompt_tokens": 196,
+      "completion_tokens": 40,
+      "response_text": "The original publication date of S-17 is returned because it was explicitly stated as 2025-11-03.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 3,
+      "ok": true,
+      "latency_ms": 574.8369693756104,
+      "finish_reason": "stop",
+      "prompt_tokens": 196,
+      "completion_tokens": 48,
+      "response_text": "The original publication date of S-17 is returned because it was explicitly stated as 2025-11-03, which takes precedence over any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    },
+    {
+      "rep": 4,
+      "ok": true,
+      "latency_ms": 520.6100940704346,
+      "finish_reason": "stop",
+      "prompt_tokens": 196,
+      "completion_tokens": 48,
+      "response_text": "The original publication date of S-17 is returned because it was explicitly stated as 2025-11-03, which takes precedence over any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+      "correct": true,
+      "score_fields": {
+        "DATE": {
+          "expected": "2025-11-03",
+          "got": "2025-11-03",
+          "ok": true
+        },
+        "SOURCE": {
+          "expected": "S-17",
+          "got": "S-17",
+          "ok": true
+        }
+      }
+    }
+  ]
+}
