@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase367-groq-gptoss20b-vault-batch-copy-expiring",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-04T00:11:05.614502376Z"
+}

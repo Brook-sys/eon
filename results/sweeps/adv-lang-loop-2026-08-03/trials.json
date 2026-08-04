@@ -1,0 +1,620 @@
+{
+  "v1-explicit-format-pt": {
+    "llama-3.1-8b-instant": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 421.675443649292,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 390.5963897705078,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 307.9342842102051,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 376.48749351501465,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 309.6158504486084,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "llama-3.3-70b-versatile": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 315.6111240386963,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 407.789945602417,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 416.48316383361816,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 354.3741703033447,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 486.97638511657715,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "allam-2-7b": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 440.4463768005371,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 432.60931968688965,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 416.6710376739502,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 436.5561008453369,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 434.96251106262207,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "qwen/qwen3.6-27b": {
+      "correct": 0,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 444.2017078399658,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later revision didn't change the original date.",
+          "correct": false,
+          "score_why": "line_count=6"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 489.2709255218506,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later revision didn't change the original date.",
+          "correct": false,
+          "score_why": "line_count=6"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 1067.720890045166,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later revision didn't change the original date.",
+          "correct": false,
+          "score_why": "line_count=6"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 439.7714138031006,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later revision didn't change the original date.",
+          "correct": false,
+          "score_why": "line_count=6"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 794.2886352539062,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Facts:**\n     - Source S-17 published on 2025-11-03. Later revision didn't change the original date.",
+          "correct": false,
+          "score_why": "line_count=6"
+        }
+      ]
+    }
+  },
+  "v2-restate-post-pt": {
+    "llama-3.1-8b-instant": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 391.0863399505615,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 406.4669609069824,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 388.25416564941406,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 325.1497745513916,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 398.93031120300293,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "llama-3.3-70b-versatile": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 393.7249183654785,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 463.63306045532227,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 388.4742259979248,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 387.2361183166504,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 461.9319438934326,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "allam-2-7b": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 430.54795265197754,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 423.05588722229004,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 418.31350326538086,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 421.07701301574707,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 423.6748218536377,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17 ",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "qwen/qwen3.6-27b": {
+      "correct": 0,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 441.3490295410156,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines.\n   - **Format Required:**\n     DATE: <iso-date>\n     SOURCE",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 775.2330303192139,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines.\n   - **Format Required:**\n     DATE: <iso-date>\n     SOURCE",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 411.55385971069336,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines.\n   - **Format Required:**\n     DATE: <iso-date>\n     SOURCE",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 479.4764518737793,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines.\n   - **Format Required:**\n     DATE: <iso-date>\n     SOURCE",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 824.6853351593018,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines.\n   - **Format Required:**\n     DATE: <iso-date>\n     SOURCE",
+          "correct": false,
+          "score_why": "line_count=8"
+        }
+      ]
+    }
+  },
+  "v3-fewshot-pt": {
+    "llama-3.1-8b-instant": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 399.61981773376465,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 395.27106285095215,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 411.2980365753174,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 398.36883544921875,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 397.2516059875488,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "llama-3.3-70b-versatile": {
+      "correct": 5,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 402.1492004394531,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 416.7044162750244,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 407.512903213501,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 331.4363956451416,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 445.7964897155762,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+          "correct": true,
+          "score_why": "exact_match"
+        }
+      ]
+    },
+    "allam-2-7b": {
+      "correct": 0,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 418.8051223754883,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2020-01-01\nSOURCE: S-17 ",
+          "correct": false,
+          "score_why": "line0='DATE: 2020-01-01' line1='SOURCE: S-17'"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 419.6603298187256,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2020-01-01\nSOURCE: S-17 ",
+          "correct": false,
+          "score_why": "line0='DATE: 2020-01-01' line1='SOURCE: S-17'"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 430.5713176727295,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2020-01-01\nSOURCE: S-17 ",
+          "correct": false,
+          "score_why": "line0='DATE: 2020-01-01' line1='SOURCE: S-17'"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 529.8042297363281,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2020-01-01\nSOURCE: S-17 ",
+          "correct": false,
+          "score_why": "line0='DATE: 2020-01-01' line1='SOURCE: S-17'"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 486.25779151916504,
+          "finish_reason": "stop",
+          "response_text": "DATE: 2020-01-01\nSOURCE: S-17 ",
+          "correct": false,
+          "score_why": "line0='DATE: 2020-01-01' line1='SOURCE: S-17'"
+        }
+      ]
+    },
+    "qwen/qwen3.6-27b": {
+      "correct": 0,
+      "of": 5,
+      "trials": [
+        {
+          "rep": 0,
+          "ok": true,
+          "latency_ms": 432.3415756225586,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Example Format:**\n     ```\n     DATE:",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 1,
+          "ok": true,
+          "latency_ms": 425.88186264038086,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Example Format:**\n     ```\n     DATE:",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 2,
+          "ok": true,
+          "latency_ms": 437.60156631469727,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Example Format:**\n     ```\n     DATE:",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 3,
+          "ok": true,
+          "latency_ms": 485.11528968811035,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Example Format:**\n     ```\n     DATE:",
+          "correct": false,
+          "score_why": "line_count=8"
+        },
+        {
+          "rep": 4,
+          "ok": true,
+          "latency_ms": 1246.9542026519775,
+          "finish_reason": "length",
+          "response_text": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Deterministic extractor.\n   - **Task:** Read facts, obey constraints, respond with EXACTLY two lines in a specific format.\n   - **Example Format:**\n     ```\n     DATE:",
+          "correct": false,
+          "score_why": "line_count=8"
+        }
+      ]
+    }
+  }
+}
