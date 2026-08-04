@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase375-groq-qwen36-vault-batch-history",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-04T15:26:09.146216009Z"
+}

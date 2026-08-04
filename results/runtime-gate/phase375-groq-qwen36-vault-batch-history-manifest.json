@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "phase375-groq-qwen36-vault-batch-history",
+  "probe_prompt": "Reply with exactly the text: READY\n\nNo markdown and no explanation.",
+  "expected_response": "READY",
+  "output_schema": "exact_text",
+  "max_output_tokens": 32,
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "seed_primary_circuit_seconds": 1,
+  "early_stop_repeated_failures": 2,
+  "bindings": [
+    {
+      "binding_id": "groq-qwen36-27b",
+      "provider": "groq",
+      "provider_kind": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "api_key_env": "GROQ_API_KEY",
+      "priority": 1,
+      "context_tokens": 8192,
+      "max_output_field": "max_tokens"
+    },
+    {
+      "binding_id": "nim-llama31-8b-instruct",
+      "provider": "nim",
+      "provider_kind": "nvidia_nim",
+      "model": "meta/llama-3.1-8b-instruct",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "priority": 2,
+      "context_tokens": 8192,
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

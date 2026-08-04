@@ -35,6 +35,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
 	mux.HandleFunc("POST /secrets/batch-metadata", h.batchMetadata)
 	mux.HandleFunc("POST /secrets/batch-exists", h.batchExists)
+	mux.HandleFunc("POST /secrets/batch-history", h.batchHistory)
 	mux.HandleFunc("POST /secrets/batch-refresh", h.batchRefreshToken)
 	mux.HandleFunc("POST /secrets/{name}/refresh", h.refreshToken)
 	mux.HandleFunc("POST /secrets/batch-copy", h.batchCopy)
@@ -101,6 +102,10 @@ type batchMetadataRequest struct {
 }
 
 type batchExistsRequest struct {
+	Names []string `json:"names"`
+}
+
+type batchHistoryRequest struct {
 	Names []string `json:"names"`
 }
 
@@ -514,6 +519,23 @@ func (h HTTP) batchExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, map[string]any{"results": results})
+}
+
+func (h HTTP) batchHistory(w http.ResponseWriter, r *http.Request) {
+	var q batchHistoryRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Names) == 0 || len(q.Names) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "names must contain 1 to 100 secret names"}})
+		return
+	}
+	results, err := h.Vault.BatchSecretHistory(q.Names)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, results)
 }
 func (h HTTP) refreshToken(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")

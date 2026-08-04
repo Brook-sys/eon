@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 375 — credential vault BatchSecretHistory capability, HTTP endpoint & live campaign (2026-08-04 12:20 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with multi-secret audit history extraction `BatchSecretHistory` and HTTP endpoint `POST /secrets/batch-history`.
+1. Implemented `func (v *Vault) BatchSecretHistory(names []string) ([]BatchSecretHistoryResult, error)`: inspects up to 100 passed secret names, filters vault audit log events per secret name, checks current secret existence, returns `Found: true` with matching audit history slice for existing or historically recorded secrets, returns `Found: false` with `os.ErrNotExist` for unknown secrets, records error strings for invalid names without failing the rest of the batch, and enforces `ErrLocked` when locked.
+2. Added HTTP endpoint: `POST /secrets/batch-history` accepting 1-100 names and returning `[]BatchSecretHistoryResult` (HTTP 200 OK).
+3. Added unit tests in `internal/secretvault/batch_history_test.go` covering batch history extraction, event filtering, missing secret handling, invalid name validation, locked vault rejection, and HTTP surface (400 for empty/over-limit names, 200 with result list).
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `qwen/qwen3.6-27b` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 811.51 ms (HTTP 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase375-groq-qwen36-vault-batch-history/`.
+
 ## Phase 374 — credential vault BatchRename capability, HTTP endpoint & live campaign (2026-08-04 07:45 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with atomic multi-secret rename `BatchRename` and HTTP endpoint `POST /secrets/batch-rename`.
