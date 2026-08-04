@@ -34,6 +34,8 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
 	mux.HandleFunc("POST /secrets/batch-metadata", h.batchMetadata)
 	mux.HandleFunc("POST /secrets/batch-exists", h.batchExists)
+	mux.HandleFunc("POST /secrets/batch-refresh", h.batchRefreshToken)
+	mux.HandleFunc("POST /secrets/{name}/refresh", h.refreshToken)
 	mux.HandleFunc("POST /secrets/batch-copy", h.batchCopy)
 	mux.HandleFunc("GET /secrets/expiring-soon", h.expiringSoon)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
@@ -118,6 +120,15 @@ type copyRequest struct {
 
 type batchCopyRequest struct {
 	Items []BatchCopyItem `json:"items"`
+}
+
+type tokenRefreshRequest struct {
+	NewValue string `json:"new_value"`
+	TTL      string `json:"ttl,omitempty"`
+}
+
+type batchTokenRefreshRequest struct {
+	Items []TokenRefreshItem `json:"items"`
 }
 
 type renameRequest struct {
@@ -480,6 +491,45 @@ func (h HTTP) batchExists(w http.ResponseWriter, r *http.Request) {
 	}
 	write(w, http.StatusOK, map[string]any{"results": results})
 }
+func (h HTTP) refreshToken(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	var q tokenRefreshRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	var dur time.Duration
+	if q.TTL != "" {
+		var err error
+		dur, err = time.ParseDuration(q.TTL)
+		if err != nil {
+			write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "invalid ttl format"}})
+			return
+		}
+	}
+	if err := h.Vault.RefreshToken(name, q.NewValue, dur); err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h HTTP) batchRefreshToken(w http.ResponseWriter, r *http.Request) {
+	var q batchTokenRefreshRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 refresh items"}})
+		return
+	}
+	result, err := h.Vault.BatchRefreshToken(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+
 func (h HTTP) batchCopy(w http.ResponseWriter, r *http.Request) {
 	var q batchCopyRequest
 	if !decode(w, r, &q) {

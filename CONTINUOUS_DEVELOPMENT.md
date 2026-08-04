@@ -6998,3 +6998,15 @@ Implementação:
 **Verificação.** `go test ./internal/provider/openai/...` ok; suíte Go integral ok; `go vet ./internal/provider/openai/`; `gofmt -l` vazio; `git diff --check` limpo; greps de segredos nos artefatos limpos.
 
 **Artefatos.** `results/runtime-gate/phase370-dashboard-v2-wiring/REPORT.md` + `live-reasoning-repro.json` (3 trials sanitizados); `results/dashboard-v2/2026-08-02/copy-quality/REPORT.md` + `copy-quality-results.json` + `probe_ui_copy.py` (runs from env, no hardcoded secrets).
+
+## Phase 371 — credential vault RefreshToken & BatchRefreshToken capabilities + HTTP endpoints (2026-08-04 02:25 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with single-secret `RefreshToken` and multi-secret atomic `BatchRefreshToken` operations (supporting upsert with value rotation and TTL refresh in string duration format), plus HTTP endpoints `POST /secrets/{name}/refresh` and `POST /secrets/batch-refresh`.
+1. Implemented `func (v *Vault) RefreshToken(name, newValue string, ttl time.Duration) error`: validates secret name, value size, and TTL; updates value and `ExpiresAt` (or creates secret with `CreatedAt=now` if non-existent); writes to vault file atomically.
+2. Implemented `func (v *Vault) BatchRefreshToken(items []TokenRefreshItem) (TokenRefreshResult, error)`: validates all items in batch; stages changes in-memory; parses TTL string format (`ParseTTL()`); saves updated data atomically in a single disk write; records failures per-item without failing valid items.
+3. Added HTTP endpoints: `POST /secrets/{name}/refresh` (returns `{"status": "ok"}`) and `POST /secrets/batch-refresh` (1-100 items limit, returns `TokenRefreshResult`).
+4. Added deterministic unit tests in `internal/secretvault/token_refresh_test.go` covering single/batch refresh, validation errors, duplicate-item detection, locked vault behavior, and full HTTP surface.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `openai/gpt-oss-120b` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
