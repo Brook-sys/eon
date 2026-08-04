@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 376 — credential vault BatchSecretHistory audit logging fix & Phase 376 live campaign (2026-08-04 13:45 -03)
+
+**Objective and implementation.** Corrected audit logging on locked vault access in `secretvault.Vault.BatchSecretHistory` and updated Phase 376 live campaign artifacts.
+1. Fixed `BatchSecretHistory` to record `v.recordAuditLocked("batch_history", "", "failure")` when called on a locked vault (`ErrLocked`), matching audit logging behavior across all other secret vault capabilities.
+2. Verified `BatchSecretHistory` success path logs audit record `v.recordAuditLocked("batch_history", "", "success")`.
+3. Added unit test assertions in `internal/secretvault/batch_history_test.go` verifying audit log generation for both success and failure cases.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `qwen/qwen3.6-27b` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 610.47 ms (HTTP 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase376-groq-qwen36-vault-batch-history/`.
+
 ## Phase 375 — credential vault BatchSecretHistory capability, HTTP endpoint & live campaign (2026-08-04 12:20 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with multi-secret audit history extraction `BatchSecretHistory` and HTTP endpoint `POST /secrets/batch-history`.
