@@ -9,14 +9,14 @@ type NavItem struct {
 }
 
 templ sidebar(items []NavItem) {
-	<nav class="w-56 shrink-0 flex flex-col gap-1">
+	<nav class="w-52 shrink-0 flex flex-col gap-1">
 		for _, item := range items {
 			<a
 				href={item.Href}
 				class={
-					"px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-between",
-					templ.KV("text-[var(--text)] bg-[var(--panel-hover)] shadow-sm border-l-4 border-l-[var(--accent)] border-t border-r border-b border-[var(--border)]", item.Active),
-					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)]/60 border border-transparent", !item.Active),
+					"px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between",
+					templ.KV("text-[var(--text)] bg-[var(--accent)]/10 text-[var(--accent)] font-semibold", item.Active),
+					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04]", !item.Active),
 				}
 				if item.External {
 					target="_blank" rel="noopener noreferrer"
@@ -24,7 +24,7 @@ templ sidebar(items []NavItem) {
 			>
 				<span>{item.Label}</span>
 				if item.External {
-					<span class="text-xs opacity-60">↗</span>
+					<span class="text-[10px] opacity-50">↗</span>
 				}
 			</a>
 		}
@@ -33,18 +33,18 @@ templ sidebar(items []NavItem) {
 
 templ badge(label, kind string) {
 	<span class={
-		"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tracking-wide",
-		templ.KV("border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]", kind == "success"),
-		templ.KV("border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]", kind == "warning"),
-		templ.KV("border-[var(--err)]/40 bg-[var(--err)]/10 text-[var(--err)]", kind == "error"),
-		templ.KV("border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]", kind == "info"),
-		templ.KV("border-[var(--border)] bg-[var(--panel)] text-[var(--muted)]", kind == "neutral"),
+		"inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tracking-tight",
+		templ.KV("bg-[var(--ok)]/15 text-[var(--ok)]", kind == "success"),
+		templ.KV("bg-[var(--warn)]/15 text-[var(--warn)]", kind == "warning"),
+		templ.KV("bg-[var(--err)]/15 text-[var(--err)]", kind == "error"),
+		templ.KV("bg-[var(--accent)]/15 text-[var(--accent)]", kind == "info"),
+		templ.KV("bg-white/[0.06] text-[var(--muted)]", kind == "neutral"),
 	}>{label}</span>
 }
 
 templ card(title string) {
-	<section class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm transition-all hover:border-[var(--border-hover)]">
-		<h3 class="text-[var(--muted)] text-xs font-bold uppercase tracking-wider mb-4 pb-2 border-b border-[var(--border)]/40">{title}</h3>
+	<section class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm">
+		<h3 class="text-[var(--muted)] text-[11px] font-semibold uppercase tracking-wider mb-4">{title}</h3>
 		{ children... }
 	</section>
 }
@@ -62,48 +62,49 @@ templ layout(title string, currentPath string, nav []NavItem) {
 		<link rel="stylesheet" href="/dash/assets/app.css"/>
 		<style>
 			:root {
-				--bg: #0b0f17;
-				--panel: #131b28;
-				--panel-hover: #1c2738;
-				--border: #223044;
-				--border-hover: #31445f;
-				--text: #f0f4f8;
-				--muted: #8295b0;
-				--accent: #4895d9;
-				--ok: #2ea066;
-				--warn: #d9a726;
-				--err: #d9534f;
+				--bg: #090d16;
+				--panel: #111726;
+				--panel-sub: #172033;
+				--border: rgba(255, 255, 255, 0.08);
+				--border-subtle: rgba(255, 255, 255, 0.04);
+				--text: #f1f5f9;
+				--muted: #94a3b8;
+				--accent: #38bdf8;
+				--ok: #34d399;
+				--warn: #fbbf24;
+				--err: #f87171;
 				--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 				--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 			}
 			* { box-sizing: border-box; }
 			body {
 				margin: 0; background: var(--bg); color: var(--text);
-				font: 14px / 1.6 var(--sans);
+				font: 14px / 1.5 var(--sans);
 				-webkit-font-smoothing: antialiased;
 			}
 			a { text-decoration: none; color: inherit; }
 			pre, code, .mono { font-family: var(--mono); font-size: 12.5px; }
-			html { scrollbar-color: #27374d transparent; }
+			html { scrollbar-color: #1e293b transparent; }
 
-			/* Standardized Inputs, Selects & Buttons */
+			/* Clean Modern Inputs */
 			input[type="text"], input[type="password"], input[type="number"], select, textarea {
-				background-color: #0d1420;
+				background-color: var(--panel-sub);
 				border: 1px solid var(--border);
 				color: var(--text);
+				border-radius: 0.5rem;
 				transition: border-color 0.15s ease, box-shadow 0.15s ease;
 			}
 			input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
 				outline: none;
 				border-color: var(--accent);
-				box-shadow: 0 0 0 2px rgba(72, 149, 217, 0.2);
+				box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 			}
 
 			/* Custom scrollbars */
-			::-webkit-scrollbar { width: 6px; height: 6px; }
+			::-webkit-scrollbar { width: 5px; height: 5px; }
 			::-webkit-scrollbar-track { background: transparent; }
-			::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-			::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+			::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+			::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 		</style>
 	</head>
 	<body class="min-h-screen" x-data="{ toasts: [] }" @toast.window="
@@ -113,18 +114,18 @@ templ layout(title string, currentPath string, nav []NavItem) {
 		setTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);
 	">
 		<!-- Dynamic Toast Notifications -->
-		<div class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
+		<div class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
 			<template x-for="t in toasts" x-bind:key="t.id">
-				<div class="pointer-events-auto p-3.5 rounded-xl border shadow-xl text-xs font-medium flex items-center justify-between gap-3 backdrop-blur-md transition-all"
+				<div class="pointer-events-auto p-3.5 rounded-xl border border-[var(--border)] shadow-2xl text-xs font-medium flex items-center justify-between gap-3 backdrop-blur-xl bg-[#111726]/95 transition-all"
 					x-bind:class="{
-						'bg-[var(--panel)]/95 border-[var(--ok)] text-[var(--ok)] shadow-[var(--ok)]/10': t.type === 'success',
-						'bg-[var(--panel)]/95 border-[var(--err)] text-[var(--err)] shadow-[var(--err)]/10': t.type === 'error',
-						'bg-[var(--panel)]/95 border-[var(--warn)] text-[var(--warn)] shadow-[var(--warn)]/10': t.type === 'warning',
-						'bg-[var(--panel)]/95 border-[var(--accent)] text-[var(--accent)] shadow-[var(--accent)]/10': t.type === 'info'
+						'text-[var(--ok)] border-[var(--ok)]/30': t.type === 'success',
+						'text-[var(--err)] border-[var(--err)]/30': t.type === 'error',
+						'text-[var(--warn)] border-[var(--warn)]/30': t.type === 'warning',
+						'text-[var(--accent)] border-[var(--accent)]/30': t.type === 'info'
 					}"
 				>
 					<span x-text="t.message"></span>
-					<button type="button" class="text-xs opacity-70 hover:opacity-100 font-bold px-1" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
+					<button type="button" class="text-xs opacity-60 hover:opacity-100 font-bold px-1" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
 				</div>
 			</template>
 		</div>
@@ -136,28 +137,31 @@ templ layout(title string, currentPath string, nav []NavItem) {
 		</script>
 		<div class="flex min-h-screen">
 			<!-- Sidebar -->
-			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-5 gap-5 shrink-0">
-				<div class="flex items-center gap-3 px-1">
-					<div class="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--accent)] text-white font-black text-base shadow-md shadow-[var(--accent)]/20">
+			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-4 gap-4 shrink-0 w-60">
+				<div class="flex items-center gap-3 px-1 py-1">
+					<div class="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--accent)] text-[#090d16] font-extrabold text-sm shadow-md">
 						M
 					</div>
 					<div>
-						<div class="text-sm font-bold tracking-tight text-[var(--text)]">motor-autonomo</div>
-						<div class="text-[11px] font-medium text-[var(--muted)]">operator dashboard</div>
+						<div class="text-xs font-bold tracking-tight text-[var(--text)]">motor-autonomo</div>
+						<div class="text-[10px] text-[var(--muted)]">operator dashboard</div>
 					</div>
 				</div>
-				<hr class="border-[var(--border)] opacity-60" />
+				<div class="h-px bg-[var(--border)] my-1"></div>
 				@sidebar(nav)
-				<div class="mt-auto pt-4 border-t border-[var(--border)] opacity-60 text-xs text-[var(--muted)] flex items-center justify-between font-mono">
+				<div class="mt-auto pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted)] flex items-center justify-between font-mono">
 					<span>v0.2.0</span>
-					<span class="px-2 py-0.5 rounded bg-[var(--panel-hover)] text-[10px] border border-[var(--border)]">online</span>
+					<span class="inline-flex items-center gap-1.5 text-[10px]">
+						<span class="w-1.5 h-1.5 rounded-full bg-[var(--ok)]"></span>
+						online
+					</span>
 				</div>
 			</aside>
 
 			<!-- Conteúdo Principal -->
 			<main class="flex-1 p-8 max-w-6xl mx-auto w-full">
-				<header class="mb-7 pb-4 border-b border-[var(--border)]/50 flex items-center justify-between">
-					<h1 class="text-2xl font-bold tracking-tight text-[var(--text)]">{title}</h1>
+				<header class="mb-6 flex items-center justify-between">
+					<h1 class="text-xl font-bold tracking-tight text-[var(--text)]">{title}</h1>
 				</header>
 				{ children... }
 			</main>

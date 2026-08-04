@@ -2,34 +2,34 @@ package views
 
 templ Events() {
 	@layout("Eventos", "/dash/events", StandardNav("/dash/events")) {
-		<div x-data="eventsState()" x-init="start()" class="space-y-4">
+		<div x-data="eventsState()" x-init="start()" class="space-y-6">
 
 			<!-- Métricas Resumidas dos Eventos -->
-			<div class="grid gap-3 grid-cols-2 lg:grid-cols-4 text-xs">
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
-					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Total Carregado</div>
-					<div class="text-2xl font-bold font-mono text-[var(--accent)]" x-text="events.length"></div>
+			<div class="grid gap-4 grid-cols-2 lg:grid-cols-4 text-xs">
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1 text-[11px]">Total Carregado</div>
+					<div class="text-2xl font-bold font-mono text-[var(--accent)] mt-1" x-text="events.length"></div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
-					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Erros Identificados</div>
-					<div class="text-2xl font-bold font-mono text-[var(--err)]" x-text="metrics.errors"></div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1 text-[11px]">Erros Identificados</div>
+					<div class="text-2xl font-bold font-mono text-[var(--err)] mt-1" x-text="metrics.errors"></div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
-					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Alertas / Avisos</div>
-					<div class="text-2xl font-bold font-mono text-[var(--warn)]" x-text="metrics.warnings"></div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1 text-[11px]">Alertas / Avisos</div>
+					<div class="text-2xl font-bold font-mono text-[var(--warn)] mt-1" x-text="metrics.warnings"></div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
-					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Última Sequência</div>
-					<div class="text-2xl font-bold font-mono text-[var(--ok)]" x-text="'#' + lastSeq"></div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1 text-[11px]">Última Sequência</div>
+					<div class="text-2xl font-bold font-mono text-[var(--ok)] mt-1" x-text="'#' + lastSeq"></div>
 				</div>
 			</div>
 
 			<!-- Barra de filtros e buscas -->
-			<div class="flex flex-wrap gap-2 items-end">
+			<div class="flex flex-wrap gap-3 items-end">
 				<label class="flex flex-col gap-1 text-xs text-[var(--muted)]">
 					Kind / Tipo
 					<select
-						class="bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--text)]"
+						class="bg-[var(--panel-sub)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--text)]"
 						x-model="filterKind"
 						x-on:change="reload()"
 					>
@@ -42,7 +42,7 @@ templ Events() {
 				<label class="flex flex-col gap-1 text-xs text-[var(--muted)]">
 					Namespace
 					<input
-						class="bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--text)] w-44"
+						class="bg-[var(--panel-sub)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--text)] w-44"
 						placeholder="ex.: telegram"
 						x-model="filterNamespace"
 						x-on:change="reload()"
@@ -51,82 +51,65 @@ templ Events() {
 				<label class="flex flex-col gap-1 text-xs text-[var(--muted)]">
 					Busca no payload
 					<input
-						class="bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--text)] w-56"
+						class="bg-[var(--panel-sub)] border border-[var(--border)] rounded-lg px-3 py-1.5 text-xs text-[var(--text)] w-56"
 						placeholder="texto livre (client-side)"
 						x-model="searchText"
 					/>
 				</label>
 				<button
-					class="px-3 py-1.5 rounded border border-[var(--border)] text-sm hover:bg-[var(--panel)]"
+					class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-white/[0.04]"
 					x-on:click="reload()"
 				>Aplicar</button>
 				<button
-					class="px-3 py-1.5 rounded border text-sm font-medium"
-					x-bind:class="liveTail ? 'border-[var(--ok)] text-[var(--ok)] bg-[var(--ok)]/10 hover:bg-[var(--ok)]/20' : 'border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel)]'"
+					class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer"
+					x-bind:class="liveTail ? 'border-[var(--ok)]/40 text-[var(--ok)] bg-[var(--ok)]/10' : 'border-[var(--border)] text-[var(--muted)] hover:bg-white/[0.04]'"
 					x-on:click="toggleTail()"
 					x-text="liveTail ? '⏸ Pausar Live Stream' : '▶ Conectar Live Stream'"
 				></button>
 				<button
-					class="px-2 py-1.5 rounded border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)]"
+					class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04]"
 					x-on:click="resetFilters()"
 				>Limpar Filtros</button>
 				<span class="text-xs text-[var(--muted)] ml-auto font-mono" x-text="statusLine"></span>
 			</div>
 
 			<!-- Lista de eventos -->
-			@card("Log de eventos") {
-				<div class="mono text-xs space-y-1 max-h-[34rem] overflow-y-auto pr-1">
+			@card("Log de Eventos") {
+				<div class="mono text-xs space-y-1 max-h-[34rem] overflow-y-auto pr-1 divide-y divide-[var(--border-subtle)]">
 					<template x-if="visibleEvents.length === 0">
-						<p class="text-[var(--muted)] p-2" x-text="loading ? 'Carregando eventos…' : 'Nenhum evento encontrado com os filtros atuais.'"></p>
+						<p class="text-[var(--muted)] p-3 text-center" x-text="loading ? 'Carregando eventos…' : 'Nenhum evento encontrado com os filtros atuais.'"></p>
 					</template>
-					<template x-for="e in visibleEvents" x-bind:key="e.sequence">
-						<div
-							class="py-1.5 px-2 rounded hover:bg-[#243247] transition-colors border-b border-[var(--border)]/30 space-y-1"
-						>
-							<div class="flex items-center gap-2 cursor-pointer" x-on:click="toggleDetail(e)">
-								<span class="text-[var(--muted)] font-mono shrink-0 w-16" x-text="'#' + e.sequence"></span>
+					<template x-for="ev in visibleEvents" x-bind:key="ev.sequence ?? Math.random()">
+						<div class="py-2 space-y-1.5">
+							<div class="flex items-center gap-2 cursor-pointer select-none" x-on:click="ev._expanded = !ev._expanded">
+								<span class="text-[var(--muted)] font-mono text-[11px]" x-text="'#' + ev.sequence"></span>
 								<span
-									class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
-									x-bind:class="({
-										error: 'bg-[var(--err)]/20 text-[var(--err)]',
-										warning: 'bg-[var(--warn)]/20 text-[var(--warn)]',
-										info: 'bg-[var(--accent)]/20 text-[var(--accent)]'
-									})[eventCategory(e)] ?? 'bg-[var(--panel)] text-[var(--text)]'"
-									x-text="shortKind(e.kind)"
+									class="px-1.5 py-0.2 rounded text-[10px] font-semibold uppercase tracking-wider"
+									x-bind:class="kindBadgeClass(ev.kind)"
+									x-text="ev.kind ?? 'UNKNOWN'"
 								></span>
-								<span class="text-[var(--muted)] text-[11px]" x-text="fmtTime(e.occurred_at)"></span>
-								<span class="text-[var(--accent)] text-[11px]" x-show="e.namespace" x-text="'[' + e.namespace + ']'"></span>
-								<span class="text-[var(--muted)] font-mono text-[10px] ml-auto" x-show="e.request_id" x-bind:title="e.request_id" x-text="'req:' + short(e.request_id, 8)"></span>
+								<span class="text-[var(--muted)] text-[11px] font-mono" x-show="ev.namespace" x-text="ev.namespace"></span>
+								<span class="text-[var(--muted)] text-[11px] font-mono ml-auto" x-text="fmtTime(ev.occurred_at)"></span>
+								<button type="button" class="text-[var(--muted)] hover:text-[var(--text)] text-xs px-1" x-text="ev._expanded ? '▲' : '▼'"></button>
 							</div>
+							<div class="text-[var(--text)] break-all font-mono text-[11px] pl-2 border-l-2 border-[var(--accent)]/30" x-text="summaryLine(ev)"></div>
 
-							<div class="text-[var(--muted)] truncate cursor-pointer pl-18 text-[11px]" x-bind:title="preview(e)" x-on:click="toggleDetail(e)" x-text="preview(e)"></div>
-
-							<!-- Painel de Detalhes expandido -->
-							<div x-show="expandedSeq === e.sequence" class="mt-2 p-3 rounded bg-[var(--bg)] border border-[var(--border)] space-y-2 font-mono text-xs">
-								<div class="flex justify-between items-center pb-1 border-b border-[var(--border)]">
-									<span class="text-[var(--accent)] font-bold" x-text="'Evento #' + e.sequence + ' — ' + e.kind"></span>
-									<div class="flex gap-2">
-										<button
-											type="button"
-											class="px-2 py-0.5 rounded border border-[var(--border)] text-[10px] text-[var(--muted)] hover:text-[var(--text)]"
-											x-on:click="copyEventJSON(e)"
-										>📋 Copiar JSON</button>
-										<button type="button" class="text-[var(--muted)] hover:text-[var(--text)]" x-on:click="expandedSeq = null">✕</button>
-									</div>
+							<!-- Detalhes JSON do Evento -->
+							<div x-show="ev._expanded" x-cloak class="mt-2 p-3 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[11px] font-mono space-y-2">
+								<div class="flex justify-between items-center border-b border-[var(--border-subtle)] pb-1.5">
+									<span class="text-[var(--muted)]">JSON do Evento</span>
+									<button
+										type="button"
+										class="px-2 py-0.5 rounded bg-white/[0.06] text-[var(--accent)] hover:bg-white/[0.1] text-[10px] font-semibold transition-all cursor-pointer"
+										x-on:click.stop="copyEventJSON(ev)"
+									>
+										📋 Copiar JSON
+									</button>
 								</div>
-								<pre class="overflow-x-auto text-[var(--text)] text-[11px] p-2 rounded bg-black/30" x-text="JSON.stringify(e, null, 2)"></pre>
+								<pre class="overflow-x-auto text-[var(--muted)] text-[11px] whitespace-pre-wrap" x-text="JSON.stringify(ev, null, 2)"></pre>
 							</div>
 						</div>
 					</template>
-				</div>
-				<div class="mt-3 flex items-center gap-3 border-t border-[var(--border)] pt-2">
-					<button
-						class="px-3 py-1.5 rounded border border-[var(--border)] text-xs font-medium hover:bg-[var(--panel)]"
-						x-show="hasMore"
-						x-on:click="loadMore()"
-						x-text="loading ? 'Carregando...' : 'Carregar mais antigos'"
-					></button>
-					<span class="text-xs text-[var(--muted)] font-mono" x-text="events.length + ' eventos no histórico local'"></span>
 				</div>
 			}
 		</div>
@@ -135,52 +118,66 @@ templ Events() {
 			function eventsState() {
 				return {
 					events: [],
-					knownKinds: [],
-					nextSequence: 0,
-					hasMore: false,
 					loading: false,
 					filterKind: '',
 					filterNamespace: '',
 					searchText: '',
-					sortDesc: false,
-					liveTail: false,
-					expandedSeq: null,
-					lastSeq: 0,
-					_es: null,
+					liveTail: true,
+					sse: null,
+					statusLine: '',
 
 					get metrics() {
 						let errs = 0, warns = 0;
 						for (const e of this.events) {
-							const cat = this.eventCategory(e);
-							if (cat === 'error') errs++;
-							else if (cat === 'warning') warns++;
+							const k = (e.kind || '').toLowerCase();
+							if (k.includes('error') || k.includes('fail')) errs++;
+							else if (k.includes('warn')) warns++;
 						}
 						return { errors: errs, warnings: warns };
 					},
 
-					get visibleEvents() {
-						let list = [...this.events];
-						if (this.searchText) {
-							const t = this.searchText.toLowerCase();
-							list = list.filter(e => JSON.stringify(e).toLowerCase().includes(t));
+					get lastSeq() {
+						if (!this.events.length) return 0;
+						return Math.max(...this.events.map(e => e.sequence || 0));
+					},
+
+					get knownKinds() {
+						const set = new Set();
+						for (const e of this.events) {
+							if (e.kind) set.add(e.kind);
 						}
-						if (this.sortDesc) list.reverse();
-						return list;
+						return Array.from(set).sort();
 					},
 
-					get statusLine() {
-						return this.liveTail
-							? `Live stream ativo (a partir de #${this.lastSeq})`
-							: (this.events.length ? `Visualizando até #${this.lastSeq}` : '');
+					get visibleEvents() {
+						const q = this.searchText.trim().toLowerCase();
+						return this.events.filter(e => {
+							if (this.filterKind && e.kind !== this.filterKind) return false;
+							if (this.filterNamespace && !(e.namespace || '').toLowerCase().includes(this.filterNamespace.toLowerCase())) return false;
+							if (q) {
+								const str = JSON.stringify(e).toLowerCase();
+								if (!str.includes(q)) return false;
+							}
+							return true;
+						});
 					},
 
-					params(after) {
-						const p = new URLSearchParams();
-						if (after != null) p.set('after_sequence', after);
-						p.set('limit', '100');
-						if (this.filterKind) p.set('kind', this.filterKind);
-						if (this.filterNamespace) p.set('namespace', this.filterNamespace);
-						return p;
+					async fetchLatest() {
+						this.loading = true;
+						try {
+							const res = await fetch('/dash/api/events?limit=100');
+							const data = await res.json();
+							this.events = (data?.events ?? []).map(e => ({ ...e, _expanded: false }));
+							this.statusLine = `${this.events.length} eventos carregados`;
+						} catch (err) {
+							this.statusLine = 'Erro ao carregar log';
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					reload() {
+						this.fetchLatest();
 					},
 
 					resetFilters() {
@@ -190,100 +187,73 @@ templ Events() {
 						this.reload();
 					},
 
-					async reload() {
-						this.pauseTail();
-						this.events = [];
-						this.knownKinds = [];
-						this.loading = true;
-						try {
-							const page = await fetch('/dash/api/events?' + this.params(0)).then(r => r.json());
-							this.ingest(page, true);
-						} catch (err) {
-							if (window.notify) window.notify('Erro ao carregar eventos: ' + err.message, 'error');
-						} finally { this.loading = false; }
+					toggleTail() {
+						this.liveTail = !this.liveTail;
+						if (this.liveTail) {
+							this.startSSE();
+							if (window.notify) window.notify('Stream SSE conectada', 'info');
+						} else {
+							this.stopSSE();
+							if (window.notify) window.notify('Stream SSE pausada', 'warning');
+						}
 					},
 
-					async loadMore() {
-						this.loading = true;
-						try {
-							const page = await fetch('/dash/api/events?' + this.params(this.nextSequence)).then(r => r.json());
-							this.ingest(page, false);
-						} catch (err) {
-							if (window.notify) window.notify('Erro ao carregar mais eventos: ' + err.message, 'error');
-						} finally { this.loading = false; }
-					},
-
-					ingest(page, reset) {
-						const evs = page.events ?? [];
-						if (reset) this.events = evs; else this.events.push(...evs);
-						this.knownKinds = [...new Set([...this.knownKinds, ...evs.map(e => e.kind)])].sort();
-						this.nextSequence = page.next_sequence ?? this.nextSequence;
-						this.hasMore = !!page.has_more;
-						if (evs.length) this.lastSeq = Math.max(...this.events.map(e => e.sequence ?? 0));
-					},
-
-					eventCategory(e) {
-						const k = (e.kind || '').toLowerCase();
-						if (k.includes('error') || k.includes('fail') || k.includes('evict')) return 'error';
-						if (k.includes('warn') || k.includes('replan') || k.includes('degraded')) return 'warning';
-						if (k.includes('info') || k.includes('success') || k.includes('commit')) return 'info';
-						return 'neutral';
-					},
-
-					copyEventJSON(e) {
-						navigator.clipboard.writeText(JSON.stringify(e, null, 2));
-						if (window.notify) window.notify('JSON do evento #' + e.sequence + ' copiado!', 'success', 2500);
-					},
-
-					toggleTail() { this.liveTail ? this.pauseTail() : this.startTail(); },
-
-					startTail() {
-						this._es = new EventSource('/dash/api/events/stream?after_sequence=' + this.lastSeq);
-						this._es.onmessage = (m) => {
+					startSSE() {
+						if (this.sse) return;
+						this.sse = new EventSource('/dash/api/events/stream');
+						this.sse.onmessage = (msg) => {
 							try {
-								const e = JSON.parse(m.data);
-								if (e && e.sequence != null) {
-									this.events.push(e);
-									if (!this.knownKinds.includes(e.kind)) this.knownKinds.push(e.kind);
-									this.lastSeq = Math.max(this.lastSeq, e.sequence);
-								}
+								const ev = JSON.parse(msg.data);
+								ev._expanded = false;
+								this.events.unshift(ev);
+								if (this.events.length > 200) this.events.pop();
 							} catch {}
 						};
-						this._es.onerror = () => {
-							this.liveTail = false;
-							this.pauseTail();
-							if (window.notify) window.notify('Desconectado do evento stream', 'warning');
+						this.sse.onerror = () => {
+							this.statusLine = 'SSE reconectando...';
 						};
-						this.liveTail = true;
-						if (window.notify) window.notify('Live stream de eventos conectado!', 'info', 2500);
 					},
 
-					pauseTail() {
-						if (this._es) { this._es.close(); this._es = null; }
-						this.liveTail = false;
-					},
-
-					toggleDetail(e) {
-						this.expandedSeq = this.expandedSeq === e.sequence ? null : e.sequence;
-					},
-
-					shortKind(k) { return k ?? '?'; },
-					short(s, n) { return (s ?? '').slice(0, n); },
-					fmtTime(t) {
-						if (!t) return '';
-						const d = new Date(t);
-						return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');
-					},
-					preview(e) {
-						if (e.summary) return e.summary;
-						if (e.payload) {
-							try { return typeof e.payload === 'string' ? e.payload : JSON.stringify(e.payload); } catch {}
+					stopSSE() {
+						if (this.sse) {
+							this.sse.close();
+							this.sse = null;
 						}
-						return JSON.stringify(e);
+					},
+
+					copyEventJSON(ev) {
+						const jsonStr = JSON.stringify(ev, null, 2);
+						navigator.clipboard.writeText(jsonStr).then(() => {
+							if (window.notify) window.notify('JSON do evento copiado!', 'success');
+						}).catch(() => {
+							if (window.notify) window.notify('Erro ao copiar JSON', 'error');
+						});
+					},
+
+					kindBadgeClass(kind) {
+						const k = (kind || '').toLowerCase();
+						if (k.includes('error') || k.includes('fail')) return 'bg-[var(--err)]/15 text-[var(--err)]';
+						if (k.includes('warn')) return 'bg-[var(--warn)]/15 text-[var(--warn)]';
+						return 'bg-[var(--accent)]/15 text-[var(--accent)]';
+					},
+
+					summaryLine(ev) {
+						if (ev.payload && typeof ev.payload === 'object') {
+							if (ev.payload.summary) return ev.payload.summary;
+							if (ev.payload.message) return ev.payload.message;
+						}
+						return JSON.stringify(ev.payload || {}).slice(0, 140);
+					},
+
+					fmtTime(t) {
+						if (!t) return '–';
+						const d = new Date(t);
+						return isNaN(d) ? '–' : d.toLocaleTimeString('pt-BR');
 					},
 
 					start() {
-						this.reload();
+						this.fetchLatest();
+						if (this.liveTail) this.startSSE();
 					}
 				};
 			}

@@ -4,11 +4,11 @@ templ Models() {
 	@layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")) {
 		<div x-data="modelsState()" x-init="start()" class="space-y-6">
 			<!-- Barra de Conexão e Ações -->
-			<div class="flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm">
+			<div class="flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5">
 				<span class="inline-flex items-center gap-2 font-medium">
 					<span
-						class="w-2 h-2 rounded-full animate-pulse"
-						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
+						class="w-2 h-2 rounded-full"
+						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
 					></span>
 					<span class="text-[var(--text)]" x-text="connected ? 'Inspect & Control API acessíveis' : 'sem resposta das APIs'"></span>
 				</span>
@@ -16,119 +16,119 @@ templ Models() {
 				<div class="ml-auto flex gap-2">
 					<button
 						type="button"
-						class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-all shadow-md shadow-[var(--accent)]/20 cursor-pointer"
+						class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-[#090d16] font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-all cursor-pointer"
 						x-on:click="openAddModal()"
 					>
-						+ Adicionar Modelo / Provedor
+						+ Adicionar Provedor / Modelo
 					</button>
 					<button
-						class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-medium"
+						class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] transition-all font-medium"
 						x-on:click="refresh()"
 					>↻ Atualizar</button>
 				</div>
 			</div>
 
 			<!-- Form / Modal para Adicionar ou Editar Provedor/Modelo -->
-			<div x-show="showForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--accent)] space-y-4 shadow-xl" style="display:none;">
+			<div x-show="showForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--accent)]/40 space-y-4 shadow-2xl" style="display:none;">
 				<div class="flex justify-between items-center pb-3 border-b border-[var(--border)]">
-					<h3 class="font-bold text-sm text-[var(--text)]" x-text="formIsEdit ? 'Editar Provedor & Modelo: ' + form.id : 'Adicionar Novo Provedor & Modelo LLM'"></h3>
-					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-[var(--panel-hover)]" x-on:click="showForm = false">✕ Fechar</button>
+					<h3 class="font-bold text-xs text-[var(--text)]" x-text="formIsEdit ? 'Editar Provedor & Modelo: ' + form.id : 'Adicionar Novo Provedor & Modelo LLM'"></h3>
+					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-white/[0.04]" x-on:click="showForm = false">✕ Fechar</button>
 				</div>
 				<form x-on:submit.prevent="submitForm()" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 text-xs">
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">ID do Provedor (Slug)</label>
-						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">ID do Provedor (Slug)</label>
+						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Tipo de Provedor</label>
-						<select x-model="form.kind" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)]">
+						<label class="block text-[var(--muted)] font-medium mb-1">Tipo de Provedor</label>
+						<select x-model="form.kind" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)]">
 							<option value="openai_compatible">OpenAI Compatible (Groq / NIM / Ollama)</option>
 						</select>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Base URL do Endpoint</label>
-						<input type="url" x-model="form.base_url" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Base URL do Endpoint</label>
+						<input type="url" x-model="form.base_url" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">ID do Modelo Exato</label>
-						<input type="text" x-model="form.model_id" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">ID do Modelo Exato</label>
+						<input type="text" x-model="form.model_id" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Janela de Contexto (tokens)</label>
-						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Janela de Contexto (tokens)</label>
+						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Máx. Output Tokens</label>
-						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Máx. Output Tokens</label>
+						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Concorrência Máxima</label>
-						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Concorrência Máxima</label>
+						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-semibold mb-1">Prioridade do Binding</label>
-						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Prioridade do Binding</label>
+						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] font-semibold mb-1">Nome da Var de Ambiente de API Key</label>
-						<input type="text" x-model="form.api_key_env" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Nome da Var de Ambiente de API Key</label>
+						<input type="text" x-model="form.api_key_env" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
 					</div>
 					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] font-semibold mb-1">Chave / API Secret (salva no Cofre local)</label>
-						<input type="password" x-model="form.secret_value" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Chave / API Secret (salva no Cofre local)</label>
+						<input type="password" x-model="form.secret_value" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
 					</div>
-					<div class="md:col-span-4 flex items-center gap-3 pt-3 border-t border-[var(--border)]/40">
-						<button type="submit" class="px-4 py-2 rounded-lg bg-[var(--accent)] text-white font-bold text-xs hover:opacity-90 shadow-md shadow-[var(--accent)]/20 cursor-pointer" x-bind:disabled="formSubmitting">
+					<div class="md:col-span-4 flex items-center gap-3 pt-3 border-t border-[var(--border)]">
+						<button type="submit" class="px-4 py-2 rounded-lg bg-[var(--accent)] text-[#090d16] font-bold text-xs hover:opacity-90 transition-all cursor-pointer" x-bind:disabled="formSubmitting">
 							<span x-text="formIsEdit ? 'Salvar Alterações do Modelo' : 'Adicionar Modelo ao Catálogo'"></span>
 						</button>
-						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] font-medium" x-on:click="showForm = false">Cancelar</button>
+						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium" x-on:click="showForm = false">Cancelar</button>
 						<span x-show="formMsg" class="text-xs font-mono" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
 					</div>
 				</form>
 			</div>
 
 			<!-- Status do Cofre de Credenciais -->
-			<div class="p-4 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-xs gap-3 shadow-sm">
+			<div class="p-4 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-xs gap-3">
 				<div class="flex items-center gap-3">
-					<span class="font-semibold text-[var(--text)]">Cofre de Credenciais Local:</span>
-					<span class="font-mono px-2 py-0.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--muted)]" x-text="vaultState"></span>
+					<span class="font-medium text-[var(--text)]">Cofre de Credenciais Local:</span>
+					<span class="font-mono px-2 py-0.5 rounded bg-[var(--panel-sub)] text-[var(--muted)]" x-text="vaultState"></span>
 				</div>
 				<div class="flex items-center gap-2" x-data="{ vPass: '' }">
-					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-3 py-1.5 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] w-40"/>
-					<button type="button" class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/25 font-semibold transition-all cursor-pointer" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
+					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] w-40"/>
+					<button type="button" class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 font-semibold transition-all cursor-pointer" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
 				</div>
 			</div>
 
 			<!-- Gestão de Provedores & Modelos Configurados -->
 			@card("Gestão de Provedores e Modelos Registrados") {
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
-					<p class="text-sm text-[var(--muted)] p-3 text-center border border-dashed border-[var(--border)] rounded-lg">Nenhum provedor configurado no catálogo ativo.</p>
+					<p class="text-xs text-[var(--muted)] p-3 text-center">Nenhum provedor configurado no catálogo ativo.</p>
 				</template>
-				<div class="space-y-4" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+				<div class="divide-y divide-[var(--border)]" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
 					<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
-						<div class="p-4 rounded-xl border border-[var(--border)] bg-[#0d1420] space-y-3 shadow-sm">
-							<div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)]/60 pb-3">
+						<div class="py-3.5 first:pt-0 last:pb-0 space-y-2">
+							<div class="flex flex-wrap items-center justify-between gap-2">
 								<div>
-									<span class="font-bold text-sm text-[var(--text)] font-mono" x-text="p.id"></span>
+									<span class="font-bold text-xs text-[var(--text)] font-mono" x-text="p.id"></span>
 									<span class="ml-2 text-xs text-[var(--muted)] font-mono" x-text="p.kind + ' · ' + p.base_url"></span>
 								</div>
 								<div class="flex items-center gap-2">
 									<button
 										type="button"
-										class="px-2.5 py-1 rounded-lg border border-[var(--border)] text-xs text-[var(--text)] hover:bg-[var(--panel)] font-medium transition-all"
+										class="px-2.5 py-1 rounded-md text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium transition-all"
 										x-on:click="editProvider(p.id)"
 									>
 										✏ Editar
 									</button>
 									<button
 										type="button"
-										class="px-2.5 py-1 rounded-lg border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)] font-medium transition-all"
+										class="px-2.5 py-1 rounded-md text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium transition-all"
 										x-on:click="toggleProvider(p.id)"
 										x-text="p.enabled ? '⏸ Desativar' : '▶ Ativar'"
 									></button>
 									<button
 										type="button"
-										class="px-2.5 py-1 rounded-lg bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/30 hover:bg-[var(--err)]/20 text-xs font-semibold transition-all"
+										class="px-2.5 py-1 rounded-md bg-[var(--err)]/15 text-[var(--err)] hover:bg-[var(--err)]/25 text-xs font-semibold transition-all"
 										x-on:click="removeProvider(p.id)"
 									>
 										🗑 Remover
@@ -162,12 +162,12 @@ templ Models() {
 								<th class="py-2.5 px-3">Prioridade</th>
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-[var(--border)]/40 font-mono">
+						<tbody class="divide-y divide-[var(--border-subtle)] font-mono">
 							<template x-if="bindings.length === 0">
 								<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Nenhum binding retornado pela Inspect API.</td></tr>
 							</template>
 							<template x-for="b in bindings" x-bind:key="b.slot ?? b.role ?? Math.random()">
-								<tr class="hover:bg-[var(--panel-hover)] transition-colors">
+								<tr class="hover:bg-white/[0.02] transition-colors">
 									<td class="py-2.5 px-3 font-semibold text-[var(--text)]" x-text="b.slot ?? b.role ?? '–'"></td>
 									<td class="py-2.5 px-3 text-[var(--accent)] font-bold" x-text="b.model_id ?? b.model ?? '–'"></td>
 									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.provider ?? '–'"></td>
@@ -190,16 +190,16 @@ templ Models() {
 						<p class="text-xs text-[var(--muted)] col-span-3">Nenhum dado de pressão de contexto disponível.</p>
 					</template>
 					<template x-for="p in pressures" x-bind:key="p.model_id ?? Math.random()">
-						<div class="p-3 rounded-xl border border-[var(--border)] bg-[#0d1420] space-y-2">
+						<div class="p-3 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] space-y-2">
 							<div class="flex justify-between items-center text-xs font-mono">
 								<span class="font-bold text-[var(--text)]" x-text="p.model_id ?? '–'"></span>
 								<span
-									class="px-2 py-0.5 rounded text-[10px] font-bold"
+									class="px-1.5 py-0.5 rounded text-[10px] font-bold"
 									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]/20 text-[var(--err)]' : 'bg-[var(--ok)]/20 text-[var(--ok)]'"
 									x-text="((p.ratio ?? 0) * 100).toFixed(1) + '%'"
 								></span>
 							</div>
-							<div class="w-full bg-[var(--bg)] rounded-full h-2 overflow-hidden border border-[var(--border)]">
+							<div class="w-full bg-[var(--bg)] rounded-full h-1.5 overflow-hidden">
 								<div
 									class="h-full rounded-full transition-all"
 									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]' : 'bg-[var(--ok)]'"

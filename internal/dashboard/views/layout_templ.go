@@ -37,14 +37,14 @@ func sidebar(items []NavItem) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<nav class=\"w-56 shrink-0 flex flex-col gap-1\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<nav class=\"w-52 shrink-0 flex flex-col gap-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, item := range items {
-			var templ_7745c5c3_Var2 = []any{"px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-between",
-				templ.KV("text-[var(--text)] bg-[var(--panel-hover)] shadow-sm border-l-4 border-l-[var(--accent)] border-t border-r border-b border-[var(--border)]", item.Active),
-				templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)]/60 border border-transparent", !item.Active),
+			var templ_7745c5c3_Var2 = []any{"px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between",
+				templ.KV("text-[var(--text)] bg-[var(--accent)]/10 text-[var(--accent)] font-semibold", item.Active),
+				templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04]", !item.Active),
 			}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 			if templ_7745c5c3_Err != nil {
@@ -104,7 +104,7 @@ func sidebar(items []NavItem) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if item.External {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"text-xs opacity-60\">↗</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"text-[10px] opacity-50\">↗</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -143,12 +143,12 @@ func badge(label, kind string) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var7 = []any{"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tracking-wide",
-			templ.KV("border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]", kind == "success"),
-			templ.KV("border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]", kind == "warning"),
-			templ.KV("border-[var(--err)]/40 bg-[var(--err)]/10 text-[var(--err)]", kind == "error"),
-			templ.KV("border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]", kind == "info"),
-			templ.KV("border-[var(--border)] bg-[var(--panel)] text-[var(--muted)]", kind == "neutral"),
+		var templ_7745c5c3_Var7 = []any{"inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tracking-tight",
+			templ.KV("bg-[var(--ok)]/15 text-[var(--ok)]", kind == "success"),
+			templ.KV("bg-[var(--warn)]/15 text-[var(--warn)]", kind == "warning"),
+			templ.KV("bg-[var(--err)]/15 text-[var(--err)]", kind == "error"),
+			templ.KV("bg-[var(--accent)]/15 text-[var(--accent)]", kind == "info"),
+			templ.KV("bg-white/[0.06] text-[var(--muted)]", kind == "neutral"),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
 		if templ_7745c5c3_Err != nil {
@@ -209,14 +209,14 @@ func card(title string) templ.Component {
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<section class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm transition-all hover:border-[var(--border-hover)]\"><h3 class=\"text-[var(--muted)] text-xs font-bold uppercase tracking-wider mb-4 pb-2 border-b border-[var(--border)]/40\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<section class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm\"><h3 class=\"text-[var(--muted)] text-[11px] font-semibold uppercase tracking-wider mb-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/layout.templ`, Line: 47, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/layout.templ`, Line: 47, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -272,7 +272,7 @@ func layout(title string, currentPath string, nav []NavItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</title><script src=\"/dash/assets/htmx.min.js\" defer></script><script src=\"/dash/assets/alpine.min.js\" defer></script><link rel=\"stylesheet\" href=\"/dash/assets/app.css\"><style>\n\t\t\t:root {\n\t\t\t\t--bg: #0b0f17;\n\t\t\t\t--panel: #131b28;\n\t\t\t\t--panel-hover: #1c2738;\n\t\t\t\t--border: #223044;\n\t\t\t\t--border-hover: #31445f;\n\t\t\t\t--text: #f0f4f8;\n\t\t\t\t--muted: #8295b0;\n\t\t\t\t--accent: #4895d9;\n\t\t\t\t--ok: #2ea066;\n\t\t\t\t--warn: #d9a726;\n\t\t\t\t--err: #d9534f;\n\t\t\t\t--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\t\t\t\t--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;\n\t\t\t}\n\t\t\t* { box-sizing: border-box; }\n\t\t\tbody {\n\t\t\t\tmargin: 0; background: var(--bg); color: var(--text);\n\t\t\t\tfont: 14px / 1.6 var(--sans);\n\t\t\t\t-webkit-font-smoothing: antialiased;\n\t\t\t}\n\t\t\ta { text-decoration: none; color: inherit; }\n\t\t\tpre, code, .mono { font-family: var(--mono); font-size: 12.5px; }\n\t\t\thtml { scrollbar-color: #27374d transparent; }\n\n\t\t\t/* Standardized Inputs, Selects & Buttons */\n\t\t\tinput[type=\"text\"], input[type=\"password\"], input[type=\"number\"], select, textarea {\n\t\t\t\tbackground-color: #0d1420;\n\t\t\t\tborder: 1px solid var(--border);\n\t\t\t\tcolor: var(--text);\n\t\t\t\ttransition: border-color 0.15s ease, box-shadow 0.15s ease;\n\t\t\t}\n\t\t\tinput[type=\"text\"]:focus, input[type=\"password\"]:focus, input[type=\"number\"]:focus, select:focus, textarea:focus {\n\t\t\t\toutline: none;\n\t\t\t\tborder-color: var(--accent);\n\t\t\t\tbox-shadow: 0 0 0 2px rgba(72, 149, 217, 0.2);\n\t\t\t}\n\n\t\t\t/* Custom scrollbars */\n\t\t\t::-webkit-scrollbar { width: 6px; height: 6px; }\n\t\t\t::-webkit-scrollbar-track { background: transparent; }\n\t\t\t::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }\n\t\t\t::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }\n\t\t</style></head><body class=\"min-h-screen\" x-data=\"{ toasts: [] }\" @toast.window=\"\n\t\tconst t = $event.detail;\n\t\tconst id = Date.now() + Math.random();\n\t\ttoasts.push({ id, message: t.message, type: t.type || 'info' });\n\t\tsetTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);\n\t\"><!-- Dynamic Toast Notifications --><div class=\"fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none\"><template x-for=\"t in toasts\" x-bind:key=\"t.id\"><div class=\"pointer-events-auto p-3.5 rounded-xl border shadow-xl text-xs font-medium flex items-center justify-between gap-3 backdrop-blur-md transition-all\" x-bind:class=\"{\n\t\t\t\t\t\t'bg-[var(--panel)]/95 border-[var(--ok)] text-[var(--ok)] shadow-[var(--ok)]/10': t.type === 'success',\n\t\t\t\t\t\t'bg-[var(--panel)]/95 border-[var(--err)] text-[var(--err)] shadow-[var(--err)]/10': t.type === 'error',\n\t\t\t\t\t\t'bg-[var(--panel)]/95 border-[var(--warn)] text-[var(--warn)] shadow-[var(--warn)]/10': t.type === 'warning',\n\t\t\t\t\t\t'bg-[var(--panel)]/95 border-[var(--accent)] text-[var(--accent)] shadow-[var(--accent)]/10': t.type === 'info'\n\t\t\t\t\t}\"><span x-text=\"t.message\"></span> <button type=\"button\" class=\"text-xs opacity-70 hover:opacity-100 font-bold px-1\" x-on:click=\"toasts = toasts.filter(x => x.id !== t.id)\">✕</button></div></template></div><script>\n\t\t\twindow.notify = function(message, type = 'info', duration = 4000) {\n\t\t\t\twindow.dispatchEvent(new CustomEvent('toast', { detail: { message, type, duration } }));\n\t\t\t};\n\t\t</script><div class=\"flex min-h-screen\"><!-- Sidebar --><aside class=\"flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-5 gap-5 shrink-0\"><div class=\"flex items-center gap-3 px-1\"><div class=\"w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--accent)] text-white font-black text-base shadow-md shadow-[var(--accent)]/20\">M</div><div><div class=\"text-sm font-bold tracking-tight text-[var(--text)]\">motor-autonomo</div><div class=\"text-[11px] font-medium text-[var(--muted)]\">operator dashboard</div></div></div><hr class=\"border-[var(--border)] opacity-60\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</title><script src=\"/dash/assets/htmx.min.js\" defer></script><script src=\"/dash/assets/alpine.min.js\" defer></script><link rel=\"stylesheet\" href=\"/dash/assets/app.css\"><style>\n\t\t\t:root {\n\t\t\t\t--bg: #090d16;\n\t\t\t\t--panel: #111726;\n\t\t\t\t--panel-sub: #172033;\n\t\t\t\t--border: rgba(255, 255, 255, 0.08);\n\t\t\t\t--border-subtle: rgba(255, 255, 255, 0.04);\n\t\t\t\t--text: #f1f5f9;\n\t\t\t\t--muted: #94a3b8;\n\t\t\t\t--accent: #38bdf8;\n\t\t\t\t--ok: #34d399;\n\t\t\t\t--warn: #fbbf24;\n\t\t\t\t--err: #f87171;\n\t\t\t\t--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n\t\t\t\t--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;\n\t\t\t}\n\t\t\t* { box-sizing: border-box; }\n\t\t\tbody {\n\t\t\t\tmargin: 0; background: var(--bg); color: var(--text);\n\t\t\t\tfont: 14px / 1.5 var(--sans);\n\t\t\t\t-webkit-font-smoothing: antialiased;\n\t\t\t}\n\t\t\ta { text-decoration: none; color: inherit; }\n\t\t\tpre, code, .mono { font-family: var(--mono); font-size: 12.5px; }\n\t\t\thtml { scrollbar-color: #1e293b transparent; }\n\n\t\t\t/* Clean Modern Inputs */\n\t\t\tinput[type=\"text\"], input[type=\"password\"], input[type=\"number\"], select, textarea {\n\t\t\t\tbackground-color: var(--panel-sub);\n\t\t\t\tborder: 1px solid var(--border);\n\t\t\t\tcolor: var(--text);\n\t\t\t\tborder-radius: 0.5rem;\n\t\t\t\ttransition: border-color 0.15s ease, box-shadow 0.15s ease;\n\t\t\t}\n\t\t\tinput[type=\"text\"]:focus, input[type=\"password\"]:focus, input[type=\"number\"]:focus, select:focus, textarea:focus {\n\t\t\t\toutline: none;\n\t\t\t\tborder-color: var(--accent);\n\t\t\t\tbox-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);\n\t\t\t}\n\n\t\t\t/* Custom scrollbars */\n\t\t\t::-webkit-scrollbar { width: 5px; height: 5px; }\n\t\t\t::-webkit-scrollbar-track { background: transparent; }\n\t\t\t::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }\n\t\t\t::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }\n\t\t</style></head><body class=\"min-h-screen\" x-data=\"{ toasts: [] }\" @toast.window=\"\n\t\tconst t = $event.detail;\n\t\tconst id = Date.now() + Math.random();\n\t\ttoasts.push({ id, message: t.message, type: t.type || 'info' });\n\t\tsetTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);\n\t\"><!-- Dynamic Toast Notifications --><div class=\"fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none\"><template x-for=\"t in toasts\" x-bind:key=\"t.id\"><div class=\"pointer-events-auto p-3.5 rounded-xl border border-[var(--border)] shadow-2xl text-xs font-medium flex items-center justify-between gap-3 backdrop-blur-xl bg-[#111726]/95 transition-all\" x-bind:class=\"{\n\t\t\t\t\t\t'text-[var(--ok)] border-[var(--ok)]/30': t.type === 'success',\n\t\t\t\t\t\t'text-[var(--err)] border-[var(--err)]/30': t.type === 'error',\n\t\t\t\t\t\t'text-[var(--warn)] border-[var(--warn)]/30': t.type === 'warning',\n\t\t\t\t\t\t'text-[var(--accent)] border-[var(--accent)]/30': t.type === 'info'\n\t\t\t\t\t}\"><span x-text=\"t.message\"></span> <button type=\"button\" class=\"text-xs opacity-60 hover:opacity-100 font-bold px-1\" x-on:click=\"toasts = toasts.filter(x => x.id !== t.id)\">✕</button></div></template></div><script>\n\t\t\twindow.notify = function(message, type = 'info', duration = 4000) {\n\t\t\t\twindow.dispatchEvent(new CustomEvent('toast', { detail: { message, type, duration } }));\n\t\t\t};\n\t\t</script><div class=\"flex min-h-screen\"><!-- Sidebar --><aside class=\"flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-4 gap-4 shrink-0 w-60\"><div class=\"flex items-center gap-3 px-1 py-1\"><div class=\"w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--accent)] text-[#090d16] font-extrabold text-sm shadow-md\">M</div><div><div class=\"text-xs font-bold tracking-tight text-[var(--text)]\">motor-autonomo</div><div class=\"text-[10px] text-[var(--muted)]\">operator dashboard</div></div></div><div class=\"h-px bg-[var(--border)] my-1\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -280,14 +280,14 @@ func layout(title string, currentPath string, nav []NavItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"mt-auto pt-4 border-t border-[var(--border)] opacity-60 text-xs text-[var(--muted)] flex items-center justify-between font-mono\"><span>v0.2.0</span> <span class=\"px-2 py-0.5 rounded bg-[var(--panel-hover)] text-[10px] border border-[var(--border)]\">online</span></div></aside><!-- Conteúdo Principal --><main class=\"flex-1 p-8 max-w-6xl mx-auto w-full\"><header class=\"mb-7 pb-4 border-b border-[var(--border)]/50 flex items-center justify-between\"><h1 class=\"text-2xl font-bold tracking-tight text-[var(--text)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"mt-auto pt-3 border-t border-[var(--border)] text-[11px] text-[var(--muted)] flex items-center justify-between font-mono\"><span>v0.2.0</span> <span class=\"inline-flex items-center gap-1.5 text-[10px]\"><span class=\"w-1.5 h-1.5 rounded-full bg-[var(--ok)]\"></span> online</span></div></aside><!-- Conteúdo Principal --><main class=\"flex-1 p-8 max-w-6xl mx-auto w-full\"><header class=\"mb-6 flex items-center justify-between\"><h1 class=\"text-xl font-bold tracking-tight text-[var(--text)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/layout.templ`, Line: 160, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/layout.templ`, Line: 164, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
