@@ -70,10 +70,10 @@ templ Events() {
 									<span class="font-semibold text-[var(--text)]" x-text="shortKind(e.kind)"></span>
 									<span class="text-[var(--muted)]" x-text="fmtTime(e.occurred_at)"></span>
 									<span class="text-[var(--accent)]" x-show="e.namespace" x-text="e.namespace"></span>
-									<span class="text-[var(--muted)]" x-show="e.request_id" x-text="'req ' + short(e.request_id, 8)"></span>
+									<span class="text-[var(--muted)] font-mono" x-show="e.request_id" x-bind:title="e.request_id" x-text="'req ' + short(e.request_id, 8)"></span>
 								</div>
-								<div class="text-[var(--muted)] truncate" x-text="preview(e)"></div>
-								<div x-show="expandedSeq === e.sequence" class="mt-2 p-2 rounded bg-[var(--bg)] whitespace-pre-wrap break-all text-[var(--text)]">
+								<div class="text-[var(--muted)] truncate" x-bind:title="preview(e)" x-text="preview(e)"></div>
+								<div x-show="expandedSeq === e.sequence" class="mt-2 p-2 rounded bg-[var(--bg)] whitespace-pre-wrap break-all text-[var(--text)] font-mono">
 									<pre x-text="JSON.stringify(e, null, 2)"></pre>
 								</div>
 							</div>

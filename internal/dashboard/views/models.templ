@@ -100,14 +100,14 @@ templ Models() {
 						<tbody class="divide-y divide-[var(--border)]">
 							<template x-for="p in pressures" x-bind:key="p.binding_id">
 								<tr>
-									<td class="py-2 pr-3 mono text-xs" x-text="short(p.binding_id, 10)"></td>
+									<td class="py-2 pr-3 font-mono text-xs" x-bind:title="p.binding_id" x-text="short(p.binding_id, 10)"></td>
 									<td class="py-2 pr-3" x-text="p.level"></td>
-									<td class="py-2 pr-3" x-text="p.successes_at_level"></td>
+									<td class="py-2 pr-3 font-mono tabular-nums" x-text="fmtNum(p.successes_at_level)"></td>
 									<td class="py-2 pr-3">
 										<span x-bind:class="p.reduction_active ? 'text-[var(--warn)]' : 'text-[var(--muted)]'"
 											x-text="p.reduction_active ? 'sim (' + Math.round((p.reduction_fraction ?? 1) * 100) + '% do window)' : 'não'"></span>
 									</td>
-									<td class="py-2 text-xs text-[var(--muted)]" x-text="fmtTime(p.updated_at)"></td>
+									<td class="py-2 text-xs text-[var(--muted)] font-mono tabular-nums" x-text="fmtTime(p.updated_at)"></td>
 								</tr>
 							</template>
 						</tbody>
