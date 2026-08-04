@@ -66,7 +66,17 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /dash/frontier", http.HandlerFunc(s.handleFrontier))
 	mux.Handle("GET /dash/alerts", http.HandlerFunc(s.handleAlerts))
 	mux.Handle("GET /dash/knowledge", http.HandlerFunc(s.handleKnowledge))
+	mux.Handle("GET /dash/partials/overview", http.HandlerFunc(s.handlePartialOverview))
 	return mux
+}
+
+func (s *V2Server) handlePartialOverview(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	component := views.PartialOverview()
+	if err := component.Render(r.Context(), w); err != nil {
+		s.Logger.Printf("render partial overview: %v", err)
+	}
 }
 
 func (s *V2Server) handleOverview(w http.ResponseWriter, r *http.Request) {
