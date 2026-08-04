@@ -154,7 +154,7 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	}
 
 	// Control API proxy check under /dash/api/control/
-	resp, err = srv.Client().Post(srv.URL + "/dash/api/control/commands", "application/json", strings.NewReader(`{}`))
+	resp, err = srv.Client().Post(srv.URL+"/dash/api/control/commands", "application/json", strings.NewReader(`{}`))
 	if err != nil {
 		t.Fatalf("post dash api control commands: %v", err)
 	}

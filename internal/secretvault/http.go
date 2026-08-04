@@ -38,6 +38,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /secrets/batch-refresh", h.batchRefreshToken)
 	mux.HandleFunc("POST /secrets/{name}/refresh", h.refreshToken)
 	mux.HandleFunc("POST /secrets/batch-copy", h.batchCopy)
+	mux.HandleFunc("POST /secrets/batch-rename", h.batchRename)
 	mux.HandleFunc("GET /secrets/expiring-soon", h.expiringSoon)
 	mux.HandleFunc("POST /secrets/bulk-touch", h.bulkTouch)
 	mux.HandleFunc("POST /secrets/batch-expire-at", h.batchExpireAt)
@@ -121,6 +122,10 @@ type copyRequest struct {
 
 type batchCopyRequest struct {
 	Items []BatchCopyItem `json:"items"`
+}
+
+type batchRenameRequest struct {
+	Items []BatchRenameItem `json:"items"`
 }
 
 type tokenRefreshRequest struct {
@@ -411,6 +416,7 @@ func (h HTTP) deleteAllSecrets(w http.ResponseWriter, _ *http.Request) {
 	}
 	write(w, http.StatusOK, map[string]any{"deleted": deleted})
 }
+
 type batchPurgeRequest struct {
 	Names []string `json:"names"`
 }
@@ -558,6 +564,23 @@ func (h HTTP) batchCopy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.Vault.BatchCopy(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, result)
+}
+
+func (h HTTP) batchRename(w http.ResponseWriter, r *http.Request) {
+	var q batchRenameRequest
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 rename items"}})
+		return
+	}
+	result, err := h.Vault.BatchRename(q.Items)
 	if err != nil {
 		writeErr(w, err)
 		return

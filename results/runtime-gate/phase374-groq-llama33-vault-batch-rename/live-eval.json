@@ -1,0 +1,20 @@
+{
+  "phase": 374,
+  "primary_circuit": "groq/llama-3.3-70b-versatile (seeded open control)",
+  "fallback_provider": "nvidia_nim",
+  "fallback_model": "meta/llama-3.1-8b-instruct",
+  "status_code": 200,
+  "latency_ms": 660.56,
+  "content": "READY",
+  "exact_match": true,
+  "usage": {
+    "prompt_tokens": 45,
+    "completion_tokens": 2,
+    "total_tokens": 47,
+    "prompt_tokens_details": {
+      "audio_tokens": null,
+      "cached_tokens": 16
+    }
+  },
+  "durable_reopen_verified": true
+}
