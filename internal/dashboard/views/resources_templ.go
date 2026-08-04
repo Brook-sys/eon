@@ -41,7 +41,7 @@ func Resources() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"resourcesState()\" x-init=\"start()\" class=\"space-y-4\"><div class=\"flex items-center gap-3 text-sm\"><span class=\"inline-flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'\"></span> <span x-show=\"connected\">Inspect API acessível</span> <span x-show=\"!connected\">sem resposta da Inspect API</span></span> <span class=\"text-[var(--muted)]\" x-show=\"observedAt\">atualizado <span x-text=\"observedAgo\"></span></span> <button class=\"ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]\" x-on:click=\"refresh()\">↻ Atualizar</button></div><div class=\"grid gap-4 md:grid-cols-3 mb-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"resourcesState()\" x-init=\"start()\" class=\"space-y-6\"><div class=\"flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm\"><span class=\"inline-flex items-center gap-2 font-medium\"><span class=\"w-2 h-2 rounded-full animate-pulse\" x-bind:class=\"connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-show=\"connected\">Inspect API acessível</span> <span class=\"text-[var(--text)]\" x-show=\"!connected\">sem resposta da Inspect API</span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-3\" x-show=\"observedAt\">atualizado <span x-text=\"observedAgo\"></span></span> <button class=\"ml-auto px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-medium\" x-on:click=\"refresh()\">↻ Atualizar</button></div><div class=\"grid gap-4 md:grid-cols-3\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Recursos Monitorados</div><div class=\"text-3xl font-extrabold text-[var(--accent)] font-mono tracking-tight my-1\" x-text=\"resources.length\"></div><div class=\"text-[11px] text-[var(--muted)]\">com linha de gate persistida</div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Em Voo Agora</div><div class=\"text-3xl font-extrabold text-[var(--ok)] font-mono tracking-tight my-1\" x-text=\"sumInFlight()\"></div><div class=\"text-[11px] text-[var(--muted)]\">soma total de in_flight</div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Circuitos Abertos</div><div class=\"text-3xl font-extrabold text-[var(--err)] font-mono tracking-tight my-1\" x-text=\"openCircuits().length\"></div><div class=\"text-[11px] text-[var(--muted)]\">gate de recurso bloqueado</div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -57,87 +57,17 @@ func Resources() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-3xl font-bold text-[var(--accent)]\" x-text=\"resources.length\"></p><p class=\"text-xs text-[var(--muted)]\">com linha persistida</p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<template x-if=\"resources.length === 0\"><p class=\"text-sm text-[var(--muted)] p-4 text-center border border-dashed border-[var(--border)] rounded-lg\" x-text=\"note || 'Nenhuma linha persistida ainda (válido quando nenhum gate foi exercido).'\"></p></template><div class=\"overflow-x-auto\" x-show=\"resources.length > 0\"><table class=\"w-full text-left border-collapse text-xs\"><thead><tr class=\"border-b border-[var(--border)] text-[var(--muted)] font-mono\"><th class=\"py-2.5 px-3\">Recurso</th><th class=\"py-2.5 px-3\">Em Voo</th><th class=\"py-2.5 px-3\">Último Min</th><th class=\"py-2.5 px-3\">Hoje</th><th class=\"py-2.5 px-3\">Tokens/Min</th><th class=\"py-2.5 px-3\">Falhas Cons.</th><th class=\"py-2.5 px-3\">Circuito</th><th class=\"py-2.5 px-3\">Última Falha</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]/40 font-mono\"><template x-for=\"r in resources\" x-bind:key=\"r.resource\"><tr class=\"hover:bg-[var(--panel-hover)] transition-colors\"><td class=\"py-2.5 px-3 font-semibold text-[var(--text)]\" x-text=\"r.resource\"></td><td class=\"py-2.5 px-3 text-[var(--accent)] font-bold\" x-text=\"r.in_flight ?? 0\"></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"r.minute_count ?? 0\"></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"r.day_count ?? 0\"></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"fmtNum(r.token_minute_count)\"></td><td class=\"py-2.5 px-3\"><span x-bind:class=\"(r.consecutive_failures ?? 0) > 0 ? 'text-[var(--warn)] font-bold' : 'text-[var(--muted)]'\" x-text=\"r.consecutive_failures ?? 0\"></span></td><td class=\"py-2.5 px-3\"><template x-if=\"r.circuit_open\"><span class=\"px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--err)]/20 border border-[var(--err)]/40 text-[var(--err)]\" x-text=\"'aberto ' + openUntilShort(r.circuit_open_until)\"></span></template><template x-if=\"!r.circuit_open\"><span class=\"px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--ok)]/20 border border-[var(--ok)]/40 text-[var(--ok)]\">fechado</span></template></td><td class=\"py-2.5 px-3 text-[var(--muted)] text-[11px]\" x-text=\"fmtTime(r.last_failure_at)\"></td></tr></template></tbody></table></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Recursos monitorados").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Linhas de ResourceGate").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<p class=\"text-3xl font-bold text-[var(--ok)]\" x-text=\"sumInFlight()\"></p><p class=\"text-xs text-[var(--muted)]\">soma de in_flight</p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Em voo agora").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"text-3xl font-bold text-[var(--err)]\" x-text=\"openCircuits().length\"></p><p class=\"text-xs text-[var(--muted)]\">gate bloqueado</p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Circuitos abertos").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<template x-if=\"resources.length === 0\"><p class=\"text-sm text-[var(--muted)]\" x-text=\"note || 'Nenhuma linha persistida ainda (válido quando nenhum gate foi exercido).'\"></p></template><div class=\"overflow-x-auto\" x-show=\"resources.length > 0\"><table class=\"w-full text-sm\"><thead><tr class=\"text-left text-[var(--muted)] text-xs uppercase tracking-wider\"><th class=\"py-2 pr-3\">Recurso</th><th class=\"py-2 pr-3\">Em voo</th><th class=\"py-2 pr-3\">Último min</th><th class=\"py-2 pr-3\">Hoje</th><th class=\"py-2 pr-3\">Tokens/min</th><th class=\"py-2 pr-3\">Falhas cons.</th><th class=\"py-2 pr-3\">Circuito</th><th class=\"py-2\">Última falha</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><template x-for=\"r in resources\" x-bind:key=\"r.resource\"><tr class=\"align-top\"><td class=\"py-2 pr-3 mono text-xs\" x-text=\"r.resource\"></td><td class=\"py-2 pr-3\" x-text=\"r.in_flight ?? 0\"></td><td class=\"py-2 pr-3\" x-text=\"r.minute_count ?? 0\"></td><td class=\"py-2 pr-3\" x-text=\"r.day_count ?? 0\"></td><td class=\"py-2 pr-3\" x-text=\"fmtNum(r.token_minute_count)\"></td><td class=\"py-2 pr-3\"><span x-bind:class=\"(r.consecutive_failures ?? 0) > 0 ? 'text-[var(--warn)] font-semibold' : ''\" x-text=\"r.consecutive_failures ?? 0\"></span></td><td class=\"py-2 pr-3\"><template x-if=\"r.circuit_open\"><span class=\"px-2 py-0.5 rounded-full text-xs border border-[var(--err)] text-[var(--err)]\" x-text=\"'aberto ' + openUntilShort(r.circuit_open_until)\"></span></template><template x-if=\"!r.circuit_open\"><span class=\"text-[var(--ok)] text-xs\">fechado</span></template></td><td class=\"py-2 text-xs text-[var(--muted)]\" x-text=\"fmtTime(r.last_failure_at)\"></td></tr></template></tbody></table></div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("ResourceGate").Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div><script>\n\t\t\tfunction resourcesState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tobservedAt: null,\n\t\t\t\t\tresources: [],\n\t\t\t\t\tnote: '',\n\n\t\t\t\t\tget observedAgo() {\n\t\t\t\t\t\tif (!this.observedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst d = await fetch('/dash/api/resources').then(r => r.json());\n\t\t\t\t\t\t\tthis.resources = d?.resources ?? [];\n\t\t\t\t\t\t\tthis.note = d?.note ?? '';\n\t\t\t\t\t\t\tthis.observedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tsumInFlight() { return this.resources.reduce((a, r) => a + (r.in_flight ?? 0), 0); },\n\t\t\t\t\topenCircuits() { return this.resources.filter(r => r.circuit_open); },\n\n\t\t\t\t\tfmtNum(v) { return v == null ? '–' : Number(v).toLocaleString('pt-BR'); },\n\t\t\t\t\tfmtTime(t) {\n\t\t\t\t\t\tif (!t) return '';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\t\t\t\t\topenUntilShort(t) {\n\t\t\t\t\t\tif (!t) return '';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\tif (isNaN(d)) return '';\n\t\t\t\t\t\tconst now = Date.now();\n\t\t\t\t\t\tconst sec = Math.max(0, (d.getTime() - now) / 1000 | 0);\n\t\t\t\t\t\treturn sec > 0 ? `(+${sec}s)` : '';\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 5000);\n\t\t\t\t\t},\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><script>\n\t\t\tfunction resourcesState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tobservedAt: null,\n\t\t\t\t\tresources: [],\n\t\t\t\t\tnote: '',\n\n\t\t\t\t\tget observedAgo() {\n\t\t\t\t\t\tif (!this.observedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tsumInFlight() {\n\t\t\t\t\t\treturn this.resources.reduce((a, r) => a + Number(r.in_flight ?? 0), 0);\n\t\t\t\t\t},\n\n\t\t\t\t\topenCircuits() {\n\t\t\t\t\t\treturn this.resources.filter(r => !!r.circuit_open);\n\t\t\t\t\t},\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst data = await fetch('/dash/api/resources').then(r => r.json());\n\t\t\t\t\t\t\tthis.resources = data?.resources ?? [];\n\t\t\t\t\t\t\tthis.note = data?.note ?? '';\n\t\t\t\t\t\t\tthis.observedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tfmtNum(n) { return n == null ? '–' : Number(n).toLocaleString('pt-BR'); },\n\t\t\t\t\tfmtTime(t) {\n\t\t\t\t\t\tif (!t) return '–';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '–' : d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\t\t\t\t\topenUntilShort(t) {\n\t\t\t\t\t\tif (!t) return '';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '' : 'até ' + d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -1,70 +1,70 @@
 package views
 
 templ Overview() {
-	@layout("Overview", "/dash", StandardNav("/dash")) {
-		<div x-data="overviewState()" x-init="start()" class="space-y-4">
+	@layout("Visão Geral", "/dash", StandardNav("/dash")) {
+		<div x-data="overviewState()" x-init="start()" class="space-y-6">
 
 			<!-- Status de conexão -->
-			<div class="flex items-center gap-3 text-sm">
-				<span class="inline-flex items-center gap-1.5">
+			<div class="flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm">
+				<span class="inline-flex items-center gap-2 font-medium">
 					<span
-						class="w-2 h-2 rounded-full"
-						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
+						class="w-2 h-2 rounded-full animate-pulse"
+						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
 					></span>
-					<span x-text="connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'"></span>
+					<span class="text-[var(--text)]" x-text="connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'"></span>
 				</span>
-				<span class="text-[var(--muted)]" x-show="generatedAt">
+				<span class="text-[var(--muted)] border-l border-[var(--border)] pl-3" x-show="generatedAt">
 					atualizado <span x-text="generatedAgo"></span>
 				</span>
 				<button
-					class="ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]"
+					class="ml-auto px-3 py-1 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-medium"
 					x-on:click="refresh()"
 				>↻ Atualizar</button>
 			</div>
 
 			<!-- Contadores operacionais -->
 			<div class="grid gap-4 grid-cols-2 lg:grid-cols-4">
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
-					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Comandos pendentes</div>
-					<div class="text-3xl font-bold text-[var(--accent)] font-mono tracking-tight my-0.5" x-text="fmt(ov.pending_commands)"></div>
-					<div class="text-xs text-[var(--muted)] mt-1">aguardando o kernel</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]">
+					<div class="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Comandos pendentes</div>
+					<div class="text-3xl font-extrabold text-[var(--accent)] font-mono tracking-tight my-1" x-text="fmt(ov.pending_commands)"></div>
+					<div class="text-[11px] text-[var(--muted)]">aguardando o kernel</div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
-					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Perguntas pendentes</div>
-					<div class="text-3xl font-bold text-[var(--warn)] font-mono tracking-tight my-0.5" x-text="fmt(ov.pending_operator_questions)"></div>
-					<div class="text-xs text-[var(--muted)] mt-1">human input required</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]">
+					<div class="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Perguntas pendentes</div>
+					<div class="text-3xl font-extrabold text-[var(--warn)] font-mono tracking-tight my-1" x-text="fmt(ov.pending_operator_questions)"></div>
+					<div class="text-[11px] text-[var(--muted)]">intervenção humana necessária</div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
-					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Subagents evictos</div>
-					<div class="text-3xl font-bold text-[var(--err)] font-mono tracking-tight my-0.5" x-text="fmt(ov.evicted_subagents)"></div>
-					<div class="text-xs text-[var(--muted)] mt-1">lease perdido</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]">
+					<div class="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Subagents evictos</div>
+					<div class="text-3xl font-extrabold text-[var(--err)] font-mono tracking-tight my-1" x-text="fmt(ov.evicted_subagents)"></div>
+					<div class="text-[11px] text-[var(--muted)]">lease perdido</div>
 				</div>
-				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 flex flex-col justify-between">
-					<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-medium mb-1">Head de eventos</div>
-					<div class="text-3xl font-bold text-[var(--ok)] font-mono tracking-tight my-0.5" x-text="fmt(ov.event_head_sequence)"></div>
-					<div class="text-xs text-[var(--muted)] mt-1">sequência do log</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between shadow-sm transition-all hover:border-[var(--border-hover)]">
+					<div class="text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Head de eventos</div>
+					<div class="text-3xl font-extrabold text-[var(--ok)] font-mono tracking-tight my-1" x-text="fmt(ov.event_head_sequence)"></div>
+					<div class="text-[11px] text-[var(--muted)]">sequência no log</div>
 				</div>
 			</div>
 
 			<!-- Controle Operacional do Runtime e Missão -->
 			@card("Controle Operacional & Execução") {
-				<div class="space-y-3 text-sm">
+				<div class="space-y-4 text-sm">
 					<div class="flex flex-wrap items-center gap-3">
-						<span class="font-medium text-[var(--text)]">Estado do Despacho:</span>
+						<span class="font-semibold text-[var(--text)]">Estado do Despacho:</span>
 						<span
-							class="px-2 py-0.5 rounded text-xs font-mono font-semibold uppercase"
-							x-bind:class="ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)]/20 text-[var(--warn)]' : 'bg-[var(--ok)]/20 text-[var(--ok)]'"
+							class="px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase border tracking-wider"
+							x-bind:class="ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)]/10 border-[var(--warn)]/30 text-[var(--warn)]' : 'bg-[var(--ok)]/10 border-[var(--ok)]/30 text-[var(--ok)]'"
 							x-text="ov.process_mode ?? 'STANDBY'"
 						></span>
-						<span class="text-xs text-[var(--muted)]" x-show="ov.mission && ov.mission.mission_id">
-							Missão: <strong x-text="ov.mission.mission_id"></strong> (Rev <span x-text="ov.mission.active_revision"></span>)
+						<span class="text-xs text-[var(--muted)] font-mono ml-auto" x-show="ov.mission && ov.mission.mission_id">
+							Missão: <strong class="text-[var(--text)]" x-text="ov.mission.mission_id"></strong> (Rev <span x-text="ov.mission.active_revision"></span>)
 						</span>
 					</div>
 
-					<div class="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border)]">
+					<div class="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--border)]/40">
 						<button
 							type="button"
-							class="px-3 py-1.5 rounded bg-[var(--warn)]/20 text-[var(--warn)] border border-[var(--warn)]/40 hover:bg-[var(--warn)]/30 font-medium text-xs flex items-center gap-1.5"
+							class="px-3.5 py-2 rounded-lg bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/30 hover:bg-[var(--warn)]/20 font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode === 'PAUSED'"
 							x-on:click="pauseMission()"
 						>
@@ -72,7 +72,7 @@ templ Overview() {
 						</button>
 						<button
 							type="button"
-							class="px-3 py-1.5 rounded bg-[var(--ok)]/20 text-[var(--ok)] border border-[var(--ok)]/40 hover:bg-[var(--ok)]/30 font-medium text-xs flex items-center gap-1.5"
+							class="px-3.5 py-2 rounded-lg bg-[var(--ok)]/10 text-[var(--ok)] border border-[var(--ok)]/30 hover:bg-[var(--ok)]/20 font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode !== 'PAUSED'"
 							x-on:click="resumeMission()"
 						>
@@ -80,7 +80,7 @@ templ Overview() {
 						</button>
 						<button
 							type="button"
-							class="px-3 py-1.5 rounded bg-[var(--err)]/20 text-[var(--err)] border border-[var(--err)]/40 hover:bg-[var(--err)]/30 font-medium text-xs flex items-center gap-1.5 ml-auto"
+							class="px-3.5 py-2 rounded-lg bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/30 hover:bg-[var(--err)]/20 font-semibold text-xs transition-all flex items-center gap-2 ml-auto disabled:opacity-40 cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id"
 							x-on:click="cancelMission()"
 						>
@@ -89,7 +89,7 @@ templ Overview() {
 					</div>
 
 					<!-- Feedback de comandos -->
-					<div x-show="cmdStatus" class="mt-2 text-xs font-mono p-2 rounded bg-[var(--bg)] border border-[var(--border)]" x-bind:class="cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="cmdStatus"></div>
+					<div x-show="cmdStatus" class="mt-3 text-xs font-mono p-3 rounded-lg bg-[#0d1420] border border-[var(--border)] shadow-inner" x-bind:class="cmdIsErr ? 'text-[var(--err)] border-[var(--err)]/40' : 'text-[var(--ok)] border-[var(--ok)]/40'" x-text="cmdStatus"></div>
 				</div>
 			}
 
@@ -98,22 +98,22 @@ templ Overview() {
 				@card("Perguntas Pendentes do Operador") {
 					<div class="space-y-3 text-sm">
 						<template x-for="q in questions" x-bind:key="q.id">
-							<div class="p-3 rounded border border-[var(--warn)]/40 bg-[var(--warn)]/5 space-y-2">
+							<div class="p-4 rounded-xl border border-[var(--warn)]/40 bg-[var(--warn)]/5 space-y-3 shadow-sm">
 								<div class="flex justify-between items-start">
-									<div class="font-medium text-[var(--text)]" x-text="q.prompt"></div>
-									<span class="text-xs font-mono text-[var(--muted)]" x-text="q.id"></span>
+									<div class="font-semibold text-[var(--text)]" x-text="q.prompt"></div>
+									<span class="text-xs font-mono text-[var(--muted)] px-2 py-0.5 rounded bg-[var(--panel)] border border-[var(--border)]" x-text="q.id"></span>
 								</div>
 								<div class="flex gap-2 items-center" x-data="{ ansText: '' }">
 									<input
 										type="text"
-										class="flex-1 px-3 py-1 text-xs rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)]"
-										placeholder="Digite sua resposta..."
+										class="flex-1 px-3.5 py-2 text-xs rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] focus:border-[var(--accent)]"
+										placeholder="Digite sua resposta para o operador..."
 										x-model="ansText"
 										x-on:keydown.enter="submitAnswer(q, ansText)"
 									/>
 									<button
 										type="button"
-										class="px-3 py-1 rounded bg-[var(--accent)] text-white text-xs font-medium hover:opacity-90"
+										class="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-xs font-bold hover:opacity-90 transition-all shadow-md shadow-[var(--accent)]/20 cursor-pointer"
 										x-on:click="submitAnswer(q, ansText)"
 									>
 										Responder
@@ -126,44 +126,46 @@ templ Overview() {
 			</div>
 
 			<!-- Saúde do runtime e alertas -->
-			<div class="grid gap-4 md:grid-cols-2">
-				@card("Runtime") {
-					<div class="space-y-1.5 text-sm">
-						<div class="flex justify-between">
-							<span class="text-[var(--muted)]">Health</span>
-							<span x-text="health.status ?? '—'"></span>
+			<div class="grid gap-5 md:grid-cols-2">
+				@card("Saúde do Runtime") {
+					<div class="space-y-2.5 text-sm">
+						<div class="flex justify-between items-center py-1 border-b border-[var(--border)]/30">
+							<span class="text-[var(--muted)]">Status de Saúde</span>
+							<span class="font-semibold font-mono" x-bind:class="health.status === 'OK' ? 'text-[var(--ok)]' : 'text-[var(--warn)]'" x-text="health.status ?? '—'"></span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-[var(--muted)]">Versão</span>
-							<span x-text="(ov.runtime && ov.runtime.version) ?? '—'"></span>
+						<div class="flex justify-between items-center py-1 border-b border-[var(--border)]/30">
+							<span class="text-[var(--muted)]">Versão do Engine</span>
+							<span class="font-mono text-[var(--text)]" x-text="(ov.runtime && ov.runtime.version) ?? '—'"></span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-[var(--muted)]">Modo</span>
-							<span x-text="ov.process_mode ?? '—'"></span>
+						<div class="flex justify-between items-center py-1 border-b border-[var(--border)]/30">
+							<span class="text-[var(--muted)]">Modo do Processo</span>
+							<span class="font-mono text-[var(--text)]" x-text="ov.process_mode ?? '—'"></span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-[var(--muted)]">Revisão de controle</span>
-							<span x-text="fmt(ov.control_revision)"></span>
+						<div class="flex justify-between items-center py-1 border-b border-[var(--border)]/30">
+							<span class="text-[var(--muted)]">Revisão de Controle</span>
+							<span class="font-mono text-[var(--accent)]" x-text="fmt(ov.control_revision)"></span>
 						</div>
-						<div class="flex justify-between">
-							<span class="text-[var(--muted)]">Missão</span>
-							<span x-text="(ov.mission && ov.mission.mission_id) ?? 'nenhuma'"></span>
+						<div class="flex justify-between items-center py-1">
+							<span class="text-[var(--muted)]">ID da Missão</span>
+							<span class="font-mono text-[var(--text)]" x-text="(ov.mission && ov.mission.mission_id) ?? 'nenhuma'"></span>
 						</div>
 					</div>
 				}
-				@card("Alertas") {
+				@card("Alertas Ativos") {
 					<template x-if="alerts.length === 0">
-						<p class="text-sm text-[var(--muted)]">Nenhum alerta ativo.</p>
+						<div class="p-4 text-center text-sm text-[var(--muted)] border border-dashed border-[var(--border)] rounded-lg">
+							Nenhum alerta crítico ou aviso no sistema.
+						</div>
 					</template>
-					<ul class="space-y-1.5 text-sm" x-show="alerts.length > 0">
+					<ul class="space-y-2 text-sm" x-show="alerts.length > 0">
 						<template x-for="a in alerts.slice(0, 8)" x-bind:key="a.id ?? a.message">
-							<li class="flex gap-2 items-start">
-								@templ.Raw(`<span class="mt-0.5 w-2 h-2 shrink-0 rounded-full"
+							<li class="flex gap-3 items-start p-2 rounded-lg bg-[var(--bg)] border border-[var(--border)]/40">
+								@templ.Raw(`<span class="mt-1.5 w-2 h-2 shrink-0 rounded-full"
 									x-bind:class="({
-										critical:'bg-[var(--err)]', warning:'bg-[var(--warn)]',
+										critical:'bg-[var(--err)] shadow-[0_0_6px_var(--err)]', warning:'bg-[var(--warn)] shadow-[0_0_6px_var(--warn)]',
 										info:'bg-[var(--accent)]'
 									})[a.severity] ?? 'bg-[var(--muted)]'"></span>`)
-								<span x-text="a.message ?? JSON.stringify(a)"></span>
+								<span class="text-xs" x-text="a.message ?? JSON.stringify(a)"></span>
 							</li>
 						</template>
 					</ul>
@@ -171,36 +173,36 @@ templ Overview() {
 			</div>
 
 			<!-- Feed de eventos ao vivo (SSE) -->
-			@card("Eventos ao vivo") {
+			@card("Eventos Recentes do Log (SSE)") {
 				<div class="flex items-center gap-2 mb-3 text-xs">
 					<span
-						class="inline-flex items-center gap-1"
-						x-bind:class="sseOn ? 'text-[var(--ok)]' : 'text-[var(--muted)]'"
+						class="inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded-full border"
+						x-bind:class="sseOn ? 'border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]' : 'border-[var(--border)] bg-[var(--panel)] text-[var(--muted)]'"
 					>
 						<span
 							class="w-1.5 h-1.5 rounded-full"
 							x-bind:class="sseOn ? 'bg-[var(--ok)]' : 'bg-[var(--muted)]'"
 						></span>
-						<span x-text="sseOn ? 'SSE ativo' : 'SSE desconectado'"></span>
+						<span x-text="sseOn ? 'Stream SSE Conectada' : 'Stream SSE Desconectada'"></span>
 					</span>
-					<span class="text-[var(--muted)] ml-auto" x-text="events.length + ' recentes'"></span>
+					<span class="text-[var(--muted)] ml-auto font-mono" x-text="events.length + ' eventos recebidos'"></span>
 				</div>
-				<div class="mono text-xs space-y-1 max-h-80 overflow-y-auto">
+				<div class="mono text-xs space-y-1.5 max-h-80 overflow-y-auto pr-1">
 					<template x-if="events.length === 0">
-						<p class="text-[var(--muted)]">Aguardando eventos…</p>
+						<p class="text-[var(--muted)] p-3 text-center border border-dashed border-[var(--border)] rounded-lg">Aguardando novos eventos do kernel...</p>
 					</template>
 					<template x-for="e in events" x-bind:key="e.seq ?? Math.random()">
-						<div class="flex gap-2 items-baseline">
-							<span class="text-[var(--muted)] shrink-0" x-text="'#' + (e.sequence ?? '?')"></span>
+						<div class="flex gap-2.5 items-baseline p-1.5 rounded-md hover:bg-[var(--panel-hover)] transition-colors border-b border-[var(--border)]/20">
+							<span class="text-[var(--muted)] shrink-0 font-mono" x-text="'#' + (e.sequence ?? '?')"></span>
 							<span
-								class="shrink-0 px-1 rounded"
+								class="shrink-0 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase"
 								x-bind:class="({
-									error: 'text-[var(--err)]',
-									warning: 'text-[var(--warn)]'
-								})[e.type] ?? 'text-[var(--accent)]'"
+									error: 'bg-[var(--err)]/20 text-[var(--err)]',
+									warning: 'bg-[var(--warn)]/20 text-[var(--warn)]'
+								})[e.type] ?? 'bg-[var(--accent)]/20 text-[var(--accent)]'"
 								x-text="e.type"
 							></span>
-							<span class="truncate" x-text="e.summary ?? JSON.stringify(e).slice(0, 120)"></span>
+							<span class="truncate text-[var(--text)]" x-text="e.summary ?? JSON.stringify(e).slice(0, 120)"></span>
 						</div>
 					</template>
 				</div>
@@ -299,19 +301,12 @@ templ Overview() {
 					},
 
 					async submitAnswer(q, text) {
-						if (!text.trim()) return;
+						if (!text) return;
 						try {
-							const payload = {
-								schema_version: 1,
-								idempotency_key: 'ans-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
-								expected_question_revision: q.revision || 1,
-								kind: 'TEXT',
-								text: text.trim()
-							};
-							const res = await fetch('/dash/api/control/questions/' + encodeURIComponent(q.id) + '/answers', {
+							const res = await fetch('/dash/api/control/questions/' + encodeURIComponent(q.id) + '/answer', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify(payload)
+								body: JSON.stringify({ answer: text })
 							});
 							const data = await res.json();
 							if (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));
@@ -323,24 +318,28 @@ templ Overview() {
 						}
 					},
 
-					connectSSE() {
+					startSSE() {
 						const es = new EventSource('/dash/api/events/stream');
 						es.onopen = () => { this.sseOn = true; };
 						es.onerror = () => { this.sseOn = false; };
 						es.onmessage = (m) => {
 							try {
-								const e = JSON.parse(m.data);
-								this.events.unshift(e);
-								if (this.events.length > 60) this.events.length = 60;
+								const d = JSON.parse(m.data);
+								this.events.unshift({
+									seq: d.sequence,
+									type: d.kind ?? 'event',
+									summary: d.summary ?? d.kind ?? JSON.stringify(d).slice(0, 100)
+								});
+								if (this.events.length > 50) this.events.pop();
 							} catch {}
 						};
 					},
 
 					start() {
 						this.refresh();
-						setInterval(() => this.refresh(), 5000);
-						this.connectSSE();
-					},
+						this.startSSE();
+						setInterval(() => this.refresh(), 10000);
+					}
 				};
 			}
 		</script>

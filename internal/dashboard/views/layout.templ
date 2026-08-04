@@ -9,37 +9,42 @@ type NavItem struct {
 }
 
 templ sidebar(items []NavItem) {
-	<nav class="w-52 shrink-0 border-r border-[var(--border)] flex flex-col gap-1 pt-1">
+	<nav class="w-56 shrink-0 flex flex-col gap-1">
 		for _, item := range items {
 			<a
 				href={item.Href}
 				class={
-					"px-3 py-2 rounded-md text-sm transition-colors",
-					templ.KV("text-[var(--text)] bg-[var(--panel)] border-[var(--accent)]", item.Active),
-					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-[#243247]", !item.Active),
+					"px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-between",
+					templ.KV("text-[var(--text)] bg-[var(--panel-hover)] shadow-sm border-l-4 border-l-[var(--accent)] border-t border-r border-b border-[var(--border)]", item.Active),
+					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)]/60 border border-transparent", !item.Active),
 				}
 				if item.External {
 					target="_blank" rel="noopener noreferrer"
 				}
-			>{item.Label}</a>
+			>
+				<span>{item.Label}</span>
+				if item.External {
+					<span class="text-xs opacity-60">↗</span>
+				}
+			</a>
 		}
 	</nav>
 }
 
 templ badge(label, kind string) {
 	<span class={
-		"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border",
-		templ.KV("border-[var(--ok)] text-[var(--ok)]", kind == "success"),
-		templ.KV("border-[var(--warn)] text-[var(--warn)]", kind == "warning"),
-		templ.KV("border-[var(--err)] text-[var(--err)]", kind == "error"),
-		templ.KV("border-[var(--accent)] text-[var(--accent)]", kind == "info"),
-		templ.KV("border-[var(--border)] text-[var(--muted)]", kind == "neutral"),
+		"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tracking-wide",
+		templ.KV("border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]", kind == "success"),
+		templ.KV("border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]", kind == "warning"),
+		templ.KV("border-[var(--err)]/40 bg-[var(--err)]/10 text-[var(--err)]", kind == "error"),
+		templ.KV("border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]", kind == "info"),
+		templ.KV("border-[var(--border)] bg-[var(--panel)] text-[var(--muted)]", kind == "neutral"),
 	}>{label}</span>
 }
 
 templ card(title string) {
-	<section class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-4 mb-4">
-		<h3 class="text-[var(--muted)] text-xs font-semibold uppercase tracking-widest mb-3">{title}</h3>
+	<section class="bg-[var(--panel)] border border-[var(--border)] rounded-xl p-5 mb-5 shadow-sm transition-all hover:border-[var(--border-hover)]">
+		<h3 class="text-[var(--muted)] text-xs font-bold uppercase tracking-wider mb-4 pb-2 border-b border-[var(--border)]/40">{title}</h3>
 		{ children... }
 	</section>
 }
@@ -57,62 +62,69 @@ templ layout(title string, currentPath string, nav []NavItem) {
 		<link rel="stylesheet" href="/dash/assets/app.css"/>
 		<style>
 			:root {
-				--bg: #0f1419;
-				--panel: #1a2332;
-				--border: #2d3a4d;
-				--text: #e7ecf3;
-				--muted: #8b9bb4;
-				--accent: #5b9fd4;
-				--ok: #3d9a6a;
-				--warn: #c9a227;
-				--err: #c45c5c;
+				--bg: #0b0f17;
+				--panel: #131b28;
+				--panel-hover: #1c2738;
+				--border: #223044;
+				--border-hover: #31445f;
+				--text: #f0f4f8;
+				--muted: #8295b0;
+				--accent: #4895d9;
+				--ok: #2ea066;
+				--warn: #d9a726;
+				--err: #d9534f;
 				--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 				--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 			}
 			* { box-sizing: border-box; }
 			body {
 				margin: 0; background: var(--bg); color: var(--text);
-				font: 14px / 1.5 var(--sans);
+				font: 14px / 1.6 var(--sans);
+				-webkit-font-smoothing: antialiased;
 			}
 			a { text-decoration: none; color: inherit; }
-			pre, code, .mono { font-family: var(--mono); font-size: 13px; }
-			html { scrollbar-color: #3a4f6a transparent; }
+			pre, code, .mono { font-family: var(--mono); font-size: 12.5px; }
+			html { scrollbar-color: #27374d transparent; }
+
+			/* Standardized Inputs, Selects & Buttons */
+			input[type="text"], input[type="password"], input[type="number"], select, textarea {
+				background-color: #0d1420;
+				border: 1px solid var(--border);
+				color: var(--text);
+				transition: border-color 0.15s ease, box-shadow 0.15s ease;
+			}
+			input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+				outline: none;
+				border-color: var(--accent);
+				box-shadow: 0 0 0 2px rgba(72, 149, 217, 0.2);
+			}
+
+			/* Custom scrollbars */
+			::-webkit-scrollbar { width: 6px; height: 6px; }
+			::-webkit-scrollbar-track { background: transparent; }
+			::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+			::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 		</style>
 	</head>
-	<body class="min-h-screen" x-data="{ showShortcuts: false, toasts: [] }" @keydown.window="
-		if ($event.key === '?') { showShortcuts = !showShortcuts; }
-		if ($event.key === 'g' || $event.key === 'G') {
-			$event.target._gPressed = true;
-			setTimeout(() => delete $event.target._gPressed, 1000);
-		} else if ($event.target._gPressed) {
-			if ($event.key === 'o' || $event.key === 'O') window.location.href = '/dash/';
-			if ($event.key === 'e' || $event.key === 'E') window.location.href = '/dash/events';
-			if ($event.key === 'm' || $event.key === 'M') window.location.href = '/dash/models';
-			if ($event.key === 'r' || $event.key === 'R') window.location.href = '/dash/resources';
-			if ($event.key === 'f' || $event.key === 'F') window.location.href = '/dash/frontier';
-			if ($event.key === 'a' || $event.key === 'A') window.location.href = '/dash/alerts';
-			if ($event.key === 'k' || $event.key === 'K') window.location.href = '/dash/knowledge';
-			delete $event.target._gPressed;
-		}
-	" @toast.window="
+	<body class="min-h-screen" x-data="{ toasts: [] }" @toast.window="
 		const t = $event.detail;
 		const id = Date.now() + Math.random();
 		toasts.push({ id, message: t.message, type: t.type || 'info' });
 		setTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);
 	">
 		<!-- Dynamic Toast Notifications -->
-		<div class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+		<div class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm pointer-events-none">
 			<template x-for="t in toasts" x-bind:key="t.id">
-				<div class="pointer-events-auto p-3 rounded-lg border shadow-lg text-xs font-medium flex items-center justify-between gap-3 animate-fade-in"
+				<div class="pointer-events-auto p-3.5 rounded-xl border shadow-xl text-xs font-medium flex items-center justify-between gap-3 backdrop-blur-md transition-all"
 					x-bind:class="{
-						'bg-[var(--panel)] border-[var(--ok)] text-[var(--ok)]': t.type === 'success',
-						'bg-[var(--panel)] border-[var(--err)] text-[var(--err)]': t.type === 'error',
-						'bg-[var(--panel)] border-[var(--warn)] text-[var(--warn)]': t.type === 'warning',
-						'bg-[var(--panel)] border-[var(--accent)] text-[var(--accent)]': t.type === 'info'
+						'bg-[var(--panel)]/95 border-[var(--ok)] text-[var(--ok)] shadow-[var(--ok)]/10': t.type === 'success',
+						'bg-[var(--panel)]/95 border-[var(--err)] text-[var(--err)] shadow-[var(--err)]/10': t.type === 'error',
+						'bg-[var(--panel)]/95 border-[var(--warn)] text-[var(--warn)] shadow-[var(--warn)]/10': t.type === 'warning',
+						'bg-[var(--panel)]/95 border-[var(--accent)] text-[var(--accent)] shadow-[var(--accent)]/10': t.type === 'info'
 					}"
 				>
 					<span x-text="t.message"></span>
-					<button type="button" class="text-xs opacity-70 hover:opacity-100 font-bold" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
+					<button type="button" class="text-xs opacity-70 hover:opacity-100 font-bold px-1" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
 				</div>
 			</template>
 		</div>
@@ -123,101 +135,32 @@ templ layout(title string, currentPath string, nav []NavItem) {
 			};
 		</script>
 		<div class="flex min-h-screen">
-			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-4 gap-4">
-				<div class="flex items-center gap-2">
-					<div class="w-8 h-8 rounded-md flex items-center justify-center bg-[var(--accent)] text-white font-bold text-sm">
+			<!-- Sidebar -->
+			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-5 gap-5 shrink-0">
+				<div class="flex items-center gap-3 px-1">
+					<div class="w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--accent)] text-white font-black text-base shadow-md shadow-[var(--accent)]/20">
 						M
 					</div>
 					<div>
-						<div class="text-sm font-semibold">motor-autonomo</div>
-						<div class="text-xs text-[var(--muted)]">operator dashboard</div>
+						<div class="text-sm font-bold tracking-tight text-[var(--text)]">motor-autonomo</div>
+						<div class="text-[11px] font-medium text-[var(--muted)]">operator dashboard</div>
 					</div>
 				</div>
-				<hr class="border-[var(--border)]" />
+				<hr class="border-[var(--border)] opacity-60" />
 				@sidebar(nav)
-				<div class="mt-auto pt-4 border-t border-[var(--border)] text-xs text-[var(--muted)] flex items-center justify-between">
-					<span>v0</span>
-					<button @click="showShortcuts = true" class="px-1.5 py-0.5 rounded border border-[var(--border)] hover:bg-[var(--panel-2)] font-mono text-[10px]" title="Atalhos de Teclado">?</button>
+				<div class="mt-auto pt-4 border-t border-[var(--border)] opacity-60 text-xs text-[var(--muted)] flex items-center justify-between font-mono">
+					<span>v0.2.0</span>
+					<span class="px-2 py-0.5 rounded bg-[var(--panel-hover)] text-[10px] border border-[var(--border)]">online</span>
 				</div>
 			</aside>
-			<main class="flex-1 p-6 max-w-6xl">
-				<header class="mb-6">
-					<h1 class="text-xl font-semibold">{title}</h1>
+
+			<!-- Conteúdo Principal -->
+			<main class="flex-1 p-8 max-w-6xl mx-auto w-full">
+				<header class="mb-7 pb-4 border-b border-[var(--border)]/50 flex items-center justify-between">
+					<h1 class="text-2xl font-bold tracking-tight text-[var(--text)]">{title}</h1>
 				</header>
 				{ children... }
 			</main>
-		</div>
-
-		<!-- Modal de Atalhos de Teclado (Cheatsheet) -->
-		<div x-show="showShortcuts" x-cloak class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-			<div @click.away="showShortcuts = false" class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-6 max-w-md w-full font-mono text-xs space-y-4">
-				<div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
-					<h3 class="text-sm font-bold text-[var(--text)]">Atalhos de Teclado</h3>
-					<button @click="showShortcuts = false" class="text-[var(--muted)] hover:text-[var(--text)]">✕</button>
-				</div>
-				<div class="space-y-2">
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Abrir este painel</span>
-						<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">?</kbd>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Visão Geral</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">o</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Eventos</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">e</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Modelos</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">m</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Recursos & Gates</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">r</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Fronteira & Ações</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">f</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Alertas</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">a</kbd>
-						</div>
-					</div>
-					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
-						<span class="text-[var(--muted)]">Ir para Conhecimento</span>
-						<div>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
-							<span class="mx-0.5">+</span>
-							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">k</kbd>
-						</div>
-					</div>
-				</div>
-			</div>
 		</div>
 	</body>
 	</html>

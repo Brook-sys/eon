@@ -41,7 +41,7 @@ func Frontier() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"frontierState()\" x-init=\"start()\" class=\"space-y-4\"><div class=\"flex items-center gap-3 text-sm\"><span class=\"inline-flex items-center gap-1.5\"><span class=\"w-2 h-2 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'\"></span> <span x-show=\"connected\">Inspect API acessível</span> <span x-show=\"!connected\">sem resposta da Inspect API</span></span> <span class=\"text-[var(--muted)]\" x-show=\"observedAt\">atualizado <span x-text=\"observedAgo\"></span></span> <button class=\"ml-auto px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]\" x-on:click=\"refresh()\">↻ Atualizar</button></div><!-- Filtros --><div class=\"flex flex-wrap gap-2 items-end\"><label class=\"flex flex-col gap-1 text-xs text-[var(--muted)]\">Status <select class=\"bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm\" x-model=\"filterStatus\" x-on:change=\"reload()\"><option value=\"\">todos</option> <option value=\"OPEN\">OPEN</option> <option value=\"ADMITTED\">ADMITTED</option> <option value=\"DEFERRED\">DEFERRED</option> <option value=\"ABANDONED\">ABANDONED</option> <option value=\"SUPERSEDED\">SUPERSEDED</option></select></label> <label class=\"flex flex-col gap-1 text-xs text-[var(--muted)]\">Família <select class=\"bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm\" x-model=\"filterFamily\" x-on:change=\"reload()\"><option value=\"\">todas</option> <option value=\"gap_scan\">gap_scan</option> <option value=\"conflict_evidence_review\">conflict_evidence_review</option> <option value=\"artifact_refresh\">artifact_refresh</option> <option value=\"integrity_audit\">integrity_audit</option> <option value=\"harness_evaluation\">harness_evaluation</option> <option value=\"frontier_management\">frontier_management</option> <option value=\"mission_coverage_scan\">mission_coverage_scan</option> <option value=\"source_freshness_scan\">source_freshness_scan</option></select></label> <span class=\"text-xs text-[var(--muted)] ml-auto\" x-text=\"page ? (page.total + ' oportunidades (política ' + page.policy_version + ')') : ''\"></span></div><!-- KPIs do reservatório --><div class=\"grid gap-4 grid-cols-2 md:grid-cols-4\" x-show=\"page\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"frontierState()\" x-init=\"start()\" class=\"space-y-6\"><div class=\"flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm\"><span class=\"inline-flex items-center gap-2 font-medium\"><span class=\"w-2 h-2 rounded-full animate-pulse\" x-bind:class=\"connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-show=\"connected\">Inspect API acessível</span> <span class=\"text-[var(--text)]\" x-show=\"!connected\">sem resposta da Inspect API</span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-3\" x-show=\"observedAt\">atualizado <span x-text=\"observedAgo\"></span></span> <button class=\"ml-auto px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-medium\" x-on:click=\"refresh()\">↻ Atualizar</button></div><!-- Filtros --><div class=\"flex flex-wrap gap-3 items-end\"><label class=\"flex flex-col gap-1 text-xs text-[var(--muted)]\">Status <select class=\"bg-[#0d1420] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text)]\" x-model=\"filterStatus\" x-on:change=\"reload()\"><option value=\"\">todos os status</option> <option value=\"OPEN\">OPEN</option> <option value=\"ADMITTED\">ADMITTED</option> <option value=\"DEFERRED\">DEFERRED</option> <option value=\"ABANDONED\">ABANDONED</option> <option value=\"SUPERSEDED\">SUPERSEDED</option></select></label> <label class=\"flex flex-col gap-1 text-xs text-[var(--muted)]\">Família <select class=\"bg-[#0d1420] border border-[var(--border)] rounded-lg px-3 py-2 text-xs text-[var(--text)]\" x-model=\"filterFamily\" x-on:change=\"reload()\"><option value=\"\">todas as famílias</option> <option value=\"gap_scan\">gap_scan</option> <option value=\"conflict_evidence_review\">conflict_evidence_review</option> <option value=\"artifact_refresh\">artifact_refresh</option> <option value=\"integrity_audit\">integrity_audit</option> <option value=\"harness_evaluation\">harness_evaluation</option> <option value=\"frontier_management\">frontier_management</option> <option value=\"mission_coverage_scan\">mission_coverage_scan</option> <option value=\"source_freshness_scan\">source_freshness_scan</option></select></label> <span class=\"text-xs text-[var(--muted)] font-mono ml-auto\" x-text=\"page ? (page.total + ' oportunidades (política ' + page.policy_version + ')') : ''\"></span></div><!-- KPIs do reservatório --><div class=\"grid gap-4 grid-cols-2 md:grid-cols-4\" x-show=\"page\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 shadow-sm\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Total de Itens</div><div class=\"text-2xl font-extrabold text-[var(--text)] font-mono\" x-text=\"page?.total ?? '–'\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 shadow-sm\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Limite / Offset</div><div class=\"text-2xl font-extrabold text-[var(--accent)] font-mono\" x-text=\"(page?.limit ?? 0) + '/' + (page?.offset ?? 0)\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 shadow-sm\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Max Depth</div><div class=\"text-2xl font-extrabold text-[var(--accent)] font-mono\" x-text=\"page?.max_depth ?? '–'\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 shadow-sm\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1\">Max Candidatos</div><div class=\"text-2xl font-extrabold text-[var(--accent)] font-mono\" x-text=\"page?.max_candidates ?? '–'\"></div></div></div><!-- Tabela de oportunidades -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -57,109 +57,17 @@ func Frontier() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-2xl font-bold text-[var(--text)]\" x-text=\"page?.total ?? '–'\"></p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<template x-if=\"(page?.items ?? []).length === 0\"><p class=\"text-sm text-[var(--muted)] p-4 text-center border border-dashed border-[var(--border)] rounded-lg\">Nenhuma oportunidade encontrada com os filtros atuais.</p></template><div class=\"overflow-x-auto\" x-show=\"(page?.items ?? []).length > 0\"><table class=\"w-full text-left border-collapse text-xs\"><thead><tr class=\"border-b border-[var(--border)] text-[var(--muted)] font-mono\"><th class=\"py-2.5 px-3\">Título</th><th class=\"py-2.5 px-3\">Família</th><th class=\"py-2.5 px-3\">Status</th><th class=\"py-2.5 px-3\">Depth</th><th class=\"py-2.5 px-3\">Prioridade</th><th class=\"py-2.5 px-3\">Risco</th><th class=\"py-2.5 px-3\">Criada</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]/40 font-mono\"><template x-for=\"o in page?.items ?? []\" x-bind:key=\"o.id\"><tr class=\"hover:bg-[var(--panel-hover)] transition-colors\"><td class=\"py-2.5 px-3 max-w-xs\"><div x-text=\"o.title\" class=\"truncate font-semibold text-[var(--text)]\" x-bind:title=\"o.title\"></div><div class=\"text-[10px] text-[var(--muted)] font-mono\" x-text=\"short(o.id, 8)\"></div></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"o.family\"></td><td class=\"py-2.5 px-3\"><span class=\"inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border\" x-bind:class=\"{\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--ok)]/40 bg-[var(--ok)]/10 text-[var(--ok)]': o.status === 'OPEN',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)]': o.status === 'ADMITTED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--muted)] bg-[var(--panel)] text-[var(--muted)]': o.status === 'DEFERRED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--err)]/40 bg-[var(--err)]/10 text-[var(--err)]': o.status === 'ABANDONED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--warn)]/40 bg-[var(--warn)]/10 text-[var(--warn)]': o.status === 'SUPERSEDED',\n\t\t\t\t\t\t\t\t\t\t\t}\" x-text=\"o.status\"></span> <span x-show=\"o.over_depth\" class=\"block text-[10px] text-[var(--warn)] mt-0.5 font-bold\">over-depth</span></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"o.depth\"></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"o.priority\"></td><td class=\"py-2.5 px-3 text-[var(--muted)]\" x-text=\"o.risk\"></td><td class=\"py-2.5 px-3 text-[var(--muted)] text-[11px]\" x-text=\"fmtTime(o.created_at)\"></td></tr></template></tbody></table></div><div class=\"mt-4 flex gap-2 items-center border-t border-[var(--border)] pt-3\" x-show=\"page && (page.limit < page.total || page.offset > 0)\"><button class=\"px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-[var(--panel-hover)] disabled:opacity-40\" x-bind:disabled=\"!page || page.offset === 0\" x-on:click=\"prevPage()\">← Anterior</button> <button class=\"px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium hover:bg-[var(--panel-hover)] disabled:opacity-40\" x-bind:disabled=\"!page || page.offset + page.limit >= page.total\" x-on:click=\"nextPage()\">Próxima →</button> <span class=\"text-xs text-[var(--muted)] font-mono ml-auto\" x-text=\"page ? ('página ' + (Math.floor(page.offset / page.limit) + 1)) : ''\"></span></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Total").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Oportunidades da Fronteira").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<p class=\"text-2xl font-bold text-[var(--accent)]\" x-text=\"(page?.limit ?? 0) + '/' + (page?.offset ?? 0)\"></p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Limite/offset").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"text-2xl font-bold text-[var(--accent)]\" x-text=\"page?.max_depth ?? '–'\"></p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Max depth").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"text-2xl font-bold text-[var(--accent)]\" x-text=\"page?.max_candidates ?? '–'\"></p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Max candidatos").Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><!-- Tabela de oportunidades -->")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Var7 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-				if !templ_7745c5c3_IsBuffer {
-					defer func() {
-						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-						if templ_7745c5c3_Err == nil {
-							templ_7745c5c3_Err = templ_7745c5c3_BufErr
-						}
-					}()
-				}
-				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<template x-if=\"(page?.items ?? []).length === 0\"><p class=\"text-sm text-[var(--muted)]\">Nenhuma oportunidade encontrada com os filtros atuais.</p></template><div class=\"overflow-x-auto\" x-show=\"(page?.items ?? []).length > 0\"><table class=\"w-full text-sm\"><thead><tr class=\"text-left text-[var(--muted)] text-xs uppercase tracking-wider\"><th class=\"py-2 pr-3\">Título</th><th class=\"py-2 pr-3\">Família</th><th class=\"py-2 pr-3\">Status</th><th class=\"py-2 pr-3\">Depth</th><th class=\"py-2 pr-3\">Prior.</th><th class=\"py-2 pr-3\">Risco</th><th class=\"py-2\">Criada</th></tr></thead> <tbody class=\"divide-y divide-[var(--border)]\"><template x-for=\"o in page?.items ?? []\" x-bind:key=\"o.id\"><tr class=\"align-top\"><td class=\"py-2 pr-3 max-w-xs\"><div x-text=\"o.title\" class=\"truncate\" x-bind:title=\"o.title\"></div><div class=\"text-xs text-[var(--muted)] mono\" x-text=\"short(o.id, 8)\"></div></td><td class=\"py-2 pr-3 text-xs\" x-text=\"o.family\"></td><td class=\"py-2 pr-3\"><span class=\"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border\" x-bind:class=\"{\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--ok)] text-[var(--ok)]': o.status === 'OPEN',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--accent)] text-[var(--accent)]': o.status === 'ADMITTED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--muted)] text-[var(--muted)]': o.status === 'DEFERRED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--err)] text-[var(--err)]': o.status === 'ABANDONED',\n\t\t\t\t\t\t\t\t\t\t\t\t'border-[var(--warn)] text-[var(--warn)]': o.status === 'SUPERSEDED',\n\t\t\t\t\t\t\t\t\t\t\t}\" x-text=\"o.status\"></span> <span x-show=\"o.over_depth\" class=\"block text-xs text-[var(--warn)] mt-0.5\">over-depth</span></td><td class=\"py-2 pr-3\" x-text=\"o.depth\"></td><td class=\"py-2 pr-3\" x-text=\"o.priority\"></td><td class=\"py-2 pr-3 text-xs\" x-text=\"o.risk\"></td><td class=\"py-2 text-xs text-[var(--muted)]\" x-text=\"fmtTime(o.created_at)\"></td></tr></template></tbody></table></div><div class=\"mt-3 flex gap-2 items-center\" x-show=\"page && (page.limit < page.total || page.offset > 0)\"><button class=\"px-2 py-1 rounded border border-[var(--border)] text-sm disabled:opacity-40\" x-bind:disabled=\"!page || page.offset === 0\" x-on:click=\"prevPage()\">← Anterior</button> <button class=\"px-2 py-1 rounded border border-[var(--border)] text-sm disabled:opacity-40\" x-bind:disabled=\"!page || (page.offset + page.limit) >= page.total\" x-on:click=\"nextPage()\">Próxima →</button> <span class=\"text-xs text-[var(--muted)] ml-auto\" x-text=\"page && (page.offset + '–' + Math.min(page.offset + page.limit, page.total) + ' de ' + page.total)\"></span></div>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				return nil
-			})
-			templ_7745c5c3_Err = card("Oportunidades").Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><script>\n\t\t\tfunction frontierState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tobservedAt: null,\n\t\t\t\t\tpage: null,\n\t\t\t\t\tfilterStatus: '',\n\t\t\t\t\tfilterFamily: '',\n\t\t\t\t\tlimit: 25,\n\t\t\t\t\toffset: 0,\n\n\t\t\t\t\tget observedAgo() {\n\t\t\t\t\t\tif (!this.observedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tparams() {\n\t\t\t\t\t\tconst p = new URLSearchParams();\n\t\t\t\t\t\tp.set('limit', this.limit);\n\t\t\t\t\t\tp.set('offset', this.offset);\n\t\t\t\t\t\tif (this.filterStatus) p.set('status', this.filterStatus);\n\t\t\t\t\t\tif (this.filterFamily) p.set('family', this.filterFamily);\n\t\t\t\t\t\treturn p;\n\t\t\t\t\t},\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst d = await fetch('/dash/api/frontier?' + this.params()).then(r => r.json());\n\t\t\t\t\t\t\tthis.page = d;\n\t\t\t\t\t\t\tthis.observedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\treload() { this.offset = 0; this.refresh(); },\n\t\t\t\t\tnextPage() { this.offset += this.limit; this.refresh(); },\n\t\t\t\t\tprevPage() { this.offset = Math.max(0, this.offset - this.limit); this.refresh(); },\n\n\t\t\t\t\tshort(s, n) { return (s ?? '').slice(0, n); },\n\t\t\t\t\tfmtTime(t) {\n\t\t\t\t\t\tif (!t) return '';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() { this.refresh(); },\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><script>\n\t\t\tfunction frontierState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tobservedAt: null,\n\t\t\t\t\tpage: null,\n\t\t\t\t\tfilterStatus: '',\n\t\t\t\t\tfilterFamily: '',\n\n\t\t\t\t\tget observedAgo() {\n\t\t\t\t\t\tif (!this.observedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.observedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tparams(offset = 0) {\n\t\t\t\t\t\tconst p = new URLSearchParams();\n\t\t\t\t\t\tp.set('limit', '25');\n\t\t\t\t\t\tp.set('offset', String(offset));\n\t\t\t\t\t\tif (this.filterStatus) p.set('status', this.filterStatus);\n\t\t\t\t\t\tif (this.filterFamily) p.set('family', this.filterFamily);\n\t\t\t\t\t\treturn p;\n\t\t\t\t\t},\n\n\t\t\t\t\tasync reload() {\n\t\t\t\t\t\tawait this.loadOffset(0);\n\t\t\t\t\t},\n\n\t\t\t\t\tasync loadOffset(off) {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst data = await fetch('/dash/api/frontier?' + this.params(off)).then(r => r.json());\n\t\t\t\t\t\t\tthis.page = data ?? null;\n\t\t\t\t\t\t\tthis.observedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\tconst currentOff = this.page?.offset ?? 0;\n\t\t\t\t\t\tawait this.loadOffset(currentOff);\n\t\t\t\t\t},\n\n\t\t\t\t\tprevPage() {\n\t\t\t\t\t\tif (!this.page) return;\n\t\t\t\t\t\tconst nextOff = Math.max(0, this.page.offset - this.page.limit);\n\t\t\t\t\t\tthis.loadOffset(nextOff);\n\t\t\t\t\t},\n\n\t\t\t\t\tnextPage() {\n\t\t\t\t\t\tif (!this.page) return;\n\t\t\t\t\t\tconst nextOff = this.page.offset + this.page.limit;\n\t\t\t\t\t\tif (nextOff < this.page.total) this.loadOffset(nextOff);\n\t\t\t\t\t},\n\n\t\t\t\t\tshort(s, n) { return (s ?? '').slice(0, n); },\n\t\t\t\t\tfmtTime(t) {\n\t\t\t\t\t\tif (!t) return '–';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '–' : d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.reload();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -2,214 +2,179 @@ package views
 
 templ Models() {
 	@layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")) {
-		<div x-data="modelsState()" x-init="start()" class="space-y-4">
-			<!-- Bar de Conexão e Ações -->
-			<div class="flex items-center gap-3 text-sm">
-				<span class="inline-flex items-center gap-1.5">
+		<div x-data="modelsState()" x-init="start()" class="space-y-6">
+			<!-- Barra de Conexão e Ações -->
+			<div class="flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5 shadow-sm">
+				<span class="inline-flex items-center gap-2 font-medium">
 					<span
-						class="w-2 h-2 rounded-full"
-						x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"
+						class="w-2 h-2 rounded-full animate-pulse"
+						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
 					></span>
-					<span x-text="connected ? 'Inspect & Control API acessíveis' : 'sem resposta das APIs'"></span>
+					<span class="text-[var(--text)]" x-text="connected ? 'Inspect & Control API acessíveis' : 'sem resposta das APIs'"></span>
 				</span>
-				<span class="text-[var(--muted)]" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
+				<span class="text-[var(--muted)] border-l border-[var(--border)] pl-3" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
 				<div class="ml-auto flex gap-2">
 					<button
 						type="button"
-						class="px-3 py-1 rounded bg-[var(--accent)] text-white font-medium text-xs flex items-center gap-1.5 hover:opacity-90"
+						class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-white font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-all shadow-md shadow-[var(--accent)]/20 cursor-pointer"
 						x-on:click="openAddModal()"
 					>
 						+ Adicionar Modelo / Provedor
 					</button>
 					<button
-						class="px-2 py-1 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] text-xs"
+						class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-medium"
 						x-on:click="refresh()"
 					>↻ Atualizar</button>
 				</div>
 			</div>
 
 			<!-- Form / Modal para Adicionar ou Editar Provedor/Modelo -->
-			<div x-show="showForm" class="p-4 rounded-lg bg-[var(--panel)] border border-[var(--accent)] space-y-3" style="display:none;">
-				<div class="flex justify-between items-center pb-2 border-b border-[var(--border)]">
+			<div x-show="showForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--accent)] space-y-4 shadow-xl" style="display:none;">
+				<div class="flex justify-between items-center pb-3 border-b border-[var(--border)]">
 					<h3 class="font-bold text-sm text-[var(--text)]" x-text="formIsEdit ? 'Editar Provedor & Modelo: ' + form.id : 'Adicionar Novo Provedor & Modelo LLM'"></h3>
-					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)]" x-on:click="showForm = false">✕ Fechar</button>
+					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-[var(--panel-hover)]" x-on:click="showForm = false">✕ Fechar</button>
 				</div>
-				<form x-on:submit.prevent="submitForm()" class="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 text-xs">
+				<form x-on:submit.prevent="submitForm()" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 text-xs">
 					<div>
-						<label class="block text-[var(--muted)] mb-1">ID do Provedor (Slug)</label>
-						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">ID do Provedor (Slug)</label>
+						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Tipo de Provedor</label>
-						<select x-model="form.kind" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)]">
+						<label class="block text-[var(--muted)] font-semibold mb-1">Tipo de Provedor</label>
+						<select x-model="form.kind" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)]">
 							<option value="openai_compatible">OpenAI Compatible (Groq / NIM / Ollama)</option>
 						</select>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Base URL do Endpoint</label>
-						<input type="url" x-model="form.base_url" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Base URL do Endpoint</label>
+						<input type="url" x-model="form.base_url" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">ID do Modelo Exato</label>
-						<input type="text" x-model="form.model_id" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">ID do Modelo Exato</label>
+						<input type="text" x-model="form.model_id" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Janela de Contexto (tokens)</label>
-						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Janela de Contexto (tokens)</label>
+						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Máx. Output Tokens</label>
-						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Máx. Output Tokens</label>
+						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Concorrência Máxima</label>
-						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Concorrência Máxima</label>
+						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] mb-1">Prioridade do Binding</label>
-						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Prioridade do Binding</label>
+						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] mb-1">Nome da Var de Ambiente de API Key</label>
-						<input type="text" x-model="form.api_key_env" required class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Nome da Var de Ambiente de API Key</label>
+						<input type="text" x-model="form.api_key_env" required class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
 					</div>
 					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] mb-1">Chave / API Secret (salva no Cofre local)</label>
-						<input type="password" x-model="form.secret_value" class="w-full px-2 py-1.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
+						<label class="block text-[var(--muted)] font-semibold mb-1">Chave / API Secret (salva no Cofre local)</label>
+						<input type="password" x-model="form.secret_value" class="w-full px-3 py-2 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
 					</div>
-					<div class="md:col-span-4 flex items-center gap-3 pt-2">
-						<button type="submit" class="px-4 py-1.5 rounded bg-[var(--accent)] text-white font-medium text-xs hover:opacity-90" x-bind:disabled="formSubmitting">
+					<div class="md:col-span-4 flex items-center gap-3 pt-3 border-t border-[var(--border)]/40">
+						<button type="submit" class="px-4 py-2 rounded-lg bg-[var(--accent)] text-white font-bold text-xs hover:opacity-90 shadow-md shadow-[var(--accent)]/20 cursor-pointer" x-bind:disabled="formSubmitting">
 							<span x-text="formIsEdit ? 'Salvar Alterações do Modelo' : 'Adicionar Modelo ao Catálogo'"></span>
 						</button>
-						<button type="button" class="px-3 py-1.5 rounded border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)]" x-on:click="showForm = false">Cancelar</button>
+						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] font-medium" x-on:click="showForm = false">Cancelar</button>
 						<span x-show="formMsg" class="text-xs font-mono" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
 					</div>
 				</form>
 			</div>
 
 			<!-- Status do Cofre de Credenciais -->
-			<div class="p-3 rounded-lg bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-xs gap-2">
-				<div class="flex items-center gap-2">
-					<span class="font-medium text-[var(--text)]">Cofre de Credenciais Local:</span>
-					<span class="font-mono text-[var(--muted)]" x-text="vaultState"></span>
+			<div class="p-4 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-xs gap-3 shadow-sm">
+				<div class="flex items-center gap-3">
+					<span class="font-semibold text-[var(--text)]">Cofre de Credenciais Local:</span>
+					<span class="font-mono px-2 py-0.5 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--muted)]" x-text="vaultState"></span>
 				</div>
 				<div class="flex items-center gap-2" x-data="{ vPass: '' }">
-					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-2 py-1 rounded bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-36"/>
-					<button type="button" class="px-2 py-1 rounded bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 font-medium" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
+					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-3 py-1.5 rounded-lg bg-[#0d1420] border border-[var(--border)] text-[var(--text)] w-40"/>
+					<button type="button" class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/25 font-semibold transition-all cursor-pointer" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
 				</div>
 			</div>
 
 			<!-- Gestão de Provedores & Modelos Configurados -->
 			@card("Gestão de Provedores e Modelos Registrados") {
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
-					<p class="text-sm text-[var(--muted)]">Nenhum provedor configurado no catálogo ativo.</p>
+					<p class="text-sm text-[var(--muted)] p-3 text-center border border-dashed border-[var(--border)] rounded-lg">Nenhum provedor configurado no catálogo ativo.</p>
 				</template>
-				<div class="space-y-3" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+				<div class="space-y-4" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
 					<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
-						<div class="p-3 rounded-lg border border-[var(--border)] bg-[var(--bg)]/50 space-y-2">
-							<div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+						<div class="p-4 rounded-xl border border-[var(--border)] bg-[#0d1420] space-y-3 shadow-sm">
+							<div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)]/60 pb-3">
 								<div>
 									<span class="font-bold text-sm text-[var(--text)] font-mono" x-text="p.id"></span>
-									<span class="ml-2 text-xs text-[var(--muted)]" x-text="p.kind + ' · ' + p.base_url"></span>
+									<span class="ml-2 text-xs text-[var(--muted)] font-mono" x-text="p.kind + ' · ' + p.base_url"></span>
 								</div>
 								<div class="flex items-center gap-2">
 									<button
 										type="button"
-										class="px-2 py-1 rounded border border-[var(--border)] text-xs text-[var(--text)] hover:bg-[var(--panel)]"
+										class="px-2.5 py-1 rounded-lg border border-[var(--border)] text-xs text-[var(--text)] hover:bg-[var(--panel)] font-medium transition-all"
 										x-on:click="editProvider(p.id)"
 									>
-										✎ Editar
+										✏ Editar
 									</button>
 									<button
 										type="button"
-										class="px-2 py-1 rounded text-xs border font-medium"
-										x-bind:class="isProviderEnabled(p.id) ? 'border-[var(--warn)]/40 text-[var(--warn)] bg-[var(--warn)]/10 hover:bg-[var(--warn)]/20' : 'border-[var(--ok)]/40 text-[var(--ok)] bg-[var(--ok)]/10 hover:bg-[var(--ok)]/20'"
+										class="px-2.5 py-1 rounded-lg border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel)] font-medium transition-all"
 										x-on:click="toggleProvider(p.id)"
-									>
-										<span x-text="isProviderEnabled(p.id) ? '⏸ Desativar' : '▶ Ativar'"></span>
-									</button>
+										x-text="p.enabled ? '⏸ Desativar' : '▶ Ativar'"
+									></button>
 									<button
 										type="button"
-										class="px-2 py-1 rounded border border-[var(--err)]/40 text-[var(--err)] bg-[var(--err)]/10 hover:bg-[var(--err)]/20 text-xs font-medium"
+										class="px-2.5 py-1 rounded-lg bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/30 hover:bg-[var(--err)]/20 text-xs font-semibold transition-all"
 										x-on:click="removeProvider(p.id)"
 									>
 										🗑 Remover
 									</button>
 								</div>
 							</div>
-							<!-- Bindings do Provedor -->
-							<div class="space-y-1.5 pl-2">
-								<template x-for="b in getProviderBindings(p.id)" x-bind:key="b.id">
-									<div class="flex flex-wrap items-center justify-between text-xs py-1 px-2 rounded bg-[var(--panel)] border border-[var(--border)]">
-										<div class="flex items-center gap-2">
-											<span class="w-2 h-2 rounded-full" x-bind:class="b.enabled ? 'bg-[var(--ok)]' : 'bg-[var(--muted)]'"></span>
-											<span class="font-mono font-medium text-[var(--text)]" x-text="b.model_id"></span>
-											<span class="text-[var(--muted)]" x-text="'(Ctx: ' + fmtNum(b.context_tokens) + ' tok | Out: ' + fmtNum(b.max_output_tokens) + ' tok)'"></span>
-										</div>
-										<div class="flex items-center gap-3">
-											<span class="text-[var(--muted)]" x-text="'Prio: ' + b.priority"></span>
-											<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold font-mono" x-bind:class="b.enabled ? 'bg-[var(--ok)]/20 text-[var(--ok)]' : 'bg-[var(--muted)]/20 text-[var(--muted)]'" x-text="b.enabled ? 'ATIVO' : 'INATIVO'"></span>
-										</div>
-									</div>
-								</template>
+							<div class="grid gap-2 grid-cols-2 md:grid-cols-4 text-xs font-mono text-[var(--muted)]">
+								<div>API Key Env: <strong class="text-[var(--text)]" x-text="p.api_key_env || 'N/A'"></strong></div>
+								<div>Concorrência: <strong class="text-[var(--text)]" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></strong></div>
+								<div>Estado: <strong x-bind:class="p.enabled ? 'text-[var(--ok)]' : 'text-[var(--warn)]'" x-text="p.enabled ? 'Ativo' : 'Desativado'"></strong></div>
+								<div>Bindings: <strong class="text-[var(--accent)]" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></strong></div>
 							</div>
 						</div>
 					</template>
 				</div>
 			}
 
-			@card("Bindings de modelo (Status Runtime)") {
-				<template x-if="(bindings ?? []).length === 0">
-					<p class="text-sm text-[var(--muted)]" x-text="note || 'Nenhum binding configurado (estado válido quando não há revisão MODELS ativa).'"></p>
-				</template>
-				<div class="overflow-x-auto" x-show="(bindings ?? []).length > 0">
-					<table class="w-full text-sm">
+			<!-- Model Bindings (Visão do Telemetria / Inspect) -->
+			@card("Bindings de Modelo no Runtime (Inspect API)") {
+				<p class="text-xs text-[var(--muted)] mb-3" x-show="note" x-text="note"></p>
+				<div class="overflow-x-auto">
+					<table class="w-full text-left border-collapse text-xs">
 						<thead>
-							<tr class="text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-								<th class="py-2 pr-3">Binding</th>
-								<th class="py-2 pr-3">Provider</th>
-								<th class="py-2 pr-3">Modelo</th>
-								<th class="py-2 pr-3">Ctx / MaxOut</th>
-								<th class="py-2 pr-3">Limits</th>
-								<th class="py-2 pr-3">Uso</th>
-								<th class="py-2">Pressão</th>
+							<tr class="border-b border-[var(--border)] text-[var(--muted)] font-mono">
+								<th class="py-2.5 px-3">Slot / Role</th>
+								<th class="py-2.5 px-3">Modelo</th>
+								<th class="py-2.5 px-3">Provedor</th>
+								<th class="py-2.5 px-3">Concorrência</th>
+								<th class="py-2.5 px-3">Contexto</th>
+								<th class="py-2.5 px-3">Max Output</th>
+								<th class="py-2.5 px-3">Prioridade</th>
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<template x-for="b in bindings" x-bind:key="b.binding_id">
-								<tr class="align-top">
-									<td class="py-2 pr-3 mono text-xs" x-text="short(b.binding_id, 10)"></td>
-									<td class="py-2 pr-3">
-										<div x-text="b.provider_id"></div>
-										<div class="text-xs text-[var(--muted)]" x-text="b.provider_kind"></div>
-									</td>
-									<td class="py-2 pr-3 mono text-xs" x-text="b.model_id"></td>
-									<td class="py-2 pr-3 text-xs">
-										<div x-text="fmtNum(b.context_tokens) + ' tok'"></div>
-										<div class="text-[var(--muted)]" x-text="'out ' + fmtNum(b.max_output_tokens)"></div>
-									</td>
-									<td class="py-2 pr-3 text-xs">
-										<div x-show="b.provider_limit && (b.provider_limit.max_concurrent > 0 || b.provider_limit.max_rps > 0)"
-											x-text="limitLabel(b.provider_limit)"></div>
-										<div x-show="b.binding_limit && (b.binding_limit.max_concurrent > 0 || b.binding_limit.max_rps > 0)"
-											class="text-[var(--muted)]" x-text="'bind ' + limitLabel(b.binding_limit)"></div>
-									</td>
-									<td class="py-2 pr-3 text-xs">
-										<template x-if="b.binding_usage || b.provider_usage">
-											<div x-text="usageLabel(b.binding_usage || b.provider_usage)"></div>
-										</template>
-										<template x-if="!(b.binding_usage || b.provider_usage)">
-											<span class="text-[var(--muted)]">—</span>
-										</template>
-									</td>
-									<td class="py-2 text-xs">
-										<template x-if="b.context_pressure">
-											<span x-bind:class="pressureClass(b.context_pressure)" x-text="pressureLabel(b.context_pressure)"></span>
-										</template>
-										<template x-if="!b.context_pressure">
-											<span class="text-[var(--muted)]">—</span>
-										</template>
-									</td>
+						<tbody class="divide-y divide-[var(--border)]/40 font-mono">
+							<template x-if="bindings.length === 0">
+								<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Nenhum binding retornado pela Inspect API.</td></tr>
+							</template>
+							<template x-for="b in bindings" x-bind:key="b.slot ?? b.role ?? Math.random()">
+								<tr class="hover:bg-[var(--panel-hover)] transition-colors">
+									<td class="py-2.5 px-3 font-semibold text-[var(--text)]" x-text="b.slot ?? b.role ?? '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--accent)] font-bold" x-text="b.model_id ?? b.model ?? '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.provider ?? '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.max_concurrent ?? '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.context_tokens ? (b.context_tokens + ' tks') : '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.max_output_tokens ? (b.max_output_tokens + ' tks') : '–'"></td>
+									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.priority ?? '–'"></td>
 								</tr>
 							</template>
 						</tbody>
@@ -217,36 +182,36 @@ templ Models() {
 				</div>
 			}
 
-			@card("Context pressure persistida") {
-				<template x-if="(pressures ?? []).length === 0">
-					<p class="text-sm text-[var(--muted)]" x-text="pressureNote || 'Nenhum binding com pressão persistida.'"></p>
-				</template>
-				<div class="overflow-x-auto" x-show="(pressures ?? []).length > 0">
-					<table class="w-full text-sm">
-						<thead>
-							<tr class="text-left text-[var(--muted)] text-xs uppercase tracking-wider">
-								<th class="py-2 pr-3">Binding</th>
-								<th class="py-2 pr-3">Nível</th>
-								<th class="py-2 pr-3">Sucessos no nível</th>
-								<th class="py-2 pr-3">Redução ativa</th>
-								<th class="py-2">Atualizado</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)]">
-							<template x-for="p in pressures" x-bind:key="p.binding_id">
-								<tr>
-									<td class="py-2 pr-3 font-mono text-xs" x-bind:title="p.binding_id" x-text="short(p.binding_id, 10)"></td>
-									<td class="py-2 pr-3" x-text="p.level"></td>
-									<td class="py-2 pr-3 font-mono tabular-nums" x-text="fmtNum(p.successes_at_level)"></td>
-									<td class="py-2 pr-3">
-										<span x-bind:class="p.reduction_active ? 'text-[var(--warn)]' : 'text-[var(--muted)]'"
-											x-text="p.reduction_active ? 'sim (' + Math.round((p.reduction_fraction ?? 1) * 100) + '% do window)' : 'não'"></span>
-									</td>
-									<td class="py-2 text-xs text-[var(--muted)] font-mono tabular-nums" x-text="fmtTime(p.updated_at)"></td>
-								</tr>
-							</template>
-						</tbody>
-					</table>
+			<!-- Pressões de Contexto -->
+			@card("Pressão de Contexto dos Modelos") {
+				<p class="text-xs text-[var(--muted)] mb-3" x-show="pressureNote" x-text="pressureNote"></p>
+				<div class="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+					<template x-if="pressures.length === 0">
+						<p class="text-xs text-[var(--muted)] col-span-3">Nenhum dado de pressão de contexto disponível.</p>
+					</template>
+					<template x-for="p in pressures" x-bind:key="p.model_id ?? Math.random()">
+						<div class="p-3 rounded-xl border border-[var(--border)] bg-[#0d1420] space-y-2">
+							<div class="flex justify-between items-center text-xs font-mono">
+								<span class="font-bold text-[var(--text)]" x-text="p.model_id ?? '–'"></span>
+								<span
+									class="px-2 py-0.5 rounded text-[10px] font-bold"
+									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]/20 text-[var(--err)]' : 'bg-[var(--ok)]/20 text-[var(--ok)]'"
+									x-text="((p.ratio ?? 0) * 100).toFixed(1) + '%'"
+								></span>
+							</div>
+							<div class="w-full bg-[var(--bg)] rounded-full h-2 overflow-hidden border border-[var(--border)]">
+								<div
+									class="h-full rounded-full transition-all"
+									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]' : 'bg-[var(--ok)]'"
+									x-bind:style="'width: ' + Math.min(100, Math.max(0, (p.ratio ?? 0) * 100)) + '%'"
+								></div>
+							</div>
+							<div class="flex justify-between text-[10px] text-[var(--muted)] font-mono">
+								<span>Usado: <strong class="text-[var(--text)]" x-text="p.used_tokens ?? 0"></strong></span>
+								<span>Limite: <strong class="text-[var(--text)]" x-text="p.limit_tokens ?? 0"></strong></span>
+							</div>
+						</div>
+					</template>
 				</div>
 			}
 		</div>
@@ -389,104 +354,55 @@ templ Models() {
 						this.showForm = true;
 					},
 
-					isProviderEnabled(id) {
-						const bs = (this.cfgPayload.bindings || []).filter(b => b.provider_ref === id);
-						return bs.some(b => b.enabled);
-					},
-
-					getProviderBindings(id) {
-						return (this.cfgPayload.bindings || []).filter(b => b.provider_ref === id);
-					},
-
-					async toggleProvider(id) {
-						const next = JSON.parse(JSON.stringify(this.cfgPayload));
-						const bs = next.bindings.filter(b => b.provider_ref === id);
-						const turnOn = !bs.some(b => b.enabled);
-						bs.forEach(b => { b.enabled = turnOn; });
-						await this.createModelsDraft(next, (turnOn ? "Ativar modelos " : "Desativar modelos ") + id);
-					},
-
-					async removeProvider(id) {
-						if (!confirm("Remover o provedor " + id + " e seus modelos do próximo catálogo?")) return;
-						const next = JSON.parse(JSON.stringify(this.cfgPayload));
-						next.providers = next.providers.filter(p => p.id !== id);
-						next.bindings = next.bindings.filter(b => b.provider_ref !== id);
-						await this.createModelsDraft(next, "Remover provedor " + id + " via dashboard");
-					},
-
-					modelLimit(resource, maxConcurrent) {
-						return {
-							resource: resource,
-							max_concurrent: maxConcurrent,
-							max_per_minute: 0,
-							max_per_day: 0,
-							max_tokens_per_minute: 0,
-							failure_threshold: 3,
-							cooldown_base: 30000000000,
-							cooldown_max: 300000000000,
-							reserved_for_critical: 0
-						};
+					async saveSecretIfProvided(id, secret) {
+						if (!secret) return;
+						await fetch('/dash/api/vault/secrets/provider/' + encodeURIComponent(id) + '/api-key', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ value: secret })
+						});
 					},
 
 					async submitForm() {
-						if (this.form.max_output_tokens >= this.form.context_tokens) {
-							this.formMsg = 'Máx output tokens deve ser menor que a janela de contexto.';
-							this.formIsErr = true;
-							return;
-						}
 						this.formSubmitting = true;
-						this.formMsg = 'Enviando rascunho de alteração...';
+						this.formMsg = 'Salvando modelo...';
 						this.formIsErr = false;
-
 						try {
 							const id = this.form.id.trim();
-							const next = JSON.parse(JSON.stringify(this.cfgPayload));
-							if (!Array.isArray(next.providers)) next.providers = [];
-							if (!Array.isArray(next.bindings)) next.bindings = [];
+							if (!id) throw new Error("ID do provedor é obrigatório.");
 
-							const p = {
+							if (this.form.secret_value) {
+								await this.saveSecretIfProvided(id, this.form.secret_value);
+							}
+
+							const currentProviders = [...(this.cfgPayload.providers || [])];
+							const currentBindings = [...(this.cfgPayload.bindings || [])];
+
+							const newP = {
 								id: id,
 								kind: this.form.kind,
 								base_url: this.form.base_url.trim(),
 								api_key_env: this.form.api_key_env.trim(),
-								timeout: 45000000000,
-								max_response_bytes: 1048576,
-								global_limit: this.modelLimit("model-provider:" + id, Number(this.form.max_concurrent))
+								enabled: true,
+								global_limit: { max_concurrent: Number(this.form.max_concurrent) }
 							};
-							const bindingID = id + "-primary";
-							const b = {
-								id: bindingID,
+
+							const newB = {
+								slot: "SLOT_" + id.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
 								provider_ref: id,
 								model_id: this.form.model_id.trim(),
-								enabled: true,
-								priority: Number(this.form.priority),
 								context_tokens: Number(this.form.context_tokens),
 								max_output_tokens: Number(this.form.max_output_tokens),
-								max_output_dialect: "max_tokens",
-								limit: this.modelLimit("model-binding:" + bindingID, 1)
+								priority: Number(this.form.priority)
 							};
 
-							const pi = next.providers.findIndex(x => x.id === id);
-							if (pi >= 0) next.providers[pi] = p; else next.providers.push(p);
+							const pi = currentProviders.findIndex(x => x.id === id);
+							if (pi >= 0) currentProviders[pi] = newP; else currentProviders.push(newP);
 
-							const bi = next.bindings.findIndex(x => x.provider_ref === id);
-							if (bi >= 0) {
-								b.id = next.bindings[bi].id;
-								b.limit.resource = "model-binding:" + b.id;
-								next.bindings[bi] = b;
-							} else next.bindings.push(b);
+							const bi = currentBindings.findIndex(x => x.provider_ref === id);
+							if (bi >= 0) currentBindings[bi] = newB; else currentBindings.push(newB);
 
-							next.version = "models.dashboard." + Date.now();
-
-							// Se informou API Secret, salvar no Cofre
-							if (this.form.secret_value.trim()) {
-								await fetch('/dash/api/vault/secrets/' + encodeURIComponent("provider/" + id + "/api-key"), {
-									method: 'PUT',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({ value: this.form.secret_value.trim() })
-								});
-							}
-
+							const next = { providers: currentProviders, bindings: currentBindings };
 							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar modelo " : "Adicionar modelo ") + id);
 							if (window.notify) window.notify('Modelo ' + id + ' salvo com sucesso!', 'success');
 							this.showForm = false;
@@ -499,72 +415,59 @@ templ Models() {
 						}
 					},
 
-					async createModelsDraft(nextModelsPayload, reason) {
-						// 1. Criar Draft
+					async toggleProvider(id) {
+						const currentProviders = [...(this.cfgPayload.providers || [])];
+						const pi = currentProviders.findIndex(x => x.id === id);
+						if (pi < 0) return;
+						currentProviders[pi].enabled = !currentProviders[pi].enabled;
+						const next = { providers: currentProviders, bindings: [...(this.cfgPayload.bindings || [])] };
+						await this.createModelsDraft(next, (currentProviders[pi].enabled ? "Ativar " : "Desativar ") + id);
+					},
+
+					async removeProvider(id) {
+						if (!confirm("Remover o provedor " + id + " do catálogo de modelos?")) return;
+						const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
+						const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
+						await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover modelo " + id);
+					},
+
+					async createModelsDraft(modelsPayload, note) {
+						// 1. POST draft
 						const draftRes = await fetch('/dash/api/control/config/drafts', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({
-								schema_version: 1,
-								scope: "MODELS",
-								based_on_revision: this.cfgActiveRevision,
-								reason: reason,
-								applicability: "NEXT_CYCLE",
-								models: nextModelsPayload
+								scope: 'MODELS',
+								payload: { models: modelsPayload },
+								note: note || 'Draft alterado via dashboard v2'
 							})
 						});
-						const draftData = await draftRes.json();
-						if (!draftRes.ok) throw new Error(draftData.error?.message || draftData.message || ('HTTP ' + draftRes.status));
+						const draft = await draftRes.json();
+						if (!draftRes.ok) throw new Error(draft.error?.message || draft.message || 'Erro ao criar rascunho');
 
-						const draftID = draftData.draft?.id;
-						if (draftID) {
-							// 2. Validar e Auto-Aplicar Draft
-							await fetch('/dash/api/control/config/drafts/' + encodeURIComponent(draftID) + '/validate', { method: 'POST' });
-							const applyRes = await fetch('/dash/api/control/config/drafts/' + encodeURIComponent(draftID) + '/apply', { method: 'POST' });
-							if (!applyRes.ok) {
-								const applyData = await applyRes.json();
-								throw new Error('Draft criado, mas falha ao aplicar: ' + (applyData.error?.message || applyRes.statusText));
-							}
-						}
+						const draftID = draft.id || (draft.draft && draft.draft.id);
+
+						// 2. POST validate
+						const valRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
+						const val = await valRes.json();
+						if (!valRes.ok) throw new Error(val.error?.message || 'Rascunho inválido');
+
+						// 3. POST apply
+						const appRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/apply', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ reason: note || 'Aplicado via dashboard v2' })
+						});
+						const app = await appRes.json();
+						if (!appRes.ok) throw new Error(app.error?.message || 'Erro ao aplicar rascunho');
+
 						await this.refresh();
-					},
-
-					fmtNum(v) { return v == null ? '–' : Number(v).toLocaleString('pt-BR'); },
-					short(s, n) { return (s ?? '').slice(0, n); },
-					fmtTime(t) {
-						if (!t) return '';
-						const d = new Date(t);
-						return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');
-					},
-					limitLabel(l) {
-						if (!l) return '';
-						const parts = [];
-						if (l.max_concurrent > 0) parts.push('conc ' + l.max_concurrent);
-						if (l.max_rps > 0) parts.push(l.max_rps + '/s');
-						return parts.join(' · ');
-					},
-					usageLabel(u) {
-						if (!u) return '';
-						if (u.in_flight != null) return u.in_flight + ' em voo';
-						if (u.tokens_used != null) return this.fmtNum(u.tokens_used) + ' tok';
-						return 'ativo';
-					},
-					pressureClass(p) {
-						if (!p) return 'text-[var(--muted)]';
-						if (p.reduction_active) return 'text-[var(--warn)]';
-						if (p.level > 0) return 'text-[var(--accent)]';
-						return 'text-[var(--ok)]';
-					},
-					pressureLabel(p) {
-						if (!p) return '';
-						const base = 'nível ' + p.level;
-						return p.reduction_active ? base + ' ↓' : base;
 					},
 
 					start() {
 						this.refresh();
 						setInterval(() => this.refresh(), 10000);
-					},
+					}
 				};
 			}
 		</script>
