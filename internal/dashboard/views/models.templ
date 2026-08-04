@@ -17,71 +17,104 @@ templ Models() {
 					<button
 						type="button"
 						class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)] text-[#090d16] font-bold text-xs flex items-center gap-1.5 hover:opacity-90 transition-all cursor-pointer"
-						x-on:click="openAddModal()"
+						x-on:click="openAddProviderModal()"
 					>
-						+ Adicionar Provedor / Modelo
+						+ Adicionar Provedor LLM
 					</button>
 					<button
+						type="button"
+						class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text)] hover:bg-white/[0.04] transition-all font-medium text-xs cursor-pointer"
+						x-on:click="openAddBindingModal()"
+					>
+						+ Adicionar Preferência de Modelo
+					</button>
+					<button
+						type="button"
 						class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] transition-all font-medium"
 						x-on:click="refresh()"
 					>↻ Atualizar</button>
 				</div>
 			</div>
 
-			<!-- Form / Modal para Adicionar ou Editar Provedor/Modelo -->
-			<div x-show="showForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--accent)]/40 space-y-4 shadow-2xl" style="display:none;">
+			<!-- Form / Modal para Adicionar ou Editar Provedor LLM (SEM EXIGIR MODELO FIXO) -->
+			<div x-show="showProviderForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--accent)]/40 space-y-4 shadow-2xl" style="display:none;">
 				<div class="flex justify-between items-center pb-3 border-b border-[var(--border)]">
-					<h3 class="font-bold text-xs text-[var(--text)]" x-text="formIsEdit ? 'Editar Provedor & Modelo: ' + form.id : 'Adicionar Novo Provedor & Modelo LLM'"></h3>
-					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-white/[0.04]" x-on:click="showForm = false">✕ Fechar</button>
+					<h3 class="font-bold text-xs text-[var(--text)]" x-text="providerFormIsEdit ? 'Editar Provedor LLM: ' + providerForm.id : 'Adicionar Novo Provedor LLM (Sem Exigir Modelo Fixo)'"></h3>
+					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-white/[0.04]" x-on:click="showProviderForm = false">✕ Fechar</button>
 				</div>
-				<form x-on:submit.prevent="submitForm()" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 text-xs">
+				<form x-on:submit.prevent="submitProviderForm()" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-xs">
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">ID do Provedor (Slug)</label>
-						<input type="text" x-model="form.id" x-bind:readonly="formIsEdit" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq-llama33"/>
+						<input type="text" x-model="providerForm.id" x-bind:readonly="providerFormIsEdit" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="ex: groq, nvidia-nim, ollama"/>
 					</div>
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">Tipo de Provedor</label>
-						<select x-model="form.kind" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)]">
+						<select x-model="providerForm.kind" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)]">
 							<option value="openai_compatible">OpenAI Compatible (Groq / NIM / Ollama)</option>
 						</select>
 					</div>
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">Base URL do Endpoint</label>
-						<input type="url" x-model="form.base_url" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
+						<input type="url" x-model="providerForm.base_url" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="https://api.groq.com/openai/v1"/>
 					</div>
 					<div>
-						<label class="block text-[var(--muted)] font-medium mb-1">ID do Modelo Exato</label>
-						<input type="text" x-model="form.model_id" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="llama-3.3-70b-versatile"/>
+						<label class="block text-[var(--muted)] font-medium mb-1">Nome da Var de Ambiente da API Key</label>
+						<input type="text" x-model="providerForm.api_key_env" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] font-medium mb-1">Concorrência Máxima de Requisições</label>
+						<input type="number" x-model.number="providerForm.max_concurrent" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] font-medium mb-1">API Secret / Chave (Salvar no Cofre Local)</label>
+						<input type="password" x-model="providerForm.secret_value" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Opcional: salva diretamente no Vault"/>
+					</div>
+					<div class="md:col-span-3 flex items-center gap-3 pt-3 border-t border-[var(--border)]">
+						<button type="submit" class="px-4 py-2 rounded-lg bg-[var(--accent)] text-[#090d16] font-bold text-xs hover:opacity-90 transition-all cursor-pointer" x-bind:disabled="formSubmitting">
+							<span x-text="providerFormIsEdit ? 'Salvar Alterações do Provedor' : 'Cadastrar Provedor LLM'"></span>
+						</button>
+						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium" x-on:click="showProviderForm = false">Cancelar</button>
+						<span x-show="formMsg" class="text-xs font-mono" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
+					</div>
+				</form>
+			</div>
+
+			<!-- Form / Modal para Adicionar Preferência de Modelo (Binding Opcional) -->
+			<div x-show="showBindingForm" class="p-5 rounded-xl bg-[var(--panel)] border border-[var(--border)] space-y-4 shadow-2xl" style="display:none;">
+				<div class="flex justify-between items-center pb-3 border-b border-[var(--border)]">
+					<h3 class="font-bold text-xs text-[var(--text)]">Adicionar / Editar Preferência de Modelo (Binding Opcional)</h3>
+					<button type="button" class="text-xs text-[var(--muted)] hover:text-[var(--text)] px-2 py-1 rounded bg-white/[0.04]" x-on:click="showBindingForm = false">✕ Fechar</button>
+				</div>
+				<form x-on:submit.prevent="submitBindingForm()" class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-xs">
+					<div>
+						<label class="block text-[var(--muted)] font-medium mb-1">Provedor de Origem</label>
+						<select x-model="bindingForm.provider_ref" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)]">
+							<template x-for="p in (cfgPayload.providers || [])" x-bind:key="p.id">
+								<option x-bind:value="p.id" x-text="p.id + ' (' + p.base_url + ')'"></option>
+							</template>
+						</select>
+					</div>
+					<div>
+						<label class="block text-[var(--muted)] font-medium mb-1">ID do Modelo (ex: llama-3.3-70b-versatile)</label>
+						<input type="text" x-model="bindingForm.model_id" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="digite ou selecione dos descobertos"/>
 					</div>
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">Janela de Contexto (tokens)</label>
-						<input type="number" x-model.number="form.context_tokens" required min="1024" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<input type="number" x-model.number="bindingForm.context_tokens" required min="1024" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">Máx. Output Tokens</label>
-						<input type="number" x-model.number="form.max_output_tokens" required min="256" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-medium mb-1">Concorrência Máxima</label>
-						<input type="number" x-model.number="form.max_concurrent" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<input type="number" x-model.number="bindingForm.max_output_tokens" required min="256" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
 					<div>
 						<label class="block text-[var(--muted)] font-medium mb-1">Prioridade do Binding</label>
-						<input type="number" x-model.number="form.priority" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
+						<input type="number" x-model.number="bindingForm.priority" required min="1" max="100" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono"/>
 					</div>
-					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] font-medium mb-1">Nome da Var de Ambiente de API Key</label>
-						<input type="text" x-model="form.api_key_env" required class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="GROQ_API_KEY"/>
-					</div>
-					<div class="md:col-span-2">
-						<label class="block text-[var(--muted)] font-medium mb-1">Chave / API Secret (salva no Cofre local)</label>
-						<input type="password" x-model="form.secret_value" class="w-full px-3 py-2 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] font-mono" placeholder="Deixe em branco se já estiver salva no ambiente"/>
-					</div>
-					<div class="md:col-span-4 flex items-center gap-3 pt-3 border-t border-[var(--border)]">
+					<div class="md:col-span-3 flex items-center gap-3 pt-3 border-t border-[var(--border)]">
 						<button type="submit" class="px-4 py-2 rounded-lg bg-[var(--accent)] text-[#090d16] font-bold text-xs hover:opacity-90 transition-all cursor-pointer" x-bind:disabled="formSubmitting">
-							<span x-text="formIsEdit ? 'Salvar Alterações do Modelo' : 'Adicionar Modelo ao Catálogo'"></span>
+							Salvar Preferência de Modelo
 						</button>
-						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium" x-on:click="showForm = false">Cancelar</button>
+						<button type="button" class="px-3.5 py-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium" x-on:click="showBindingForm = false">Cancelar</button>
 						<span x-show="formMsg" class="text-xs font-mono" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
 					</div>
 				</form>
@@ -99,8 +132,8 @@ templ Models() {
 				</div>
 			</div>
 
-			<!-- Gestão de Provedores & Modelos Configurados -->
-			@card("Gestão de Provedores e Modelos Registrados") {
+			<!-- Gestão de Provedores LLM Configurados -->
+			@card("Provedores LLM Registrados") {
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
 					<p class="text-xs text-[var(--muted)] p-3 text-center">Nenhum provedor configurado no catálogo ativo.</p>
 				</template>
@@ -113,6 +146,13 @@ templ Models() {
 									<span class="ml-2 text-xs text-[var(--muted)] font-mono" x-text="p.kind + ' · ' + p.base_url"></span>
 								</div>
 								<div class="flex items-center gap-2">
+									<button
+										type="button"
+										class="px-2.5 py-1 rounded-md text-xs text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 font-semibold transition-all cursor-pointer"
+										x-on:click="discoverModelsForProvider(p.id)"
+									>
+										🔍 Descobrir Modelos via API
+									</button>
 									<button
 										type="button"
 										class="px-2.5 py-1 rounded-md text-xs text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] font-medium transition-all"
@@ -139,15 +179,48 @@ templ Models() {
 								<div>API Key Env: <strong class="text-[var(--text)]" x-text="p.api_key_env || 'N/A'"></strong></div>
 								<div>Concorrência: <strong class="text-[var(--text)]" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></strong></div>
 								<div>Estado: <strong x-bind:class="p.enabled ? 'text-[var(--ok)]' : 'text-[var(--warn)]'" x-text="p.enabled ? 'Ativo' : 'Desativado'"></strong></div>
-								<div>Bindings: <strong class="text-[var(--accent)]" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></strong></div>
+								<div>Bindings Preferenciais: <strong class="text-[var(--accent)]" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></strong></div>
 							</div>
 						</div>
 					</template>
 				</div>
 			}
 
-			<!-- Model Bindings (Visão do Telemetria / Inspect) -->
-			@card("Bindings de Modelo no Runtime (Inspect API)") {
+			<!-- Modelos Descobertos Dinamicamente via API OpenAI -->
+			@card("Modelos Descobertos Dinamicamente via API OpenAI") {
+				<div class="space-y-3">
+					<div class="flex items-center justify-between text-xs">
+						<span class="text-[var(--muted)]" x-text="discoveredModelsNote || 'Modelos obtidos dinamicamente da API OpenAI do provedor ativo.'"></span>
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 font-semibold text-xs transition-all cursor-pointer"
+							x-on:click="discoverModels()"
+						>
+							🔄 Buscar Modelos da API OpenAI
+						</button>
+					</div>
+					<template x-if="discoveredModels.length === 0">
+						<p class="text-xs text-[var(--muted)] p-2">Nenhum modelo retornado pela API OpenAI até o momento (clique no botão para buscar).</p>
+					</template>
+					<div class="flex flex-wrap gap-2 pt-2" x-show="discoveredModels.length > 0">
+						<template x-for="m in discoveredModels" x-bind:key="m">
+							<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-xs font-mono">
+								<span class="font-bold text-[var(--accent)]" x-text="m"></span>
+								<button
+									type="button"
+									class="text-[10px] text-[var(--muted)] hover:text-[var(--text)] hover:underline ml-1 cursor-pointer"
+									x-on:click="addBindingFromDiscovered(m)"
+								>
+									+ Preferência
+								</button>
+							</div>
+						</template>
+					</div>
+				</div>
+			}
+
+			<!-- Preferências de Modelo / Bindings Registradas (Opcional) -->
+			@card("Preferências de Modelo / Bindings (Opcional)") {
 				<p class="text-xs text-[var(--muted)] mb-3" x-show="note" x-text="note"></p>
 				<div class="overflow-x-auto">
 					<table class="w-full text-left border-collapse text-xs">
@@ -160,11 +233,12 @@ templ Models() {
 								<th class="py-2.5 px-3">Contexto</th>
 								<th class="py-2.5 px-3">Max Output</th>
 								<th class="py-2.5 px-3">Prioridade</th>
+								<th class="py-2.5 px-3 text-right">Ação</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-[var(--border-subtle)] font-mono">
 							<template x-if="bindings.length === 0">
-								<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Nenhum binding retornado pela Inspect API.</td></tr>
+								<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Nenhuma preferência explícita de modelo cadastrada (o sistema usa descoberta dinâmica).</td></tr>
 							</template>
 							<template x-for="b in bindings" x-bind:key="b.slot ?? b.role ?? Math.random()">
 								<tr class="hover:bg-white/[0.02] transition-colors">
@@ -175,6 +249,13 @@ templ Models() {
 									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.context_tokens ? (b.context_tokens + ' tks') : '–'"></td>
 									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.max_output_tokens ? (b.max_output_tokens + ' tks') : '–'"></td>
 									<td class="py-2.5 px-3 text-[var(--muted)]" x-text="b.priority ?? '–'"></td>
+									<td class="py-2.5 px-3 text-right">
+										<button
+											type="button"
+											class="text-[10px] text-[var(--err)] hover:underline"
+											x-on:click="removeBinding(b.id ?? b.slot)"
+										>Remover</button>
+									</td>
 								</tr>
 							</template>
 						</tbody>
@@ -230,24 +311,35 @@ templ Models() {
 					cfgPayload: { providers: [], bindings: [] },
 					vaultState: 'Desconhecido',
 
-					// Form de adição/edição
-					showForm: false,
-					formIsEdit: false,
-					formSubmitting: false,
-					formMsg: '',
-					formIsErr: false,
-					form: {
+					// Descoberta Dinâmica de Modelos
+					discoveredModels: [],
+					discoveredModelsNote: '',
+
+					// Form de Provedor (sem modelo fixo)
+					showProviderForm: false,
+					providerFormIsEdit: false,
+					providerForm: {
 						id: '',
 						kind: 'openai_compatible',
 						base_url: 'https://api.groq.com/openai/v1',
+						api_key_env: 'GROQ_API_KEY',
+						max_concurrent: 2,
+						secret_value: ''
+					},
+
+					// Form de Binding / Preferência de Modelo (Opcional)
+					showBindingForm: false,
+					bindingForm: {
+						provider_ref: '',
 						model_id: '',
 						context_tokens: 131072,
 						max_output_tokens: 8192,
-						max_concurrent: 2,
-						priority: 10,
-						api_key_env: 'GROQ_API_KEY',
-						secret_value: ''
+						priority: 10
 					},
+
+					formSubmitting: false,
+					formMsg: '',
+					formIsErr: false,
 
 					get observedAgo() {
 						if (!this.observedAt) return '';
@@ -267,7 +359,6 @@ templ Models() {
 							this.pressures = p?.pressures ?? [];
 							this.pressureNote = p?.note ?? '';
 
-							// Config active payload
 							const rev = activeRev?.revision || activeRev;
 							if (rev && rev.payload) {
 								this.cfgActiveRevision = Number(rev.revision || 0);
@@ -280,6 +371,27 @@ templ Models() {
 							this.observedAt = Date.now();
 							this.connected = true;
 						} catch (e) { this.connected = false; }
+					},
+
+					async discoverModels() {
+						try {
+							this.discoveredModelsNote = 'Buscando modelos dinâmicos da API OpenAI...';
+							const res = await fetch('/dash/api/provider/models');
+							const data = await res.json();
+							if (data && data.models && Array.isArray(data.models)) {
+								this.discoveredModels = data.models;
+								this.discoveredModelsNote = `${data.models.length} modelos dinâmicos retornados pela API OpenAI`;
+								if (window.notify) window.notify(`${data.models.length} modelos descobertos da API OpenAI!`, 'success');
+							} else {
+								this.discoveredModelsNote = data.note || 'Nenhum modelo retornado no momento.';
+							}
+						} catch (err) {
+							this.discoveredModelsNote = 'Erro na descoberta: ' + err.message;
+						}
+					},
+
+					async discoverModelsForProvider(pId) {
+						await this.discoverModels();
 					},
 
 					async refreshVaultStatus() {
@@ -308,50 +420,64 @@ templ Models() {
 							if (!res.ok) throw new Error('Falha ao desbloquear');
 							await this.refreshVaultStatus();
 							if (window.notify) window.notify('Cofre de credenciais desbloqueado!', 'success');
-							else alert('Cofre desbloqueado com sucesso!');
 						} catch (err) {
 							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
-							else alert('Erro no cofre: ' + err.message);
 						}
 					},
 
-					openAddModal() {
-						this.formIsEdit = false;
-						this.form = {
+					openAddProviderModal() {
+						this.providerFormIsEdit = false;
+						this.providerForm = {
 							id: '',
 							kind: 'openai_compatible',
 							base_url: 'https://api.groq.com/openai/v1',
-							model_id: '',
-							context_tokens: 131072,
-							max_output_tokens: 8192,
-							max_concurrent: 2,
-							priority: 10,
 							api_key_env: 'GROQ_API_KEY',
+							max_concurrent: 2,
 							secret_value: ''
 						};
 						this.formMsg = '';
-						this.showForm = true;
+						this.showProviderForm = true;
+					},
+
+					openAddBindingModal() {
+						const firstP = (this.cfgPayload.providers || [])[0];
+						this.bindingForm = {
+							provider_ref: firstP ? firstP.id : '',
+							model_id: '',
+							context_tokens: 131072,
+							max_output_tokens: 8192,
+							priority: 10
+						};
+						this.formMsg = '';
+						this.showBindingForm = true;
+					},
+
+					addBindingFromDiscovered(modelId) {
+						const firstP = (this.cfgPayload.providers || [])[0];
+						this.bindingForm = {
+							provider_ref: firstP ? firstP.id : '',
+							model_id: modelId,
+							context_tokens: 131072,
+							max_output_tokens: 8192,
+							priority: 10
+						};
+						this.showBindingForm = true;
 					},
 
 					editProvider(id) {
 						const p = (this.cfgPayload.providers || []).find(x => x.id === id);
-						const b = (this.cfgPayload.bindings || []).find(x => x.provider_ref === id);
 						if (!p) return;
-						this.formIsEdit = true;
-						this.form = {
+						this.providerFormIsEdit = true;
+						this.providerForm = {
 							id: p.id,
 							kind: p.kind || 'openai_compatible',
 							base_url: p.base_url || '',
-							model_id: b ? b.model_id : '',
-							context_tokens: b ? b.context_tokens : 8192,
-							max_output_tokens: b ? b.max_output_tokens : 1024,
 							max_concurrent: (p.global_limit && p.global_limit.max_concurrent) || 1,
-							priority: b ? b.priority : 10,
-							api_key_env: p.api_key_env || 'EON_PROVIDER_API_KEY',
+							api_key_env: p.api_key_env || 'GROQ_API_KEY',
 							secret_value: ''
 						};
 						this.formMsg = '';
-						this.showForm = true;
+						this.showProviderForm = true;
 					},
 
 					async saveSecretIfProvided(id, secret) {
@@ -363,53 +489,76 @@ templ Models() {
 						});
 					},
 
-					async submitForm() {
+					async submitProviderForm() {
 						this.formSubmitting = true;
-						this.formMsg = 'Salvando modelo...';
+						this.formMsg = 'Salvando provedor...';
 						this.formIsErr = false;
 						try {
-							const id = this.form.id.trim();
+							const id = this.providerForm.id.trim();
 							if (!id) throw new Error("ID do provedor é obrigatório.");
 
-							if (this.form.secret_value) {
-								await this.saveSecretIfProvided(id, this.form.secret_value);
+							if (this.providerForm.secret_value) {
+								await this.saveSecretIfProvided(id, this.providerForm.secret_value);
 							}
 
 							const currentProviders = [...(this.cfgPayload.providers || [])];
-							const currentBindings = [...(this.cfgPayload.bindings || [])];
-
 							const newP = {
 								id: id,
-								kind: this.form.kind,
-								base_url: this.form.base_url.trim(),
-								api_key_env: this.form.api_key_env.trim(),
+								kind: this.providerForm.kind,
+								base_url: this.providerForm.base_url.trim(),
+								api_key_env: this.providerForm.api_key_env.trim(),
 								enabled: true,
-								global_limit: { max_concurrent: Number(this.form.max_concurrent) }
-							};
-
-							const newB = {
-								slot: "SLOT_" + id.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
-								provider_ref: id,
-								model_id: this.form.model_id.trim(),
-								context_tokens: Number(this.form.context_tokens),
-								max_output_tokens: Number(this.form.max_output_tokens),
-								priority: Number(this.form.priority)
+								global_limit: { max_concurrent: Number(this.providerForm.max_concurrent) }
 							};
 
 							const pi = currentProviders.findIndex(x => x.id === id);
 							if (pi >= 0) currentProviders[pi] = newP; else currentProviders.push(newP);
 
-							const bi = currentBindings.findIndex(x => x.provider_ref === id);
-							if (bi >= 0) currentBindings[bi] = newB; else currentBindings.push(newB);
-
-							const next = { providers: currentProviders, bindings: currentBindings };
-							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar modelo " : "Adicionar modelo ") + id);
-							if (window.notify) window.notify('Modelo ' + id + ' salvo com sucesso!', 'success');
-							this.showForm = false;
+							const next = { providers: currentProviders, bindings: [...(this.cfgPayload.bindings || [])] };
+							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar provedor " : "Adicionar provedor ") + id);
+							if (window.notify) window.notify('Provedor ' + id + ' salvo com sucesso!', 'success');
+							this.showProviderForm = false;
 						} catch (err) {
 							this.formMsg = 'Erro: ' + err.message;
 							this.formIsErr = true;
-							if (window.notify) window.notify('Erro ao salvar modelo: ' + err.message, 'error');
+							if (window.notify) window.notify('Erro ao salvar provedor: ' + err.message, 'error');
+						} finally {
+							this.formSubmitting = false;
+						}
+					},
+
+					async submitBindingForm() {
+						this.formSubmitting = true;
+						this.formMsg = 'Salvando preferência de modelo...';
+						this.formIsErr = false;
+						try {
+							const pRef = this.bindingForm.provider_ref;
+							const mId = this.bindingForm.model_id.trim();
+							if (!pRef || !mId) throw new Error("Provedor e ID do modelo são obrigatórios.");
+
+							const currentBindings = [...(this.cfgPayload.bindings || [])];
+							const newB = {
+								id: "binding_" + pRef + "_" + mId.replace(/[^a-zA-Z0-9]/g, '_'),
+								slot: "SLOT_" + mId.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
+								provider_ref: pRef,
+								model_id: mId,
+								enabled: true,
+								context_tokens: Number(this.bindingForm.context_tokens),
+								max_output_tokens: Number(this.bindingForm.max_output_tokens),
+								priority: Number(this.bindingForm.priority)
+							};
+
+							const bi = currentBindings.findIndex(x => x.provider_ref === pRef && x.model_id === mId);
+							if (bi >= 0) currentBindings[bi] = newB; else currentBindings.push(newB);
+
+							const next = { providers: [...(this.cfgPayload.providers || [])], bindings: currentBindings };
+							await this.createModelsDraft(next, "Adicionar preferência de modelo " + mId);
+							if (window.notify) window.notify('Preferência de modelo ' + mId + ' salva!', 'success');
+							this.showBindingForm = false;
+						} catch (err) {
+							this.formMsg = 'Erro: ' + err.message;
+							this.formIsErr = true;
+							if (window.notify) window.notify('Erro ao salvar binding: ' + err.message, 'error');
 						} finally {
 							this.formSubmitting = false;
 						}
@@ -425,14 +574,19 @@ templ Models() {
 					},
 
 					async removeProvider(id) {
-						if (!confirm("Remover o provedor " + id + " do catálogo de modelos?")) return;
+						if (!confirm("Remover o provedor " + id + " do catálogo de provedores?")) return;
 						const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
 						const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
-						await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover modelo " + id);
+						await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
+					},
+
+					async removeBinding(idOrSlot) {
+						if (!confirm("Remover esta preferência de modelo?")) return;
+						const nextB = (this.cfgPayload.bindings || []).filter(x => x.id !== idOrSlot && x.slot !== idOrSlot);
+						await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover preferência de modelo");
 					},
 
 					async createModelsDraft(modelsPayload, note) {
-						// 1. POST draft
 						const draftRes = await fetch('/dash/api/control/config/drafts', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
@@ -447,12 +601,10 @@ templ Models() {
 
 						const draftID = draft.id || (draft.draft && draft.draft.id);
 
-						// 2. POST validate
 						const valRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
 						const val = await valRes.json();
 						if (!valRes.ok) throw new Error(val.error?.message || 'Rascunho inválido');
 
-						// 3. POST apply
 						const appRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/apply', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
