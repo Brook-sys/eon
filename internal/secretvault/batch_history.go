@@ -18,6 +18,7 @@ func (v *Vault) BatchSecretHistory(names []string) ([]BatchSecretHistoryResult, 
 	defer v.mu.Unlock()
 
 	if len(v.key) == 0 {
+		v.recordAuditLocked("batch_history", "", "failure")
 		return nil, ErrLocked
 	}
 
@@ -60,5 +61,6 @@ func (v *Vault) BatchSecretHistory(names []string) ([]BatchSecretHistoryResult, 
 		results[i] = res
 	}
 
+	v.recordAuditLocked("batch_history", "", "success")
 	return results, nil
 }
