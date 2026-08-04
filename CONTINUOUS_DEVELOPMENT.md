@@ -7010,3 +7010,14 @@ Implementação:
 **Live hypothesis and bounds.** Rotated provider deployment to primary Groq `openai/gpt-oss-120b` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
+
+## Phase 372 — credential vault BatchPurgeExpired capability, HTTP endpoint & live campaign (2026-08-04 05:00 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with targeted multi-secret selective purge `BatchPurgeExpired` and HTTP endpoint `POST /secrets/batch-purge-expired`.
+1. Implemented `func (v *Vault) BatchPurgeExpired(names []string) (BatchPurgeResult, error)`: inspects passed secret names, purges only those where `ExpiresAt` is non-zero and `<= now`, ignores active/missing secrets, sorts purged names deterministically, saves vault file atomically in a single write, and logs audit events (`batch_purge_expired`).
+2. Added HTTP endpoint: `POST /secrets/batch-purge-expired` accepting `{"names": [...]}` and returning `BatchPurgeResult` (HTTP 200 OK).
+3. Added unit tests in `internal/secretvault/batch_purge_test.go` covering target subset purge, active secret preservation, locked vault rejection, and HTTP surface.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `llama-3.3-70b-versatile` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 625.08 ms (HTTP 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase372-groq-llama33-vault-batch-purge/`.
