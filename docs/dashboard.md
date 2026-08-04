@@ -1,52 +1,101 @@
 # Documentação do Painel do Operador (`dashboard`) — `motor-autonomo`
 
-O painel do operador do **`motor-autonomo`** é uma interface web SPA (*Single Page Application*) inline e sem etapas de build externas, servida diretamente pelo pacote `internal/dashboard`. Ele permite acompanhar o estado do sistema, inspecionar execuções, responder a perguntas de auditoria/interrupção, gerenciar revisões de missão, cadastrar provedores de modelos LLM e administrar configurações versionadas de forma segura.
+O painel do operador do **`motor-autonomo`** é uma interface web moderna servida pelo pacote `internal/dashboard`.
+
+No projeto existem duas superfícies:
+1. **v1 (Legacy):** Interface baseada em Vanilla JS (servida em `/` e `/dashboard`).
+2. **v2 (Design System & HTMX):** Nova interface construída com Go Templ, HTMX, Alpine.js e Tailwind CSS v4, servida na rota **/dash/** (`http://localhost:8080/dash/`).
 
 ---
 
-## 1. Visão Geral do Painel
+## 1. Visão Geral do Painel v2 (`/dash/`)
 
 ### O que é
-O painel é uma superfície de controle e inspeção experimental projetada para operadores humanos e automatizados. Ele **nunca escreve diretamente no banco de dados canônico**; toda leitura ocorre por meio de projeções fornecidas pela **Inspect API** e todas as mutações são enviadas por comandos/eventos tipados à **Control API**. As credenciais confidenciais (como chaves de API) trafegam exclusivamente pela **Vault API** (localhost-only e write-only).
+A versão v2 do painel do operador traz uma arquitetura de componentes server-side (Templ) baseada no Design System oficial (`docs/ui/DESIGN_SYSTEM.md`). Ela fornece visualização em tempo real de eventos, posture de modelos LLM, uso de recursos, fonte de conhecimento e métricas do sistema com alinhamento numérico legível e suporte a atalhos de teclado.
 
 ### Como acessar
-Quando o runtime é iniciado com a flag `-dashboard=true` (padrão) e a flag `-listen` configurada (ex.: `127.0.0.1:8080`), o painel fica acessível nas seguintes URLs do seu navegador:
+Quando o runtime é iniciado com a flag `-dashboard=true` (padrão) e a flag `-listen` configurada (ex.: `127.0.0.1:8080`), o painel v2 fica acessível nas seguintes URLs do seu navegador:
 
-*   **Página inicial:** `http://127.0.0.1:8080/`
-*   **Alias direto:** `http://127.0.0.1:8080/dashboard` ou `http://127.0.0.1:8080/dashboard/`
+*   **Página inicial v2:** `http://127.0.0.1:8080/dash/`
+*   **Eventos:** `http://127.0.0.1:8080/dash/events`
+*   **Detalhes de Evento:** `http://127.0.0.1:8080/dash/events/{id}`
+*   **Modelos:** `http://127.0.0.1:8080/dash/models`
+*   **Recursos:** `http://127.0.0.1:8080/dash/resources`
+*   **Fronteira:** `http://127.0.0.1:8080/dash/frontier`
+*   **Alertas:** `http://127.0.0.1:8080/dash/alerts`
+*   **Conhecimento:** `http://127.0.0.1:8080/dash/knowledge`
 
-Por padrão, a API base é montada em `/api`, expondo:
-*   Inspect API em `/api/inspect/`
-*   Control API em `/api/control/`
-*   Vault API em `/api/vault/` (apenas quando o Vault está ativado em localhost)
+### Atalhos de Teclado (v2)
+Você pode navegar rapidamente entre as páginas pressionando as teclas no teclado:
+*   `g` + `o`: Ir para Visão Geral (`/dash/`)
+*   `g` + `e`: Ir para Explorador de Eventos (`/dash/events`)
+*   `g` + `m`: Ir para Postura de Modelos (`/dash/models`)
+*   `g` + `k`: Ir para Base de Conhecimento (`/dash/knowledge`)
+*   `?`: Abrir modal Cheatsheet de Atalhos de Teclado
+
+---
+
+## 2. Como Adicionar uma Nova Página no Dashboard v2
+
+Para adicionar uma nova sub-página no dashboard v2, siga os 3 passos abaixo:
+
+### Passo 1: Criar o Template Templ
+Crie um arquivo em `internal/dashboard/views/<sua_pagina>.templ`.
+
+```templ
+package views
+
+templ SuaPagina() {
+    @layout("Título da Sua Página", "/dash/sua-pagina", []NavItem{
+        {Href: "/dash", Label: "Visão geral"},
+        {Href: "/dash/sua-pagina", Label: "Sua Página", Active: true},
+    }) {
+        <div class="space-y-4">
+            @card("Título do Bloco") {
+                <p class="text-sm font-mono text-[var(--text)]">Conteúdo aqui...</p>
+            }
+        </div>
+    }
+}
+```
+Gere os arquivos Go com:
+```bash
+go run github.com/a-h/templ/cmd/templ@latest generate ./internal/dashboard/views/
+```
+
+### Passo 2: Registrar o Handler no `server_v2.go`
+No arquivo `internal/dashboard/server_v2.go`:
+
+1. Registre a rota em `Handler()`:
+```go
+mux.Handle("GET /dash/sua-pagina", http.HandlerFunc(s.handleSuaPagina))
+```
+
+2. Escreva o handler:
+```go
+func (s *V2Server) handleSuaPagina(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "text/html; charset=utf-8")
+    w.Header().Set("Cache-Control", "no-store")
+    component := views.SuaPagina()
+    if err := component.Render(r.Context(), w); err != nil {
+        s.Logger.Printf("render sua pagina: %v", err)
+    }
+}
+```
+
+### Passo 3: Adicionar o Link na Sidebar (`sidebar.templ`)
+Edite `internal/dashboard/views/sidebar.templ` e inclua o item na lista de navegação.
+
+---
+
+## 3. Painel Legacy (v1)
+
+A versão v1 permanece acessível em `http://127.0.0.1:8080/` e `http://127.0.0.1:8080/dashboard` como fallback e para envio de comandos de controle (mutações da Control API).
 
 ### Filosofia de Segurança e Isolamento
-*   **Zero Secrets na UI:** Tokens e chaves de API nunca são renderizados na tela ou retornados em endpoints de leitura.
-*   **Write-only Vault:** A inserção de chaves de API de provedores envia o segredo diretamente ao cofre local cifrado com AES-256-GCM.
-*   **Mutações por Draft/Revisão:** Alterações de infraestrutura e modelos não afetam o runtime imediatamente em memória; elas criam *drafts* versionados que passam por validação previa (`validate`) e aplicação controlada (`apply`).
+*   **Zero Secrets na UI:** Tokens e chaves de API nunca são renderizados na tela.
+*   **Write-only Vault:** Inserção de chaves via cofre local cifrado com AES-256-GCM.
 
----
-
-## 2. Áreas Navegáveis
-
-O painel é organizado em **6 áreas navegáveis** através da barra lateral (*sidebar*). Abaixo está o detalhamento de cada área, seus blocos, botões, campos e casos de uso.
-
----
-
-### Área 1: Visão Geral (`home`)
-
-#### O que faz
-Oferece um panorama em tempo real da missão em andamento, métricas do runtime, estado do despacho, perguntas pendentes e alertas críticos.
-
-#### Seções e Blocos
-1.  **Contexto (`data-view="home mission"`)**
-    *   **Propósito:** Define a missão ativa sob inspeção e controla a atualização global de dados e a conexão da linha do tempo.
-    *   **Campos:**
-        *   `mission_id` (`#missionId`): ID único da missão (ex.: `mission_demo_01`).
-    *   **Botões:**
-        *   `Atualizar` (`#btnRefresh`): Executa uma leitura completa via Control e Inspect APIs (`health`, `overview`, `questions`, `config/revisions/active`).
-        *   `Conectar timeline` (`#btnConnect`): Estabelece a conexão EventSource (SSE) com o endpoint `/api/inspect/events/stream`.
-    *   **Indicadores:** Caixa de erro global (`#globalError`).
 
 2.  **Overview (`data-view="home mission"`)**
     *   **Propósito:** Exibe metadados de execução do runtime (`process_mode`, `control_revision`, `event_head_sequence`, `pending_commands`, `pending_questions`, `evicted_subagents`) e estatísticas da missão (status, revisão ativa, propósito, despacho, agenda, horizonte, fronteira e diagnósticos de continuidade).
