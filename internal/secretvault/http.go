@@ -227,8 +227,9 @@ func (h HTTP) importVault(w http.ResponseWriter, r *http.Request) {
 }
 func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
 	filter := AuditFilter{
-		Action: strings.TrimSpace(r.URL.Query().Get("action")),
-		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+		Action:     strings.TrimSpace(r.URL.Query().Get("action")),
+		Status:     strings.TrimSpace(r.URL.Query().Get("status")),
+		SecretName: strings.TrimSpace(r.URL.Query().Get("secret_name")),
 	}
 	if since := strings.TrimSpace(r.URL.Query().Get("since")); since != "" {
 		parsed, err := time.Parse(time.RFC3339, since)
@@ -267,8 +268,9 @@ func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
 // aggregation, keeping the summary complete.
 func (h HTTP) auditSummary(w http.ResponseWriter, r *http.Request) {
 	filter := AuditFilter{
-		Action: strings.TrimSpace(r.URL.Query().Get("action")),
-		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+		Action:     strings.TrimSpace(r.URL.Query().Get("action")),
+		Status:     strings.TrimSpace(r.URL.Query().Get("status")),
+		SecretName: strings.TrimSpace(r.URL.Query().Get("secret_name")),
 	}
 	if since := strings.TrimSpace(r.URL.Query().Get("since")); since != "" {
 		parsed, err := time.Parse(time.RFC3339, since)

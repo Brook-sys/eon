@@ -1541,11 +1541,12 @@ func (v *Vault) SecretHistory(name string) ([]AuditEvent, error) {
 
 // AuditFilter holds optional filters for AuditLogFiltered.
 type AuditFilter struct {
-	Action string
-	Status string
-	Since  time.Time
-	Until  time.Time
-	Limit  int
+	Action     string
+	Status     string
+	SecretName string
+	Since      time.Time
+	Until      time.Time
+	Limit      int
 }
 
 // AuditSummary aggregates filtered audit events for operator diagnostics.
@@ -1584,6 +1585,9 @@ func (v *Vault) AuditSummary(filter AuditFilter) AuditSummary {
 		if filter.Status != "" && evt.Status != filter.Status {
 			continue
 		}
+		if filter.SecretName != "" && evt.SecretName != filter.SecretName {
+			continue
+		}
 		if !filter.Since.IsZero() && evt.Timestamp.Before(filter.Since) {
 			continue
 		}
@@ -1620,6 +1624,9 @@ func (v *Vault) AuditLogFiltered(filter AuditFilter) []AuditEvent {
 			continue
 		}
 		if filter.Status != "" && evt.Status != filter.Status {
+			continue
+		}
+		if filter.SecretName != "" && evt.SecretName != filter.SecretName {
 			continue
 		}
 		if !filter.Since.IsZero() && evt.Timestamp.Before(filter.Since) {

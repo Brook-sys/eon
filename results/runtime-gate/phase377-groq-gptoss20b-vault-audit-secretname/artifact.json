@@ -1,0 +1,21 @@
+{
+  "phase": "Phase 377",
+  "task": "vault-audit-secretname-filter",
+  "timestamp": "2026-08-04T20:25:00-03:00",
+  "primary_provider": "groq",
+  "primary_model": "openai/gpt-oss-20b",
+  "fallback_provider": "nvidia_nim",
+  "fallback_model": "meta/llama-3.1-8b-instruct",
+  "live_trial": {
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms": 445.0,
+    "prompt_tokens": 160,
+    "completion_tokens": 53,
+    "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+    "exact_match": true,
+    "durable_reopen_verified": true
+  }
+}

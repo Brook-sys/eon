@@ -7011,6 +7011,18 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 377 — Secret Vault Audit Filter by SecretName & Live Campaign (2026-08-04 20:30 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` audit filtering with `SecretName` targeting across Go methods and HTTP API.
+1. Added `SecretName` field to `AuditFilter` in `internal/secretvault/vault.go`.
+2. Updated `v.AuditLogFiltered(filter)` and `v.AuditSummary(filter)` to match `evt.SecretName == filter.SecretName` when specified.
+3. Updated HTTP handlers `GET /audit` and `GET /audit/summary` in `internal/secretvault/http.go` to parse query parameter `secret_name`.
+4. Added deterministic unit tests in `internal/secretvault/batch_search_audit_test.go` verifying `SecretName` filtering.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `openai/gpt-oss-20b` (with `reasoning_effort: low`), 64 max tokens, 30 s deadline, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary `openai/gpt-oss-20b` completed the live call in 445 ms (200 OK, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase377-groq-gptoss20b-vault-audit-secretname/`.
+
 ## Phase 376 — credential vault BatchSecretHistory audit logging fix & Phase 376 live campaign (2026-08-04 13:45 -03)
 
 **Objective and implementation.** Corrected audit logging on locked vault access in `secretvault.Vault.BatchSecretHistory` and updated Phase 376 live campaign artifacts.

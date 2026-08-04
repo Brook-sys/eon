@@ -142,6 +142,17 @@ func TestVault_AuditLogFiltered(t *testing.T) {
 		}
 	}
 
+	// Filter by SecretName "key1"
+	key1Evts := v.AuditLogFiltered(AuditFilter{SecretName: "key1"})
+	if len(key1Evts) == 0 {
+		t.Fatalf("expected at least 1 audit event for 'key1'")
+	}
+	for _, e := range key1Evts {
+		if e.SecretName != "key1" {
+			t.Fatalf("expected SecretName='key1', got %q", e.SecretName)
+		}
+	}
+
 	// Filter by Status "failure"
 	failEvts := v.AuditLogFiltered(AuditFilter{Status: "failure"})
 	if len(failEvts) == 0 {
