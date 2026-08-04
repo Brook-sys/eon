@@ -1,7 +1,7 @@
 # Design System — `motor-autonomo` Dashboard v2
 
 **Status:** Ativo / Produção
-**Versão:** 2.1.0 (Design System Standarized & System Architecture Enforced)
+**Versão:** 2.2.0 (Polidez de Componentes, Espaçamento de Bordas e Usabilidade)
 **Escopo:** Todas as superfícies operacionais sob `/dash/*` (Go Templ + Alpine.js + HTMX + Tailwind CSS v4)
 
 ---
@@ -15,15 +15,16 @@ O Design System do **`motor-autonomo`** é construído sob os princípios de **O
 1. **Clareza Informacional Sem Poluição Visual:**
    - Evita cards aninhados pesados, bordas duplicadas ou sombras chamativas.
    - Utiliza contraste sutil de fundo (`--bg` vs `--panel` vs `--panel-sub`), tipografia precisa e indicadores de estado coloridos (`--ok`, `--warn`, `--err`, `--accent`).
+   - Espaçamento generoso de bordas (`p-5` a `p-6` em cards, `px-3.5 py-2` em inputs) para evitar colisão visual de textos e elementos.
 2. **Resiliência e Recuperação Transparente:**
    - A interface monitora proativamente a conectividade com as APIs do runtime (`/dash/api/control/` e `/dash/api/inspect/`).
    - Notifica o operador instantaneamente via Toast ou Banners sobre desconexões ou retries sem travar a navegação.
 3. **Desempenho Server-Side Type-Safe com Templ:**
    - Todo o HTML é compilado em Go via Templ, garantindo tempo de resposta sub-milissegundo para a primeira pintura (SSR).
    - Interações dinâmicas são orquestradas por Alpine.js (~15 KB) e HTMX (~14 KB) sem peso de frameworks SPA.
-4. **Navegação Eficiente e Atalhos de Teclado:**
-   - Atalhos globais sem interferir em campos de formulário ou `input/textarea`.
-   - Atalho `?` abre o cheatsheet interativo de navegação rápida em qualquer página.
+4. **Navegação Limpa e Intuitiva:**
+   - Barra lateral organizada com rótulos claros e destaques visuais para a rota ativa.
+   - Sem atalhos invasivos de teclado de tecla única, garantindo digitação fluida em inputs sem disparo acidental de navegação.
 5. **Acessibilidade e Usabilidade em Telas de Operação:**
    - Suporte completo a navegação por teclado (`Tab`, `:focus-visible` com anel de foco `--accent`).
    - Rótulos ARIA semânticos (`role="navigation"`, `role="main"`, `aria-label`).
@@ -78,52 +79,19 @@ Os tokens do Design System são definidos como **CSS Custom Properties** globais
 | `info` / `notice` | `--accent` | `#38bdf8` | Informação neutra, estado ativo de nav |
 | `neutral` | `--muted` | `#94a3b8` | Metadados genéricos, inativo |
 
-### 2.3 Tipografia e Escala
-
-- **Corpo da Página:** `14px / 1.5` (`var(--sans)`).
-- **Labels de Seção:** `11px uppercase tracking-wider` (`var(--muted)` font-bold).
-- **Valores KPI / Stat:** `24px (text-2xl)` ou `30px (text-3xl)` (`var(--mono)` font-bold).
-- **Elementos Técnicos (IDs, Hashes, JSON, Logs):** `12px` (`var(--mono)`).
-
 ---
 
-## 3. Biblioteca de Componentes Templ (`internal/dashboard/views/components.templ`)
+## 3. Inventário de Componentes Reutilizáveis (Templ)
 
-Toda a interface v2 consome componentes Templ reutilizáveis e fortemente tipados.
+Todos os componentes vivem em `internal/dashboard/views/components.templ`:
 
-| Componente | Assinatura | Descrição / Uso |
-|---|---|---|
-| `Card` | `card(title string)` | Conteiner com borda sutil, título em uppercase e padding responsivo |
-| `StatCard` | `statCard(label, value, sub, tone)` | Exibição de KPI/métrica individual com destaque visual |
-| `StatusDot` | `statusDot(ok bool, label string)` | Indicador de pulso verde/vermelho com rótulo semântico |
-| `Badge` | `badge(label, kind string)` | Pill de status (`success`, `warning`, `error`, `info`, `neutral`) |
-| `AlertBanner` | `alertBanner(title, msg, kind)` | Caixa de alerta em destaque no topo das páginas |
-| `EmptyState` | `emptyState(msg string)` | Estado vazio padronizado com borda pontilhada e mensagem explicativa |
-| `Pager` | `pager(prefix string, current, total int, hasPrev, hasNext bool)` | Barra de paginação uniforme com estados desabilitados |
-| `Kbd` | `kbd(key string)` | Tecla de atalho visual padronizada (`<kbd>g</kbd>`) |
-| `LoadingSkeleton` | `loadingSkeleton(rows int)` | Animação de carregamento (shimmer) para tabelas e listas |
-| `CopyButton` | `copyButton(text string)` | Botão compacto para cópia de JSON/IDs com feedback de toast |
-
----
-
-## 4. Atalhos de Teclado Nativos (`layout.templ`)
-
-O dashboard v2 inclui navegação global por teclado ativada quando o usuário pressiona a sequência correspondente (fora de campos de formulário):
-
-- <kbd>g</kbd> <kbd>o</kbd> → Ir para **Visão Geral** (`/dash`)
-- <kbd>g</kbd> <kbd>e</kbd> → Ir para **Eventos** (`/dash/events`)
-- <kbd>g</kbd> <kbd>m</kbd> → Ir para **Modelos & LLMs** (`/dash/models`)
-- <kbd>g</kbd> <kbd>r</kbd> → Ir para **Recursos & Gates** (`/dash/resources`)
-- <kbd>g</kbd> <kbd>f</kbd> → Ir para **Fronteira & Ações** (`/dash/frontier`)
-- <kbd>g</kbd> <kbd>a</kbd> → Ir para **Alertas & Telemetria** (`/dash/alerts`)
-- <kbd>g</kbd> <kbd>k</kbd> → Ir para **Conhecimento** (`/dash/knowledge`)
-- <kbd>?</kbd> → Abrir / Fechar o **Cheatsheet de Atalhos**
-
----
-
-## 5. Diretrizes de Qualidade e Manutenibilidade
-
-1. **Compilação Templ Obrigatória:** Qualquer alteração em arquivos `.templ` exige a execução de `templ generate ./internal/dashboard/views/`.
-2. **Check de Formatação:** O código gerado deve passar limpo por `git diff --check`.
-3. **Testes Unitários de Componentes:** Novos componentes devem ter casos de teste correspondentes em `components_test.go`.
-4. **Respeito às Regras de Execução:** Toda iteração de sistema exige validação com a suíte de testes Go (`go test ./...`) e inferência live obrigatória (Regra 6).
+1. `@StatCard(label, value, sub, tone string)` — Card de métrica KPI com espaçamento interno generoso.
+2. `@StatusDot(ok bool, label string)` — Indicador viva de pulso para status de conexões.
+3. `@Badge(label, kind string)` — Pílula semântica padronizada com bordas suaves.
+4. `@Card(title string)` — Conteiner principal de seção com padding de 1.5rem (`p-6`).
+5. `@AlertBanner(title, msg, kind string)` — Banner destacado para alertas e mensagens críticas.
+6. `@EmptyState(msg string)` — Caixa de estado vazio padronizada para tabelas e listas.
+7. `@Kbd(key string)` — Renderizador visual de teclas/instruções em linha.
+8. `@LoadingSkeleton(rows int)` — Indicador de carregamento com efeito de brilho (*shimmer*).
+9. `@CopyButton(textToCopy string)` — Botão compacto de cópia para clipboard com toast.
+10. `@Pager(prefix, current, total, hasPrev, hasNext)` — Controles de paginação com espaçamento refinado.

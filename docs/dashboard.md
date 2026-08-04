@@ -35,22 +35,7 @@ A versão v2 do painel do operador traz uma arquitetura de componentes server-si
 
 ---
 
-## 2. Atalhos de Teclado Globais & Cheatsheet (`?`)
-
-O painel v2 inclui suporte a navegação por teclado sem interferir em inputs de texto:
-
-- <kbd>g</kbd> <kbd>o</kbd> → Visão Geral (`/dash`)
-- <kbd>g</kbd> <kbd>e</kbd> → Explorador de Eventos (`/dash/events`)
-- <kbd>g</kbd> <kbd>m</kbd> → Modelos & LLMs (`/dash/models`)
-- <kbd>g</kbd> <kbd>r</kbd> → Recursos & Gates (`/dash/resources`)
-- <kbd>g</kbd> <kbd>f</kbd> → Fronteira & Ações (`/dash/frontier`)
-- <kbd>g</kbd> <kbd>a</kbd> → Alertas & Telemetria (`/dash/alerts`)
-- <kbd>g</kbd> <kbd>k</kbd> → Base de Conhecimento (`/dash/knowledge`)
-- <kbd>?</kbd> → Abrir / Fechar Cheatsheet de Atalhos de Teclado
-
----
-
-## 3. Arquitetura do Design System & Componentes Templ
+## 2. Arquitetura do Design System & Componentes Templ
 
 Toda a interface consome a biblioteca de componentes em `internal/dashboard/views/components.templ`:
 
@@ -61,12 +46,11 @@ Toda a interface consome a biblioteca de componentes em `internal/dashboard/view
 - `@alertBanner(title, msg, kind)`: Banner de aviso e alertas no topo
 - `@emptyState(msg)`: Caixas de estado vazio para tabelas sem dados
 - `@pager(prefix, current, total, hasPrev, hasNext)`: Controle de paginação
-- `@kbd(key)`: Tecla de atalho estilizada
 - `@copyButton(text)`: Botão compacto de cópia para a área de transferência com toast
 
 ---
 
-## 4. Filosofia de Segurança e Isolamento do Vault
+## 3. Filosofia de Segurança e Isolamento do Vault
 
 - **Zero Secrets na UI:** Tokens e chaves de API nunca são expostos em texto puro nas respostas HTTP.
 - **Cofre Local Cifrado:** As chaves fornecidas na tela de Modelos são gravadas via `POST /dash/api/vault/secrets/provider/{id}/api-key` no cofre local seguro (AES-256-GCM).
@@ -74,7 +58,7 @@ Toda a interface consome a biblioteca de componentes em `internal/dashboard/view
 
 ---
 
-## 5. Como Adicionar uma Nova Página no Dashboard v2
+## 4. Como Adicionar uma Nova Página no Dashboard v2
 
 ### Passo 1: Criar o Template Templ
 Crie um arquivo em `internal/dashboard/views/<sua_pagina>.templ`:
