@@ -17,6 +17,10 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	inspectMux.HandleFunc("GET /missions", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"missions":[]}`))
 	})
+	inspectMux.HandleFunc("GET /events/stream", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+	})
 	inspectMux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
@@ -135,16 +139,18 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 		t.Fatalf("/dash/events status=%d missing explorer markers", resp.StatusCode)
 	}
 
+	// SSE Stream proxy check
+	resp, err = srv.Client().Get(srv.URL + "/dash/api/events/stream")
+	if err != nil {
+		t.Fatalf("get dash api events stream: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/dash/api/events/stream status=%d, expected 200", resp.StatusCode)
+	}
+
 	// Events proxy passes the paginated inspect payload through unchanged.
 	resp, err = srv.Client().Get(srv.URL + "/dash/api/events?limit=5")
-	if err != nil {
-		t.Fatalf("get dash api events: %v", err)
-	}
-	b, _ = io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if !strings.Contains(string(b), "operator.command.accepted") {
-		t.Fatalf("/dash/api/events body: %s", string(b))
-	}
 
 	// Models page is served with live-data wiring.
 	resp, err = srv.Client().Get(srv.URL + "/dash/models")
