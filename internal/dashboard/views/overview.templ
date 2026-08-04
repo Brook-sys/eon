@@ -273,10 +273,12 @@ templ Overview() {
 							const data = await res.json();
 							if (!res.ok) throw new Error(data.error?.message || data.message || ('HTTP ' + res.status));
 							this.cmdStatus = 'Comando ' + kind + ' enviado com sucesso! Receipt ID: ' + (data.command_id || 'OK');
+							if (window.notify) window.notify('Comando ' + kind + ' enviado com sucesso!', 'success');
 							await this.refresh();
 						} catch (err) {
 							this.cmdStatus = 'Erro ao enviar comando: ' + err.message;
 							this.cmdIsErr = true;
+							if (window.notify) window.notify('Erro no comando ' + kind + ': ' + err.message, 'error');
 						} finally {
 							this.cmdLoading = false;
 						}
@@ -313,9 +315,11 @@ templ Overview() {
 							});
 							const data = await res.json();
 							if (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));
+							if (window.notify) window.notify('Resposta enviada para a pergunta!', 'success');
 							await this.refresh();
 						} catch (err) {
-							alert('Erro ao responder pergunta: ' + err.message);
+							if (window.notify) window.notify('Erro ao responder: ' + err.message, 'error');
+							else alert('Erro ao responder pergunta: ' + err.message);
 						}
 					},
 

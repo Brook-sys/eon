@@ -79,7 +79,7 @@ templ layout(title string, currentPath string, nav []NavItem) {
 			html { scrollbar-color: #3a4f6a transparent; }
 		</style>
 	</head>
-	<body class="min-h-screen" x-data="{ showShortcuts: false }" @keydown.window="
+	<body class="min-h-screen" x-data="{ showShortcuts: false, toasts: [] }" @keydown.window="
 		if ($event.key === '?') { showShortcuts = !showShortcuts; }
 		if ($event.key === 'g' || $event.key === 'G') {
 			$event.target._gPressed = true;
@@ -94,7 +94,34 @@ templ layout(title string, currentPath string, nav []NavItem) {
 			if ($event.key === 'k' || $event.key === 'K') window.location.href = '/dash/knowledge';
 			delete $event.target._gPressed;
 		}
+	" @toast.window="
+		const t = $event.detail;
+		const id = Date.now() + Math.random();
+		toasts.push({ id, message: t.message, type: t.type || 'info' });
+		setTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);
 	">
+		<!-- Dynamic Toast Notifications -->
+		<div class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+			<template x-for="t in toasts" x-bind:key="t.id">
+				<div class="pointer-events-auto p-3 rounded-lg border shadow-lg text-xs font-medium flex items-center justify-between gap-3 animate-fade-in"
+					x-bind:class="{
+						'bg-[var(--panel)] border-[var(--ok)] text-[var(--ok)]': t.type === 'success',
+						'bg-[var(--panel)] border-[var(--err)] text-[var(--err)]': t.type === 'error',
+						'bg-[var(--panel)] border-[var(--warn)] text-[var(--warn)]': t.type === 'warning',
+						'bg-[var(--panel)] border-[var(--accent)] text-[var(--accent)]': t.type === 'info'
+					}"
+				>
+					<span x-text="t.message"></span>
+					<button type="button" class="text-xs opacity-70 hover:opacity-100 font-bold" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
+				</div>
+			</template>
+		</div>
+
+		<script>
+			window.notify = function(message, type = 'info', duration = 4000) {
+				window.dispatchEvent(new CustomEvent('toast', { detail: { message, type, duration } }));
+			};
+		</script>
 		<div class="flex min-h-screen">
 			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-4 gap-4">
 				<div class="flex items-center gap-2">

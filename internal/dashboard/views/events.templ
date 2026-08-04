@@ -4,16 +4,36 @@ templ Events() {
 	@layout("Eventos", "/dash/events", StandardNav("/dash/events")) {
 		<div x-data="eventsState()" x-init="start()" class="space-y-4">
 
-			<!-- Barra de filtros -->
+			<!-- Métricas Resumidas dos Eventos -->
+			<div class="grid gap-3 grid-cols-2 lg:grid-cols-4 text-xs">
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Total Carregado</div>
+					<div class="text-2xl font-bold font-mono text-[var(--accent)]" x-text="events.length"></div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Erros Identificados</div>
+					<div class="text-2xl font-bold font-mono text-[var(--err)]" x-text="metrics.errors"></div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Alertas / Avisos</div>
+					<div class="text-2xl font-bold font-mono text-[var(--warn)]" x-text="metrics.warnings"></div>
+				</div>
+				<div class="bg-[var(--panel)] border border-[var(--border)] rounded-lg p-3">
+					<div class="text-[var(--muted)] font-medium uppercase tracking-wider mb-1">Última Sequência</div>
+					<div class="text-2xl font-bold font-mono text-[var(--ok)]" x-text="'#' + lastSeq"></div>
+				</div>
+			</div>
+
+			<!-- Barra de filtros e buscas -->
 			<div class="flex flex-wrap gap-2 items-end">
 				<label class="flex flex-col gap-1 text-xs text-[var(--muted)]">
-					Kind
+					Kind / Tipo
 					<select
 						class="bg-[var(--panel)] border border-[var(--border)] rounded px-2 py-1.5 text-sm text-[var(--text)]"
 						x-model="filterKind"
 						x-on:change="reload()"
 					>
-						<option value="">todos</option>
+						<option value="">todos os tipos</option>
 						<template x-for="k in knownKinds" x-bind:key="k">
 							<option x-bind:value="k" x-text="k"></option>
 						</template>
@@ -37,53 +57,76 @@ templ Events() {
 					/>
 				</label>
 				<button
-					class="px-3 py-1.5 rounded border border-[var(--border)] text-sm"
+					class="px-3 py-1.5 rounded border border-[var(--border)] text-sm hover:bg-[var(--panel)]"
 					x-on:click="reload()"
 				>Aplicar</button>
 				<button
-					class="px-3 py-1.5 rounded border text-sm"
-					x-bind:class="liveTail ? 'border-[var(--ok)] text-[var(--ok)]' : 'border-[var(--border)] text-[var(--muted)]'"
+					class="px-3 py-1.5 rounded border text-sm font-medium"
+					x-bind:class="liveTail ? 'border-[var(--ok)] text-[var(--ok)] bg-[var(--ok)]/10 hover:bg-[var(--ok)]/20' : 'border-[var(--border)] text-[var(--muted)] hover:bg-[var(--panel)]'"
 					x-on:click="toggleTail()"
-					x-text="liveTail ? '⏸ Pausar live tail' : '▶ Live tail'"
+					x-text="liveTail ? '⏸ Pausar Live Stream' : '▶ Conectar Live Stream'"
 				></button>
-				<span class="text-xs text-[var(--muted)] ml-auto" x-text="statusLine"></span>
+				<button
+					class="px-2 py-1.5 rounded border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)]"
+					x-on:click="resetFilters()"
+				>Limpar Filtros</button>
+				<span class="text-xs text-[var(--muted)] ml-auto font-mono" x-text="statusLine"></span>
 			</div>
 
 			<!-- Lista de eventos -->
 			@card("Log de eventos") {
-				<div class="mono text-xs space-y-1 max-h-[32rem] overflow-y-auto">
+				<div class="mono text-xs space-y-1 max-h-[34rem] overflow-y-auto pr-1">
 					<template x-if="visibleEvents.length === 0">
-						<p class="text-[var(--muted)]" x-text="loading ? 'Carregando…' : 'Nenhum evento encontrado com os filtros atuais.'"></p>
+						<p class="text-[var(--muted)] p-2" x-text="loading ? 'Carregando eventos…' : 'Nenhum evento encontrado com os filtros atuais.'"></p>
 					</template>
 					<template x-for="e in visibleEvents" x-bind:key="e.sequence">
 						<div
-							class="grid grid-cols-[5rem_1fr] gap-2 py-1 px-1 rounded hover:bg-[#243247] cursor-pointer"
-							x-on:click="toggleDetail(e)"
+							class="py-1.5 px-2 rounded hover:bg-[#243247] transition-colors border-b border-[var(--border)]/30 space-y-1"
 						>
-							<span class="text-[var(--muted)] shrink-0" x-text="'#' + e.sequence"></span>
-							<div class="min-w-0">
-								<div class="flex gap-2 items-baseline flex-wrap">
-									<span class="font-semibold text-[var(--text)]" x-text="shortKind(e.kind)"></span>
-									<span class="text-[var(--muted)]" x-text="fmtTime(e.occurred_at)"></span>
-									<span class="text-[var(--accent)]" x-show="e.namespace" x-text="e.namespace"></span>
-									<span class="text-[var(--muted)] font-mono" x-show="e.request_id" x-bind:title="e.request_id" x-text="'req ' + short(e.request_id, 8)"></span>
+							<div class="flex items-center gap-2 cursor-pointer" x-on:click="toggleDetail(e)">
+								<span class="text-[var(--muted)] font-mono shrink-0 w-16" x-text="'#' + e.sequence"></span>
+								<span
+									class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
+									x-bind:class="({
+										error: 'bg-[var(--err)]/20 text-[var(--err)]',
+										warning: 'bg-[var(--warn)]/20 text-[var(--warn)]',
+										info: 'bg-[var(--accent)]/20 text-[var(--accent)]'
+									})[eventCategory(e)] ?? 'bg-[var(--panel)] text-[var(--text)]'"
+									x-text="shortKind(e.kind)"
+								></span>
+								<span class="text-[var(--muted)] text-[11px]" x-text="fmtTime(e.occurred_at)"></span>
+								<span class="text-[var(--accent)] text-[11px]" x-show="e.namespace" x-text="'[' + e.namespace + ']'"></span>
+								<span class="text-[var(--muted)] font-mono text-[10px] ml-auto" x-show="e.request_id" x-bind:title="e.request_id" x-text="'req:' + short(e.request_id, 8)"></span>
+							</div>
+
+							<div class="text-[var(--muted)] truncate cursor-pointer pl-18 text-[11px]" x-bind:title="preview(e)" x-on:click="toggleDetail(e)" x-text="preview(e)"></div>
+
+							<!-- Painel de Detalhes expandido -->
+							<div x-show="expandedSeq === e.sequence" class="mt-2 p-3 rounded bg-[var(--bg)] border border-[var(--border)] space-y-2 font-mono text-xs">
+								<div class="flex justify-between items-center pb-1 border-b border-[var(--border)]">
+									<span class="text-[var(--accent)] font-bold" x-text="'Evento #' + e.sequence + ' — ' + e.kind"></span>
+									<div class="flex gap-2">
+										<button
+											type="button"
+											class="px-2 py-0.5 rounded border border-[var(--border)] text-[10px] text-[var(--muted)] hover:text-[var(--text)]"
+											x-on:click="copyEventJSON(e)"
+										>📋 Copiar JSON</button>
+										<button type="button" class="text-[var(--muted)] hover:text-[var(--text)]" x-on:click="expandedSeq = null">✕</button>
+									</div>
 								</div>
-								<div class="text-[var(--muted)] truncate" x-bind:title="preview(e)" x-text="preview(e)"></div>
-								<div x-show="expandedSeq === e.sequence" class="mt-2 p-2 rounded bg-[var(--bg)] whitespace-pre-wrap break-all text-[var(--text)] font-mono">
-									<pre x-text="JSON.stringify(e, null, 2)"></pre>
-								</div>
+								<pre class="overflow-x-auto text-[var(--text)] text-[11px] p-2 rounded bg-black/30" x-text="JSON.stringify(e, null, 2)"></pre>
 							</div>
 						</div>
 					</template>
 				</div>
-				<div class="mt-3 flex items-center gap-3">
+				<div class="mt-3 flex items-center gap-3 border-t border-[var(--border)] pt-2">
 					<button
-						class="px-3 py-1.5 rounded border border-[var(--border)] text-sm"
+						class="px-3 py-1.5 rounded border border-[var(--border)] text-xs font-medium hover:bg-[var(--panel)]"
 						x-show="hasMore"
 						x-on:click="loadMore()"
-						x-text="loading ? '…' : 'Carregar mais antigos'"
+						x-text="loading ? 'Carregando...' : 'Carregar mais antigos'"
 					></button>
-					<span class="text-xs text-[var(--muted)]" x-text="events.length + ' carregados'"></span>
+					<span class="text-xs text-[var(--muted)] font-mono" x-text="events.length + ' eventos no histórico local'"></span>
 				</div>
 			}
 		</div>
@@ -105,6 +148,16 @@ templ Events() {
 					lastSeq: 0,
 					_es: null,
 
+					get metrics() {
+						let errs = 0, warns = 0;
+						for (const e of this.events) {
+							const cat = this.eventCategory(e);
+							if (cat === 'error') errs++;
+							else if (cat === 'warning') warns++;
+						}
+						return { errors: errs, warnings: warns };
+					},
+
 					get visibleEvents() {
 						let list = [...this.events];
 						if (this.searchText) {
@@ -117,8 +170,8 @@ templ Events() {
 
 					get statusLine() {
 						return this.liveTail
-							? `live a partir de #${this.lastSeq}`
-							: (this.events.length ? `até #${this.lastSeq}` : '');
+							? `Live stream ativo (a partir de #${this.lastSeq})`
+							: (this.events.length ? `Visualizando até #${this.lastSeq}` : '');
 					},
 
 					params(after) {
@@ -130,6 +183,13 @@ templ Events() {
 						return p;
 					},
 
+					resetFilters() {
+						this.filterKind = '';
+						this.filterNamespace = '';
+						this.searchText = '';
+						this.reload();
+					},
+
 					async reload() {
 						this.pauseTail();
 						this.events = [];
@@ -138,6 +198,8 @@ templ Events() {
 						try {
 							const page = await fetch('/dash/api/events?' + this.params(0)).then(r => r.json());
 							this.ingest(page, true);
+						} catch (err) {
+							if (window.notify) window.notify('Erro ao carregar eventos: ' + err.message, 'error');
 						} finally { this.loading = false; }
 					},
 
@@ -146,6 +208,8 @@ templ Events() {
 						try {
 							const page = await fetch('/dash/api/events?' + this.params(this.nextSequence)).then(r => r.json());
 							this.ingest(page, false);
+						} catch (err) {
+							if (window.notify) window.notify('Erro ao carregar mais eventos: ' + err.message, 'error');
 						} finally { this.loading = false; }
 					},
 
@@ -156,6 +220,19 @@ templ Events() {
 						this.nextSequence = page.next_sequence ?? this.nextSequence;
 						this.hasMore = !!page.has_more;
 						if (evs.length) this.lastSeq = Math.max(...this.events.map(e => e.sequence ?? 0));
+					},
+
+					eventCategory(e) {
+						const k = (e.kind || '').toLowerCase();
+						if (k.includes('error') || k.includes('fail') || k.includes('evict')) return 'error';
+						if (k.includes('warn') || k.includes('replan') || k.includes('degraded')) return 'warning';
+						if (k.includes('info') || k.includes('success') || k.includes('commit')) return 'info';
+						return 'neutral';
+					},
+
+					copyEventJSON(e) {
+						navigator.clipboard.writeText(JSON.stringify(e, null, 2));
+						if (window.notify) window.notify('JSON do evento #' + e.sequence + ' copiado!', 'success', 2500);
 					},
 
 					toggleTail() { this.liveTail ? this.pauseTail() : this.startTail(); },
@@ -172,8 +249,13 @@ templ Events() {
 								}
 							} catch {}
 						};
-						this._es.onerror = () => { this.liveTail = false; this.pauseTail(); };
+						this._es.onerror = () => {
+							this.liveTail = false;
+							this.pauseTail();
+							if (window.notify) window.notify('Desconectado do evento stream', 'warning');
+						};
 						this.liveTail = true;
+						if (window.notify) window.notify('Live stream de eventos conectado!', 'info', 2500);
 					},
 
 					pauseTail() {
@@ -185,16 +267,24 @@ templ Events() {
 						this.expandedSeq = this.expandedSeq === e.sequence ? null : e.sequence;
 					},
 
-					shortKind(k) { return (k ?? '').split(':').pop() || k; },
+					shortKind(k) { return k ?? '?'; },
 					short(s, n) { return (s ?? '').slice(0, n); },
 					fmtTime(t) {
 						if (!t) return '';
 						const d = new Date(t);
 						return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR');
 					},
-					preview(e) { return JSON.stringify(e).slice(0, 140); },
+					preview(e) {
+						if (e.summary) return e.summary;
+						if (e.payload) {
+							try { return typeof e.payload === 'string' ? e.payload : JSON.stringify(e.payload); } catch {}
+						}
+						return JSON.stringify(e);
+					},
 
-					start() { this.reload(); },
+					start() {
+						this.reload();
+					}
 				};
 			}
 		</script>

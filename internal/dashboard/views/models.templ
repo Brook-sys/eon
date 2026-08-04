@@ -342,9 +342,11 @@ templ Models() {
 							});
 							if (!res.ok) throw new Error('Falha ao desbloquear');
 							await this.refreshVaultStatus();
-							alert('Cofre desbloqueado com sucesso!');
+							if (window.notify) window.notify('Cofre de credenciais desbloqueado!', 'success');
+							else alert('Cofre desbloqueado com sucesso!');
 						} catch (err) {
-							alert('Erro no cofre: ' + err.message);
+							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
+							else alert('Erro no cofre: ' + err.message);
 						}
 					},
 
@@ -486,10 +488,12 @@ templ Models() {
 							}
 
 							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar modelo " : "Adicionar modelo ") + id);
+							if (window.notify) window.notify('Modelo ' + id + ' salvo com sucesso!', 'success');
 							this.showForm = false;
 						} catch (err) {
 							this.formMsg = 'Erro: ' + err.message;
 							this.formIsErr = true;
+							if (window.notify) window.notify('Erro ao salvar modelo: ' + err.message, 'error');
 						} finally {
 							this.formSubmitting = false;
 						}
