@@ -88,6 +88,9 @@ templ layout(title string, currentPath string, nav []NavItem) {
 			if ($event.key === 'o' || $event.key === 'O') window.location.href = '/dash/';
 			if ($event.key === 'e' || $event.key === 'E') window.location.href = '/dash/events';
 			if ($event.key === 'm' || $event.key === 'M') window.location.href = '/dash/models';
+			if ($event.key === 'r' || $event.key === 'R') window.location.href = '/dash/resources';
+			if ($event.key === 'f' || $event.key === 'F') window.location.href = '/dash/frontier';
+			if ($event.key === 'a' || $event.key === 'A') window.location.href = '/dash/alerts';
 			if ($event.key === 'k' || $event.key === 'K') window.location.href = '/dash/knowledge';
 			delete $event.target._gPressed;
 		}
@@ -152,6 +155,30 @@ templ layout(title string, currentPath string, nav []NavItem) {
 							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
 							<span class="mx-0.5">+</span>
 							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">m</kbd>
+						</div>
+					</div>
+					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
+						<span class="text-[var(--muted)]">Ir para Recursos & Gates</span>
+						<div>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
+							<span class="mx-0.5">+</span>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">r</kbd>
+						</div>
+					</div>
+					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
+						<span class="text-[var(--muted)]">Ir para Fronteira & Ações</span>
+						<div>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
+							<span class="mx-0.5">+</span>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">f</kbd>
+						</div>
+					</div>
+					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">
+						<span class="text-[var(--muted)]">Ir para Alertas</span>
+						<div>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">g</kbd>
+							<span class="mx-0.5">+</span>
+							<kbd class="px-1.5 py-0.5 bg-[var(--panel-2)] border border-[var(--border)] rounded">a</kbd>
 						</div>
 					</div>
 					<div class="flex justify-between py-1 border-b border-[var(--border)]/50">

@@ -1,10 +1,7 @@
 package views
 
 templ EventDetail(id string) {
-	@layout("Detalhes do Evento", "/dash/events", []NavItem{
-		{Href: "/dash", Label: "Visão geral"},
-		{Href: "/dash/events", Label: "Eventos", Active: true},
-	}) {
+	@layout("Detalhes do Evento", "/dash/events", StandardNav("/dash/events")) {
 		<div class="space-y-4">
 			<div class="flex items-center gap-3">
 				<a href="/dash/events" class="px-2.5 py-1 text-xs font-mono bg-[var(--panel-2)] hover:bg-[var(--border)] text-[var(--text)] rounded border border-[var(--border)] transition-colors">

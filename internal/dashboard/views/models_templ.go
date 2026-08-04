@@ -95,12 +95,7 @@ func Models() templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = layout("Modelos", "/dash/models", []NavItem{
-			{Href: "/dash", Label: "Visão geral"},
-			{Href: "/dash/events", Label: "Eventos"},
-			{Href: "/dash/models", Label: "Modelos", Active: true},
-			{Href: "/dashboard", Label: "Dashboard legado", External: true},
-		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

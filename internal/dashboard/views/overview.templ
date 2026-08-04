@@ -1,11 +1,7 @@
 package views
 
 templ Overview() {
-	@layout("Overview", "/dash", []NavItem{
-		{Href: "/dash", Label: "Visão geral", Active: true},
-		{Href: "/dash/events", Label: "Eventos"},
-		{Href: "/dashboard", Label: "Dashboard legado", External: true},
-	}) {
+	@layout("Overview", "/dash", StandardNav("/dash")) {
 		<div x-data="overviewState()" x-init="start()" class="space-y-4">
 
 			<!-- Status de conexão -->

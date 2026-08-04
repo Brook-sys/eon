@@ -1,15 +1,7 @@
 package views
 
 templ Alerts() {
-	@layout("Alertas", "/dash/alerts", []NavItem{
-		{Href: "/dash", Label: "Visão geral"},
-		{Href: "/dash/events", Label: "Eventos"},
-		{Href: "/dash/models", Label: "Modelos"},
-		{Href: "/dash/resources", Label: "Recursos"},
-		{Href: "/dash/frontier", Label: "Frontier"},
-		{Href: "/dash/alerts", Label: "Alertas", Active: true},
-		{Href: "/dashboard", Label: "Dashboard legado", External: true},
-	}) {
+	@layout("Alertas & Telemetria", "/dash/alerts", StandardNav("/dash/alerts")) {
 		<div x-data="alertsState()" x-init="start()" class="space-y-4">
 			<div class="flex items-center gap-3 text-sm">
 				<span class="inline-flex items-center gap-1.5">

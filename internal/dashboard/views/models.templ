@@ -1,12 +1,7 @@
 package views
 
 templ Models() {
-	@layout("Modelos", "/dash/models", []NavItem{
-		{Href: "/dash", Label: "Visão geral"},
-		{Href: "/dash/events", Label: "Eventos"},
-		{Href: "/dash/models", Label: "Modelos", Active: true},
-		{Href: "/dashboard", Label: "Dashboard legado", External: true},
-	}) {
+	@layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")) {
 		<div x-data="modelsState()" x-init="start()" class="space-y-4">
 			<div class="flex items-center gap-3 text-sm">
 				<span class="inline-flex items-center gap-1.5">

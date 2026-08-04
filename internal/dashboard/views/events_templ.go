@@ -73,11 +73,7 @@ func Events() templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = layout("Eventos", "/dash/events", []NavItem{
-			{Href: "/dash", Label: "Visão geral"},
-			{Href: "/dash/events", Label: "Eventos", Active: true},
-			{Href: "/dashboard", Label: "Dashboard legado", External: true},
-		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layout("Eventos", "/dash/events", StandardNav("/dash/events")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
