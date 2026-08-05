@@ -511,8 +511,8 @@ templ Models() {
 
 					async saveSecretIfProvided(id, secret) {
 						if (!secret) return;
-						await fetch('/dash/api/vault/secrets/provider/' + encodeURIComponent(id) + '/api-key', {
-							method: 'POST',
+						await fetch('/dash/api/vault/secrets/' + encodeURIComponent('provider/' + id + '/api-key'), {
+							method: 'PUT',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ value: secret })
 						});
