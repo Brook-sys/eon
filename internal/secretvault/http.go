@@ -19,6 +19,7 @@ func (h HTTP) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", h.status)
 	mux.HandleFunc("GET /audit", h.auditLog)
+	mux.HandleFunc("POST /audit/batch-filter", h.batchAuditFilter)
 	mux.HandleFunc("GET /audit/summary", h.auditSummary)
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
@@ -259,6 +260,25 @@ func (h HTTP) auditLog(w http.ResponseWriter, r *http.Request) {
 		filter.Limit = lim
 	}
 	write(w, http.StatusOK, h.Vault.AuditLogFiltered(filter))
+}
+
+func (h HTTP) batchAuditFilter(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Items []BatchAuditFilterItem `json:"items"`
+	}
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 entries"}})
+		return
+	}
+	results, err := h.Vault.BatchAuditFilter(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, results)
 }
 
 // auditSummary returns aggregate counters (total/matched events, per-action

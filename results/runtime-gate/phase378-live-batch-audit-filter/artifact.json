@@ -1,0 +1,20 @@
+{
+  "groq": {
+    "finish_reason": "stop",
+    "latency": "345.083155ms",
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "success": true,
+    "text": "READY"
+  },
+  "nim": {
+    "finish_reason": "stop",
+    "latency": "12.000959085s",
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nvidia_nim",
+    "success": true,
+    "text": "READY"
+  },
+  "phase": "Phase 378",
+  "timestamp": "2026-08-05T02:10:10Z"
+}
