@@ -637,7 +637,7 @@ templ Models() {
 						const draft = await draftRes.json();
 						if (!draftRes.ok) throw new Error(draft.error?.message || draft.message || 'Erro ao criar rascunho');
 
-						const draftID = draft.id || (draft.draft && draft.draft.id);
+						const draftID = draft.draft_id || draft.id || (draft.draft && (draft.draft.draft_id || draft.draft.id));
 
 						const valRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
 						const val = await valRes.json();
