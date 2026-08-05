@@ -1,0 +1,25 @@
+{
+  "phase": "Phase 379",
+  "task": "vault-batch-audit-summary",
+  "timestamp": "2026-08-05T01:45:00-03:00",
+  "primary_provider": "groq",
+  "primary_model": "llama-3.3-70b-versatile",
+  "fallback_provider": "nvidia_nim",
+  "fallback_model": "meta/llama-3.1-8b-instruct",
+  "groq": {
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile",
+    "success": true,
+    "text": "READY",
+    "finish_reason": "stop",
+    "latency_ms": 380.03
+  },
+  "nim": {
+    "provider": "nvidia_nim",
+    "model": "meta/llama-3.1-8b-instruct",
+    "success": true,
+    "text": "READY",
+    "finish_reason": "stop",
+    "latency_ms": 9927.68
+  }
+}

@@ -20,6 +20,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /status", h.status)
 	mux.HandleFunc("GET /audit", h.auditLog)
 	mux.HandleFunc("POST /audit/batch-filter", h.batchAuditFilter)
+	mux.HandleFunc("POST /audit/batch-summary", h.batchAuditSummary)
 	mux.HandleFunc("GET /audit/summary", h.auditSummary)
 	mux.HandleFunc("POST /initialize", h.initialize)
 	mux.HandleFunc("POST /unlock", h.unlock)
@@ -278,6 +279,21 @@ func (h HTTP) batchAuditFilter(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, err)
 		return
 	}
+	write(w, http.StatusOK, results)
+}
+
+func (h HTTP) batchAuditSummary(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Items []BatchAuditSummaryItem `json:"items"`
+	}
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 entries"}})
+		return
+	}
+	results := h.Vault.BatchAuditSummary(q.Items)
 	write(w, http.StatusOK, results)
 }
 

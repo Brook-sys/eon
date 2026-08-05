@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 379 — credential vault BatchAuditSummary capability, HTTP endpoint & live campaign (2026-08-05 01:45 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with targeted multi-filter aggregate audit summary extraction `BatchAuditSummary` and HTTP endpoint `POST /audit/batch-summary`.
+1. Implemented `func (v *Vault) BatchAuditSummary(items []BatchAuditSummaryItem) []BatchAuditSummaryResult`: inspects up to 100 passed filter items (with optional `secret_name`, `action`, and `status`), computes `AuditSummary` per item from in-memory audit log metadata without requiring vault unlock, returns per-item `Summary` with `MatchedEvents` and action/status breakdowns, and records error strings for invalid secret names without aborting the batch.
+2. Added HTTP endpoint: `POST /audit/batch-summary` accepting 1-100 filter items and returning `[]BatchAuditSummaryResult` (HTTP 200 OK).
+3. Added unit tests in `internal/secretvault/batch_audit_summary_test.go` covering multi-item audit summary extraction, filtering by secret/action/status, locked vault readiness, and HTTP surface.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `llama-3.3-70b-versatile` and cross-provider NVIDIA NIM `meta/llama-3.1-8b-instruct`; isolated live calls, exact-response contract (`READY`), max output 32 tokens.
+
+**Observed evidence and decision.** Groq primary `llama-3.3-70b-versatile` completed the live call in 380.03 ms (`finish_reason=stop`, exact match `READY`). NVIDIA NIM `meta/llama-3.1-8b-instruct` completed cross-provider check in 9.93 s (`finish_reason=stop`, exact match `READY`). Deterministic verification: `go test ./internal/secretvault/...` passed (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase379-groq-gptoss120b-vault-batch-audit-summary/`.
+
 ## Phase 378 — credential vault BatchAuditFilter capability, HTTP endpoint & live campaign (2026-08-04 23:10 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with targeted multi-filter audit log extraction `BatchAuditFilter` and HTTP endpoint `POST /audit/batch-filter`.
