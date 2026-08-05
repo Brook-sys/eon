@@ -26,7 +26,7 @@ type BatchTouchResponse struct {
 }
 
 // BatchTouch extends expiration TTL for up to 100 targeted secrets with per-secret custom TTLs.
-// It processes items atomically per secret, saving updated vault state in a single disk write.
+// It reloads disk state using pathLock before processing and saves updated vault state in a single disk write.
 // Returns ErrLocked if the vault is locked.
 func (v *Vault) BatchTouch(items []BatchTouchItem) (BatchTouchResponse, error) {
 	v.mu.Lock()
@@ -37,7 +37,16 @@ func (v *Vault) BatchTouch(items []BatchTouchItem) (BatchTouchResponse, error) {
 		return BatchTouchResponse{}, ErrLocked
 	}
 
-	now := v.now()
+	pathLock := lockForPath(v.path)
+	pathLock.Lock()
+	defer pathLock.Unlock()
+
+	if err := v.reloadWithCurrentKeyLocked(); err != nil {
+		v.recordAuditLocked("batch_touch", "", "failure")
+		return BatchTouchResponse{}, err
+	}
+
+	now := v.now().UTC()
 	v.lastUsed = now
 
 	resp := BatchTouchResponse{
@@ -79,6 +88,7 @@ func (v *Vault) BatchTouch(items []BatchTouchItem) (BatchTouchResponse, error) {
 		}
 
 		newExpiry := now.Add(item.TTL)
+		sec.UpdatedAt = now
 		sec.ExpiresAt = newExpiry
 		v.data.Secrets[item.Name] = sec
 
@@ -87,7 +97,7 @@ func (v *Vault) BatchTouch(items []BatchTouchItem) (BatchTouchResponse, error) {
 		res.Entry = SecretEntry{
 			Name:      item.Name,
 			CreatedAt: sec.CreatedAt,
-			UpdatedAt: sec.UpdatedAt,
+			UpdatedAt: now,
 			ExpiresAt: newExpiry,
 		}
 		resp.Touched++

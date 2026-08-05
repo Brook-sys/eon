@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase381-groq-llama33-vault-batch-touch-reload",
+  "planned_trials": 1,
+  "completed_trials": 1,
+  "next_trial_not_before": "2026-08-05T06:04:38.260931766Z"
+}

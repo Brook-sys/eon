@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 381 — credential vault BatchTouch disk-reload & concurrency safety fix with live campaign (2026-08-05 03:00 -03)
+
+**Objective and implementation.** Hardened `secretvault.Vault.BatchTouch` concurrency safety and multi-handle disk state reload consistency.
+1. Added `pathLock` acquisition and `v.reloadWithCurrentKeyLocked()` to `BatchTouch`, matching all other vault write capabilities (`ExpireAt`, `BatchExpireAt`, `BatchPut`, `BatchDelete`, etc.) so external file modifications by other handles are reloaded before mutating and saving secrets.
+2. Updated `sec.UpdatedAt` to `now` upon touching a secret to maintain timestamp coherence.
+3. Verified deterministic unit tests in `internal/secretvault/batch_touch_test.go` pass cleanly with file-reload locking.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `llama-3.3-70b-versatile` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` / Groq secondary `llama-3.3-70b-versatile` completed the live call in 428.66 ms (`finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase381-groq-llama33-vault-batch-touch-reload/`.
+
 ## Phase 380 — credential vault BatchTouch capability, HTTP endpoint & live campaign (2026-08-05 02:25 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with targeted multi-secret TTL extension capability `BatchTouch` and HTTP endpoint `POST /secrets/batch-touch`.
