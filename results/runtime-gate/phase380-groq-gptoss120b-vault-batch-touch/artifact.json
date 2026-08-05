@@ -1,0 +1,25 @@
+{
+  "phase": "Phase 380",
+  "task": "vault-batch-touch",
+  "timestamp": "2026-08-05T02:25:00-03:00",
+  "primary_provider": "groq",
+  "primary_model": "openai/gpt-oss-120b",
+  "fallback_provider": "nvidia_nim",
+  "fallback_model": "meta/llama-3.1-8b-instruct",
+  "groq": {
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "success": true,
+    "text": "READY",
+    "finish_reason": "stop",
+    "latency_ms": 382.15
+  },
+  "nim": {
+    "provider": "nvidia_nim",
+    "model": "meta/llama-3.1-8b-instruct",
+    "success": true,
+    "text": "READY",
+    "finish_reason": "stop",
+    "latency_ms": 612.44
+  }
+}

@@ -7011,6 +7011,17 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 380 — credential vault BatchTouch capability, HTTP endpoint & live campaign (2026-08-05 02:25 -03)
+
+**Objective and implementation.** Extended `secretvault.Vault` with targeted multi-secret TTL extension capability `BatchTouch` and HTTP endpoint `POST /secrets/batch-touch`.
+1. Implemented `func (v *Vault) BatchTouch(items []BatchTouchItem) (BatchTouchResponse, error)`: validates each item name and TTL duration (> 0), updates secret `ExpiresAt` to `now + TTL`, updates in-memory vault state, persists changes atomically in a single disk write, records per-item failures without cancelling valid items, and logs audit events (`touch` per item and `batch_touch` for batch).
+2. Added HTTP endpoint: `POST /secrets/batch-touch` accepting 1-100 items and returning `BatchTouchResponse` (HTTP 200 OK).
+3. Added unit tests in `internal/secretvault/batch_touch_test.go` covering batch TTL extensions, missing secret handling, invalid TTL validation, locked vault rejection, audit logging, and HTTP surface.
+
+**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `openai/gpt-oss-120b` (with `reasoning_effort: low` and max 32 tokens) and cross-provider NVIDIA NIM `meta/llama-3.1-8b-instruct`; isolated live calls, exact-response contract (`READY`).
+
+**Observed evidence and decision.** Groq primary `openai/gpt-oss-120b` completed the live call in 382.15 ms (`finish_reason=stop`, exact match `READY`). NVIDIA NIM `meta/llama-3.1-8b-instruct` completed cross-provider check in 612.44 ms (`finish_reason=stop`, exact match `READY`). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase380-groq-gptoss120b-vault-batch-touch/`.
+
 ## Phase 379 — credential vault BatchAuditSummary capability, HTTP endpoint & live campaign (2026-08-05 01:45 -03)
 
 **Objective and implementation.** Extended `secretvault.Vault` with targeted multi-filter aggregate audit summary extraction `BatchAuditSummary` and HTTP endpoint `POST /audit/batch-summary`.

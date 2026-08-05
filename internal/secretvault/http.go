@@ -32,6 +32,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
 	mux.HandleFunc("POST /secrets/batch-purge-expired", h.batchPurgeExpired)
+	mux.HandleFunc("POST /secrets/batch-touch", h.batchTouch)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
 	mux.HandleFunc("POST /secrets/batch-put", h.batchPut)
 	mux.HandleFunc("POST /secrets/batch-rotate", h.batchRotate)
@@ -475,6 +476,25 @@ func (h HTTP) batchPurgeExpired(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, http.StatusOK, result)
+}
+
+func (h HTTP) batchTouch(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Items []BatchTouchItem `json:"items"`
+	}
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 entries"}})
+		return
+	}
+	res, err := h.Vault.BatchTouch(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, res)
 }
 
 func (h HTTP) batchDelete(w http.ResponseWriter, r *http.Request) {
