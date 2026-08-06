@@ -115,16 +115,42 @@ def reasoning_effort_for(prov_id, model, override):
     return None
 
 def parse_lines(text, keys):
-    """Parse expected KEY: value lines; exact prefix match, strip whitespace."""
+    """Parse expected KEY: value lines; exact prefix match, strip whitespace.
+
+    Fallback: when a key's prefix is missing, attempt positional bare-value
+    parsing.  If _any_ key was found by prefix, no fallback is attempted
+    (mixed format is treated as intentional).  When _no_ key was found by
+    prefix and the number of non-empty lines equals the number of keys,
+    lines are assigned positionally.  This recovers semantically correct but
+    format-non-compliant responses (fire-sweep 2026-08-05 finding #1: models
+    drop DATE:/SOURCE: prefix but emit correct values in correct order).
+    """
     out = {}
     for line in text.splitlines():
         for k in keys:
             if line.startswith(k + ":"):
                 out[k] = line[len(k) + 1:].strip()
+    # Fallback: only when zero keys were found by prefix AND line count
+    # matches key count.  This avoids false positives on mixed-format or
+    # prose responses.
+    if not out:
+        non_empty = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        if len(non_empty) == len(keys):
+            for i, k in enumerate(keys):
+                out[k] = non_empty[i]
     return out
 
 def score_task(task, response_text):
-    """Exact-line scorer. Returns (all_correct, field_results)."""
+    """Exact-line scorer. Returns (all_correct, field_results).
+
+    When the primary scorer (prefix match) fails, a fallback parse is
+    attempted and the result is recorded for analysis.  The fallback is
+    conservative: it only fires when zero keys were found by prefix and
+    the non-empty line count exactly matches the key count (positional
+    assignment).  Fallback-correct responses are marked scored_correct=True
+    but tagged scored_via_fallback=True so analysis can separate format
+    compliance from semantic correctness.
+    """
     scoring = task.get("scoring", "")
     if not scoring.startswith("exact_lines:"):
         return False, {"error": "unknown scoring " + scoring}

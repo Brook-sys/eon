@@ -33,6 +33,32 @@ def test_parse_lines_ignores_non_matching():
     assert t == {"CLAIM": "C-14"}, t
 
 
+def test_parse_lines_fallback_bare_values_positional():
+    # Fire-sweep 2026-08-05 finding #1: models drop DATE:/SOURCE: prefix
+    # but emit correct values in expected order. Fallback positional parse.
+    t = parse_lines("2025-11-03\nS-17", ["DATE", "SOURCE"])
+    assert t == {"DATE": "2025-11-03", "SOURCE": "S-17"}, t
+
+
+def test_parse_lines_fallback_no_partial_mixed():
+    # When some keys found by prefix, no fallback attempted (mixed format
+    # is treated as intentional, not a non-compliant response).
+    t = parse_lines("DATE: 2025-11-03\nS-17", ["DATE", "SOURCE"])
+    assert t == {"DATE": "2025-11-03"}, t
+    assert "SOURCE" not in t
+
+
+def test_parse_lines_fallback_wrong_count_no_match():
+    # Line count != key count: no fallback (avoids false positives on prose).
+    t = parse_lines("just one line", ["DATE", "SOURCE"])
+    assert t == {}, t
+
+
+def test_parse_lines_fallback_three_fields():
+    t = parse_lines("C-14\nREPAIRED\n3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
+    assert t == {"CLAIM": "C-14", "STATUS": "REPAIRED", "EVIDENCE_COUNT": "3"}, t
+
+
 def test_parse_lines_empty_and_truncated():
     assert parse_lines("", ["DATE", "SOURCE"]) == {}
     assert parse_lines("DATE: 2025-", ["DATE", "SOURCE"]) == {"DATE": "2025-"}
@@ -66,10 +92,36 @@ def test_score_truncated_fails_field():
     assert fields["SOURCE"]["got"] is None and not fields["SOURCE"]["ok"]
 
 
+def test_score_bare_value_fallback_recovers_semantic():
+    # Fire-sweep finding: llama-3.1-8b emits bare values without DATE:/SOURCE:
+    # prefix but the semantic data is correct. Fallback should recover it.
+    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+                            "2025-11-03\nS-17")
+    assert ok, fields
+    assert fields["DATE"]["ok"] is True
+    assert fields["SOURCE"]["ok"] is True
+
+
 def test_score_empty_response_fails_all():
     ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}), "")
     assert not ok
     assert all(not f["ok"] and f["got"] is None for f in fields.values())
+
+
+def test_score_bare_value_wrong_count_fails():
+    # Bare values with wrong count should not produce false positives.
+    ok, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+                      "2025-11-03")
+    assert not ok
+
+
+def test_score_bare_value_wrong_order_fails():
+    # Bare values in wrong order must fail (positional assignment).
+    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+                            "S-17\n2025-11-03")
+    assert not ok
+    assert fields["DATE"]["got"] == "S-17"
+    assert fields["SOURCE"]["got"] == "2025-11-03"
 
 
 def test_score_case_sensitive_values():

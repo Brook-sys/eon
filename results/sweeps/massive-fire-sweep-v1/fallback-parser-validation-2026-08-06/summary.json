@@ -1,0 +1,56 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "fallback-parser-validation-2026-08-06",
+ "executed_at": "2026-08-06T19:06:04Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "max_tokens_per_call_actual": 256,
+ "reasoning_effort_override": null,
+ "reasoning_model_defaults": {
+  "groq:qwen/": "none",
+  "groq:openai/gpt-oss-": "low"
+ },
+ "calls_attempted": 40,
+ "calls_ok": 40,
+ "calls_error": 0,
+ "latency_ms": {
+  "p50": 469.0,
+  "p95": 1286.8,
+  "max": 1360.1
+ },
+ "by_model": {
+  "groq/llama-3.3-70b-versatile": {
+   "calls": 10,
+   "ok": 10,
+   "err": 0,
+   "correct": 5
+  },
+  "groq/llama-3.1-8b-instant": {
+   "calls": 10,
+   "ok": 10,
+   "err": 0,
+   "correct": 10
+  },
+  "groq/qwen/qwen3.6-27b": {
+   "calls": 10,
+   "ok": 10,
+   "err": 0,
+   "correct": 10
+  },
+  "nvidia_nim/meta/llama-3.1-8b-instruct": {
+   "calls": 10,
+   "ok": 10,
+   "err": 0,
+   "correct": 10
+  }
+ }
+}

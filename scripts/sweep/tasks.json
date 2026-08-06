@@ -171,7 +171,7 @@
     "evidence_slice": "heartbeat-2026-08-03-prompt-loops-adv",
     "baseline_sha256": "360c5ebe9783e9ef",
     "promoted_sha256": "cc311b42b065008a",
-    "improvement": "0/10 -> 5/5 (llama-3.1-8b-instant, 5-rep loop); allam-2-7b remains 2/10 on v0 and needs v2 noise-label demotion \u2014 kept as known-boundary task (see loop report)"
+    "improvement": "0/10 -> 5/5 (llama-3.1-8b-instant, 5-rep loop); allam-2-7b remains 2/10 on v0 and needs v2 noise-label demotion — kept as known-boundary task (see loop report)"
    }
   },
   {
@@ -191,7 +191,7 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "Voc\u00ea \u00e9 um extrator determin\u00edstico. Leia os fatos, obede\u00e7a as restri\u00e7\u00f5es e responda com EXATAMENTE duas linhas.\nDATE: <iso-date>\nSOURCE: <id>\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revis\u00e3o posterior n\u00e3o mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestri\u00e7\u00f5es:\n- Retorne a data de publica\u00e7\u00e3o original de S-17.\n- Responda apenas as duas linhas, nada mais.",
+   "prompt": "Você é um extrator determinístico. Leia os fatos, obedeça as restrições e responda com EXATAMENTE duas linhas.\nDATE: <iso-date>\nSOURCE: <id>\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revisão posterior não mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestrições:\n- Retorne a data de publicação original de S-17.\n- Responda apenas as duas linhas, nada mais.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
@@ -221,6 +221,18 @@
     "pair": "O-1/O-2"
    },
    "scoring": "exact_lines:CONFLICT,PAIR"
+  },
+  {
+   "id": "adv-ptbr-format-anchor",
+   "operation": "EXTRACT",
+   "format": "DELIMITED",
+   "adversarial": true,
+   "prompt": "Você é um extrator determinístico. Leia os fatos, obedeça as restrições e responda com EXATAMENTE duas linhas neste formato.\nDATE: <iso-date>\nSOURCE: <id>\n\nExemplo de resposta correta:\nDATE: 2025-01-15\nSOURCE: S-99\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revisão posterior não mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestrições:\n- Retorne a data de publicação original de S-17.\n- Responda apenas as duas linhas, nada mais.\n- O formato deve ser exatamente DATE: seguido do valor, depois SOURCE: seguido do valor, cada um em sua própria linha.",
+   "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+   },
+   "scoring": "exact_lines:DATE,SOURCE"
   }
  ]
 }
