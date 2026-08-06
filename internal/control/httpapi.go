@@ -333,7 +333,7 @@ func (a *API) handleCreateModelPresetEnableDraft(w http.ResponseWriter, r *http.
 	}
 	draft := domain.ConfigDraft{
 		SchemaVersion: req.SchemaVersion, ID: draftID, Scope: domain.ConfigScopeModels,
-		BasedOnRevision: active.Revision, Applicability: domain.ConfigRestartRequired,
+		BasedOnRevision: active.Revision, Applicability: domain.ConfigNextCycle,
 		Status: domain.ConfigDraftOpen, ActorType: actorType, ActorID: actorID,
 		Reason: strings.TrimSpace(req.Reason), Models: preview.Candidate, CreatedAt: a.Clock.Now().UTC(),
 	}

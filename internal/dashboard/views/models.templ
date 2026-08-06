@@ -353,9 +353,9 @@ templ Models() {
 							this.pressureNote = p?.note ?? '';
 
 							const rev = activeRev?.revision || activeRev;
-							if (rev && rev.payload) {
+							if (rev) {
 								this.cfgActiveRevision = Number(rev.revision || 0);
-								this.cfgPayload = rev.payload.models || rev.payload || { providers: [], bindings: [] };
+								this.cfgPayload = rev.models || { providers: [], bindings: [] };
 								if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
 								if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
 							}
@@ -501,7 +501,7 @@ templ Models() {
 							priority: Number(b.priority) || 10,
 							context_tokens: Number(b.context_tokens) || 8192,
 							max_output_tokens: Number(b.max_output_tokens) || 2048,
-							max_output_dialect: b.max_output_dialect || "legacy",
+							max_output_dialect: b.max_output_dialect || "max_tokens",
 							limit: {
 								resource: "model-binding:" + bId,
 								max_concurrent: Number(b.limit?.max_concurrent) || 1
@@ -509,9 +509,9 @@ templ Models() {
 						};
 					},
 
-					async saveSecretIfProvided(id, secret) {
+					async saveSecretIfProvided(apiKeyEnv, secret) {
 						if (!secret) return;
-						await fetch('/dash/api/vault/secrets/' + encodeURIComponent('provider/' + id + '/api-key'), {
+						await fetch('/dash/api/vault/secrets/' + encodeURIComponent(apiKeyEnv), {
 							method: 'PUT',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ value: secret })
@@ -527,7 +527,7 @@ templ Models() {
 							if (!id) throw new Error("ID do provedor é obrigatório.");
 
 							if (this.providerForm.secret_value) {
-								await this.saveSecretIfProvided(id, this.providerForm.secret_value);
+								await this.saveSecretIfProvided(this.providerForm.api_key_env.trim(), this.providerForm.secret_value);
 							}
 
 							const currentProviders = [...(this.cfgPayload.providers || [])];
@@ -581,7 +581,7 @@ templ Models() {
 								context_tokens: Number(this.bindingForm.context_tokens) || 8192,
 								max_output_tokens: Number(this.bindingForm.max_output_tokens) || 2048,
 								priority: Number(this.bindingForm.priority) || 10,
-								max_output_dialect: "legacy",
+								max_output_dialect: "max_tokens",
 								limit: {
 									resource: "model-binding:" + bId,
 									max_concurrent: 1

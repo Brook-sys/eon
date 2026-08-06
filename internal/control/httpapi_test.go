@@ -1123,7 +1123,7 @@ func TestControlAPIModelPresetEnablementPreviewAfterDisabledApply(t *testing.T) 
 		Draft domain.ConfigDraft `json:"draft"`
 	}
 	decodeJSON(t, enableDraft.Body, &enableBody)
-	if enableBody.Draft.Applicability != domain.ConfigRestartRequired || !enableBody.Draft.Models.Bindings[0].Enabled {
+	if enableBody.Draft.Applicability != domain.ConfigNextCycle || !enableBody.Draft.Models.Bindings[0].Enabled {
 		t.Fatalf("enable draft = %#v", enableBody.Draft)
 	}
 	var drafts []domain.ConfigDraft
