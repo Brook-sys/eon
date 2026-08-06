@@ -1,0 +1,68 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "format-anchor-full-2026-08-06",
+ "executed_at": "2026-08-06T19:33:18Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "max_tokens_per_call_actual": 256,
+ "reasoning_effort_override": null,
+ "reasoning_model_defaults": {
+  "groq:qwen/": "none",
+  "groq:openai/gpt-oss-": "low"
+ },
+ "calls_attempted": 270,
+ "calls_ok": 215,
+ "calls_error": 55,
+ "latency_ms": {
+  "p50": 394.0,
+  "p95": 606.7,
+  "max": 1215.6
+ },
+ "by_model": {
+  "groq/llama-3.3-70b-versatile": {
+   "calls": 45,
+   "ok": 39,
+   "err": 6,
+   "correct": 39
+  },
+  "groq/llama-3.1-8b-instant": {
+   "calls": 45,
+   "ok": 34,
+   "err": 11,
+   "correct": 34
+  },
+  "groq/openai/gpt-oss-20b": {
+   "calls": 45,
+   "ok": 35,
+   "err": 10,
+   "correct": 35
+  },
+  "groq/openai/gpt-oss-120b": {
+   "calls": 45,
+   "ok": 34,
+   "err": 11,
+   "correct": 34
+  },
+  "groq/qwen/qwen3.6-27b": {
+   "calls": 45,
+   "ok": 41,
+   "err": 4,
+   "correct": 41
+  },
+  "groq/allam-2-7b": {
+   "calls": 45,
+   "ok": 32,
+   "err": 13,
+   "correct": 26
+  }
+ }
+}

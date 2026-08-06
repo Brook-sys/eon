@@ -233,6 +233,18 @@
     "source": "S-17"
    },
    "scoring": "exact_lines:DATE,SOURCE"
+  },
+  {
+   "id": "adv-ptbr-format-anchor-conflicting",
+   "operation": "CONFLICT",
+   "format": "DELIMITED",
+   "adversarial": true,
+   "prompt": "Você é um classificador determinístico. Decida se duas observações conflitam sobre a mesma propriedade medida. Responda com EXATAMENTE duas linhas neste formato.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nExemplo de resposta correta:\nCONFLICT: YES\nPAIR: O-99/O-100\n\nPergunta: O-1 e O-2 conflitam entre si?\n\nFatos:\n- O-1 mediu o serviço às 10:00 e encontrou latência p95=120ms.\n- O-2 mediu o mesmo serviço e configuração às 10:00 e encontrou latência p95=410ms.\n- O-3 mediu o serviço às 10:00 e encontrou latência p95=121ms. O-3 é consistente com O-1.\n\nRestrições:\n- CONFLICT é YES apenas quando a mesma propriedade, sujeito, configuração e tempo discordam.\n- Produza apenas as duas linhas, nada mais.\n- A linha PAIR deve nomear as duas observações comparadas com seus identificadores completos: o prefixo O- é parte do id (por exemplo O-1/O-2, nunca 1/2).\n- O formato deve ser exatamente CONFLICT: seguido do valor, depois PAIR: seguido do valor, cada um em sua própria linha.",
+   "expected": {
+    "conflict": "YES",
+    "pair": "O-1/O-2"
+   },
+   "scoring": "exact_lines:CONFLICT,PAIR"
   }
  ]
 }

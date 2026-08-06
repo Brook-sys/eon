@@ -1,0 +1,539 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "format-anchor-nim-cross-2026-08-06",
+ "executed_at": "2026-08-06T19:31:37Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 20,
+ "calls_ok": 17,
+ "calls_error": 3,
+ "trials": [
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 1243.2,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 1299.1,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 1396.4,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 720.9,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 791.4,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 760.8,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 927.7,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 1216.8,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 735.4,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 2516.6,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 1555.0,
+   "prompt_tokens": 217,
+   "completion_tokens": 16,
+   "total_tokens": 233,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 1516.3,
+   "prompt_tokens": 217,
+   "completion_tokens": 16,
+   "total_tokens": 233,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 2092.6,
+   "prompt_tokens": 217,
+   "completion_tokens": 16,
+   "total_tokens": 233,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 6455.5,
+   "prompt_tokens": 217,
+   "completion_tokens": 16,
+   "total_tokens": 233,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 1259.5,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "ok",
+   "latency_ms": 1412.9,
+   "prompt_tokens": 340,
+   "completion_tokens": 14,
+   "total_tokens": 354,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 22966.1,
+   "prompt_tokens": 217,
+   "completion_tokens": 16,
+   "total_tokens": 233,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "error",
+   "error": {
+    "latency_ms": 45307.3,
+    "error_class": "transport",
+    "error_body": "TimeoutError('The read operation timed out')"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "error",
+   "error": {
+    "latency_ms": 45307.5,
+    "error_class": "transport",
+    "error_body": "TimeoutError('The read operation timed out')"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-70b-instruct",
+   "task": "adv-ptbr-format-anchor-conflicting",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "06e55d6d067f0972",
+   "outcome": "error",
+   "error": {
+    "latency_ms": 45333.9,
+    "error_class": "transport",
+    "error_body": "TimeoutError('The read operation timed out')"
+   }
+  }
+ ]
+}
