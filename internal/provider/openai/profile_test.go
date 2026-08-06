@@ -49,8 +49,8 @@ func TestDeclaredProfileIsConservativeWithoutIO(t *testing.T) {
 
 func TestProbeConfirmsTextToTextAndRespectsBudget(t *testing.T) {
 	server := fakeserver.New(
-		fakeserver.Exchange{ExpectedPrompt: "ping", ExpectedModel: "tiny", ExpectedMaxOutputField: "max_tokens", ResponseText: "ok", ResponseModel: "tiny-v2", InputTokens: 1, OutputTokens: 1},
-		fakeserver.Exchange{ExpectedPrompt: "ping", ExpectedModel: "tiny", ExpectedMaxOutputField: "max_tokens", ResponseText: "again", ResponseModel: "tiny-v3", InputTokens: 1, OutputTokens: 1},
+		fakeserver.Exchange{ExpectedPrompt: "Reply with exactly: READY", ExpectedModel: "tiny", ExpectedMaxOutputField: "max_tokens", ExpectedReasoningEffort: "none", ResponseText: "READY", ResponseModel: "tiny-v2", InputTokens: 1, OutputTokens: 1},
+		fakeserver.Exchange{ExpectedPrompt: "Reply with exactly: READY", ExpectedModel: "tiny", ExpectedMaxOutputField: "max_tokens", ExpectedReasoningEffort: "none", ResponseText: "READY", ResponseModel: "tiny-v3", InputTokens: 1, OutputTokens: 1},
 	)
 	defer server.Close()
 	provider, err := openai.New(openai.Config{
@@ -80,6 +80,10 @@ func TestProbeConfirmsTextToTextAndRespectsBudget(t *testing.T) {
 	}
 	if len(server.Requests()) != 1 {
 		t.Fatalf("expected one network call after first probe, got %d", len(server.Requests()))
+	}
+	// Verify probe sent reasoning_effort=none
+	if server.Requests()[0].ReasoningEffort != "none" {
+		t.Fatalf("expected reasoning_effort=none in probe, got %q", server.Requests()[0].ReasoningEffort)
 	}
 
 	// Budget exhausted: return cached/last probe without a second network call.
