@@ -580,6 +580,11 @@ func (p *Provider) Probe(ctx context.Context) (domain.ProviderProfile, error) {
 		Prompt:          "Reply with exactly: READY",
 		MaxOutputTokens: 16,
 		Temperature:     0,
+		// Probe requests disable shadow thinking tokens where supported so the
+		// text-to-text contract probe receives the direct answer within the
+		// small output token budget. Providers that ignore the field will be
+		// unaffected.
+		ReasoningEffort: "none",
 	})
 	now := time.Now().UTC()
 	p.mu.Lock()
