@@ -7011,6 +7011,45 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 383 — adversarial fire sweep across 6 Groq models + 4 NIM cross-provider, 288 live calls (2026-08-05 22:00 -03)
+
+**Objective and implementation.** Executed bounded adversarial fire-sweep campaigns against all 8 operator-mandated adversarial scenarios (ambiguous instruction, context pollution, format pressure, conflicting data, prompt injection, language degradation, budget starvation, CoT poisoning) across 6 Groq models and 4 NVIDIA NIM models, totaling 288 live calls with exact-line scoring.
+
+1. Refreshed model availability probe: 10/12 models available (NIM llama-3.3-70b and deepseek-v4-pro timed out on probe).
+2. Groq campaign: 240 calls (6 models × 8 adversarial tasks × 5 reps, temp=0.0, max_tokens=256, concurrency=3). 202 ok, 38 HTTP 429 (throttle, all with Retry-After 1-3s). Latency P50=423ms, P95=663ms, Max=2318ms.
+3. NIM cross-provider campaign: 48 calls (4 models × 4 hardest tasks × 3 reps, temp=0.0, max_tokens=256). 46 ok, 2 transport timeouts. Latency P50=1026ms, P95=22756ms.
+4. Wrote comprehensive REPORT.md with per-model × per-task accuracy matrix, throttle characterization, and engine design implications.
+
+**Key findings.**
+
+- **Format compliance is the dominant failure mode**: most incorrect responses extract correct semantic data but drop the `DATE:`/`SOURCE:` prefix. Models emit bare `2025-11-03\nS-17` instead of `DATE: 2025-11-03\nSOURCE: S-17`.
+- **adv-language-degradation (PT-BR) is the most discriminating scenario**: large models (gpt-oss-120b, llama-3.1-70b NIM, mistral-nemotron) and qwen3.6-27b (reasoning_effort=none) maintain 100% accuracy; all 8B models and mid-size models without reasoning suppression fail at 0%.
+- **qwen/qwen3.6-27b with reasoning_effort=none is the best performer**: 37/37 correct (100%) across all 8 adversarial scenarios. Without reasoning_effort=none, the model consumes all output tokens in shadow thinking.
+- **allam-2-7b has genuine semantic failure on adv-conflicting-data**: returns `NO` where answer is `YES` (3/3 reps consistently wrong) — not a format issue but a reasoning deficit.
+- **Throttling is bounded and recoverable**: 15.8% 429 rate on Groq with concurrency=3 and 250ms inter-call delay. All 429s have Retry-After 1-3s; linear respect sufficient, no exponential backoff needed.
+- **NIM latency is 3x slower than Groq** (P50: 1026ms vs 423ms) with heavier tails (P95: 22756ms vs 663ms).
+
+**Engine design implications.** (1) Response parser must be format-tolerant with fallback bare-value parsing. (2) Model selection per task class: format-heavy tasks → prefer llama-3.3-70b, qwen3.6-27b (effort=none), gpt-oss-120b; avoid 8B models. (3) PT-BR tasks need stronger format anchoring in prompts. (4) reasoning_effort=none for qwen3.6-27b is critical for bounded-output tasks.
+
+**Deterministic verification.** No code changes in this cycle; campaign-only. Artifacts verified: `results/sweeps/massive-fire-sweep-v1/adv-fire-2026-08-05/` (trials.json, summary.json, REPORT.md) and `results/sweeps/massive-fire-sweep-v1/adv-fire-nim-2026-08-05/` (trials.json, summary.json). `git diff --check` clean.
+
+## Phase 382 — dashboard models 4 critical bug fixes + e2e audit test + dialect compatibility campaign (2026-08-05 18:00 -03)
+
+**Objective and implementation.** Identified and fixed 4 critical bugs in the dashboard models subsystem that blocked model configuration via the dashboard UI.
+
+1. `max_output_dialect: "legacy"` → `"max_tokens"` in `cleanBinding()` and `submitBindingForm()` (`internal/control/httpapi.go`): the invalid `"legacy"` value was always rejected by domain validation, preventing any model binding from being saved.
+2. `refresh()` accessing non-existent `rev.payload` → fixed to read `rev.models` directly: dashboard refresh was throwing JavaScript errors when loading model revisions.
+3. `DefaultApplicabilityForScope(MODELS)` changed from `ConfigRestartRequired` to `ConfigNextCycle` (`internal/domain/config.go`): model changes should hot-reload atomically via `reloadModelExecutorIfNeeded` between cycles, not require a full gateway restart.
+4. `saveSecretIfProvided` saving API key under wrong vault name → fixed to use `api_key_env` (e.g. `GROQ_API_KEY`): API keys were being stored under the provider ID (e.g. `groq`) rather than the environment variable name, making them inaccessible to the provider adapter.
+
+**Tests.** Added `internal/control/models_e2e_audit_test.go` — `TestModelsE2EDashboardFlow` covering create/validate/apply with both dialects (`max_tokens` and `max_completion_tokens`), rejection of invalid `legacy` dialect, JSON field verification, applicability check (`ConfigNextCycle`), and read-back verification of saved bindings. Added standalone audit diagnostic CLI `cmd/audit_test/main.go`. Wrote `AUDIT_REPORT.md` documenting the systematic audit.
+
+**Live campaign.** Dialect compatibility campaign: 18 bounded Groq calls across 3 models (llama-3.1-8b-instant, llama-3.3-70b-versatile, openai/gpt-oss-20b) × 2 dialects (max_tokens, max_completion_tokens) × 3 trials. All 18 calls returned HTTP 200, zero errors, zero 429s. Both dialects accepted universally by Groq. gpt-oss-20b returns empty content at 48-token limit (model behavior: tokens consumed by internal reasoning, not a dialect issue).
+
+**Deterministic verification.** `go test ./internal/control/...` — all pass (including new e2e audit test). `go test ./internal/domain/... ./internal/dashboard/... ./internal/kernel/... ./internal/storage/memory/... ./internal/storage/contract/...` — all pass. `go vet ./...` clean. `gofmt -l .` empty. `git diff --check` clean. Pre-existing flaky test `TestSQLiteWalCheckpointScaleCampaign` in `internal/storage/sqlite` hangs in parallel (passes in isolation) — unrelated to changes.
+
+**Artifacts.** `results/dialect-campaign-2026-08-05/` (manifest.json, results.json, results_clean.json, report.md). `AUDIT_REPORT.md`. `cmd/audit_test/main.go`.
+
 ## Phase 381 — credential vault BatchTouch disk-reload & concurrency safety fix with live campaign (2026-08-05 03:00 -03)
 
 **Objective and implementation.** Hardened `secretvault.Vault.BatchTouch` concurrency safety and multi-handle disk state reload consistency.
