@@ -28,6 +28,16 @@ type CompletionRequest struct {
 	// JSON validity, and it carries no semantic answer when the prefix is a
 	// pure structural opener like "{" or "[".
 	PrefillAssistant string
+	// ReasoningEffort is an optional provider-hint to control internal
+	// reasoning token consumption on hybrid reasoning models (e.g. Groq
+	// qwen3.6-27b, gpt-oss-20b/120b). Adapters that support the field pass it
+	// through; adapters that do not MUST silently ignore it. Valid values are
+	// provider-specific; the kernel validates against the declared profile.
+	// Observed 2026-08-05 adversarial sweep: qwen3.6-27b without effort=none
+	// consumes all output tokens in shadow thinking (0% accuracy); with
+	// effort=none the same model achieves 100% across all 8 adversarial
+	// scenarios. gpt-oss-20b/120b benefits from effort=low for bounded tasks.
+	ReasoningEffort string
 }
 
 type CompletionResult struct {

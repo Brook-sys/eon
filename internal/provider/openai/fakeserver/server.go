@@ -26,16 +26,19 @@ type Exchange struct {
 	ExpectedResponseFormat string
 	// RequireResponseFormat when true fails if response_format is missing.
 	RequireResponseFormat bool
-	ResponseText          string
-	ResponseModel         string
-	ModelsResponse        []string
-	InputTokens           int
-	OutputTokens          int
-	StatusCode            int
-	RawBody               string
-	Headers               map[string]string
-	FinishReason          string
-	ToolCalls             []struct {
+	// ExpectedReasoningEffort is the reasoning_effort value expected in the
+	// request body. Empty means the field must be absent (baseline behavior).
+	ExpectedReasoningEffort string
+	ResponseText            string
+	ResponseModel           string
+	ModelsResponse          []string
+	InputTokens             int
+	OutputTokens            int
+	StatusCode              int
+	RawBody                 string
+	Headers                 map[string]string
+	FinishReason            string
+	ToolCalls               []struct {
 		Name      string
 		Arguments string
 	}
@@ -49,6 +52,8 @@ type Request struct {
 	Temperature     float64
 	Authorization   string
 	ResponseFormat  string
+	ReasoningEffort string
+	UserAgent       string
 	// PrefillAssistant captures the trailing assistant message content when the
 	// caller appended one (adapter prefill contract evidence).
 	PrefillAssistant string
@@ -109,7 +114,8 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat      *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
-		Tools []struct {
+		ReasoningEffort string `json:"reasoning_effort"`
+		Tools           []struct {
 			Type     string `json:"type"`
 			Function struct {
 				Name       string          `json:"name"`
@@ -165,6 +171,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens,
 		MaxOutputField: maxOutputField, Temperature: body.Temperature,
 		Authorization: r.Header.Get("Authorization"), ResponseFormat: responseFormat,
+		ReasoningEffort: body.ReasoningEffort, UserAgent: r.Header.Get("User-Agent"),
 		PrefillAssistant: prefill,
 	}
 	s.requests = append(s.requests, req)
@@ -199,6 +206,12 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if exchange.ExpectedResponseFormat == "" && !exchange.RequireResponseFormat && req.ResponseFormat != "" {
 		// Scripts that do not opt into response_format must remain baseline.
 		s.failures = append(s.failures, fmt.Sprintf("unexpected response_format %q", req.ResponseFormat))
+	}
+	if exchange.ExpectedReasoningEffort != "" && exchange.ExpectedReasoningEffort != req.ReasoningEffort {
+		s.failures = append(s.failures, fmt.Sprintf("reasoning_effort mismatch: expected %q, got %q", exchange.ExpectedReasoningEffort, req.ReasoningEffort))
+	}
+	if exchange.ExpectedReasoningEffort == "" && req.ReasoningEffort != "" {
+		s.failures = append(s.failures, fmt.Sprintf("unexpected reasoning_effort %q", req.ReasoningEffort))
 	}
 	status := exchange.StatusCode
 	if status == 0 {

@@ -25,6 +25,11 @@ const (
 	defaultHTTPTimeout            = 2 * time.Minute
 	defaultModelsCacheTTL         = 5 * time.Minute
 	maxDiscoveredModels           = 100
+	// adapterUserAgent identifies the adapter on all HTTP requests. Some
+	// provider front-ends (e.g. Cloudflare on Groq) reject requests without
+	// a User-Agent header with HTTP 403 even when the API key is valid
+	// (confirmed 2026-08-01: probe without UA -> 403; with UA -> 200 <300ms).
+	adapterUserAgent = "motor-autonomo-openai-adapter/1.0 (go-net/http; bounded text-to-text)"
 )
 
 type Config struct {
@@ -255,6 +260,10 @@ type chatRequest struct {
 	Temperature         float64         `json:"temperature"`
 	ResponseFormat      *responseFormat `json:"response_format,omitempty"`
 	Tools               []chatTool      `json:"tools,omitempty"`
+	// ReasoningEffort is an optional provider extension to control internal
+	// reasoning token consumption. Only sent when non-empty so baseline
+	// servers that do not recognize the field are never surprised.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 }
 
 type chatTool struct {
@@ -342,6 +351,12 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	} else {
 		chatReq.MaxTokens = request.MaxOutputTokens
 	}
+	// Pass reasoning_effort when the kernel requests it. Adapters that do not
+	// support the field will ignore it; the OpenAI-compatible wire format is
+	// permissive about unknown fields on most servers.
+	if effort := strings.TrimSpace(request.ReasoningEffort); effort != "" {
+		chatReq.ReasoningEffort = effort
+	}
 	// Optional FR-MODEL-006 enrichment: only emit response_format when the
 	// kernel selected a known hint. Unknown values fail closed as invalid request.
 	switch request.ResponseFormat {
@@ -361,6 +376,7 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("User-Agent", adapterUserAgent)
 	if p.apiKey != "" {
 		httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
@@ -599,6 +615,7 @@ func (p *Provider) DiscoverModels(ctx context.Context) ([]string, error) {
 	if p.apiKey != "" {
 		httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
+	httpRequest.Header.Set("User-Agent", adapterUserAgent)
 
 	response, err := p.client.Do(httpRequest)
 	if err != nil {

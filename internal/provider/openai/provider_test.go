@@ -406,3 +406,73 @@ func TestProviderCompletesWithToolsAndReturnsToolCalls(t *testing.T) {
 		t.Fatalf("unexpected tool calls: %+v", result.ToolCalls)
 	}
 }
+
+func TestProviderEmitsReasoningEffortWhenRequested(t *testing.T) {
+	server := fakeserver.New(fakeserver.Exchange{
+		ExpectedReasoningEffort: "none",
+		ResponseText:            "READY",
+		ResponseModel:           "qwen-fixture",
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "qwen-fixture", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "choose A or B",
+		MaxOutputTokens: 256,
+		ReasoningEffort: "none",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Text != "READY" {
+		t.Fatalf("unexpected result text: %q", result.Text)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].ReasoningEffort != "none" {
+		t.Fatalf("expected reasoning_effort 'none', got %q", requests[0].ReasoningEffort)
+	}
+	if !strings.HasPrefix(requests[0].UserAgent, "motor-autonomo-openai-adapter/") {
+		t.Fatalf("expected User-Agent header, got %q", requests[0].UserAgent)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}
+
+func TestProviderSetsUserAgentOnAllRequests(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "ok"},
+		fakeserver.Exchange{ModelsResponse: []string{"model-1"}},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "model-1", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. Completion request
+	if _, err := provider.Complete(context.Background(), port.CompletionRequest{Prompt: "hi", MaxOutputTokens: 10}); err != nil {
+		t.Fatal(err)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 || !strings.HasPrefix(requests[0].UserAgent, "motor-autonomo-openai-adapter/") {
+		t.Fatalf("completion request missing User-Agent: %+v", requests)
+	}
+
+	// 2. DiscoverModels request
+	models, err := provider.DiscoverModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(models) != 1 || models[0] != "model-1" {
+		t.Fatalf("unexpected discovered models: %v", models)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}
