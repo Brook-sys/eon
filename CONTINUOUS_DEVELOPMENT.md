@@ -7011,6 +7011,41 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 384 — provider adapter: reasoning_effort, User-Agent, seed, stop, probe fix (2026-08-06 00:45 -03)
+
+**Objective and implementation.** Improved the OpenAI-compatible adapter (`internal/provider/openai/`) with four new port-level features and one critical probe fix, all directly evidenced by the 2026-08-05 adversarial fire sweep results.
+
+1. **`reasoning_effort` passthrough**: Added `ReasoningEffort string` field to `port.CompletionRequest` and `chatRequest`. When the kernel sets this field (e.g. `"none"` for qwen/qwen3.6-27b or `"low"` for gpt-oss-20b/120b), the adapter passes it through to the provider. Adapters that do not recognize the field silently ignore it (OpenAI-compatible wire format is permissive about unknown fields). This is the single most impactful fix for hybrid reasoning models: qwen/qwen3.6-27b without `reasoning_effort=none` scores 0% on adversarial tasks (all tokens consumed by shadow thinking); with `reasoning_effort=none` it scores 100%.
+
+2. **`User-Agent` header on all HTTP requests**: Added `adapterUserAgent` constant and set it on both chat completions and discover-models HTTP requests. Confirmed 2026-08-01: Cloudflare on Groq rejects requests without User-Agent with HTTP 403 even when API key is valid. The sweep runner (Python) already had this fix; the Go adapter did not.
+
+3. **`seed` and `stop` passthrough**: Added `Seed *int64` and `Stop []string` fields to `port.CompletionRequest` and `chatRequest`. When set, the adapter passes them through for deterministic sampling and stop-sequence termination. Both use `omitempty` so baseline servers are never surprised.
+
+4. **Probe prompt strengthened**: Changed probe from `prompt:"ping", max_output_tokens:1` to `prompt:"Reply with exactly: READY", max_output_tokens:16, reasoning_effort:"none"`. The old probe was too weak for hybrid reasoning models (gpt-oss-20b where a single token is consumed by reasoning). The new probe also sets `reasoning_effort=none` to suppress shadow thinking on models like qwen/qwen3.6-27b.
+
+**Live validation on Groq (2026-08-06).**
+
+- `llama-3.3-70b-versatile` baseline completion with User-Agent: `READY` (HTTP 200, <300ms).
+- `qwen/qwen3.6-27b` with `reasoning_effort=none`: `READY` with `finish_reason=stop` (vs. `受限\nHere's a thinking process:...` without the field).
+- `llama-3.3-70b-versatile` with `seed=42, stop=["5"]` + `"Count 1 to 10"`: `"1\n2\n3\n4"` with `finish_reason=stop` (stop sequence correctly hit before 5).
+- `llama-3.3-70b-versatile` `DiscoverModels` with User-Agent: HTTP 200, model list returned.
+- `qwen/qwen3.6-27b` `Probe()` with `reasoning_effort=none`: `text_to_text_confirmed=true`, `source=probed`, `model=qwen/qwen3.6-27b` (previously would fail due to thinking token drain).
+
+**Deterministic verification.**
+
+- `TestProviderEmitsReasoningEffortWhenRequested`: fakeserver verifies `reasoning_effort=none` in request body and `User-Agent` header presence.
+- `TestProviderSetsUserAgentOnAllRequests`: fakeserver verifies `User-Agent` on both completion and discover-models requests.
+- `TestProviderEmitsSeedAndStopWhenRequested`: fakeserver verifies `seed=42` and `stop=["END","STOP"]` in request body.
+- `TestProviderOmitsSeedAndStopWhenNotRequested`: fakeserver verifies no failures when seed/stop are not set.
+- Fakeserver extended with `ExpectedReasoningEffort`, `UserAgent`, `Seed`, `Stop` capture in `Request` struct.
+- All existing adapter and fakeserver tests pass (`go test -count=1 ./internal/provider/openai/...`).
+- `go vet`, `gofmt`, `git diff --check` all clean.
+- Full affected package tests pass: `internal/port`, `internal/domain`, `internal/control`, `internal/kernel`, `internal/dashboard`.
+
+**Commits.** `2a9cd14` (reasoning_effort + User-Agent), `55458c2` (seed + stop + probe prompt), `5432a8b` (probe reasoning_effort fix). All pushed to `origin/main`.
+
+---
+
 ## Phase 383 — adversarial fire sweep across 6 Groq models + 4 NIM cross-provider, 288 live calls (2026-08-05 22:00 -03)
 
 **Objective and implementation.** Executed bounded adversarial fire-sweep campaigns against all 8 operator-mandated adversarial scenarios (ambiguous instruction, context pollution, format pressure, conflicting data, prompt injection, language degradation, budget starvation, CoT poisoning) across 6 Groq models and 4 NVIDIA NIM models, totaling 288 live calls with exact-line scoring.
