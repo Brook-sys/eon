@@ -264,6 +264,11 @@ type chatRequest struct {
 	// reasoning token consumption. Only sent when non-empty so baseline
 	// servers that do not recognize the field are never surprised.
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// Seed is an optional integer hint for deterministic sampling.
+	// Only sent when non-nil so baseline servers are never surprised.
+	Seed *int64 `json:"seed,omitempty"`
+	// Stop is an optional list of stop sequences. Only sent when non-empty.
+	Stop []string `json:"stop,omitempty"`
 }
 
 type chatTool struct {
@@ -356,6 +361,14 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	// permissive about unknown fields on most servers.
 	if effort := strings.TrimSpace(request.ReasoningEffort); effort != "" {
 		chatReq.ReasoningEffort = effort
+	}
+	// Pass seed for deterministic sampling when requested.
+	if request.Seed != nil {
+		chatReq.Seed = request.Seed
+	}
+	// Pass stop sequences when requested.
+	if len(request.Stop) > 0 {
+		chatReq.Stop = request.Stop
 	}
 	// Optional FR-MODEL-006 enrichment: only emit response_format when the
 	// kernel selected a known hint. Unknown values fail closed as invalid request.
@@ -564,8 +577,8 @@ func (p *Provider) Probe(ctx context.Context) (domain.ProviderProfile, error) {
 	p.mu.Unlock()
 
 	result, err := p.Complete(ctx, port.CompletionRequest{
-		Prompt:          "ping",
-		MaxOutputTokens: 1,
+		Prompt:          "Reply with exactly: READY",
+		MaxOutputTokens: 16,
 		Temperature:     0,
 	})
 	now := time.Now().UTC()

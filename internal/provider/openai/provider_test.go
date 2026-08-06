@@ -444,6 +444,59 @@ func TestProviderEmitsReasoningEffortWhenRequested(t *testing.T) {
 	}
 }
 
+func TestProviderEmitsSeedAndStopWhenRequested(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "ok"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seedVal := int64(42)
+	if _, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "generate",
+		MaxOutputTokens: 32,
+		Seed:            &seedVal,
+		Stop:            []string{"END", "STOP"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	requests := server.Requests()
+	if len(requests) != 1 {
+		t.Fatalf("expected 1 request, got %d", len(requests))
+	}
+	if requests[0].Seed == nil || *requests[0].Seed != 42 {
+		t.Fatalf("expected seed 42, got %v", requests[0].Seed)
+	}
+	if len(requests[0].Stop) != 2 || requests[0].Stop[0] != "END" || requests[0].Stop[1] != "STOP" {
+		t.Fatalf("expected stop [END STOP], got %v", requests[0].Stop)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}
+
+func TestProviderOmitsSeedAndStopWhenNotRequested(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{ResponseText: "ok"},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "fixture-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "generate",
+		MaxOutputTokens: 32,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}
+
 func TestProviderSetsUserAgentOnAllRequests(t *testing.T) {
 	server := fakeserver.New(
 		fakeserver.Exchange{ResponseText: "ok"},

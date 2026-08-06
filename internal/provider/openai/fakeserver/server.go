@@ -54,6 +54,8 @@ type Request struct {
 	ResponseFormat  string
 	ReasoningEffort string
 	UserAgent       string
+	Seed            *int64
+	Stop            []string
 	// PrefillAssistant captures the trailing assistant message content when the
 	// caller appended one (adapter prefill contract evidence).
 	PrefillAssistant string
@@ -114,7 +116,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		ResponseFormat      *struct {
 			Type string `json:"type"`
 		} `json:"response_format"`
-		ReasoningEffort string `json:"reasoning_effort"`
+		ReasoningEffort string   `json:"reasoning_effort"`
+		Seed            *int64   `json:"seed"`
+		Stop            []string `json:"stop"`
 		Tools           []struct {
 			Type     string `json:"type"`
 			Function struct {
@@ -172,6 +176,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		MaxOutputField: maxOutputField, Temperature: body.Temperature,
 		Authorization: r.Header.Get("Authorization"), ResponseFormat: responseFormat,
 		ReasoningEffort: body.ReasoningEffort, UserAgent: r.Header.Get("User-Agent"),
+		Seed: body.Seed, Stop: body.Stop,
 		PrefillAssistant: prefill,
 	}
 	s.requests = append(s.requests, req)

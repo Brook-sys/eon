@@ -38,6 +38,12 @@ type CompletionRequest struct {
 	// effort=none the same model achieves 100% across all 8 adversarial
 	// scenarios. gpt-oss-20b/120b benefits from effort=low for bounded tasks.
 	ReasoningEffort string
+	// Seed is an optional integer hint for deterministic sampling (when supported).
+	// When non-nil, adapters supporting seed pass it through; others ignore.
+	Seed *int64
+	// Stop is an optional list of stop sequences. When non-empty, adapters that
+	// support stop sequences send them to terminate completion generation.
+	Stop []string
 }
 
 type CompletionResult struct {
