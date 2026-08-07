@@ -124,6 +124,9 @@ def parse_lines(text, keys):
     lines are assigned positionally.  This recovers semantically correct but
     format-non-compliant responses (fire-sweep 2026-08-05 finding #1: models
     drop DATE:/SOURCE: prefix but emit correct values in correct order).
+
+    Returns (out, used_fallback) where used_fallback is True when the
+    positional fallback was applied.
     """
     out = {}
     for line in text.splitlines():
@@ -133,15 +136,17 @@ def parse_lines(text, keys):
     # Fallback: only when zero keys were found by prefix AND line count
     # matches key count.  This avoids false positives on mixed-format or
     # prose responses.
+    used_fallback = False
     if not out:
         non_empty = [ln.strip() for ln in text.splitlines() if ln.strip()]
         if len(non_empty) == len(keys):
             for i, k in enumerate(keys):
                 out[k] = non_empty[i]
-    return out
+            used_fallback = True
+    return out, used_fallback
 
 def score_task(task, response_text):
-    """Exact-line scorer. Returns (all_correct, field_results).
+    """Exact-line scorer. Returns (all_correct, field_results, used_fallback).
 
     When the primary scorer (prefix match) fails, a fallback parse is
     attempted and the result is recorded for analysis.  The fallback is
@@ -153,10 +158,10 @@ def score_task(task, response_text):
     """
     scoring = task.get("scoring", "")
     if not scoring.startswith("exact_lines:"):
-        return False, {"error": "unknown scoring " + scoring}
+        return False, {"error": "unknown scoring " + scoring}, False
     keys = scoring.split(":", 1)[1].split(",")
     expected = task["expected"]
-    got = parse_lines(response_text, keys)
+    got, used_fallback = parse_lines(response_text, keys)
     fields = {}
     all_ok = True
     for k, exp in zip(keys, [expected.get(k.lower()) for k in keys]):
@@ -165,7 +170,7 @@ def score_task(task, response_text):
         fields[k] = {"expected": exp, "got": g, "ok": ok}
         if not ok:
             all_ok = False
-    return all_ok, fields
+    return all_ok, fields, used_fallback
 
 def main():
     ap = argparse.ArgumentParser()
@@ -247,11 +252,12 @@ def main():
         if effort:
             rec["reasoning_effort"] = effort
         if r.get("ok"):
-            correct, fields = score_task(task, r["response_text"])
+            correct, fields, fb = score_task(task, r["response_text"])
             rec.update({"latency_ms": r["latency_ms"], "prompt_tokens": r["prompt_tokens"],
                         "completion_tokens": r["completion_tokens"], "total_tokens": r["total_tokens"],
                         "finish_reason": r["finish_reason"], "response_text": r["response_text"],
-                        "scored_correct": correct, "field_results": fields})
+                        "scored_correct": correct, "scored_via_fallback": fb,
+                        "field_results": fields})
             calls_ok += 1
         else:
             rec["error"] = {k: v for k, v in r.items() if k != "ok"}
@@ -267,11 +273,15 @@ def main():
     by_model = {}
     for r in results:
         k = f"{r['provider']}/{r['model']}"
-        agg = by_model.setdefault(k, {"calls": 0, "ok": 0, "err": 0, "correct": 0})
+        agg = by_model.setdefault(k, {"calls": 0, "ok": 0, "err": 0, "correct": 0, "fallback_correct": 0, "fallback_total": 0})
         agg["calls"] += 1
         if r["outcome"] == "ok":
             agg["ok"] += 1
             agg["correct"] += int(r.get("scored_correct", False))
+            if r.get("scored_via_fallback"):
+                agg["fallback_total"] += 1
+                if r.get("scored_correct"):
+                    agg["fallback_correct"] += 1
         else:
             agg["err"] += 1
 
@@ -286,6 +296,8 @@ def main():
         "calls_attempted": len(results),
         "calls_ok": calls_ok,
         "calls_error": len(results) - calls_ok,
+        "fallback_total": sum(1 for r in results if r.get("scored_via_fallback")),
+        "fallback_correct": sum(1 for r in results if r.get("scored_via_fallback") and r.get("scored_correct")),
         "latency_ms": {
             "p50": round(statistics.median(lat_ok), 1) if lat_ok else None,
             "p95": round(statistics.quantiles(lat_ok, n=20)[18], 1) if len(lat_ok) >= 20 else (max(lat_ok) if lat_ok else None),
@@ -310,8 +322,7 @@ def atomic_write(path, data):
         f.write(data)
         f.flush()
         os.fsync(f.fileno())
-    os.link(tmp, path) if not os.path.exists(path) else None
-    os.unlink(tmp)
+    os.replace(tmp, path)
 
 if __name__ == "__main__":
     main()
