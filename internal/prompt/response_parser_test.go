@@ -1,0 +1,316 @@
+package prompt
+
+import (
+	"testing"
+)
+
+func TestParseResponse_PrimaryMatch(t *testing.T) {
+	text := "DATE: 2025-11-03\nSOURCE: S-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("should not use fallback when prefix match succeeds")
+	}
+	if len(r.FoundKeys) != 2 {
+		t.Fatalf("expected 2 found keys, got %d", len(r.FoundKeys))
+	}
+	if got := r.Values["DATE"]; got != "2025-11-03" {
+		t.Errorf("DATE=%q, want %q", got, "2025-11-03")
+	}
+	if got := r.Values["SOURCE"]; got != "S-17" {
+		t.Errorf("SOURCE=%q, want %q", got, "S-17")
+	}
+}
+
+func TestParseResponse_CaseInsensitivePrefix(t *testing.T) {
+	text := "date: 2025-11-03\nsource: S-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("should not use fallback")
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_FallbackBareValues(t *testing.T) {
+	// Phase 383 finding: models drop prefix but emit correct values in order.
+	text := "2025-11-03\nS-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if !r.UsedFallback {
+		t.Fatal("expected fallback to be used")
+	}
+	if len(r.FoundByFallback) != 2 {
+		t.Fatalf("expected 2 fallback keys, got %d", len(r.FoundByFallback))
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_NoFallbackWhenLineCountMismatch(t *testing.T) {
+	// 3 non-empty lines but only 2 keys — fallback should NOT fire.
+	text := "2025-11-03\nS-17\nextra line"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("fallback must not fire when non-empty line count != key count")
+	}
+	if len(r.FoundKeys) != 0 {
+		t.Fatalf("expected 0 found keys, got %d", len(r.FoundKeys))
+	}
+}
+
+func TestParseResponse_NoFallbackOnProse(t *testing.T) {
+	// Single line of prose, 2 keys — different line count, no fallback.
+	text := "The date is 2025-11-03 and the source is S-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("fallback must not fire on prose")
+	}
+}
+
+func TestParseResponse_PartialMatchNoFallback(t *testing.T) {
+	// When some keys are found by prefix, fallback is not used even if
+	// other keys are missing.
+	text := "DATE: 2025-11-03\nS-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("fallback must not fire when primary found at least one key")
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if _, ok := r.Values["SOURCE"]; ok {
+		t.Error("SOURCE should be missing (no prefix match, no fallback)")
+	}
+}
+
+func TestParseResponse_EmptyText(t *testing.T) {
+	r := ParseResponse("", []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("empty text should not trigger fallback")
+	}
+	if len(r.FoundKeys) != 0 {
+		t.Fatalf("expected 0 found keys, got %d", len(r.FoundKeys))
+	}
+}
+
+func TestParseResponse_EmptyKeys(t *testing.T) {
+	r := ParseResponse("anything", []string{})
+	if r.UsedFallback {
+		t.Fatal("empty keys should not trigger fallback")
+	}
+	if len(r.Values) != 0 {
+		t.Fatalf("expected 0 values, got %d", len(r.Values))
+	}
+}
+
+func TestParseResponse_ExtraWhitespace(t *testing.T) {
+	text := "DATE:   2025-11-03  \n  SOURCE:   S-17  "
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q (whitespace not trimmed)", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q (whitespace not trimmed)", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_ThreeKeys(t *testing.T) {
+	text := "VERDICT: FAIL\nFACTORS: F-4\nEVIDENCE_COUNT: 3"
+	r := ParseResponse(text, []string{"VERDICT", "FACTORS", "EVIDENCE_COUNT"})
+	if r.UsedFallback {
+		t.Fatal("should not use fallback")
+	}
+	if r.Values["VERDICT"] != "FAIL" {
+		t.Errorf("VERDICT=%q", r.Values["VERDICT"])
+	}
+	if r.Values["FACTORS"] != "F-4" {
+		t.Errorf("FACTORS=%q", r.Values["FACTORS"])
+	}
+	if r.Values["EVIDENCE_COUNT"] != "3" {
+		t.Errorf("EVIDENCE_COUNT=%q", r.Values["EVIDENCE_COUNT"])
+	}
+}
+
+func TestParseResponse_FallbackThreeKeys(t *testing.T) {
+	text := "FAIL\nF-4\n3"
+	r := ParseResponse(text, []string{"VERDICT", "FACTORS", "EVIDENCE_COUNT"})
+	if !r.UsedFallback {
+		t.Fatal("expected fallback")
+	}
+	if r.Values["VERDICT"] != "FAIL" {
+		t.Errorf("VERDICT=%q", r.Values["VERDICT"])
+	}
+	if r.Values["FACTORS"] != "F-4" {
+		t.Errorf("FACTORS=%q", r.Values["FACTORS"])
+	}
+	if r.Values["EVIDENCE_COUNT"] != "3" {
+		t.Errorf("EVIDENCE_COUNT=%q", r.Values["EVIDENCE_COUNT"])
+	}
+}
+
+func TestParseResponse_BlankLinesIgnoredInFallback(t *testing.T) {
+	text := "\n2025-11-03\n\nS-17\n"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if !r.UsedFallback {
+		t.Fatal("expected fallback (2 non-empty lines == 2 keys)")
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_DuplicateKeyFirstWins(t *testing.T) {
+	text := "DATE: 2025-11-03\nDATE: 2025-12-25\nSOURCE: S-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q, want first occurrence", r.Values["DATE"])
+	}
+	if len(r.FoundKeys) != 2 {
+		t.Fatalf("expected 2 found keys (no dup), got %d", len(r.FoundKeys))
+	}
+}
+
+func TestParseResponse_EmptyValueSkipped(t *testing.T) {
+	text := "DATE: \nSOURCE: S-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	// DATE has empty value, so only SOURCE is found by prefix.
+	// Since at least one key was found, fallback does NOT fire.
+	if r.UsedFallback {
+		t.Fatal("fallback must not fire when partial match exists")
+	}
+	if _, ok := r.Values["DATE"]; ok {
+		t.Error("DATE with empty value should not be recorded")
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q", r.Values["SOURCE"])
+	}
+}
+
+func TestAllMatch_AllCorrect(t *testing.T) {
+	r := ParseResponse("DATE: 2025-11-03\nSOURCE: S-17", []string{"DATE", "SOURCE"})
+	if !r.AllMatch([]string{"DATE", "SOURCE"}, map[string]string{
+		"DATE":   "2025-11-03",
+		"SOURCE": "S-17",
+	}) {
+		t.Fatal("AllMatch should return true when all values match")
+	}
+}
+
+func TestAllMatch_ValueMismatch(t *testing.T) {
+	r := ParseResponse("DATE: 2025-12-25\nSOURCE: S-17", []string{"DATE", "SOURCE"})
+	if r.AllMatch([]string{"DATE", "SOURCE"}, map[string]string{
+		"DATE":   "2025-11-03",
+		"SOURCE": "S-17",
+	}) {
+		t.Fatal("AllMatch should return false on value mismatch")
+	}
+}
+
+func TestAllMatch_MissingKey(t *testing.T) {
+	r := ParseResponse("DATE: 2025-11-03", []string{"DATE", "SOURCE"})
+	if r.AllMatch([]string{"DATE", "SOURCE"}, map[string]string{
+		"DATE":   "2025-11-03",
+		"SOURCE": "S-17",
+	}) {
+		t.Fatal("AllMatch should return false when key is missing")
+	}
+}
+
+func TestParseResponse_FiveKeys(t *testing.T) {
+	// Matches the synthesize-factor-trace task with 5 output lines.
+	text := "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4"
+	r := ParseResponse(text, []string{"F3", "F4", "F5", "VERDICT", "FACTORS"})
+	if r.UsedFallback {
+		t.Fatal("should not use fallback")
+	}
+	expected := map[string]string{
+		"F3":      "OK",
+		"F4":      "FAIL",
+		"F5":      "OK",
+		"VERDICT": "FAIL",
+		"FACTORS": "F-4",
+	}
+	for k, exp := range expected {
+		if r.Values[k] != exp {
+			t.Errorf("%s=%q, want %q", k, r.Values[k], exp)
+		}
+	}
+}
+
+func TestParseResponse_FiveKeysFallback(t *testing.T) {
+	text := "OK\nFAIL\nOK\nFAIL\nF-4"
+	r := ParseResponse(text, []string{"F3", "F4", "F5", "VERDICT", "FACTORS"})
+	if !r.UsedFallback {
+		t.Fatal("expected fallback for 5 bare values")
+	}
+	expected := map[string]string{
+		"F3":      "OK",
+		"F4":      "FAIL",
+		"F5":      "OK",
+		"VERDICT": "FAIL",
+		"FACTORS": "F-4",
+	}
+	for k, exp := range expected {
+		if r.Values[k] != exp {
+			t.Errorf("%s=%q, want %q", k, r.Values[k], exp)
+		}
+	}
+}
+
+// TestParseResponse_MarkdownFencesIgnored verifies that markdown code fences
+// do not interfere with prefix matching.
+func TestParseResponse_MarkdownFencesIgnored(t *testing.T) {
+	text := "```\nDATE: 2025-11-03\nSOURCE: S-17\n```"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	// The fence lines have colons but won't match DATE or SOURCE.
+	// The actual DATE and SOURCE lines will match by prefix.
+	if r.UsedFallback {
+		t.Fatal("should not use fallback when keys are found inside fences")
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q", r.Values["SOURCE"])
+	}
+}
+
+// TestParseResponse_ConflictTask verifies the conflict detection task format.
+func TestParseResponse_ConflictTask(t *testing.T) {
+	text := "CONFLICT: YES\nPAIR: O-1/O-2"
+	r := ParseResponse(text, []string{"CONFLICT", "PAIR"})
+	if r.UsedFallback {
+		t.Fatal("should not use fallback")
+	}
+	if r.Values["CONFLICT"] != "YES" {
+		t.Errorf("CONFLICT=%q", r.Values["CONFLICT"])
+	}
+	if r.Values["PAIR"] != "O-1/O-2" {
+		t.Errorf("PAIR=%q", r.Values["PAIR"])
+	}
+}
+
+// TestParseResponse_ConflictTaskFallback verifies fallback for bare conflict values.
+func TestParseResponse_ConflictTaskFallback(t *testing.T) {
+	text := "YES\nO-1/O-2"
+	r := ParseResponse(text, []string{"CONFLICT", "PAIR"})
+	if !r.UsedFallback {
+		t.Fatal("expected fallback")
+	}
+	if r.Values["CONFLICT"] != "YES" {
+		t.Errorf("CONFLICT=%q", r.Values["CONFLICT"])
+	}
+	if r.Values["PAIR"] != "O-1/O-2" {
+		t.Errorf("PAIR=%q", r.Values["PAIR"])
+	}
+}
