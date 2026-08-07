@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -98,6 +99,8 @@ type API struct {
 	SemanticMemoryReader port.MemoryReader
 	// PeerManager is optional; nil disables P2P endpoints.
 	PeerManager *PeerManager
+	// Logger receives structured debug/error lines. Defaults to slog.Default().
+	Logger *slog.Logger
 }
 
 func NewAPI(commands *CommandInbox, events *ExternalEventInbox, clock source.Clock, ids source.IDGenerator) (*API, error) {
@@ -149,7 +152,34 @@ func (a *API) Handler() http.Handler {
 	mux.HandleFunc("GET /memories", a.handleListMemories)
 	mux.HandleFunc("DELETE /memories/{id}", a.handleDeleteMemory)
 	mux.HandleFunc("POST /peers", a.handleAddPeer)
-	return mux
+	return a.withRequestLog(mux)
+}
+
+// withRequestLog wraps the mux with a lightweight request logger that records
+// method, path, status, and duration at debug level. This is the primary
+// debugging surface for dashboard-driven API calls.
+func (a *API) withRequestLog(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		h.ServeHTTP(rw, r)
+		a.logDebug("api request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+	})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
 }
 
 func (a *API) modelPreset(id string) (domain.ModelPreset, bool) {
@@ -946,9 +976,11 @@ func (a *API) handleCreateConfigDraft(w http.ResponseWriter, r *http.Request) {
 		return tx.CreateConfigDraft(draft)
 	})
 	if err != nil {
+		a.logError("config draft create failed", "scope", req.Scope, "reason", req.Reason, "error", err.Error())
 		writeAPIError(w, mapStoreError(err, "config_draft"))
 		return
 	}
+	a.logDebug("config draft created", "draft_id", draftID, "scope", req.Scope, "based_on_revision", req.BasedOnRevision)
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"schema_version": domain.SchemaVersionV1,
 		"draft":          draft,
@@ -1027,9 +1059,11 @@ func (a *API) handleValidateConfigDraft(w http.ResponseWriter, r *http.Request) 
 	id := domain.ConfigDraftID(r.PathValue("draftID"))
 	preview, diff, err := a.ConfigValidate.ValidateDraft(r.Context(), id)
 	if err != nil {
+		a.logError("draft validate failed", "draft_id", id, "error", err.Error())
 		writeAPIError(w, mapStoreError(err, "config_draft"))
 		return
 	}
+	a.logDebug("draft validated", "draft_id", id, "blocked", preview.Blocked, "changes", len(diff.Changes))
 	var draft domain.ConfigDraft
 	_ = a.Events.Store.View(r.Context(), func(reader port.Reader) error {
 		var loadErr error
@@ -1052,9 +1086,11 @@ func (a *API) handleApplyConfigDraft(w http.ResponseWriter, r *http.Request) {
 	id := domain.ConfigDraftID(r.PathValue("draftID"))
 	revision, receipt, err := a.ConfigApply.ApplyDraft(r.Context(), id)
 	if err != nil {
+		a.logError("draft apply failed", "draft_id", id, "error", err.Error())
 		writeAPIError(w, mapStoreError(err, "config_draft"))
 		return
 	}
+	a.logDebug("draft applied", "draft_id", id, "revision", revision.Revision, "result_ref", receipt.ResultRef)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"schema_version": domain.SchemaVersionV1,
 		"revision":       revision,
@@ -1418,7 +1454,27 @@ func writeAPIError(w http.ResponseWriter, err error) {
 		writeJSON(w, apiErr.status, errorBody{Error: errorDetail{Code: apiErr.code, Message: apiErr.message}})
 		return
 	}
+	// Unexpected error type — log for debugging
+	slog.Error("control API unhandled error", "error", err.Error(), "path", "")
 	writeJSON(w, http.StatusInternalServerError, errorBody{Error: errorDetail{Code: "internal_error", Message: "request failed"}})
+}
+
+// logDebug emits a structured debug line when the API logger is configured.
+func (a *API) logDebug(msg string, args ...any) {
+	l := a.Logger
+	if l == nil {
+		l = slog.Default()
+	}
+	l.Debug(msg, args...)
+}
+
+// logError emits a structured error line when the API logger is configured.
+func (a *API) logError(msg string, args ...any) {
+	l := a.Logger
+	if l == nil {
+		l = slog.Default()
+	}
+	l.Error(msg, args...)
 }
 
 func mapStoreError(err error, resource string) error {

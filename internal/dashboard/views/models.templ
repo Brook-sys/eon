@@ -127,7 +127,7 @@ templ Models() {
 					<span class="font-mono px-2 py-0.5 rounded bg-[var(--panel-sub)] text-[var(--muted)]" x-text="vaultState"></span>
 				</div>
 				<div class="flex items-center gap-2" x-data="{ vPass: '' }">
-					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] w-40"/>
+					<input type="password" placeholder="Senha mestra (mín. 12 chars)..." x-model="vPass" class="px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)] w-48" @keyup.enter="unlockVault(vPass)"/>
 					<button type="button" class="px-3.5 py-1.5 rounded-lg bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)]/25 font-semibold transition-all cursor-pointer" x-on:click="unlockVault(vPass)">Desbloquear Cofre</button>
 				</div>
 			</div>
@@ -410,7 +410,11 @@ templ Models() {
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify({ password: pass })
 							});
-							if (!res.ok) throw new Error('Falha ao desbloquear');
+							if (!res.ok) {
+								let errMsg = 'Falha ao desbloquear';
+								try { const errBody = await res.json(); errMsg = errBody?.error?.message || errMsg; } catch (_) {}
+								throw new Error(errMsg);
+							}
 							await this.refreshVaultStatus();
 							if (window.notify) window.notify('Cofre de credenciais desbloqueado!', 'success');
 						} catch (err) {
@@ -511,11 +515,16 @@ templ Models() {
 
 					async saveSecretIfProvided(apiKeyEnv, secret) {
 						if (!secret) return;
-						await fetch('/dash/api/vault/secrets/' + encodeURIComponent(apiKeyEnv), {
+						const res = await fetch('/dash/api/vault/secrets/' + encodeURIComponent(apiKeyEnv), {
 							method: 'PUT',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ value: secret })
 						});
+						if (!res.ok) {
+							let msg = 'Falha ao salvar credencial';
+							try { const e = await res.json(); msg = e?.error?.message || msg; } catch (_) {}
+							throw new Error(msg);
+						}
 					},
 
 					async submitProviderForm() {
@@ -606,15 +615,25 @@ templ Models() {
 
 					async removeProvider(id) {
 						if (!confirm("Remover o provedor " + id + " do catálogo de provedores?")) return;
-						const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
-						const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
-						await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
+						try {
+							const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
+							const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
+							await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
+							if (window.notify) window.notify('Provedor ' + id + ' removido.', 'success');
+						} catch (err) {
+							if (window.notify) window.notify('Erro ao remover provedor: ' + err.message, 'error');
+						}
 					},
 
 					async removeBinding(idOrSlot) {
 						if (!confirm("Remover esta preferência de modelo?")) return;
-						const nextB = (this.cfgPayload.bindings || []).filter(x => x.id !== idOrSlot && x.slot !== idOrSlot);
-						await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover preferência de modelo");
+						try {
+							const nextB = (this.cfgPayload.bindings || []).filter(x => x.id !== idOrSlot && x.slot !== idOrSlot);
+							await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover preferência de modelo");
+							if (window.notify) window.notify('Preferência de modelo removida.', 'success');
+						} catch (err) {
+							if (window.notify) window.notify('Erro ao remover preferência: ' + err.message, 'error');
+						}
 					},
 
 					async createModelsDraft(modelsPayload, note) {
@@ -631,6 +650,7 @@ templ Models() {
 							body: JSON.stringify({
 								scope: 'MODELS',
 								reason: note || 'Draft alterado via dashboard v2',
+								based_on_revision: this.cfgActiveRevision || 0,
 								models: payload
 							})
 						});
@@ -638,6 +658,7 @@ templ Models() {
 						if (!draftRes.ok) throw new Error(draft.error?.message || draft.message || 'Erro ao criar rascunho');
 
 						const draftID = draft.draft_id || draft.id || (draft.draft && (draft.draft.draft_id || draft.draft.id));
+						if (!draftID) throw new Error('ID do rascunho não retornado pela API');
 
 						const valRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
 						const val = await valRes.json();
@@ -648,7 +669,12 @@ templ Models() {
 							headers: { 'Content-Type': 'application/json' }
 						});
 						const app = await appRes.json();
-						if (!appRes.ok) throw new Error(app.error?.message || 'Erro ao aplicar rascunho');
+						if (!appRes.ok) {
+							const code = app.error?.code || '';
+							const msg = app.error?.message || 'Erro ao aplicar rascunho';
+							if (code === 'conflict') throw new Error('Conflito: a configuração foi alterada por outra operação. Atualizando...');
+							throw new Error(msg);
+						}
 
 						await this.refresh();
 					},
