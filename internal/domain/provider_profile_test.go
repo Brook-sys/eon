@@ -40,6 +40,26 @@ func TestProviderProfileRejectsUnknownSourceAndDialect(t *testing.T) {
 	}
 }
 
+func TestResolveThinkingOverheadTokens(t *testing.T) {
+	cases := []struct {
+		model    string
+		expected int
+	}{
+		{"qwen/qwen3.6-27b", 640},
+		{"Qwen-3.6-27B-Instruct", 640},
+		{"openai/gpt-oss-120b", 256},
+		{"openai/gpt-oss-20b", 128},
+		{"llama-3.3-70b-versatile", 0},
+		{"", 0},
+	}
+	for _, tc := range cases {
+		got := domain.ResolveThinkingOverheadTokens(tc.model)
+		if got != tc.expected {
+			t.Errorf("model %q: expected %d, got %d", tc.model, tc.expected, got)
+		}
+	}
+}
+
 func TestProviderProfileReasoningEffortValidation(t *testing.T) {
 	base := domain.BaselineDeclaredProfile("x", "m", domain.MaxOutputDialectLegacy, 0, time.Unix(0, 0).UTC())
 	for _, effort := range []string{"none", "low", "medium", "high", ""} {

@@ -7245,3 +7245,17 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` 100% passing across all packages. `git diff --check` clean. Report in `results/phase391-auto-suppression/REPORT.md`.
 
+## Phase 392 — full-chain integration & reasoning thinking overhead floor (2026-08-08 15:10 -03)
+
+**Objective and implementation.** Executed a 36-trial live integration campaign testing the complete prompt compiler and recovery pipeline (BudgetGuard + thinking overhead floor + reasoning effort auto-suppression + StripThinkingTags + ParseResponse format-fallback) across 4 Groq models (`qwen/qwen3.6-27b`, `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `openai/gpt-oss-20b`) under 3 budget regimes (tight 64, moderate 256, comfortable 512 tokens).
+1. Extended `domain.ProviderProfile` with `ThinkingOverheadTokens int` and added `domain.ResolveThinkingOverheadTokens(model string) int` to supply empirical thinking token overhead estimates (640 for `qwen3.6-27b`, 256 for `gpt-oss-120b`, 128 for `gpt-oss-20b`).
+2. Wired `ModelExecutor.resolveThinkingOverhead(profile)` to pass the model's thinking overhead estimate into `prompt.Input.ThinkingOverheadTokens` before compilation.
+3. Live campaign findings:
+   - `qwen/qwen3.6-27b`: achieved **9/9 (100%) success** across all budget levels (64, 256, and 512 tokens) with latency P50 ~240ms, using auto-suppressed `reasoning_effort: "none"` to return the exact 21-token response without truncation.
+   - `llama-3.3-70b-versatile`: **9/9 (100%) success** across all budgets in 236–618ms using 16 output tokens.
+   - `llama-3.1-8b-instant`: **6/6 success** at 256 and 512 tokens; failed at 64 tokens due to verbose prose before answer.
+   - `openai/gpt-oss-20b`: **6/6 success** at 256 and 512 tokens; rejected `reasoning_effort: "none"` at 64 tokens (HTTP 400).
+4. Total campaign score: 33/36 (91.7%) OK, P50 latency 308ms, P95 428ms.
+
+**Deterministic verification.** `go test ./...` 100% passing across all packages. `go vet` and `git diff --check` clean. Artifacts in `results/phase392-integration-fire/`.
+

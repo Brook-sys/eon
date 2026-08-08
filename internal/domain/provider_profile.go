@@ -68,6 +68,10 @@ type ProviderProfile struct {
 	// reasoning models (e.g., "none", "low", "medium", "high"). When set, the
 	// adaptation selection includes it in the completion request.
 	DefaultReasoningEffort string `json:"default_reasoning_effort,omitempty"`
+	// ThinkingOverheadTokens is the estimated token budget consumed by model
+	// reasoning/thinking before the answer is produced. When > 0, BudgetGuard
+	// factors this overhead into the output budget floor and auto-suppression logic.
+	ThinkingOverheadTokens int `json:"thinking_overhead_tokens,omitempty"`
 	// TextToTextConfirmed is true only after a successful probe or equivalent
 	// contract evidence that plain text completion works.
 	TextToTextConfirmed bool `json:"text_to_text_confirmed"`
@@ -157,5 +161,22 @@ func BaselineDeclaredProfile(name, model string, dialect MaxOutputDialect, conte
 		Quirks:               []string{string(dialect)},
 		SafeDetail:           "declared baseline; richer capabilities unknown until probe or operator override",
 		PolicyVersion:        "provider-profile@1",
+	}
+}
+
+// ResolveThinkingOverheadTokens returns empirical thinking token overhead estimates
+// for known reasoning models based on live fire test campaigns (Phases 388-392).
+// Returns 0 for non-thinking models.
+func ResolveThinkingOverheadTokens(model string) int {
+	lower := strings.ToLower(model)
+	switch {
+	case strings.Contains(lower, "qwen3.6-27b") || strings.Contains(lower, "qwen-3.6-27b"):
+		return 640 // Phase 392 live fire test proved qwen3.6-27b consumes >512 tokens when unsuppressed
+	case strings.Contains(lower, "gpt-oss-120b"):
+		return 256
+	case strings.Contains(lower, "gpt-oss-20b"):
+		return 128
+	default:
+		return 0
 	}
 }

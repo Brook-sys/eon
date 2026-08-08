@@ -480,6 +480,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		return nil
 	})
 
+	profile := e.resolveProfile()
 	compileInput, err := e.buildPromptInput(operation, spec, baseCommit)
 	if err != nil {
 		e.releaseResourcePermits(ctx, operation, preflightPermits, true, nil)
@@ -487,8 +488,8 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		failErr := e.failRunning(ctx, operation, leaseRef, err)
 		return result, failErr
 	}
+	compileInput.ThinkingOverheadTokens = e.resolveThinkingOverhead(profile)
 	// FR-MODEL-006/007: select reversible enrichment + conservative context.
-	profile := e.resolveProfile()
 	plan := domain.SelectAdaptationPlan(domain.AdaptationSelectionInput{
 		Profile:               profile,
 		PreferJSON:            true, // PROPOSE_ONLY path expects JSON ChangeSet.
@@ -1709,6 +1710,16 @@ func (e ModelExecutor) resolveProfile() domain.ProviderProfile {
 		now = e.Clock.Now().UTC()
 	}
 	return domain.BaselineDeclaredProfile("model-executor", "", domain.MaxOutputDialectLegacy, ctxTokens, now)
+}
+
+func (e ModelExecutor) resolveThinkingOverhead(profile domain.ProviderProfile) int {
+	if profile.ThinkingOverheadTokens > 0 {
+		return profile.ThinkingOverheadTokens
+	}
+	if overhead := domain.ResolveThinkingOverheadTokens(profile.Model); overhead > 0 {
+		return overhead
+	}
+	return domain.ResolveThinkingOverheadTokens(e.PrimaryBindingID)
 }
 
 func (e ModelExecutor) appendAdaptationEvent(ctx context.Context, operation domain.Operation, leaseRef string, plan domain.AdaptationPlan, callsUsed int) error {

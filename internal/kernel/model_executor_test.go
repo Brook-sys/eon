@@ -263,6 +263,41 @@ func TestModelExecutorBurnsUnresolvedReservationAcrossRedispatch(t *testing.T) {
 	}
 }
 
+func TestModelExecutorResolvesThinkingOverhead(t *testing.T) {
+	executor := ModelExecutor{
+		PrimaryBindingID: "qwen/qwen3.6-27b",
+	}
+	profile := domain.ProviderProfile{
+		Model: "qwen/qwen3.6-27b",
+	}
+	overhead := executor.resolveThinkingOverhead(profile)
+	if overhead != 640 {
+		t.Fatalf("expected thinking overhead 640 for qwen3.6-27b, got %d", overhead)
+	}
+
+	// Profile override takes precedence
+	profileOverride := domain.ProviderProfile{
+		Model:                  "qwen/qwen3.6-27b",
+		ThinkingOverheadTokens: 500,
+	}
+	overheadOverride := executor.resolveThinkingOverhead(profileOverride)
+	if overheadOverride != 500 {
+		t.Fatalf("expected profile override thinking overhead 500, got %d", overheadOverride)
+	}
+
+	// Non-reasoning model returns 0
+	nonThinkingProfile := domain.ProviderProfile{
+		Model: "llama-3.3-70b-versatile",
+	}
+	executorNonThinking := ModelExecutor{
+		PrimaryBindingID: "llama-3.3-70b-versatile",
+	}
+	overheadNonThinking := executorNonThinking.resolveThinkingOverhead(nonThinkingProfile)
+	if overheadNonThinking != 0 {
+		t.Fatalf("expected thinking overhead 0 for llama-3.3-70b, got %d", overheadNonThinking)
+	}
+}
+
 func TestBuildPromptInputUsesMinimalExactTextContract(t *testing.T) {
 	executor := ModelExecutor{}
 	spec := modelTestSpec()

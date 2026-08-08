@@ -1,0 +1,39 @@
+{
+  "total_trials": 36,
+  "total_errors": 3,
+  "total_429": 0,
+  "total_ok": 33,
+  "by_model": {
+    "llama-3.1-8b-instant": {
+      "trials": 9,
+      "format_ok": 6,
+      "semantic_ok": 6,
+      "errors": 0,
+      "auto_suppressed": 0
+    },
+    "llama-3.3-70b-versatile": {
+      "trials": 9,
+      "format_ok": 9,
+      "semantic_ok": 9,
+      "errors": 0,
+      "auto_suppressed": 0
+    },
+    "openai/gpt-oss-20b": {
+      "trials": 6,
+      "format_ok": 6,
+      "semantic_ok": 6,
+      "errors": 0,
+      "auto_suppressed": 0
+    },
+    "qwen/qwen3.6-27b": {
+      "trials": 9,
+      "format_ok": 9,
+      "semantic_ok": 9,
+      "errors": 0,
+      "auto_suppressed": 9
+    }
+  },
+  "latency_p50_ms": 308,
+  "latency_p95_ms": 428,
+  "latency_max_ms": 990
+}
