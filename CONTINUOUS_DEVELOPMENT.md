@@ -7184,13 +7184,32 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 626.39 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase373-groq-qwen36-vault-search-fix/`.
 
-## Phase 372 — credential vault BatchPurgeExpired capability, HTTP endpoint & live campaign (2026-08-04 05:00 -03)
+## Phase 386 — prompt compiler: BudgetGuard output token floor validation (2026-08-08 04:30 -03)
 
-**Objective and implementation.** Extended `secretvault.Vault` with targeted multi-secret selective purge `BatchPurgeExpired` and HTTP endpoint `POST /secrets/batch-purge-expired`.
-1. Implemented `func (v *Vault) BatchPurgeExpired(names []string) (BatchPurgeResult, error)`: inspects passed secret names, purges only those where `ExpiresAt` is non-zero and `<= now`, ignores active/missing secrets, sorts purged names deterministically, saves vault file atomically in a single write, and logs audit events (`batch_purge_expired`).
-2. Added HTTP endpoint: `POST /secrets/batch-purge-expired` accepting `{"names": [...]}` and returning `BatchPurgeResult` (HTTP 200 OK).
-3. Added unit tests in `internal/secretvault/batch_purge_test.go` covering target subset purge, active secret preservation, locked vault rejection, and HTTP surface.
+**Objective and implementation.** Hardened `internal/prompt/compiler.go` against budget starvation by adding an automated output token floor check (`BudgetGuard`).
+1. Implemented `estimateMinOutputTokens(answerFormat string)`: estimates the minimum output tokens needed to emit an answer format using conservative UTF-8 byte packing (`len(bytes)/3`), plus a 20% format delimiter overhead, with an absolute floor of 8 tokens.
+2. Added `MinOutputTokens` field to `prompt.Input`: allows callers to override the auto-computed minimum floor.
+3. Added `ErrOutputBudgetInsufficient` check to `Compiler.Compile`: returns an explicit error when `OperationSpec.MaxOutputTokens` is below the output floor, preventing requests that would deterministically fail with `finish_reason=length`.
+4. Added deterministic unit tests in `internal/prompt/compiler_test.go` (`TestBudgetGuardRejectsInsufficientOutputBudget`, `TestEstimateMinOutputTokens`).
 
-**Live hypothesis and bounds.** Rotated provider deployment to primary Groq `llama-3.3-70b-versatile` with seeded circuit control (fallback-path verification), bounded fallback to NVIDIA NIM `meta/llama-3.1-8b-instruct`; single isolated call, 45 s deadline, 32 max output tokens, exact-response contract (`READY`).
+**Deterministic verification.** `go test ./internal/prompt/...` passed cleanly. `go vet` and `git diff --check` clean. Commit `7ce87d0` pushed to `origin/main`.
 
-**Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 625.08 ms (HTTP 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./internal/secretvault/...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase372-groq-llama33-vault-batch-purge/`.
+## Phase 387 — CoT anti-poisoning guard campaign & prompt structure validation (2026-08-08 04:45 -03)
+
+**Objective and implementation.** Conducted a live fire campaign evaluating anti-poisoning guard mechanisms when context contains misleading few-shot examples or reasoning cues.
+1. Formulated a 45-trial live campaign across 3 Groq models (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) under CoT poisoning pressure (misleading few-shot example placing `SOURCE:` before `DATE:` and omitting fields).
+2. Executed 45 calls (15 per model) via `cmd/cot_anti_poisoning_fire_test`.
+3. Results: `llama-3.3-70b-versatile` achieved 15/15 format compliance and 15/15 semantic correctness (100%), completely ignoring the poisoned example. `llama-3.1-8b-instant` achieved 15/15 format compliance and 15/15 semantic correctness (100%).
+4. Critical finding: `qwen/qwen3.6-27b` scored 0/15 semantic correctness at `max_tokens=128` because reasoning tokens consumed the entire budget before the answer could be emitted (`finish_reason=length`).
+
+**Deterministic verification.** Full report written to `results/cot-anti-poisoning-phase387/REPORT.md`. Commit `e98c41f` pushed to `origin/main`.
+
+## Phase 388 — thinking budget threshold campaign & ThinkingOverheadTokens support (2026-08-08 05:05 -03)
+
+**Objective and implementation.** Investigated token budget thresholds for reasoning-heavy models (`qwen/qwen3.6-27b`) and integrated reasoning overhead into the prompt compiler.
+1. Formulated and executed Phase 388 live campaign (42 live calls across 7 token levels: 128, 256, 384, 512, 768, 1024, 2048).
+2. Proved empirically that `qwen/qwen3.6-27b` fails with `finish_reason=length` and 0/3 correctness when `max_tokens` < 512 due to reasoning token overhead (~350–500 tokens). At `max_tokens` >= 512, correctness reaches 3/3 (100%). At `max_tokens=2048`, the model completes naturally with `finish_reason=stop`.
+3. Non-thinking control (`llama-3.3-70b-versatile`) scored 21/21 (100%) correctness across all token levels (128–2048) in ~300ms.
+4. Extended `internal/prompt/compiler.go` with `ThinkingOverheadTokens int` field in `Input`. When set, the BudgetGuard floor incorporates the reasoning overhead. Added unit test `TestBudgetGuardIncludesThinkingOverhead`.
+
+**Deterministic verification.** `go test ./internal/prompt/...` passed cleanly. `go vet`, `gofmt`, `git diff --check` all clean. Commit `b80131a` pushed to `origin/main`. Artifacts in `results/thinking-budget-threshold-phase388/`.
