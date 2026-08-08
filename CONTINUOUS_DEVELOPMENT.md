@@ -7259,3 +7259,14 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` 100% passing across all packages. `go vet` and `git diff --check` clean. Artifacts in `results/phase392-integration-fire/`.
 
+## Phase 393 — adaptive reasoning effort & multi-provider budget recovery campaign (2026-08-08 17:30 -03)
+
+**Objective and implementation.** Evaluated adaptive reasoning effort auto-suppression, BudgetGuard floor validation, and multi-provider cross-model behavior across 5 models (`groq/qwen/qwen3.6-27b`, `groq/llama-3.3-70b-versatile`, `groq/openai/gpt-oss-20b`, `groq/llama-3.1-8b-instant`, `nim/deepseek-ai/deepseek-v4-flash-0731`) under 3 output token budget regimes (64, 256, 512 max output tokens).
+1. Formulated and executed a 45-trial live fire campaign (`cmd/phase393_adaptive_budget_campaign`).
+2. Empirically validated that under `max_tokens: 64`, `qwen/qwen3.6-27b` (`ThinkingOverheadTokens: 640`) automatically suppressed `reasoning_effort` to `"none"`, achieving 9/9 (100%) success across all budgets with P50 latency **248ms**.
+3. `llama-3.3-70b-versatile` and `nim/deepseek-ai/deepseek-v4-flash-0731` both achieved **9/9 (100%)** success across all budgets.
+4. `gpt-oss-20b` failed at `max_tokens: 64` due to reasoning token starvation, accurately classified by adapter as `INVALID_RESPONSE: reasoning_budget_exhausted` (3/3 calls), but achieved 6/6 (100%) success at 256 and 512 tokens.
+5. `llama-3.1-8b-instant` achieved 6/6 (100%) success at 256 and 512 tokens (failed at 64 tokens due to preamble).
+6. Overall campaign score: 39/45 (86.7%) OK, P50 latency 280ms. Artifacts saved in `results/phase393-adaptive-budget/`.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly. `git diff --check` clean.
