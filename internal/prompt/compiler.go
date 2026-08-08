@@ -61,6 +61,13 @@ type Input struct {
 	// deterministic truncation on gpt-oss-120b/20b (0/8 format compliance)
 	// because the models cannot compress DATE+SOURCE into 20 tokens.
 	MinOutputTokens int
+	// ThinkingOverheadTokens is the estimated token budget consumed by model
+	// reasoning/thinking before the answer is produced (e.g. qwen3.6-27b).
+	// Phase 388 empirical campaign (42 live trials, 2026-08-08) proved that
+	// thinking models fail with finish_reason=length when max_tokens < 512
+	// because thinking consumes ~350-500 tokens before the answer.
+	// When non-zero, this overhead is added to the BudgetGuard floor.
+	ThinkingOverheadTokens int
 }
 
 // ErrOutputBudgetInsufficient is returned when MaxOutputTokens is below the
@@ -106,7 +113,7 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	// max_tokens=20 because DATE+SOURCE cannot fit in 20 output tokens.
 	minOutput := input.MinOutputTokens
 	if minOutput <= 0 {
-		minOutput = estimateMinOutputTokens(input.AnswerFormat)
+		minOutput = estimateMinOutputTokens(input.AnswerFormat) + input.ThinkingOverheadTokens
 	}
 	if spec.MaxOutputTokens < minOutput {
 		return Result{MinOutputTokens: minOutput}, fmt.Errorf("%w: need %d, have %d", ErrOutputBudgetInsufficient, minOutput, spec.MaxOutputTokens)

@@ -182,6 +182,26 @@ func TestBudgetGuardRespectsExplicitMinOutputTokens(t *testing.T) {
 	}
 }
 
+func TestBudgetGuardIncludesThinkingOverhead(t *testing.T) {
+	spec := validSpec()
+	spec.MaxOutputTokens = 128 // normal format fits, but thinking overhead doesn't
+	spec.Budget.Tokens = 1000
+	spec.SafetyMargin = 3
+	input := Input{
+		Task:                   "Extract date and source.",
+		AllowedOutputs:         []string{"DATE: value", "SOURCE: value"},
+		AnswerFormat:           "DATE: 2025-11-03\nSOURCE: S-17",
+		ThinkingOverheadTokens: 384, // Phase 388 floor for qwen3.6-27b
+	}
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
+	if !errors.Is(err, ErrOutputBudgetInsufficient) {
+		t.Fatalf("expected ErrOutputBudgetInsufficient when thinking overhead exceeds budget, got %v", err)
+	}
+	if result.MinOutputTokens < 390 {
+		t.Fatalf("MinOutputTokens (%d) should include thinking overhead (384 + format floor)", result.MinOutputTokens)
+	}
+}
+
 func TestEstimateMinOutputTokens(t *testing.T) {
 	cases := []struct {
 		format   string
