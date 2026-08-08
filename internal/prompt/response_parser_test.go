@@ -328,3 +328,14 @@ func TestParseResponse_IgnoresThinkingBlocks(t *testing.T) {
 		t.Errorf("SOURCE=%q, want S-1", r.Values["SOURCE"])
 	}
 }
+
+func TestParseResponse_ThinkingWithMarkdownFences(t *testing.T) {
+	text := "<thought>\nLet's analyze\n</thought>\n```text\nDATE: 2026-08-08\nSOURCE: S-42\n```"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-42" {
+		t.Errorf("SOURCE=%q, want S-42", r.Values["SOURCE"])
+	}
+}

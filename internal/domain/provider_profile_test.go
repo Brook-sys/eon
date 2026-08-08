@@ -39,3 +39,17 @@ func TestProviderProfileRejectsUnknownSourceAndDialect(t *testing.T) {
 		t.Fatal("expected invalid dialect")
 	}
 }
+
+func TestProviderProfileReasoningEffortValidation(t *testing.T) {
+	base := domain.BaselineDeclaredProfile("x", "m", domain.MaxOutputDialectLegacy, 0, time.Unix(0, 0).UTC())
+	for _, effort := range []string{"none", "low", "medium", "high", ""} {
+		base.DefaultReasoningEffort = effort
+		if err := base.Validate(); err != nil {
+			t.Fatalf("expected valid reasoning effort %q, got: %v", effort, err)
+		}
+	}
+	base.DefaultReasoningEffort = "invalid_effort"
+	if err := base.Validate(); err == nil {
+		t.Fatal("expected error for invalid reasoning effort")
+	}
+}

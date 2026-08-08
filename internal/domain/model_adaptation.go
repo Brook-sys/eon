@@ -232,6 +232,9 @@ type AdaptationPlan struct {
 	// Phase 371 B showed a lone "{" opener eliminates Markdown fences on
 	// llama-3.1-8b-instant without trading JSON validity or latency).
 	PrefillAssistant string `json:"prefill_assistant,omitempty"`
+	// ReasoningEffort is an optional reasoning effort hint (e.g. "none", "low")
+	// populated from the provider profile to control internal thinking overhead.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 	// ContextTokens is the effective compiler window (FR-MODEL-007).
 	ContextTokens int `json:"context_tokens,omitempty"`
 	// Reason is a short machine-oriented code for audit (no free-form prose).
@@ -271,10 +274,11 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 	// Native tools: only when explicitly allowed AND profile confirms support.
 	if in.AllowNativeTools && in.Profile.SupportsTools {
 		return AdaptationPlan{
-			Level:         AdaptationNativeTools,
-			ContextTokens: effectiveCtx,
-			Reason:        "tools_confirmed",
-			Reversible:    true,
+			Level:           AdaptationNativeTools,
+			ContextTokens:   effectiveCtx,
+			ReasoningEffort: in.Profile.DefaultReasoningEffort,
+			Reason:          "tools_confirmed",
+			Reversible:      true,
 		}
 	}
 
@@ -289,11 +293,12 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 			reason = "json_mode_confirmed_expanded_context"
 		}
 		plan := AdaptationPlan{
-			Level:          level,
-			ResponseFormat: ResponseFormatJSONObject,
-			ContextTokens:  effectiveCtx,
-			Reason:         reason,
-			Reversible:     true,
+			Level:           level,
+			ResponseFormat:  ResponseFormatJSONObject,
+			ContextTokens:   effectiveCtx,
+			ReasoningEffort: in.Profile.DefaultReasoningEffort,
+			Reason:          reason,
+			Reversible:      true,
 		}
 		if in.Profile.SupportsPrefill {
 			plan.PrefillAssistant = "{"
@@ -308,6 +313,7 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 			Level:            AdaptationBaseline,
 			PrefillAssistant: "{",
 			ContextTokens:    effectiveCtx,
+			ReasoningEffort:  in.Profile.DefaultReasoningEffort,
 			Reason:           "prefill_confirmed_json_unavailable",
 			Reversible:       true,
 		}
@@ -315,18 +321,20 @@ func SelectAdaptationPlan(in AdaptationSelectionInput) AdaptationPlan {
 
 	if in.PreferExpandedContext && effectiveCtx > 0 {
 		return AdaptationPlan{
-			Level:         AdaptationExpandedContext,
-			ContextTokens: effectiveCtx,
-			Reason:        "expanded_context_policy",
-			Reversible:    true,
+			Level:           AdaptationExpandedContext,
+			ContextTokens:   effectiveCtx,
+			ReasoningEffort: in.Profile.DefaultReasoningEffort,
+			Reason:          "expanded_context_policy",
+			Reversible:      true,
 		}
 	}
 
 	return AdaptationPlan{
-		Level:         AdaptationBaseline,
-		ContextTokens: effectiveCtx,
-		Reason:        "baseline_text_to_text",
-		Reversible:    true,
+		Level:           AdaptationBaseline,
+		ContextTokens:   effectiveCtx,
+		ReasoningEffort: in.Profile.DefaultReasoningEffort,
+		Reason:          "baseline_text_to_text",
+		Reversible:      true,
 	}
 }
 

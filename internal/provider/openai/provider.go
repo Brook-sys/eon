@@ -576,16 +576,24 @@ func (p *Provider) Probe(ctx context.Context) (domain.ProviderProfile, error) {
 	remaining := p.probeBudget
 	p.mu.Unlock()
 
-	result, err := p.Complete(ctx, port.CompletionRequest{
+	req := port.CompletionRequest{
 		Prompt:          "Reply with exactly: READY",
 		MaxOutputTokens: 16,
 		Temperature:     0,
-		// Probe requests disable shadow thinking tokens where supported so the
-		// text-to-text contract probe receives the direct answer within the
-		// small output token budget. Providers that ignore the field will be
-		// unaffected.
+		// Probe requests attempt to disable shadow thinking tokens where supported
+		// so the text-to-text contract probe receives the direct answer within the
+		// small output token budget.
 		ReasoningEffort: "none",
-	})
+	}
+	result, err := p.Complete(ctx, req)
+	if err != nil {
+		var providerErr *Error
+		if errors.As(err, &providerErr) && providerErr.StatusCode == 400 {
+			// Baseline standard models on providers like Groq reject reasoning_effort with HTTP 400; retry without it.
+			req.ReasoningEffort = ""
+			result, err = p.Complete(ctx, req)
+		}
+	}
 	now := time.Now().UTC()
 	p.mu.Lock()
 	defer p.mu.Unlock()

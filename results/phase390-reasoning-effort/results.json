@@ -1,0 +1,111 @@
+[
+  {
+    "model": "llama-3.3-70b-versatile",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 321,
+    "input_tokens": 71,
+    "output_tokens": 25,
+    "stripped_thought": false,
+    "parsed_values": {
+      "DATE": "2026-08-08",
+      "WEEKEND": "YES"
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "reasoning_effort": "none",
+    "probe_confirmed": true,
+    "latency_ms": 226,
+    "input_tokens": 57,
+    "output_tokens": 20,
+    "stripped_thought": false,
+    "parsed_values": {
+      "DATE": "2026-08-08",
+      "WEEKEND": "YES"
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 223,
+    "input_tokens": 71,
+    "output_tokens": 16,
+    "stripped_thought": false,
+    "parsed_values": {
+      "DATE": "2026-08-08",
+      "WEEKEND": "NO"
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 343,
+    "input_tokens": 79,
+    "output_tokens": 26,
+    "stripped_thought": false,
+    "parsed_values": {
+      "CONFLICT": "YES",
+      "REASON": "The two sensors report significantly different latency values for the same window, indicating a discrepancy."
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 287,
+    "input_tokens": 79,
+    "output_tokens": 33,
+    "stripped_thought": false,
+    "parsed_values": {
+      "CONFLICT": "YES",
+      "REASON": "Sensor B reports a latency that is greater than the window's duration, which is likely not possible for a single window."
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "reasoning_effort": "none",
+    "probe_confirmed": true,
+    "latency_ms": 259,
+    "input_tokens": 62,
+    "output_tokens": 37,
+    "stripped_thought": false,
+    "parsed_values": {
+      "CONFLICT": "YES",
+      "REASON": "The reported latency values of 120ms and 410ms are significantly different, indicating a discrepancy between the two sensors."
+    },
+    "used_fallback": false
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 690,
+    "input_tokens": 59,
+    "output_tokens": 256,
+    "stripped_thought": true,
+    "parsed_values": {},
+    "used_fallback": false
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "reasoning_effort": "",
+    "probe_confirmed": true,
+    "latency_ms": 2134,
+    "input_tokens": 71,
+    "output_tokens": 16,
+    "stripped_thought": false,
+    "parsed_values": {
+      "DATE": "2026-08-08",
+      "WEEKEND": "NO"
+    },
+    "used_fallback": false
+  }
+]

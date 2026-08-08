@@ -258,3 +258,17 @@ func TestDemoteAdaptationAndShouldDemote(t *testing.T) {
 		t.Fatalf("audit fragment: %q", audit)
 	}
 }
+
+func TestAdaptationPlanPreservesReasoningEffort(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+	profile := BaselineDeclaredProfile("p", "m", MaxOutputDialectLegacy, 2048, now)
+	profile.DefaultReasoningEffort = "low"
+
+	plan := SelectAdaptationPlan(AdaptationSelectionInput{
+		Profile: profile,
+	})
+	if plan.ReasoningEffort != "low" {
+		t.Fatalf("expected plan.ReasoningEffort = %q, got %q", "low", plan.ReasoningEffort)
+	}
+}

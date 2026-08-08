@@ -2,6 +2,8 @@ package prompt
 
 import (
 	"strings"
+
+	"motor-autonomo/internal/modeltext"
 )
 
 // ResponseParser parses structured KEY: value responses from model completions
@@ -41,31 +43,24 @@ func ParseResponse(text string, keys []string) ParseResult {
 	if len(keys) == 0 {
 		return result
 	}
-	// Strip thinking tags and markdown fences if present before line parsing
-	for _, line := range strings.Split(text, "\n") {
-		// Quick check if line starts/contains unclosed think tags
-		if strings.HasPrefix(strings.TrimSpace(strings.ToLower(line)), "<think>") && !strings.Contains(strings.ToLower(line), "</think>") {
-			continue
-		}
-	}
+	// Normalize text using modeltext ladder (strips BOM, thinking tags, code fences).
+	norm := modeltext.NormalizeStructuredResponse(text)
+	cleanText := norm.Text
+
 	lowerKeys := make(map[string]string, len(keys))
 	for _, k := range keys {
 		lowerKeys[strings.ToLower(k)] = ""
 	}
 
 	// Primary parse: scan lines for "KEY: value" pattern.
-	for _, line := range strings.Split(text, "\n") {
-		// Ignore thinking lines and fence markers
+	for _, line := range strings.Split(cleanText, "\n") {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(strings.ToLower(trimmed), "<think>") || strings.HasPrefix(strings.ToLower(trimmed), "</think>") {
-			continue
-		}
-		colon := strings.Index(line, ":")
+		colon := strings.Index(trimmed, ":")
 		if colon <= 0 {
 			continue
 		}
-		prefix := strings.TrimSpace(line[:colon])
-		value := strings.TrimSpace(line[colon+1:])
+		prefix := strings.TrimSpace(trimmed[:colon])
+		value := strings.TrimSpace(trimmed[colon+1:])
 		if value == "" {
 			continue
 		}
@@ -86,9 +81,9 @@ func ParseResponse(text string, keys []string) ParseResult {
 	// or prose responses.
 	if len(result.FoundKeys) == 0 {
 		nonEmpty := make([]string, 0)
-		for _, line := range strings.Split(text, "\n") {
+		for _, line := range strings.Split(cleanText, "\n") {
 			s := strings.TrimSpace(line)
-			if s != "" && !strings.HasPrefix(s, "```") && !strings.HasPrefix(strings.ToLower(s), "<think>") && !strings.HasPrefix(strings.ToLower(s), "</think>") {
+			if s != "" {
 				nonEmpty = append(nonEmpty, s)
 			}
 		}

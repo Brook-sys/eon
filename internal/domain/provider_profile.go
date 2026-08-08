@@ -64,6 +64,10 @@ type ProviderProfile struct {
 	// model continues from (Phase 371 B evidence on Groq chat completions).
 	// False means the kernel will not select plans that depend on prefill.
 	SupportsPrefill bool `json:"supports_prefill,omitempty"`
+	// DefaultReasoningEffort specifies the default reasoning effort hint for
+	// reasoning models (e.g., "none", "low", "medium", "high"). When set, the
+	// adaptation selection includes it in the completion request.
+	DefaultReasoningEffort string `json:"default_reasoning_effort,omitempty"`
 	// TextToTextConfirmed is true only after a successful probe or equivalent
 	// contract evidence that plain text completion works.
 	TextToTextConfirmed bool `json:"text_to_text_confirmed"`
@@ -111,6 +115,13 @@ func (p ProviderProfile) Validate() error {
 	}
 	if p.MaxContextTokens < 0 || p.MaxOutputTokens < 0 || p.ProbeBudgetRemaining < 0 {
 		return errors.New("provider profile token/probe budgets must not be negative")
+	}
+	if effort := strings.TrimSpace(p.DefaultReasoningEffort); effort != "" {
+		switch effort {
+		case "none", "low", "medium", "high":
+		default:
+			return fmt.Errorf("unsupported reasoning effort %q", effort)
+		}
 	}
 	return nil
 }
