@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-08-07T06:20:00-03:00",
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "reasoning_effort": "low",
+  "scenario": "adv-language-degradation-format-example",
+  "hypothesis": "FormatExample EXAMPLE block lifts format compliance on gpt-oss-20b for PT-BR extraction task",
+  "arms": {"without_example": {"prompt_contains_example": false}, "with_example": {"prompt_contains_example": true}},
+  "http_a": "200 0.504865",
+  "http_b": "200 0.439789",
+  "body_a": "{"id":"chatcmpl-042daf0a-0fc5-4570-9bca-d7a2c0d4a4c1","object":"chat.completion","created":1786095320,"model":"openai/gpt-oss-20b","choices":[{"index":0,"message":{"role":"assistant","content":"DATE: 2025-11-03\nSOURCE: equipe S-17","reasoning":"We need to extract publication date and source. Date: 2025-11-03. Source: \"equipe S-17\" or \"laboratory S-17\"? The text says \"O artigo foi publicado em 2025-11-03 pela equipe S-17.\" So source is equipe S-17. Also \"Fonte oficial confirmada pelo laboratory S-17.\" Might be source. Likely source: equipe S-17."},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.240584315,"prompt_tokens":165,"prompt_time":0.00903826,"completion_tokens":117,"completion_time":0.127190429,"total_tokens":282,"total_time":0.136228689,"completion_tokens_details":{"reasoning_tokens":92}},"usage_breakdown":null,"system_fingerprint":"fp_565badff47","x_groq":{"id":"req_01kzds7ewpevyar83dxa80ttfe","seed":1083643244},"service_tier":"on_demand"}",
+  "body_b": "{"id":"chatcmpl-84d427e9-b308-4812-8b1a-e9ff6f15c909","object":"chat.completion","created":1786095320,"model":"openai/gpt-oss-20b","choices":[{"index":0,"message":{"role":"assistant","content":"DATE: 2025-11-03\nSOURCE: S-17","reasoning":"We need to extract date and source. Date: 2025-11-03. Source: S-17."},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.223289673,"prompt_tokens":183,"prompt_time":0.008813144,"completion_tokens":49,"completion_time":0.093238073,"total_tokens":232,"total_time":0.102051217,"completion_tokens_details":{"reasoning_tokens":25}},"usage_breakdown":null,"system_fingerprint":"fp_57d3604148","x_groq":{"id":"req_01kzds7fdjestsaca2va9q6t3y","seed":159039764},"service_tier":"on_demand"}",
+  "bounds": {"max_tokens": 128, "temperature": 0.0, "timeout_s": 30, "retries": 0},
+  "note": "Fresh live call this heartbeat. No secrets recorded."
+}
