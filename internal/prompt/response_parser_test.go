@@ -53,12 +53,12 @@ func TestParseResponse_FallbackBareValues(t *testing.T) {
 	}
 }
 
-func TestParseResponse_NoFallbackWhenLineCountMismatch(t *testing.T) {
-	// 3 non-empty lines but only 2 keys — fallback should NOT fire.
-	text := "2025-11-03\nS-17\nextra line"
+func TestParseResponse_NoFallbackWhenLineCountExcessive(t *testing.T) {
+	// 5 non-empty lines for 2 keys — too many extra lines (> key count + 2), fallback should NOT fire.
+	text := "2025-11-03\nS-17\nextra line 1\nextra line 2\nextra line 3"
 	r := ParseResponse(text, []string{"DATE", "SOURCE"})
 	if r.UsedFallback {
-		t.Fatal("fallback must not fire when non-empty line count != key count")
+		t.Fatal("fallback must not fire when non-empty line count is excessively greater than key count")
 	}
 	if len(r.FoundKeys) != 0 {
 		t.Fatalf("expected 0 found keys, got %d", len(r.FoundKeys))
@@ -555,22 +555,32 @@ func TestParseResponse_QuotedAndBacktickKeys(t *testing.T) {
 	}
 }
 
-func TestParseResponse_MixedQuotedAndBulletedKeys(t *testing.T) {
-	text := "- \"BUILD\": SUCCESS\n* **'ERRORS'**: 0_ERRORS\n1. `TARGET`: PROD"
-	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+func TestParseResponse_PositionalFallbackRelaxed(t *testing.T) {
+	// 3 non-empty lines, 2 keys: first 2 lines are short bare values, 3rd line is trailing note.
+	text := "2025-11-03\nS-17\nNote: date extracted successfully."
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if !r.UsedFallback {
+		t.Fatal("expected relaxed fallback to fire when 3 lines exist for 2 keys and first 2 lines are concise")
+	}
+	if r.Strategy != ParseStrategyPositionalFallbackRelaxed {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPositionalFallbackRelaxed, r.Strategy)
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q, want 2025-11-03", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q, want S-17", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_PositionalFallbackRelaxed_LongLine(t *testing.T) {
+	// First line is long (>80 chars) prose — should NOT fire relaxed fallback.
+	text := "This is a long prose explanation about the date being 2025-11-03 and some more text to exceed 80 chars.\nS-17\nNote."
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
 	if r.UsedFallback {
-		t.Fatal("should match primary keys after removing bullet+bold+quote markers")
+		t.Fatal("relaxed fallback must not fire when any candidate line is long prose")
 	}
-	if r.Strategy != ParseStrategyPrimary {
-		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
-	}
-	if r.Values["BUILD"] != "SUCCESS" {
-		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
-	}
-	if r.Values["ERRORS"] != "0_ERRORS" {
-		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
-	}
-	if r.Values["TARGET"] != "PROD" {
-		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
+	if r.Strategy != ParseStrategyNone {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyNone, r.Strategy)
 	}
 }

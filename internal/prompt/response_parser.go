@@ -21,10 +21,11 @@ import (
 type ParseStrategy string
 
 const (
-	ParseStrategyPrimary            ParseStrategy = "primary_prefix"
-	ParseStrategyPositionalFallback ParseStrategy = "positional_fallback"
-	ParseStrategyHybrid             ParseStrategy = "hybrid_prefix_positional"
-	ParseStrategyNone               ParseStrategy = "none"
+	ParseStrategyPrimary                  ParseStrategy = "primary_prefix"
+	ParseStrategyPositionalFallback       ParseStrategy = "positional_fallback"
+	ParseStrategyPositionalFallbackRelaxed ParseStrategy = "positional_fallback_relaxed"
+	ParseStrategyHybrid                   ParseStrategy = "hybrid_prefix_positional"
+	ParseStrategyNone                     ParseStrategy = "none"
 )
 
 // ParseResult holds the outcome of parsing a structured response.
@@ -188,6 +189,29 @@ func ParseResponse(text string, keys []string) ParseResult {
 			result.UsedFallback = true
 			result.Strategy = ParseStrategyPositionalFallback
 			result.FormatComplianceScore = float64(len(result.FoundByFallback)) / float64(len(keys))
+		} else if len(nonEmptyLines) > len(keys) && len(nonEmptyLines) <= len(keys)+2 {
+			// Relaxed positional fallback: when non-empty line count is slightly higher
+			// than key count (1-2 extra lines), but the first N lines are concise (<80 chars),
+			// extract positionally from the first N non-empty lines.
+			allConcise := true
+			for i := 0; i < len(keys); i++ {
+				if len(nonEmptyLines[i]) > 80 {
+					allConcise = false
+					break
+				}
+			}
+			if allConcise {
+				for i, k := range keys {
+					result.Values[k] = nonEmptyLines[i]
+					result.FoundByFallback = append(result.FoundByFallback, k)
+				}
+				result.UsedFallback = true
+				result.Strategy = ParseStrategyPositionalFallbackRelaxed
+				result.FormatComplianceScore = float64(len(result.FoundByFallback)) / float64(len(keys))
+			} else {
+				result.Strategy = ParseStrategyNone
+				result.FormatComplianceScore = 0.0
+			}
 		} else {
 			result.Strategy = ParseStrategyNone
 			result.FormatComplianceScore = 0.0
