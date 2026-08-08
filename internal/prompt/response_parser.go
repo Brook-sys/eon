@@ -47,6 +47,32 @@ type ParseResult struct {
 	NonEmptyLineCount int
 }
 
+// cleanPrefix strips leading markdown list markers (bullets, numbers, quotes)
+// from a line prefix before matching against expected keys (e.g. "- KEY", "* KEY", "1. KEY").
+func cleanPrefix(prefix string) string {
+	s := strings.TrimSpace(prefix)
+	for {
+		orig := s
+		s = strings.TrimLeft(s, "-*+•> ")
+		if idx := strings.IndexAny(s, ".):"); idx > 0 && idx <= 3 {
+			isDigits := true
+			for _, r := range s[:idx] {
+				if r < '0' || r > '9' {
+					isDigits = false
+					break
+				}
+			}
+			if isDigits {
+				s = strings.TrimSpace(s[idx+1:])
+			}
+		}
+		if s == orig {
+			break
+		}
+	}
+	return s
+}
+
 // ParseResponse parses a model response text against an ordered list of
 // expected line keys (e.g. []string{"DATE", "SOURCE"}). The primary parse
 // looks for lines of the form "KEY: value" (case-insensitive on the key).
@@ -75,7 +101,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 		if colon <= 0 {
 			continue
 		}
-		prefix := strings.TrimSpace(trimmed[:colon])
+		prefix := cleanPrefix(trimmed[:colon])
 		value := strings.TrimSpace(trimmed[colon+1:])
 		if value == "" {
 			continue
@@ -148,7 +174,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 			if colon <= 0 {
 				continue
 			}
-			prefix := strings.TrimSpace(trimmed[:colon])
+			prefix := cleanPrefix(trimmed[:colon])
 			for _, k := range keys {
 				if strings.EqualFold(prefix, k) {
 					// Mark this line index as consumed.

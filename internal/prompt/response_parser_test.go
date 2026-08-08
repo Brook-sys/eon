@@ -403,6 +403,26 @@ func TestParseResponse_IgnoresThinkingBlocks(t *testing.T) {
 	}
 }
 
+func TestParseResponse_BulletedMarkdownKeys(t *testing.T) {
+	text := "- BUILD: SUCCESS\n* ERRORS: 0_ERRORS\n1. TARGET: PROD"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing bullet list markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+	if r.Values["TARGET"] != "PROD" {
+		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
+	}
+}
+
 func TestParseResponse_ThinkingWithMarkdownFences(t *testing.T) {
 	text := "<thought>\nLet's analyze\n</thought>\n```text\nDATE: 2026-08-08\nSOURCE: S-42\n```"
 	r := ParseResponse(text, []string{"DATE", "SOURCE"})

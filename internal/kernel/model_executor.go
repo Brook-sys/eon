@@ -852,6 +852,30 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			if classified && activeKind == domain.ProviderKindNVIDIANIM && decision.Class == domain.ModelFailureInvalidRequest && budget.ModelCallsUsed < maxCalls {
 				continue
 			}
+			// Reasoning budget exhaustion: when finish_reason=length and reasoning tokens consumed
+			// the entire output budget without emitting visible content, scale MaxOutputTokens (x4)
+			// and retry if budget.ModelCallsUsed < maxCalls.
+			if isReasoningBudgetExhausted(callErr) && budget.ModelCallsUsed < maxCalls {
+				newTokens := request.MaxOutputTokens * 4
+				if newTokens <= request.MaxOutputTokens {
+					newTokens = request.MaxOutputTokens + 512
+				}
+				if profile.MaxOutputTokens > 0 && newTokens > profile.MaxOutputTokens {
+					newTokens = profile.MaxOutputTokens
+				}
+				if newTokens > request.MaxOutputTokens {
+					request.MaxOutputTokens = newTokens
+					result.RecoveryStages = append(result.RecoveryStages, domain.RecoverySimplerFormat)
+					_ = e.appendRecoveryEvent(ctx, operation, leaseRef, domain.ModelRecoveryDecision{
+						Disposition:         domain.DispositionSimplerFormat,
+						Stage:               domain.RecoverySimplerFormat,
+						Reason:              "reasoning_budget_exhausted_scaled_max_output_tokens",
+						RemainingModelCalls: budget.RemainingModelCalls(),
+					}, budget.ModelCallsUsed)
+					continue
+				}
+			}
+
 			// FR-MODEL-006: enrichment-related transport failures demote and retry
 			// on baseline when budget remains; other provider errors exit the loop.
 			safeDetail := safeErrorDetail(callErr)
@@ -1842,6 +1866,17 @@ func safeRateLimitPayload(metadata port.RateLimitMetadata) string {
 		return ""
 	}
 	return ";" + strings.Join(fields, ";")
+}
+
+func isReasoningBudgetExhausted(err error) bool {
+	if err == nil {
+		return false
+	}
+	var diag port.ProviderDiagnosticError
+	if errors.As(err, &diag) {
+		return diag.DiagnosticReason() == "reasoning_budget_exhausted"
+	}
+	return false
 }
 
 func (e ModelExecutor) appendModelFailurePolicyEvent(ctx context.Context, operation domain.Operation, leaseRef string, decision domain.ModelBindingFailureDecision, providerID, bindingID string, callsUsed int, rateLimit port.RateLimitMetadata) error {

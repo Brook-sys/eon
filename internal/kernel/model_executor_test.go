@@ -2105,6 +2105,109 @@ func TestModelExecutorPreventsRedispatchWhenLifetimeBudgetExhausted(t *testing.T
 	}
 }
 
+type reasoningExhaustedProvider struct {
+	calls []port.CompletionRequest
+}
+
+func (p *reasoningExhaustedProvider) Complete(ctx context.Context, req port.CompletionRequest) (port.CompletionResult, error) {
+	p.calls = append(p.calls, req)
+	if req.MaxOutputTokens <= 100 {
+		return port.CompletionResult{}, &fakeReasoningExhaustedError{reason: "reasoning_budget_exhausted"}
+	}
+	proposal := domain.ProposedChangeSet{
+		SchemaVersion: 1, ID: "changeset_model_1", MissionRevision: "revision_1",
+		OperationID: "operation_model", BaseCommitID: domain.GenesisCommitID,
+		ReadSet: []string{"fragment_1"}, Preconditions: []string{},
+		Changes: []domain.Change{{
+			Kind: domain.ChangeAdd, EntityType: "observation", EntityID: "obs_model_1", PayloadRef: "payload_model_1",
+		}},
+		ExpectedDelta: "one observation", ValidatorIDs: []string{"schema"},
+		Provenance: "model:fixture", IdempotencyKey: "idem_model",
+	}
+	body, _ := json.Marshal(proposal)
+	return port.CompletionResult{
+		Text:         string(body),
+		InputTokens:  50,
+		OutputTokens: 20,
+		Model:        "hybrid-reasoning-v1",
+	}, nil
+}
+
+func (p *reasoningExhaustedProvider) DeclaredProfile() (domain.ProviderProfile, bool) {
+	return domain.ProviderProfile{MaxOutputTokens: 2048, MaxContextTokens: 8192}, true
+}
+
+func (p *reasoningExhaustedProvider) FastPathSupported(profile domain.ProviderProfile) bool {
+	return false
+}
+
+type fakeReasoningExhaustedError struct {
+	reason string
+}
+
+func (e *fakeReasoningExhaustedError) Error() string {
+	return "openai-compatible provider: INVALID_RESPONSE: " + e.reason
+}
+func (e *fakeReasoningExhaustedError) HTTPStatusCode() int    { return 200 }
+func (e *fakeReasoningExhaustedError) RetryableFailure() bool { return false }
+func (e *fakeReasoningExhaustedError) DiagnosticReason() string {
+	return e.reason
+}
+func (e *fakeReasoningExhaustedError) RetryAfterDelay() time.Duration { return 0 }
+func (e *fakeReasoningExhaustedError) RateLimitMetadata() port.RateLimitMetadata {
+	return port.RateLimitMetadata{}
+}
+
+func TestModelExecutorAutoScalesMaxOutputTokensOnReasoningBudgetExhausted(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	now := time.Date(2026, 8, 8, 18, 0, 0, 0, time.UTC)
+	clock := source.NewManualClock(now)
+	ids := source.NewSequenceIDGenerator(1)
+	store := memory.New()
+
+	spec := modelTestSpec()
+	spec.MaxOutputTokens = 100
+	spec.Budget.ModelCalls = 2
+
+	seedModelAgendaWithSpec(t, store, now, spec)
+
+	provider := &reasoningExhaustedProvider{}
+	processor, err := changeset.New(changeset.Config{
+		Store: store, Clock: clock, IDs: ids, PolicyVersion: "policy@model-test",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exec := ModelExecutor{
+		Store: store, Clock: clock, IDs: ids, Provider: provider, Changes: processor,
+		Compiler: prompt.Compiler{
+			Estimator:             prompt.ConservativeEstimator{},
+			ProviderContextTokens: 8000,
+		},
+		PolicyVersion: "policy@model-test", LeaseTTL: 5 * time.Minute,
+	}
+
+	res, err := exec.Execute(ctx, "operation_model")
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+	if !res.Completed {
+		t.Fatalf("expected Completed=true, got false")
+	}
+
+	if len(provider.calls) != 2 {
+		t.Fatalf("expected 2 provider calls (1 exhausted + 1 retry with scaled budget), got %d", len(provider.calls))
+	}
+	if provider.calls[0].MaxOutputTokens != 100 {
+		t.Errorf("call 0 MaxOutputTokens = %d, want 100", provider.calls[0].MaxOutputTokens)
+	}
+	if provider.calls[1].MaxOutputTokens != 400 {
+		t.Errorf("call 1 MaxOutputTokens = %d, want 400 (scaled x4)", provider.calls[1].MaxOutputTokens)
+	}
+}
+
 func TestValidateAuthorityFreeCompletionExactJSON(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
