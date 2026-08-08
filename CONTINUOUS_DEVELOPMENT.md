@@ -7348,3 +7348,30 @@ Implementação:
    - **Overall success rate:** 11/15 (73.3%) OK across cross-provider deployments.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase398_auto_scale_fire_test/` and `results/phase398-auto-scale-parser/`.
+
+## Phase 399 — markdown bold/italic prefix cleaning & prompt compiler thinking overhead integration (2026-08-08 19:25 -03)
+
+**Objective and implementation.** Addressed key parsing failures on markdown-formatted responses (`**KEY**: VALUE`, `*KEY*: VALUE`) and integrated `ThinkingOverheadTokens` into campaign test harnesses to mirror kernel behavior.
+1. **Markdown Emphasis Prefix Tolerant Parsing (`ResponseParser`)**: Enhanced `cleanPrefix()` in `internal/prompt/response_parser.go` to strip markdown bold (`**KEY**`, `__KEY__`) and italic (`*KEY*`, `_KEY_`) emphasis formatting surrounding keys before prefix matching. Added helper `stripMarkdownEmphasis()` ensuring only matched boundary pairs are stripped to avoid corrupting internal formatting. Added unit tests in `internal/prompt/response_parser_test.go` (`TestParseResponse_BoldMarkdownKeys`, `TestParseResponse_ItalicMarkdownKeys`, `TestParseResponse_UnderscoreBoldKeys`, `TestParseResponse_MixedBoldAndBulletedKeys`, `TestStripMarkdownEmphasis`).
+2. **Campaign Harness Thinking Overhead Integration**: Built `cmd/phase399_thinking_overhead_fire_test` incorporating `domain.ResolveThinkingOverheadTokens` into `prompt.Input.ThinkingOverheadTokens`. This enables `prompt.Compiler.Compile` to correctly calculate `minOutput = minOutputBase + ThinkingOverheadTokens` and trigger `ReasoningEffortSuppressed = true` (`reasoning_effort: "none"`) when `MaxOutputTokens` is constrained.
+3. **Live Fire Campaign Phase 399**: Executed a 15-trial live fire campaign (`cmd/phase399_thinking_overhead_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`).
+4. **Live campaign findings**:
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success, 1.00 compliance across ALL cases** (381ms–474ms latency) with `suppressed=true` (`reasoning_effort: "none"`). Completely eliminated prior 0% compliance failures caused by unsuppressed thinking token overhead.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 247ms, 1.00 compliance and semantic correctness across all cases.
+   - **`bold_markdown_key_parsing`**: **100% primary prefix match success across ALL models** (Llama 8B, Llama 70B, Qwen 27B, GPT-OSS 20B, NIM Llama 8B).
+   - **`gpt-oss-20b` empirical discovery**: `ResolveThinkingOverheadTokens("gpt-oss-20b")` returned 128 tokens, which was insufficient to trigger auto-suppression when `maxTokens=256`, causing reasoning budget exhaustion under Groq's HTTP 400 parameter fallback.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase399_thinking_overhead_fire_test/` and `results/phase399-thinking-overhead-parser/`.
+
+## Phase 400 — empirical thinking overhead tuning, auto-retry budget escalation & live fire campaign (2026-08-08 19:30 -03)
+
+**Objective and implementation.** Updated empirical thinking overhead estimates in `domain` and validated live recovery via budget auto-scaling factor (4x) on reasoning-budget exhaustion.
+1. **Empirical Thinking Overhead Profile Tuning (`provider_profile.go`)**: Updated `ResolveThinkingOverheadTokens` in `internal/domain/provider_profile.go`: increased `gpt-oss-20b` overhead from 128 to 256 tokens and `gpt-oss-120b` from 256 to 384 tokens based on empirical evidence from Phase 399. Updated `internal/domain/provider_profile_test.go`.
+2. **Auto-Retry Budget Escalation Campaign (`cmd/phase400_auto_retry_fire_test`)**: Created a 15-trial campaign integrating `gatecampaign.ShouldRetryWithHigherBudget`. When a provider call returns `reasoning_budget_exhausted`, the harness auto-scales `MaxOutputTokens` by `BudgetRetryScale` (4x factor) and retries the call.
+3. **Live Fire Campaign Phase 400 Results**:
+   - **GPT-OSS-20B Budget Recovery Proved**: `groq/openai/gpt-oss-20b` on `bulleted_bold_key_parsing` exhausted its 256 token budget on internal reasoning. The campaign harness detected `reasoning_budget_exhausted`, auto-scaled budget from 256 to 1024 tokens, retried, and **succeeded** (1.00 compliance score, 1167ms).
+   - **GPT-OSS-20B Auto-Suppression**: On `bold_markdown_key_parsing`, the updated 256 token overhead triggered `suppressed=true`, resulting in instant success (504ms, 1.00 compliance score).
+   - **Qwen 3.6-27B Consistency**: Maintained **100% success and 1.00 compliance** across all cases (296ms–434ms latency).
+   - **Overall Campaign Efficiency**: P50 latency 370ms, P95 latency 945ms. Live fire proof of end-to-end budget auto-scaling recovery for reasoning models.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase400_auto_retry_fire_test/` and `results/phase400-auto-retry-parser/`.

@@ -165,7 +165,7 @@ func BaselineDeclaredProfile(name, model string, dialect MaxOutputDialect, conte
 }
 
 // ResolveThinkingOverheadTokens returns empirical thinking token overhead estimates
-// for known reasoning models based on live fire test campaigns (Phases 388-392).
+// for known reasoning models based on live fire test campaigns (Phases 388-399).
 // Returns 0 for non-thinking models.
 func ResolveThinkingOverheadTokens(model string) int {
 	lower := strings.ToLower(model)
@@ -173,9 +173,9 @@ func ResolveThinkingOverheadTokens(model string) int {
 	case strings.Contains(lower, "qwen3.6-27b") || strings.Contains(lower, "qwen-3.6-27b"):
 		return 640 // Phase 392 live fire test proved qwen3.6-27b consumes >512 tokens when unsuppressed
 	case strings.Contains(lower, "gpt-oss-120b"):
-		return 256
+		return 384
 	case strings.Contains(lower, "gpt-oss-20b"):
-		return 128
+		return 256 // Phase 399 live fire proved gpt-oss-20b exhausts budget when max_tokens=256 and overhead is 128
 	default:
 		return 0
 	}

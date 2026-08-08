@@ -47,8 +47,8 @@ func TestResolveThinkingOverheadTokens(t *testing.T) {
 	}{
 		{"qwen/qwen3.6-27b", 640},
 		{"Qwen-3.6-27B-Instruct", 640},
-		{"openai/gpt-oss-120b", 256},
-		{"openai/gpt-oss-20b", 128},
+		{"openai/gpt-oss-120b", 384},
+		{"openai/gpt-oss-20b", 256},
 		{"llama-3.3-70b-versatile", 0},
 		{"", 0},
 	}
