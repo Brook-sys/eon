@@ -517,6 +517,9 @@ func TestStripMarkdownEmphasis(t *testing.T) {
 		{"*BUILD*", "BUILD"},
 		{"__BUILD__", "BUILD"},
 		{"_BUILD_", "BUILD"},
+		{"\"BUILD\"", "BUILD"},
+		{"'BUILD'", "BUILD"},
+		{"`BUILD`", "BUILD"},
 		{"BUILD", "BUILD"},
 		{"**", "**"},   // empty inner — not stripped
 		{"*", "*"},     // single char — not stripped
@@ -529,5 +532,45 @@ func TestStripMarkdownEmphasis(t *testing.T) {
 		if got != c.want {
 			t.Errorf("stripMarkdownEmphasis(%q) = %q, want %q", c.input, got, c.want)
 		}
+	}
+}
+
+func TestParseResponse_QuotedAndBacktickKeys(t *testing.T) {
+	text := "\"BUILD\": SUCCESS\n'ERRORS': 0_ERRORS\n`TARGET`: PROD"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing quotes and backticks")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+	if r.Values["TARGET"] != "PROD" {
+		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
+	}
+}
+
+func TestParseResponse_MixedQuotedAndBulletedKeys(t *testing.T) {
+	text := "- \"BUILD\": SUCCESS\n* **'ERRORS'**: 0_ERRORS\n1. `TARGET`: PROD"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing bullet+bold+quote markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+	if r.Values["TARGET"] != "PROD" {
+		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
 	}
 }

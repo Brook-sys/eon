@@ -7363,15 +7363,19 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase399_thinking_overhead_fire_test/` and `results/phase399-thinking-overhead-parser/`.
 
-## Phase 400 — empirical thinking overhead tuning, auto-retry budget escalation & live fire campaign (2026-08-08 19:30 -03)
+## Phase 401 — quoted/backtick key prefix cleaning & multi-provider live fire campaign (2026-08-08 20:25 -03)
 
-**Objective and implementation.** Updated empirical thinking overhead estimates in `domain` and validated live recovery via budget auto-scaling factor (4x) on reasoning-budget exhaustion.
-1. **Empirical Thinking Overhead Profile Tuning (`provider_profile.go`)**: Updated `ResolveThinkingOverheadTokens` in `internal/domain/provider_profile.go`: increased `gpt-oss-20b` overhead from 128 to 256 tokens and `gpt-oss-120b` from 256 to 384 tokens based on empirical evidence from Phase 399. Updated `internal/domain/provider_profile_test.go`.
-2. **Auto-Retry Budget Escalation Campaign (`cmd/phase400_auto_retry_fire_test`)**: Created a 15-trial campaign integrating `gatecampaign.ShouldRetryWithHigherBudget`. When a provider call returns `reasoning_budget_exhausted`, the harness auto-scales `MaxOutputTokens` by `BudgetRetryScale` (4x factor) and retries the call.
-3. **Live Fire Campaign Phase 400 Results**:
-   - **GPT-OSS-20B Budget Recovery Proved**: `groq/openai/gpt-oss-20b` on `bulleted_bold_key_parsing` exhausted its 256 token budget on internal reasoning. The campaign harness detected `reasoning_budget_exhausted`, auto-scaled budget from 256 to 1024 tokens, retried, and **succeeded** (1.00 compliance score, 1167ms).
-   - **GPT-OSS-20B Auto-Suppression**: On `bold_markdown_key_parsing`, the updated 256 token overhead triggered `suppressed=true`, resulting in instant success (504ms, 1.00 compliance score).
-   - **Qwen 3.6-27B Consistency**: Maintained **100% success and 1.00 compliance** across all cases (296ms–434ms latency).
-   - **Overall Campaign Efficiency**: P50 latency 370ms, P95 latency 945ms. Live fire proof of end-to-end budget auto-scaling recovery for reasoning models.
+**Objective and implementation.** Resolved key parsing failures on quoted and backtick-formatted response keys (`"KEY": VALUE`, `'KEY': VALUE`, `` `KEY`: VALUE ``) and executed a 15-trial multi-provider live fire campaign.
+1. **Quoted/Backtick Key Prefix Cleaning (`ResponseParser`)**: Extended `stripMarkdownEmphasis()` in `internal/prompt/response_parser.go` to strip double quotes (`"KEY"`), single quotes (`'KEY'`), and backticks (`` `KEY` ``) surrounding keys before prefix matching. Handles nested combinations such as `- "KEY": VALUE`, `* **'KEY'**: VALUE`, `1. `KEY`: VALUE`. Added unit tests in `internal/prompt/response_parser_test.go` (`TestStripMarkdownEmphasis`, `TestParseResponse_QuotedAndBacktickKeys`, `TestParseResponse_MixedQuotedAndBulletedKeys`).
+2. **Live Fire Campaign Phase 401**: Built and executed a 15-trial live fire campaign (`cmd/phase401_quoted_key_parser_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`) under 3 quoted key scenarios (`double_quoted_keys`, `backtick_quoted_keys`, `bulleted_single_quoted_keys`).
+3. **Live campaign findings**:
+   - **100% Format Compliance Average (1.00)** across all 15 trials and all 5 models.
+   - **`groq/llama-3.1-8b-instant`**: **3/3 (100%) success**, `primary_prefix` strategy, P50 latency 536ms.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, `primary_prefix` strategy, P50 latency 323ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, `primary_prefix` strategy, P50 latency 264ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, `primary_prefix` strategy, P50 latency 552ms.
+   - **`groq/openai/gpt-oss-20b`**: Auto-scaled budget on reasoning exhaustion (256 -> 1024 tokens) and completed 3/3 trials, using `primary_prefix` on backtick and single-quoted cases.
+   - **Overall success rate:** 14/15 (93.3%) OK, P50 latency 518ms, P95 latency 1515ms.
 
-**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase400_auto_retry_fire_test/` and `results/phase400-auto-retry-parser/`.
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase401_quoted_key_parser_fire_test/` and `results/phase401-quoted-key-parser/`.
+

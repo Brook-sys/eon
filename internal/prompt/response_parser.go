@@ -90,17 +90,20 @@ func cleanPrefix(prefix string) string {
 	return s
 }
 
-// stripMarkdownEmphasis removes surrounding markdown bold/italic markers
-// from a string: **...**, *...*, __...__, _..._. It only strips matched
-// pairs at the boundaries to avoid corrupting values containing internal
-// asterisks or underscores. The input is expected to be already trimmed
-// of leading whitespace.
+// stripMarkdownEmphasis removes surrounding markdown bold/italic markers,
+// double/single quotes, and backticks from a string: **...**, *...*, __...__,
+// _..._, "... ", '...', `...`. It only strips matched pairs at the boundaries to
+// avoid corrupting values containing internal symbols. The input is expected
+// to be already trimmed of leading/trailing whitespace.
 func stripMarkdownEmphasis(s string) string {
 	pairs := []struct{ open, close string }{
 		{"**", "**"},
 		{"__", "__"},
 		{"*", "*"},
 		{"_", "_"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"`", "`"},
 	}
 	for _, p := range pairs {
 		if len(s) >= len(p.open)+len(p.close) &&
