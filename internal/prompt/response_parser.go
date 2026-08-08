@@ -48,26 +48,67 @@ type ParseResult struct {
 }
 
 // cleanPrefix strips leading markdown list markers (bullets, numbers, quotes)
-// from a line prefix before matching against expected keys (e.g. "- KEY", "* KEY", "1. KEY").
+// and inline emphasis formatting (bold, italic) from a line prefix before
+// matching against expected keys (e.g. "- KEY", "* KEY", "1. KEY",
+// "**KEY**", "__KEY__", "- **KEY**", "* **KEY**").
 func cleanPrefix(prefix string) string {
 	s := strings.TrimSpace(prefix)
 	for {
 		orig := s
-		s = strings.TrimLeft(s, "-*+•> ")
-		if idx := strings.IndexAny(s, ".):"); idx > 0 && idx <= 3 {
-			isDigits := true
-			for _, r := range s[:idx] {
-				if r < '0' || r > '9' {
-					isDigits = false
-					break
+		// Strip list markers first, then emphasis markers.
+		// List markers: bullet (- , * , +), numbered (1. , 2) , 3: ).
+		// Only strip * as bullet when followed by space (distinguishes from italic).
+		switch {
+		case strings.HasPrefix(s, "- "), strings.HasPrefix(s, "+ "):
+			s = strings.TrimSpace(s[2:])
+		case strings.HasPrefix(s, "* "):
+			s = strings.TrimSpace(s[2:])
+		case strings.HasPrefix(s, "• "), strings.HasPrefix(s, "> "):
+			s = strings.TrimSpace(s[2:])
+		default:
+			if idx := strings.IndexAny(s, ".):"); idx > 0 && idx <= 3 {
+				isDigits := true
+				for _, r := range s[:idx] {
+					if r < '0' || r > '9' {
+						isDigits = false
+						break
+					}
+				}
+				if isDigits {
+					s = strings.TrimSpace(s[idx+1:])
 				}
 			}
-			if isDigits {
-				s = strings.TrimSpace(s[idx+1:])
-			}
 		}
+		// Strip markdown emphasis markers (**key**, *key*, __key__, _key_).
+		s = strings.TrimSpace(s)
+		s = stripMarkdownEmphasis(s)
+		s = strings.TrimSpace(s)
 		if s == orig {
 			break
+		}
+	}
+	return s
+}
+
+// stripMarkdownEmphasis removes surrounding markdown bold/italic markers
+// from a string: **...**, *...*, __...__, _..._. It only strips matched
+// pairs at the boundaries to avoid corrupting values containing internal
+// asterisks or underscores. The input is expected to be already trimmed
+// of leading whitespace.
+func stripMarkdownEmphasis(s string) string {
+	pairs := []struct{ open, close string }{
+		{"**", "**"},
+		{"__", "__"},
+		{"*", "*"},
+		{"_", "_"},
+	}
+	for _, p := range pairs {
+		if len(s) >= len(p.open)+len(p.close) &&
+			strings.HasPrefix(s, p.open) && strings.HasSuffix(s, p.close) {
+			inner := s[len(p.open) : len(s)-len(p.close)]
+			if inner != "" {
+				return inner
+			}
 		}
 	}
 	return s

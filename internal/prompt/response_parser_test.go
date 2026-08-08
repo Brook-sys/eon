@@ -433,3 +433,101 @@ func TestParseResponse_ThinkingWithMarkdownFences(t *testing.T) {
 		t.Errorf("SOURCE=%q, want S-42", r.Values["SOURCE"])
 	}
 }
+
+func TestParseResponse_BoldMarkdownKeys(t *testing.T) {
+	text := "**BUILD**: SUCCESS\n**ERRORS**: 0_ERRORS\n**TARGET**: PROD"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing bold markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+	if r.Values["TARGET"] != "PROD" {
+		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
+	}
+}
+
+func TestParseResponse_ItalicMarkdownKeys(t *testing.T) {
+	text := "*BUILD*: SUCCESS\n*ERRORS*: 0_ERRORS"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing italic markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+}
+
+func TestParseResponse_UnderscoreBoldKeys(t *testing.T) {
+	text := "__BUILD__: SUCCESS\n__ERRORS__: 0_ERRORS"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing underscore bold markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+}
+
+func TestParseResponse_MixedBoldAndBulletedKeys(t *testing.T) {
+	text := "- **BUILD**: SUCCESS\n* **ERRORS**: 0_ERRORS\n1. **TARGET**: PROD"
+	r := ParseResponse(text, []string{"BUILD", "ERRORS", "TARGET"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys after removing bullet+bold markers")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["BUILD"] != "SUCCESS" {
+		t.Errorf("BUILD=%q, want SUCCESS", r.Values["BUILD"])
+	}
+	if r.Values["ERRORS"] != "0_ERRORS" {
+		t.Errorf("ERRORS=%q, want 0_ERRORS", r.Values["ERRORS"])
+	}
+	if r.Values["TARGET"] != "PROD" {
+		t.Errorf("TARGET=%q, want PROD", r.Values["TARGET"])
+	}
+}
+
+func TestStripMarkdownEmphasis(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"**BUILD**", "BUILD"},
+		{"*BUILD*", "BUILD"},
+		{"__BUILD__", "BUILD"},
+		{"_BUILD_", "BUILD"},
+		{"BUILD", "BUILD"},
+		{"**", "**"},   // empty inner — not stripped
+		{"*", "*"},     // single char — not stripped
+		{"", ""},
+		{"**B", "**B"},  // unbalanced — not stripped
+		{"B**", "B**"},  // unbalanced — not stripped
+	}
+	for _, c := range cases {
+		got := stripMarkdownEmphasis(c.input)
+		if got != c.want {
+			t.Errorf("stripMarkdownEmphasis(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
