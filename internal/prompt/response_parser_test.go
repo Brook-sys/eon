@@ -314,3 +314,17 @@ func TestParseResponse_ConflictTaskFallback(t *testing.T) {
 		t.Errorf("PAIR=%q", r.Values["PAIR"])
 	}
 }
+
+func TestParseResponse_IgnoresThinkingBlocks(t *testing.T) {
+	text := "<think>\nThinking about the date: 2020-01-01\nSource could be: S-99\n</think>\nDATE: 2026-08-08\nSOURCE: S-1"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys outside think block")
+	}
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-1" {
+		t.Errorf("SOURCE=%q, want S-1", r.Values["SOURCE"])
+	}
+}

@@ -7213,3 +7213,13 @@ Implementação:
 4. Extended `internal/prompt/compiler.go` with `ThinkingOverheadTokens int` field in `Input`. When set, the BudgetGuard floor incorporates the reasoning overhead. Added unit test `TestBudgetGuardIncludesThinkingOverhead`.
 
 **Deterministic verification.** `go test ./internal/prompt/...` passed cleanly. `go vet`, `gofmt`, `git diff --check` all clean. Commit `b80131a` pushed to `origin/main`. Artifacts in `results/thinking-budget-threshold-phase388/`.
+
+## Phase 389 — thinking/reasoning tag stripping & structured response parser hardening (2026-08-08 09:25 -03)
+
+**Objective and implementation.** Hardened text normalization and response parsing against CoT/thinking blocks (<think>...</think>, <thought>...</thought>, <reasoning>...</reasoning>) emitted by reasoning models (e.g. Qwen 3.6 27B).
+1. Added `StripThinkingTags(raw string) NormalizeResult` in `internal/modeltext/normalize.go`: removes closed and unclosed `<think>`, `<thought>`, and `<reasoning>` tags (case-insensitive).
+2. Integrated `StripThinkingTags` into `NormalizeJSONCandidate`, `NormalizeClosedToken`, and added `NormalizeStructuredResponse`.
+3. Hardened `prompt.ParseResponse` in `internal/prompt/response_parser.go` to ignore line matching inside reasoning blocks or markdown code fences.
+4. Formulated and executed Phase 389 live campaign (`cmd/thinking_parser_fire_test`) testing live reasoning output from Groq models (`qwen/qwen3.6-27b`, `groq/compound-mini`, `llama-3.3-70b-versatile`). Result: 3/3 passed (100%), successfully extracting `DATE` and `SOURCE` despite `qwen/qwen3.6-27b` emitting unclosed `<think>` tags.
+
+**Deterministic verification.** `go test -race ./internal/modeltext/... ./internal/prompt/...` passed cleanly. `go vet` and `git diff --check` clean. Report saved in `results/thinking-parser-phase389/REPORT.md`.

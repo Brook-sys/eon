@@ -91,3 +91,54 @@ func TestBestJSONCandidate(t *testing.T) {
 		t.Fatalf("BestJSONCandidate = %q", got)
 	}
 }
+
+func TestStripThinkingTags(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			name: "single line think tag",
+			raw:  "<think>I should output B</think>\nB",
+			want: "\nB",
+		},
+		{
+			name: "multiline reasoning tag",
+			raw:  "<reasoning>\nStep 1: Check facts.\nStep 2: Conclude.\n</reasoning>\nDATE: 2026-08-08\nSOURCE: S-1",
+			want: "\nDATE: 2026-08-08\nSOURCE: S-1",
+		},
+		{
+			name: "unclosed think tag",
+			raw:  "<think>Reasoning truncated here...",
+			want: "",
+		},
+		{
+			name: "unclosed think tag with prefix",
+			raw:  "Prefix text\n<think>Reasoning truncated here...",
+			want: "Prefix text\n",
+		},
+		{
+			name: "case insensitive tag",
+			raw:  "<THINK>Internal thoughts</THINK>{\n\"ok\": true\n}",
+			want: "{\n\"ok\": true\n}",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := StripThinkingTags(tc.raw)
+			if got.Text != tc.want {
+				t.Fatalf("StripThinkingTags(%q) = %q, want %q", tc.raw, got.Text, tc.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeStructuredResponse(t *testing.T) {
+	raw := "<think>\nConsidering the options...\n</think>\n```\nDATE: 2026-08-08\nSOURCE: S-10\n```"
+	got := NormalizeStructuredResponse(raw)
+	want := "DATE: 2026-08-08\nSOURCE: S-10"
+	if got.Text != want {
+		t.Fatalf("NormalizeStructuredResponse(%q) = %q, want %q", raw, got.Text, want)
+	}
+}

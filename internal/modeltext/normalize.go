@@ -28,8 +28,9 @@ type NormalizeResult struct {
 // NormalizeJSONCandidate applies the recovery ladder for outputs expected to be
 // a single JSON object:
 //  1. trim BOM/whitespace
-//  2. strip a single outer markdown code fence (``` / ```json)
-//  3. extract the first balanced top-level JSON object when surrounded by prose
+//  2. strip thinking/reasoning blocks (<think>...</think>, <thought>...</thought>, <reasoning>...</reasoning>)
+//  3. strip a single outer markdown code fence (``` / ```json)
+//  4. extract the first balanced top-level JSON object when surrounded by prose
 //
 // It does not pretty-print, re-key fields, invent keys, or repair invalid JSON
 // beyond locating a complete object span. Duplicate keys and schema remain the
@@ -51,6 +52,11 @@ func NormalizeJSONCandidate(raw string) NormalizeResult {
 		}
 	}
 
+	if unthought := StripThinkingTags(text); unthought.Changed {
+		text = strings.TrimSpace(unthought.Text)
+		applied = append(applied, unthought.Applied...)
+	}
+
 	if unfenced, ok := stripMarkdownFence(text); ok {
 		text = strings.TrimSpace(unfenced)
 		applied = append(applied, "strip_markdown_fence")
@@ -68,8 +74,8 @@ func NormalizeJSONCandidate(raw string) NormalizeResult {
 }
 
 // NormalizeClosedToken applies ladder steps for level-0 closed answers:
-// trim, drop common prefixes ("ANSWER:", "Opção", "Option"), strip trailing
-// punctuation, and upper-case a single Latin letter when that is the whole token.
+// trim, strip BOM, strip thinking tags, drop common prefixes ("ANSWER:", "Opção", "Option"),
+// strip trailing punctuation, and upper-case a single Latin letter when that is the whole token.
 // It does not invent options; validation against the allowlist is the caller's job.
 func NormalizeClosedToken(raw string) NormalizeResult {
 	original := strings.TrimSpace(raw)
@@ -79,6 +85,11 @@ func NormalizeClosedToken(raw string) NormalizeResult {
 		applied = append(applied, "strip_bom")
 	}
 	text = strings.TrimSpace(text)
+
+	if unthought := StripThinkingTags(text); unthought.Changed {
+		text = strings.TrimSpace(unthought.Text)
+		applied = append(applied, unthought.Applied...)
+	}
 
 	// Prefer the last non-empty line for multi-line "reasoning + answer" shapes.
 	if lines := nonEmptyLines(text); len(lines) > 1 {
@@ -292,4 +303,80 @@ func contains(xs []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// NormalizeStructuredResponse applies ladder steps for line-based key-value responses:
+// 1. strip BOM
+// 2. strip thinking/reasoning blocks (<think>...</think>, <thought>...</thought>, <reasoning>...</reasoning>)
+// 3. strip outer markdown code fences (``` / ```text / ```yaml)
+// 4. trim surrounding whitespace
+func NormalizeStructuredResponse(raw string) NormalizeResult {
+	original := raw
+	var applied []string
+	text := stripBOM(raw)
+	if text != raw {
+		applied = append(applied, "strip_bom")
+	}
+	text = strings.TrimSpace(text)
+	if text != strings.TrimSpace(original) && !contains(applied, "strip_bom") {
+		applied = append(applied, "trim_space")
+	}
+
+	if unthought := StripThinkingTags(text); unthought.Changed {
+		text = strings.TrimSpace(unthought.Text)
+		applied = append(applied, unthought.Applied...)
+	}
+
+	if unfenced, ok := stripMarkdownFence(text); ok {
+		text = strings.TrimSpace(unfenced)
+		applied = append(applied, "strip_markdown_fence")
+	}
+
+	changed := text != strings.TrimSpace(stripBOM(original))
+	return NormalizeResult{Text: text, Applied: applied, Changed: changed}
+}
+
+// StripThinkingTags removes <think>...</think>, <thought>...</thought>, and
+// <reasoning>...</reasoning> blocks (case-insensitive) from raw text.
+// When an opening tag is unclosed (e.g. truncated generation), it removes
+// from the opening tag to the end of the text if preceding content exists,
+// or returns an empty string.
+func StripThinkingTags(raw string) NormalizeResult {
+	original := raw
+	text := raw
+	var applied []string
+
+	pairs := []struct{ open, close string }{
+		{"<think>", "</think>"},
+		{"<thought>", "</thought>"},
+		{"<reasoning>", "</reasoning>"},
+	}
+
+	for _, p := range pairs {
+		for {
+			lower := strings.ToLower(text)
+			openIdx := strings.Index(lower, p.open)
+			if openIdx < 0 {
+				break
+			}
+			closeIdx := strings.Index(lower[openIdx+len(p.open):], p.close)
+			if closeIdx >= 0 {
+				realClose := openIdx + len(p.open) + closeIdx + len(p.close)
+				text = text[:openIdx] + text[realClose:]
+				applied = append(applied, "strip_thinking_tags")
+			} else {
+				// Unclosed tag: remove from openIdx to end if preceding text exists.
+				if openIdx > 0 {
+					text = text[:openIdx]
+				} else {
+					text = ""
+				}
+				applied = append(applied, "strip_unclosed_thinking_tag")
+				break
+			}
+		}
+	}
+
+	changed := text != original
+	return NormalizeResult{Text: text, Applied: applied, Changed: changed}
 }

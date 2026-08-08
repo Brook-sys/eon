@@ -41,6 +41,13 @@ func ParseResponse(text string, keys []string) ParseResult {
 	if len(keys) == 0 {
 		return result
 	}
+	// Strip thinking tags and markdown fences if present before line parsing
+	for _, line := range strings.Split(text, "\n") {
+		// Quick check if line starts/contains unclosed think tags
+		if strings.HasPrefix(strings.TrimSpace(strings.ToLower(line)), "<think>") && !strings.Contains(strings.ToLower(line), "</think>") {
+			continue
+		}
+	}
 	lowerKeys := make(map[string]string, len(keys))
 	for _, k := range keys {
 		lowerKeys[strings.ToLower(k)] = ""
@@ -48,6 +55,11 @@ func ParseResponse(text string, keys []string) ParseResult {
 
 	// Primary parse: scan lines for "KEY: value" pattern.
 	for _, line := range strings.Split(text, "\n") {
+		// Ignore thinking lines and fence markers
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") || strings.HasPrefix(strings.ToLower(trimmed), "<think>") || strings.HasPrefix(strings.ToLower(trimmed), "</think>") {
+			continue
+		}
 		colon := strings.Index(line, ":")
 		if colon <= 0 {
 			continue
@@ -76,7 +88,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 		nonEmpty := make([]string, 0)
 		for _, line := range strings.Split(text, "\n") {
 			s := strings.TrimSpace(line)
-			if s != "" {
+			if s != "" && !strings.HasPrefix(s, "```") && !strings.HasPrefix(strings.ToLower(s), "<think>") && !strings.HasPrefix(strings.ToLower(s), "</think>") {
 				nonEmpty = append(nonEmpty, s)
 			}
 		}
