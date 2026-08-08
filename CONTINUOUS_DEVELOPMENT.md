@@ -7413,3 +7413,23 @@ Implementação:
    - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 528ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase403_header_prefix_fire_test/` and `results/phase403-header-prefix-parser/`.
+
+## Phase 404 — bracket key & alternate separator parsing & multi-provider live fire campaign (2026-08-08 22:03 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for bracketed/parentheses key names (`[KEY]: VALUE`, `(KEY): VALUE`, `【KEY】: VALUE`, `[1] [KEY]: VALUE`) and alternate key-value separators (` - `, ` – `, ` — `, ` = `, `=`), executing a 15-trial multi-provider live fire campaign.
+1. **Bracket & Alternate Separator Support (`ResponseParser`)**:
+   - Enhanced `cleanPrefix()` and `stripMarkdownEmphasis()` in `internal/prompt/response_parser.go` to clean surrounding square brackets (`[...]`), parentheses (`(...)`), CJK brackets (`【...】`), and numbered bracket tags (`[1] `, `(1) `).
+   - Added `extractLinePrefixAndValue()` supporting alternate separators (` - `, ` – `, ` — `, ` = `, `=`) when no colon is present on the line, eliminating code duplication in primary matching and hybrid consumed-line detection.
+2. **Unit Test Expansion (`response_parser_test.go`)**: Added unit test coverage for `stripMarkdownEmphasis`, `cleanPrefix`, `TestParseResponse_BracketAndParenthesesKeys`, and `TestParseResponse_AlternateSeparators`.
+3. **Live Fire Campaign Phase 404**: Formulated and executed a 15-trial live fire campaign (`cmd/phase404_bracket_separator_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`bracket_keys`, `dash_separators`, `bracket_tags_and_headers`).
+4. **Live campaign findings**:
+   - **Perfect 100.0% Success Rate (15/15 trials OK)** across all 5 models.
+   - **`primary_prefix` strategy achieved 100% (15/15)** across all models post-fix.
+   - **P50 Latency: 317 ms**, P95 Latency: 1336 ms, average format compliance: 1.00.
+   - **`groq/llama-3.1-8b-instant`**: **3/3 (100%) success**, P50 latency 313ms.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 317ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 310ms.
+   - **`groq/openai/gpt-oss-20b`**: **3/3 (100%) success**, P50 latency 327ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 780ms.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase404_bracket_separator_fire_test/` and `results/phase404-bracket-separator-parser/`.

@@ -48,10 +48,11 @@ type ParseResult struct {
 	NonEmptyLineCount int
 }
 
-// cleanPrefix strips leading markdown list markers (bullets, numbers, quotes)
-// and inline emphasis formatting (bold, italic) from a line prefix before
-// matching against expected keys (e.g. "- KEY", "* KEY", "1. KEY",
-// "**KEY**", "__KEY__", "- **KEY**", "* **KEY**").
+// cleanPrefix strips leading markdown list markers (bullets, numbers, quotes),
+// bracket tags, and inline emphasis formatting (bold, italic, quotes, backticks,
+// brackets) from a line prefix before matching against expected keys
+// (e.g. "- KEY", "* KEY", "1. KEY", "**KEY**", "[KEY]", "(KEY)", "【KEY】",
+// "- **[KEY]**").
 func cleanPrefix(prefix string) string {
 	s := strings.TrimSpace(prefix)
 	for {
@@ -85,7 +86,19 @@ func cleanPrefix(prefix string) string {
 				}
 			}
 		}
-		// Strip markdown emphasis markers (**key**, *key*, __key__, _key_).
+		// Strip bracket tags like [1], (1), [LABEL], (LABEL) followed by space or colon
+		if strings.HasPrefix(s, "[") || strings.HasPrefix(s, "(") {
+			closeIdx := -1
+			if strings.HasPrefix(s, "[") {
+				closeIdx = strings.Index(s, "]")
+			} else {
+				closeIdx = strings.Index(s, ")")
+			}
+			if closeIdx > 0 && closeIdx < len(s)-1 && (s[closeIdx+1] == ' ' || s[closeIdx+1] == ':') {
+				s = strings.TrimSpace(s[closeIdx+1:])
+			}
+		}
+		// Strip markdown emphasis markers (**key**, *key*, __key__, _key_, [key], (key), 【key】).
 		s = strings.TrimSpace(s)
 		s = stripMarkdownEmphasis(s)
 		s = strings.TrimSpace(s)
@@ -97,8 +110,9 @@ func cleanPrefix(prefix string) string {
 }
 
 // stripMarkdownEmphasis removes surrounding markdown bold/italic markers,
-// double/single quotes, and backticks from a string: **...**, *...*, __...__,
-// _..._, "... ", '...', `...`. It only strips matched pairs at the boundaries to
+// double/single quotes, backticks, brackets, and CJK full-width brackets
+// from a string: **...**, *...*, __...__, _..._, "... ", '...', `...`,
+// [...], (...), 【...】. It only strips matched pairs at the boundaries to
 // avoid corrupting values containing internal symbols. The input is expected
 // to be already trimmed of leading/trailing whitespace.
 func stripMarkdownEmphasis(s string) string {
@@ -110,6 +124,9 @@ func stripMarkdownEmphasis(s string) string {
 		{"\"", "\""},
 		{"'", "'"},
 		{"`", "`"},
+		{"[", "]"},
+		{"(", ")"},
+		{"【", "】"},
 	}
 	for _, p := range pairs {
 		if len(s) >= len(p.open)+len(p.close) &&
@@ -121,6 +138,40 @@ func stripMarkdownEmphasis(s string) string {
 		}
 	}
 	return s
+}
+
+// extractLinePrefixAndValue parses a line for "KEY: value" or alternate
+// separator patterns (" - ", " – ", " — ", " = ", "=") and returns the cleaned prefix
+// and trimmed value. hasKey is true if a valid prefix and separator were found.
+func extractLinePrefixAndValue(line string) (prefix string, value string, hasKey bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return "", "", false
+	}
+	var prefStr, valStr string
+	if colon := strings.Index(trimmed, ":"); colon > 0 {
+		prefStr = trimmed[:colon]
+		valStr = trimmed[colon+1:]
+	} else if sepIdx, sepLen := findAlternateSeparator(trimmed); sepIdx > 0 {
+		prefStr = trimmed[:sepIdx]
+		valStr = trimmed[sepIdx+sepLen:]
+	} else {
+		return "", "", false
+	}
+
+	pref := cleanPrefix(prefStr)
+	val := strings.TrimSpace(valStr)
+	return pref, val, true
+}
+
+func findAlternateSeparator(s string) (int, int) {
+	seps := []string{" - ", " – ", " — ", " = ", "="}
+	for _, sep := range seps {
+		if idx := strings.Index(s, sep); idx > 0 {
+			return idx, len(sep)
+		}
+	}
+	return -1, 0
 }
 
 // ParseResponse parses a model response text against an ordered list of
@@ -146,14 +197,8 @@ func ParseResponse(text string, keys []string) ParseResult {
 
 	// Primary parse: scan lines for "KEY: value" pattern.
 	for _, line := range strings.Split(cleanText, "\n") {
-		trimmed := strings.TrimSpace(line)
-		colon := strings.Index(trimmed, ":")
-		if colon <= 0 {
-			continue
-		}
-		prefix := cleanPrefix(trimmed[:colon])
-		value := strings.TrimSpace(trimmed[colon+1:])
-		if value == "" {
+		prefix, value, ok := extractLinePrefixAndValue(line)
+		if !ok || value == "" {
 			continue
 		}
 		// Match against any expected key (case-insensitive).
@@ -243,11 +288,10 @@ func ParseResponse(text string, keys []string) ParseResult {
 		consumedLines := make(map[int]bool)
 		for _, line := range strings.Split(cleanText, "\n") {
 			trimmed := strings.TrimSpace(line)
-			colon := strings.Index(trimmed, ":")
-			if colon <= 0 {
+			prefix, _, ok := extractLinePrefixAndValue(trimmed)
+			if !ok {
 				continue
 			}
-			prefix := cleanPrefix(trimmed[:colon])
 			for _, k := range keys {
 				if strings.EqualFold(prefix, k) {
 					// Mark this line index as consumed.

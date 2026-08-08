@@ -520,6 +520,9 @@ func TestStripMarkdownEmphasis(t *testing.T) {
 		{"\"BUILD\"", "BUILD"},
 		{"'BUILD'", "BUILD"},
 		{"`BUILD`", "BUILD"},
+		{"[BUILD]", "BUILD"},
+		{"(BUILD)", "BUILD"},
+		{"【BUILD】", "BUILD"},
 		{"BUILD", "BUILD"},
 		{"**", "**"},   // empty inner — not stripped
 		{"*", "*"},     // single char — not stripped
@@ -576,6 +579,12 @@ func TestCleanPrefix(t *testing.T) {
 		{"### **KEY**", "KEY"},
 		{"\"KEY\"", "KEY"},
 		{"`KEY`", "KEY"},
+		{"[KEY]", "KEY"},
+		{"(KEY)", "KEY"},
+		{"【KEY】", "KEY"},
+		{"[1] KEY", "KEY"},
+		{"[1] [KEY]", "KEY"},
+		{"- [KEY]", "KEY"},
 	}
 	for _, tc := range tests {
 		got := cleanPrefix(tc.input)
@@ -612,5 +621,48 @@ func TestParseResponse_PositionalFallbackRelaxed_LongLine(t *testing.T) {
 	}
 	if r.Strategy != ParseStrategyNone {
 		t.Fatalf("expected strategy %q, got %q", ParseStrategyNone, r.Strategy)
+	}
+}
+
+func TestParseResponse_BracketAndParenthesesKeys(t *testing.T) {
+	text := "[DATE]: 2026-08-08\n(SOURCE): Document A\n【VERDICT】: PASS\n[1] [STATUS]: ACTIVE"
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "VERDICT", "STATUS"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys with bracket/parentheses prefixes")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "Document A" {
+		t.Errorf("SOURCE=%q, want Document A", r.Values["SOURCE"])
+	}
+	if r.Values["VERDICT"] != "PASS" {
+		t.Errorf("VERDICT=%q, want PASS", r.Values["VERDICT"])
+	}
+	if r.Values["STATUS"] != "ACTIVE" {
+		t.Errorf("STATUS=%q, want ACTIVE", r.Values["STATUS"])
+	}
+}
+
+func TestParseResponse_AlternateSeparators(t *testing.T) {
+	text := "DATE - 2026-08-08\nSOURCE — Document B\nSTATUS = ACTIVE"
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys with alternate dash/equals separators")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "Document B" {
+		t.Errorf("SOURCE=%q, want Document B", r.Values["SOURCE"])
+	}
+	if r.Values["STATUS"] != "ACTIVE" {
+		t.Errorf("STATUS=%q, want ACTIVE", r.Values["STATUS"])
 	}
 }
