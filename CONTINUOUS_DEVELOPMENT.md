@@ -7396,3 +7396,20 @@ Implementação:
    - **`groq/openai/gpt-oss-20b`**: Auto-scaled reasoning budget (128/256 -> 512/1024 tokens) on token exhaustion and achieved **4/4 (100%) success** with P50 latency 1320ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase402_adversarial_retest/` and `results/phase402-adversarial-retest/`.
+
+## Phase 403 — markdown header key prefix cleaning & multi-provider live fire campaign (2026-08-08 21:25 -03)
+
+**Objective and implementation.** Addressed key parsing failures on markdown header-formatted keys (`# KEY: VALUE`, `## KEY: VALUE`, `### KEY: VALUE`, `- # KEY: VALUE`) and executed a 15-trial multi-provider live fire campaign.
+1. **Markdown Header Key Prefix Cleaning (`ResponseParser`)**: Enhanced `cleanPrefix()` in `internal/prompt/response_parser.go` to strip leading markdown header markers (`#`, `##`, `###`, etc.) before key matching, allowing `cleanPrefix()` to iteratively handle combinations of markdown headers, bullets, emphasis, and quotes. Added unit tests in `internal/prompt/response_parser_test.go` (`TestCleanPrefix`).
+2. **Live Fire Campaign Phase 403**: Formulated and executed a 15-trial live fire campaign (`cmd/phase403_header_prefix_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`) under 3 header key scenarios (`markdown_header_keys`, `header_with_bullets`, `bold_header_mix`).
+3. **Live campaign findings**:
+   - **Perfect 100.0% Success Rate (15/15 trials OK)** across all 5 models and all 3 header scenarios.
+   - **`primary_prefix` strategy achieved 100% (15/15)** across all models post-fix (improved from `hybrid_prefix_positional` fallback).
+   - **P50 Latency: 312 ms**, P95 Latency: 908 ms, average format compliance: 1.00.
+   - **`groq/llama-3.1-8b-instant`**: **3/3 (100%) success**, P50 latency 295ms.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 274ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 279ms.
+   - **`groq/openai/gpt-oss-20b`**: **3/3 (100%) success**, P50 latency 312ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 528ms.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase403_header_prefix_fire_test/` and `results/phase403-header-prefix-parser/`.

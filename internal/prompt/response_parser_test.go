@@ -555,6 +555,36 @@ func TestParseResponse_QuotedAndBacktickKeys(t *testing.T) {
 	}
 }
 
+func TestCleanPrefix(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"- KEY", "KEY"},
+		{"* KEY", "KEY"},
+		{"+ KEY", "KEY"},
+		{"1. KEY", "KEY"},
+		{"2) KEY", "KEY"},
+		{"> KEY", "KEY"},
+		{"# KEY", "KEY"},
+		{"**KEY**", "KEY"},
+		{"*KEY*", "KEY"},
+		{"__KEY__", "KEY"},
+		{"_KEY_", "KEY"},
+		{"- **KEY**", "KEY"},
+		{"# KEY", "KEY"},
+		{"### **KEY**", "KEY"},
+		{"\"KEY\"", "KEY"},
+		{"`KEY`", "KEY"},
+	}
+	for _, tc := range tests {
+		got := cleanPrefix(tc.input)
+		if got != tc.expected {
+			t.Errorf("cleanPrefix(%q) = %q, want %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
 func TestParseResponse_PositionalFallbackRelaxed(t *testing.T) {
 	// 3 non-empty lines, 2 keys: first 2 lines are short bare values, 3rd line is trailing note.
 	text := "2025-11-03\nS-17\nNote: date extracted successfully."

@@ -56,6 +56,11 @@ func cleanPrefix(prefix string) string {
 	s := strings.TrimSpace(prefix)
 	for {
 		orig := s
+		// Strip markdown header hashes (#, ##, ###, etc.)
+		if strings.HasPrefix(s, "#") {
+			s = strings.TrimLeft(s, "#")
+			s = strings.TrimSpace(s)
+		}
 		// Strip list markers first, then emphasis markers.
 		// List markers: bullet (- , * , +), numbered (1. , 2) , 3: ).
 		// Only strip * as bullet when followed by space (distinguishes from italic).
