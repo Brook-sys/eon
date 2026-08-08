@@ -7379,3 +7379,20 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase401_quoted_key_parser_fire_test/` and `results/phase401-quoted-key-parser/`.
 
+
+## Phase 402 — relaxed positional fallback strategy & adversarial retest campaign (2026-08-08 20:45 -03)
+
+**Objective and implementation.** Extended the Go structured response parser (`internal/prompt/response_parser.go`) with relaxed positional fallback recovery (`ParseStrategyPositionalFallbackRelaxed` / `"positional_fallback_relaxed"`) and executed a 20-trial multi-provider live fire campaign (`cmd/phase402_adversarial_retest`) across Groq and NVIDIA NIM models.
+1. **Relaxed Positional Fallback Strategy (`ResponseParser`)**: Extended `ParseStrategy` enum with `ParseStrategyPositionalFallbackRelaxed = "positional_fallback_relaxed"`. When zero keys are matched by prefix and response line count slightly exceeds requested key count (1–2 extra non-empty lines, e.g. trailing notes or quotes), the parser verifies if the first N lines are concise (<80 chars, non-prose). If concise, it extracts positionally from the first N lines, sets `UsedFallback = true`, `Strategy = ParseStrategyPositionalFallbackRelaxed`, and computes `FormatComplianceScore`. Added unit tests in `internal/prompt/response_parser_test.go` (`TestParseResponse_PositionalFallbackRelaxed`, `TestParseResponse_PositionalFallbackRelaxed_LongLine`, `TestParseResponse_NoFallbackWhenLineCountExcessive`).
+2. **Adversarial Retest Live Fire Campaign (Phase 402)**: Built and executed `cmd/phase402_adversarial_retest` across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`) on the 4 hardest adversarial scenarios from the Aug 5 sweep (`adv-language-degradation`, `adv-budget-starvation`, `adv-conflicting-data`, `adv-context-pollution`).
+3. **Live campaign findings**:
+   - **Perfect 100.0% Success Rate (20/20 trials OK)** across all models, providers, and adversarial cases.
+   - **Average Compliance Score: 1.00** across all 20 trials.
+   - **P50 Latency: 333 ms**, P95 Latency: 1417 ms.
+   - **`groq/llama-3.1-8b-instant`**: **4/4 (100%) success**, P50 latency 227ms.
+   - **`groq/llama-3.3-70b-versatile`**: **4/4 (100%) success**, P50 latency 272ms.
+   - **`groq/qwen/qwen3.6-27b`**: **4/4 (100%) success**, P50 latency 251ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **4/4 (100%) success**, P50 latency 632ms.
+   - **`groq/openai/gpt-oss-20b`**: Auto-scaled reasoning budget (128/256 -> 512/1024 tokens) on token exhaustion and achieved **4/4 (100%) success** with P50 latency 1320ms.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase402_adversarial_retest/` and `results/phase402-adversarial-retest/`.
