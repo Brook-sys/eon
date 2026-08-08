@@ -1,0 +1,13 @@
+{
+  "total_trials": 15,
+  "success_count": 11,
+  "success_rate": 0.7333333333333333,
+  "p50_latency_ms": 340,
+  "p95_latency_ms": 1787,
+  "strategy_counts": {
+    "hybrid_prefix_positional": 3,
+    "none": 1,
+    "primary_prefix": 8
+  },
+  "compliance_avg": 0.7333333333333333
+}

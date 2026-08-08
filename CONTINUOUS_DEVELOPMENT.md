@@ -7305,3 +7305,17 @@ Implementação:
    - `groq/openai/gpt-oss-20b` failed under tight token limits due to reasoning overhead without auto-suppression enabled.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly. `go vet ./...` clean. `git diff --check` clean. Artifacts saved in `cmd/phase395_hybrid_parsing_fire_test/` and `results/phase395-hybrid-parsing/REPORT.md`.
+
+## Phase 396 — multi-key structured response parsing integration & live fire campaign (2026-08-08 19:40 -03)
+
+**Objective and implementation.** Formulated and executed a 15-trial live fire campaign (`cmd/phase396_structured_parser_integration`) testing multi-key structured response extraction across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/deepseek-ai/deepseek-v4-flash-0731`) under 3 multi-key test scenarios (`multi_key_standard`, `multi_key_hybrid_pressure`, `multi_key_reasoning_pressure`).
+1. Validated `prompt.ParseResponse` across 2, 3, and mixed key-value extraction workloads with `FormatAnchoringAuto` enabled.
+2. Live campaign findings:
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 329ms. Correctly utilized `hybrid_prefix_positional` strategy to recover 100% compliance when bare values were emitted under pressure.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 340ms. Reasoning overhead floor + auto-suppressed reasoning effort (`reasoning_effort: "none"`) enabled clean execution without truncation or format corruption.
+   - **`nim/deepseek-ai/deepseek-v4-flash-0731`**: **3/3 (100%) success**, P50 latency 1737ms. Handled multi-key standard and hybrid pressure cases cleanly across providers.
+   - **`groq/llama-3.1-8b-instant`**: **2/3 (66.7%) success**. Passed standard and reasoning cases via `primary_prefix`; failed `hybrid_pressure` due to low parameter capacity omitting keys.
+   - **`groq/openai/gpt-oss-20b`**: 0/3 due to HTTP 400 rejection of unsuppressed parameters.
+   - Overall campaign score (excluding provider-rejected gpt-oss-20b): **11/12 (91.7%) OK**, overall P50 latency 340ms, P95 1787ms.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase396_structured_parser_integration/` and `results/phase396-structured-parser-integration/`.
