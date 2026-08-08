@@ -10,8 +10,8 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/kernel"
-	memstore "motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/runtime/source"
+	memstore "motor-autonomo/internal/storage/memory"
 )
 
 // TestModelsE2EDashboardFlow simulates the complete dashboard flow:
@@ -262,4 +262,3 @@ func TestModelsE2EDashboardFlow(t *testing.T) {
 		t.Logf("confirmed: revision has 'models' field, not 'payload'")
 	})
 }
-

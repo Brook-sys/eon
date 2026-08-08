@@ -84,3 +84,38 @@ func validSpec() domain.OperationSpec {
 func validInput() Input {
 	return Input{Task: "Choose one.", AllowedOutputs: []string{"first", "second"}, AnswerFormat: "Only A or B."}
 }
+
+func TestCompileRenderIncludesFormatExample(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:           "Extract the publication date and source.",
+		AllowedOutputs: []string{"DATE: value", "SOURCE: value"},
+		AnswerFormat:   "DATE: <value>\\nSOURCE: <value>",
+		FormatExample:  "DATE: 2025-11-03\\nSOURCE: S-17",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Request.Prompt, "EXAMPLE") {
+		t.Fatalf("prompt missing EXAMPLE block:\n%s", result.Request.Prompt)
+	}
+	if !strings.Contains(result.Request.Prompt, "DATE: 2025-11-03") {
+		t.Fatalf("prompt missing format example content:\n%s", result.Request.Prompt)
+	}
+	if !strings.Contains(result.Request.Prompt, "SOURCE: S-17") {
+		t.Fatalf("prompt missing format example source content:\n%s", result.Request.Prompt)
+	}
+}
+
+func TestCompileOmitsFormatExampleWhenEmpty(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, validInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Request.Prompt, "EXAMPLE") {
+		t.Fatalf("prompt should not contain EXAMPLE block when FormatExample is empty:\n%s", result.Request.Prompt)
+	}
+}

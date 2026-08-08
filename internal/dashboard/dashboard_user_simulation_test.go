@@ -162,7 +162,7 @@ func TestDashboardUserSimulations(t *testing.T) {
 						"timeout":            90000000000,
 						"max_response_bytes": 10485760,
 						"global_limit": map[string]interface{}{
-							"resource":"model-provider:groq-user-test",
+							"resource":       "model-provider:groq-user-test",
 							"max_concurrent": 4,
 						},
 					},

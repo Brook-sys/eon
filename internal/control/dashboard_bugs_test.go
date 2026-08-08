@@ -9,8 +9,8 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/kernel"
-	memstore "motor-autonomo/internal/storage/memory"
 	"motor-autonomo/internal/runtime/source"
+	memstore "motor-autonomo/internal/storage/memory"
 )
 
 // TestDashboardBug5_BasedOnRevisionForwarded verifies that based_on_revision
@@ -230,18 +230,18 @@ func createModelsDraftWithProvider(t *testing.T, baseURL string, basedOnRev int,
 	t.Helper()
 	payload := map[string]any{
 		"scope":             "MODELS",
-		"reason":             "add provider " + providerID,
-		"based_on_revision":  basedOnRev,
+		"reason":            "add provider " + providerID,
+		"based_on_revision": basedOnRev,
 		"models": map[string]any{
 			"version": "models.v1",
 			"providers": []map[string]any{
 				{
-					"id":                  providerID,
-					"kind":                "openai_compatible",
-					"base_url":            baseURLStr,
-					"api_key_env":         apiKeyEnv,
-					"timeout":             90000000000,
-					"max_response_bytes":  10485760,
+					"id":                 providerID,
+					"kind":               "openai_compatible",
+					"base_url":           baseURLStr,
+					"api_key_env":        apiKeyEnv,
+					"timeout":            90000000000,
+					"max_response_bytes": 10485760,
 					"global_limit": map[string]any{
 						"resource":       "model-provider:" + providerID,
 						"max_concurrent": 2,

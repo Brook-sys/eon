@@ -46,6 +46,13 @@ type Input struct {
 	Constraints    []string
 	AllowedOutputs []string
 	AnswerFormat   string
+	// FormatExample is an optional explicit example of the expected response
+	// format. When non-empty, it is rendered as an EXAMPLE block between
+	// ANSWER and the closing delimiter. Adversarial fire sweeps (300+ live
+	// calls, 2026-08-06) found that an explicit format example is the single
+	// most effective prompt intervention: it lifted 70B model format
+	// compliance from 0% to 100% under PT-BR language pressure.
+	FormatExample string
 }
 
 type Result struct {
@@ -153,5 +160,8 @@ func render(version uint64, input Input, facts []Fact) string {
 		fmt.Fprintf(&b, "%c: %s\n", 'A'+index, strings.TrimSpace(output))
 	}
 	fmt.Fprintf(&b, "\nANSWER\n%s\n", strings.TrimSpace(input.AnswerFormat))
+	if strings.TrimSpace(input.FormatExample) != "" {
+		fmt.Fprintf(&b, "\nEXAMPLE\n%s\n", strings.TrimSpace(input.FormatExample))
+	}
 	return b.String()
 }

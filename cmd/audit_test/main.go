@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
-	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/kernel"
+	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/runtime/source"
 	memstore "motor-autonomo/internal/storage/memory"
 )
@@ -17,7 +17,6 @@ func main() {
 	ctx := context.Background()
 
 	store := memstore.New()
-	
 
 	clock := source.SystemClock{}
 	ids := source.CryptoIDGenerator{}
@@ -63,16 +62,16 @@ func main() {
 	}
 
 	draft := domain.ConfigDraft{
-		SchemaVersion:   domain.SchemaVersionV1,
-		ID:              draftID,
-		Scope:           domain.ConfigScopeModels,
-		Applicability:   domain.DefaultApplicabilityForScope(domain.ConfigScopeModels),
-		Status:          domain.ConfigDraftOpen,
-		ActorType:       domain.ActorOperator,
-		ActorID:         "test-operator",
-		Reason:          "test models flow",
-		Models:          &modelsConfig,
-		CreatedAt:       clock.Now().UTC(),
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            draftID,
+		Scope:         domain.ConfigScopeModels,
+		Applicability: domain.DefaultApplicabilityForScope(domain.ConfigScopeModels),
+		Status:        domain.ConfigDraftOpen,
+		ActorType:     domain.ActorOperator,
+		ActorID:       "test-operator",
+		Reason:        "test models flow",
+		Models:        &modelsConfig,
+		CreatedAt:     clock.Now().UTC(),
 	}
 
 	fmt.Printf("Step 1: Draft validation...\n")
@@ -138,16 +137,16 @@ func main() {
 	wrongBinding := modelsConfig
 	wrongBinding.Bindings[0].MaxOutputDialect = "legacy"
 	wrongDraft := domain.ConfigDraft{
-		SchemaVersion:   domain.SchemaVersionV1,
-		ID:              "cfgdraft_test2",
-		Scope:           domain.ConfigScopeModels,
-		Applicability:   domain.DefaultApplicabilityForScope(domain.ConfigScopeModels),
-		Status:          domain.ConfigDraftOpen,
-		ActorType:       domain.ActorOperator,
-		ActorID:         "test-operator",
-		Reason:          "test wrong dialect",
-		Models:          &wrongBinding,
-		CreatedAt:       clock.Now().UTC(),
+		SchemaVersion: domain.SchemaVersionV1,
+		ID:            "cfgdraft_test2",
+		Scope:         domain.ConfigScopeModels,
+		Applicability: domain.DefaultApplicabilityForScope(domain.ConfigScopeModels),
+		Status:        domain.ConfigDraftOpen,
+		ActorType:     domain.ActorOperator,
+		ActorID:       "test-operator",
+		Reason:        "test wrong dialect",
+		Models:        &wrongBinding,
+		CreatedAt:     clock.Now().UTC(),
 	}
 	if err := wrongDraft.Validate(); err != nil {
 		fmt.Printf("  EXPECTED FAIL: %v\n", err)

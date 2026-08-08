@@ -6,3 +6,4 @@ scripts/sweep/__pycache__/
 scripts/sweep/probe-last.json
 tools/dashboard-assets/tailwindcss
 /audit_test
+/nim_fire_test

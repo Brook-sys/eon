@@ -1370,6 +1370,7 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			Constraints:    []string{"Return exactly the text requested by the task, with no explanation or formatting."},
 			AllowedOutputs: []string{"exact requested text"},
 			AnswerFormat:   "exact requested text only",
+			FormatExample:  task,
 		}, nil
 	}
 	if spec.OutputSchema == "exact_json" {
@@ -1378,6 +1379,7 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			Constraints:    []string{"Return exactly the JSON object requested by the task, with no markdown fence, explanation, or extra keys."},
 			AllowedOutputs: []string{"exact requested JSON object"},
 			AnswerFormat:   "single exact JSON object only",
+			FormatExample:  `{"key":"value"}`,
 		}, nil
 	}
 	facts := []prompt.Fact{
@@ -1409,6 +1411,7 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 		},
 		AllowedOutputs: []string{"application/json", "ProposedChangeSet"},
 		AnswerFormat:   "single ProposedChangeSet JSON object with canonical snake_case keys",
+		FormatExample:  `{"schema_version":1,"id":"cs-001","mission_revision_id":"rev-1","operation_id":"op-1","base_commit_id":"commit-1","read_set":["manifest"],"preconditions":[],"changes":[{"kind":"ADD","entity_type":"source","entity_id":"src-1","payload_ref":"p-1"}],"expected_delta":"one observation","validator_ids":["v1"],"provenance":"model:proposed_changeset","idempotency_key":"k-1"}`,
 	}, nil
 }
 
