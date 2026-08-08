@@ -184,7 +184,7 @@ func TestBudgetGuardRespectsExplicitMinOutputTokens(t *testing.T) {
 
 func TestBudgetGuardIncludesThinkingOverhead(t *testing.T) {
 	spec := validSpec()
-	spec.MaxOutputTokens = 128 // normal format fits, but thinking overhead doesn't
+	spec.MaxOutputTokens = 3 // below both format floor and thinking overhead
 	spec.Budget.Tokens = 1000
 	spec.SafetyMargin = 3
 	input := Input{
@@ -195,10 +195,33 @@ func TestBudgetGuardIncludesThinkingOverhead(t *testing.T) {
 	}
 	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
 	if !errors.Is(err, ErrOutputBudgetInsufficient) {
-		t.Fatalf("expected ErrOutputBudgetInsufficient when thinking overhead exceeds budget, got %v", err)
+		t.Fatalf("expected ErrOutputBudgetInsufficient when output budget is below floor, got %v", err)
 	}
 	if result.MinOutputTokens < 390 {
 		t.Fatalf("MinOutputTokens (%d) should include thinking overhead (384 + format floor)", result.MinOutputTokens)
+	}
+}
+
+func TestBudgetGuardAutoSuppressesReasoningEffort(t *testing.T) {
+	spec := validSpec()
+	spec.MaxOutputTokens = 64 // Enough for format (~8-12 tokens), but NOT for format + thinking overhead (384)
+	spec.Budget.Tokens = 1000
+	spec.SafetyMargin = 3
+	input := Input{
+		Task:                   "Extract date and source.",
+		AllowedOutputs:         []string{"DATE: value", "SOURCE: value"},
+		AnswerFormat:           "DATE: 2025-11-03\nSOURCE: S-17",
+		ThinkingOverheadTokens: 384,
+	}
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
+	if err != nil {
+		t.Fatalf("expected compile success via auto-suppression, got error: %v", err)
+	}
+	if !result.ReasoningEffortSuppressed {
+		t.Fatalf("expected ReasoningEffortSuppressed to be true")
+	}
+	if result.Request.ReasoningEffort != "none" {
+		t.Fatalf("expected Request.ReasoningEffort to be 'none', got %q", result.Request.ReasoningEffort)
 	}
 }
 

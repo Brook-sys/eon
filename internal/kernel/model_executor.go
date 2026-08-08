@@ -570,7 +570,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	request := compiled.Request
 	request.ResponseFormat = plan.ResponseFormat
 	request.PrefillAssistant = plan.PrefillAssistant
-	request.ReasoningEffort = plan.ReasoningEffort
+	if plan.ReasoningEffort != "" {
+		request.ReasoningEffort = plan.ReasoningEffort
+	}
 	usingFallback := false
 	var lastCompletion port.CompletionResult
 	var lastErr error
@@ -669,7 +671,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			request = compiled.Request
 			request.ResponseFormat = plan.ResponseFormat
 			request.PrefillAssistant = plan.PrefillAssistant
-			request.ReasoningEffort = plan.ReasoningEffort
+			if plan.ReasoningEffort != "" {
+				request.ReasoningEffort = plan.ReasoningEffort
+			}
 			plan.Reason = "context_pressure_reduction"
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
@@ -796,7 +800,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				request = compiled.Request
 				request.ResponseFormat = plan.ResponseFormat
 				request.PrefillAssistant = plan.PrefillAssistant
-				request.ReasoningEffort = plan.ReasoningEffort
+				if plan.ReasoningEffort != "" {
+					request.ReasoningEffort = plan.ReasoningEffort
+				}
 				continue
 			}
 			// The failure taxonomy's TRY_NEXT_BINDING disposition is operational,
@@ -853,7 +859,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				plan = domain.PlanAfterDemotion(plan, profile)
 				request.ResponseFormat = plan.ResponseFormat
 				request.PrefillAssistant = plan.PrefillAssistant
-				request.ReasoningEffort = plan.ReasoningEffort
+				if plan.ReasoningEffort != "" {
+					request.ReasoningEffort = plan.ReasoningEffort
+				}
 				_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 				continue
 			}
@@ -993,7 +1001,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 					request = compiled.Request
 					request.ResponseFormat = plan.ResponseFormat
 					request.PrefillAssistant = plan.PrefillAssistant
-					request.ReasoningEffort = plan.ReasoningEffort
+					if plan.ReasoningEffort != "" {
+						request.ReasoningEffort = plan.ReasoningEffort
+					}
 					compileInput = nextInput
 					continue
 				}
@@ -1041,7 +1051,9 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				request = compiled.Request
 				request.ResponseFormat = plan.ResponseFormat
 				request.PrefillAssistant = plan.PrefillAssistant
-				request.ReasoningEffort = plan.ReasoningEffort
+				if plan.ReasoningEffort != "" {
+					request.ReasoningEffort = plan.ReasoningEffort
+				}
 				compileInput = nextInput
 
 				continue

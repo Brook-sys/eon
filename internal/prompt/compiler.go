@@ -85,6 +85,10 @@ type Result struct {
 	// answer format. Callers can use it to decide whether to degrade the
 	// format or increase the output budget.
 	MinOutputTokens int
+	// ReasoningEffortSuppressed is true when BudgetGuard automatically suppressed
+	// reasoning effort to "none" because MaxOutputTokens could accommodate the
+	// answer format floor but not the thinking overhead tokens.
+	ReasoningEffortSuppressed bool
 }
 
 type Compiler struct {
@@ -111,12 +115,19 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	// guaranteed to fail on truncation (finish_reason=length). Phase 386
 	// evidence: gpt-oss-120b/20b scored 0/8 on budget-starvation at
 	// max_tokens=20 because DATE+SOURCE cannot fit in 20 output tokens.
+	minOutputBase := estimateMinOutputTokens(input.AnswerFormat)
 	minOutput := input.MinOutputTokens
 	if minOutput <= 0 {
-		minOutput = estimateMinOutputTokens(input.AnswerFormat) + input.ThinkingOverheadTokens
+		minOutput = minOutputBase + input.ThinkingOverheadTokens
 	}
+	reasoningSuppressed := false
 	if spec.MaxOutputTokens < minOutput {
-		return Result{MinOutputTokens: minOutput}, fmt.Errorf("%w: need %d, have %d", ErrOutputBudgetInsufficient, minOutput, spec.MaxOutputTokens)
+		if input.ThinkingOverheadTokens > 0 && spec.MaxOutputTokens >= minOutputBase {
+			minOutput = minOutputBase
+			reasoningSuppressed = true
+		} else {
+			return Result{MinOutputTokens: minOutput}, fmt.Errorf("%w: need %d, have %d", ErrOutputBudgetInsufficient, minOutput, spec.MaxOutputTokens)
+		}
 	}
 
 	effective := min(spec.Budget.Tokens, c.ProviderContextTokens)
@@ -166,11 +177,22 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	for i := range omitted {
 		omittedIDs[i] = omitted[i].ID
 	}
+	req := port.CompletionRequest{
+		Prompt:          promptText,
+		MaxOutputTokens: spec.MaxOutputTokens,
+		Temperature:     0,
+	}
+	if reasoningSuppressed {
+		req.ReasoningEffort = "none"
+	}
 	return Result{
-		Request:         port.CompletionRequest{Prompt: promptText, MaxOutputTokens: spec.MaxOutputTokens, Temperature: 0},
-		TemplateVersion: spec.TemplateVersion, EstimatedInputTokens: count,
-		InputTokenLimit: inputLimit, OmittedFactIDs: omittedIDs,
-		MinOutputTokens: minOutput,
+		Request:                   req,
+		TemplateVersion:           spec.TemplateVersion,
+		EstimatedInputTokens:      count,
+		InputTokenLimit:           inputLimit,
+		OmittedFactIDs:            omittedIDs,
+		MinOutputTokens:           minOutput,
+		ReasoningEffortSuppressed: reasoningSuppressed,
 	}, nil
 }
 

@@ -7223,3 +7223,25 @@ Implementação:
 4. Formulated and executed Phase 389 live campaign (`cmd/thinking_parser_fire_test`) testing live reasoning output from Groq models (`qwen/qwen3.6-27b`, `groq/compound-mini`, `llama-3.3-70b-versatile`). Result: 3/3 passed (100%), successfully extracting `DATE` and `SOURCE` despite `qwen/qwen3.6-27b` emitting unclosed `<think>` tags.
 
 **Deterministic verification.** `go test -race ./internal/modeltext/... ./internal/prompt/...` passed cleanly. `go vet` and `git diff --check` clean. Report saved in `results/thinking-parser-phase389/REPORT.md`.
+
+## Phase 390 — reasoning effort pipeline integration & probe resiliency (2026-08-08 13:40 -03)
+
+**Objective and implementation.** Integrated `DefaultReasoningEffort` into `ProviderProfile` and `AdaptationPlan`, wired `ReasoningEffort` through `ModelExecutor` to all request sites, hardened provider probe retry logic for standard models, and refactored `prompt.ParseResponse` to leverage `modeltext.NormalizeStructuredResponse`.
+1. Added `DefaultReasoningEffort` to `ProviderProfile` and `AdaptationPlan` with validation for `none`, `low`, `medium`, `high`.
+2. Wired `request.ReasoningEffort = plan.ReasoningEffort` across all 6 request construction sites in `ModelExecutor`.
+3. Added HTTP 400 retry fallback in `openai.Provider.Probe` to retry probe completion without `ReasoningEffort` when a standard model rejects the parameter.
+4. Refactored `prompt.ParseResponse` to use `modeltext.NormalizeStructuredResponse` as a pre-parse ladder step.
+5. Formulated and executed an 8-trial live fire campaign across 4 Groq models and 1 NIM control (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`, `meta/llama-3.1-8b-instruct`). Findings: probe auto-fallback confirmed on live endpoints, 8B models showed semantic failure on weekday calculation (cognitive gap), budget starvation observed on reasoning models when effort was unset.
+
+**Deterministic verification.** `go test ./...` 100% passing. Report in `results/phase390-reasoning-effort/REPORT.md`. Commit `d1a8034` pushed to `origin/main`.
+
+## Phase 391 — BudgetGuard reasoning effort auto-suppression & ModelExecutor wire preservation (2026-08-08 14:30 -03)
+
+**Objective and implementation.** Implemented dynamic reasoning effort auto-suppression in `prompt.Compiler` when `MaxOutputTokens` cannot fit reasoning overhead (`ThinkingOverheadTokens`) but accommodates the base answer format floor (`estimateMinOutputTokens`).
+1. Extended `prompt.Result` with `ReasoningEffortSuppressed bool`.
+2. Updated `Compiler.Compile` to set `Request.ReasoningEffort = "none"` and `ReasoningEffortSuppressed = true` when `MaxOutputTokens` can fit `minOutputBase` but not `minOutputBase + ThinkingOverheadTokens`.
+3. Hardened `kernel.ModelExecutor` across all 6 request construction sites to preserve `compiled.Request.ReasoningEffort` when `plan.ReasoningEffort` is empty (`if plan.ReasoningEffort != "" { request.ReasoningEffort = plan.ReasoningEffort }`).
+4. Executed live fire campaign (`cmd/auto_suppression_fire_test`) against Groq `qwen/qwen3.6-27b` under `max_tokens=64`. Empirically proved: auto-suppressed case completed in **331ms** using **9 tokens** with `finish_reason=stop` (100% accurate); unsuppressed control starved out all 64 tokens with `finish_reason=length` and 0 parsed values.
+
+**Deterministic verification.** `go test ./...` 100% passing across all packages. `git diff --check` clean. Report in `results/phase391-auto-suppression/REPORT.md`.
+

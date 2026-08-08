@@ -1,0 +1,50 @@
+[
+  {
+    "case_name": "auto-suppress-tight-budget",
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 64,
+    "thinking_overhead": 384,
+    "suppressed": true,
+    "wire_effort": "none",
+    "latency_ms": 331,
+    "input_tokens": 68,
+    "output_tokens": 9,
+    "finish_reason": "stop",
+    "thought_stripped": false,
+    "parsed_values": {
+      "CONFIRM": "YES",
+      "STATUS": "OK"
+    }
+  },
+  {
+    "case_name": "unsuppressed-tight-budget-control",
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 64,
+    "thinking_overhead": 0,
+    "suppressed": false,
+    "wire_effort": "",
+    "latency_ms": 328,
+    "input_tokens": 66,
+    "output_tokens": 64,
+    "finish_reason": "length",
+    "thought_stripped": true,
+    "parsed_values": {}
+  },
+  {
+    "case_name": "auto-suppress-moderate-budget",
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 128,
+    "thinking_overhead": 384,
+    "suppressed": true,
+    "wire_effort": "none",
+    "latency_ms": 359,
+    "input_tokens": 68,
+    "output_tokens": 9,
+    "finish_reason": "stop",
+    "thought_stripped": false,
+    "parsed_values": {
+      "CONFIRM": "YES",
+      "STATUS": "OK"
+    }
+  }
+]
