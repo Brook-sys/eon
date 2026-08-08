@@ -7290,3 +7290,18 @@ Implementação:
    - Total campaign score: 27/36 (75.0%) OK, P50 latency 729ms, P95 2695ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `gofmt`, `go vet`, `git diff --check` clean. Artifacts in `cmd/phase394_format_anchoring_fire_test/` and `results/phase394-format-anchoring/`.
+
+## Phase 395 — hybrid prefix-positional parsing strategy & multi-provider live fire campaign (2026-08-08 19:15 -03)
+
+**Objective and implementation.** Extended structured response parser in `internal/prompt/response_parser.go` with hybrid prefix-positional fallback recovery (`ParseStrategyHybrid` / `"hybrid_prefix_positional"`).
+1. Extended `ParseStrategy` enum with `ParseStrategyHybrid = "hybrid_prefix_positional"`.
+2. Implemented hybrid fallback logic in `prompt.ParseResponse`: when prefix matching finds a partial set of requested keys (at least 1 key found and at least 1 key missing), the parser isolates non-empty response lines unconsumed by prefix matching. If the count of unmatched non-empty lines equals the count of missing keys, it assigns the unmatched lines to missing keys in order, sets `UsedFallback = true`, `Strategy = ParseStrategyHybrid`, and computes `FormatComplianceScore`.
+3. Updated unit test suite in `internal/prompt/response_parser_test.go` with `TestParseResponse_PartialMatchHybridFallback` and `TestParseResponse_PartialMatchNoFallbackLineCountMismatch` verifying both successful recovery and guardrails against false positives when line counts mismatch.
+4. Formulated and executed a 10-trial live fire campaign (`cmd/phase395_hybrid_parsing_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/deepseek-ai/deepseek-v4-flash-0731`) under 2 test cases (`standard_prefix` and `hybrid_prefix_bare`).
+5. Live campaign findings:
+   - Overall campaign score: **8/10 (80.0%) OK**, P50 latency 452ms, P95 latency 3702ms, average compliance score 0.80.
+   - **`hybrid_prefix_positional` strategy successfully triggered and recovered 100% compliance** on `groq/llama-3.3-70b-versatile` (321ms) and `groq/qwen/qwen3.6-27b` (518ms) when presented with mixed responses (e.g. `DATE: 2025-11-03\nS-17`).
+   - `groq/llama-3.1-8b-instant` and `nim/deepseek-ai/deepseek-v4-flash-0731` autonomously emitted prefix labels for all keys (`primary_prefix` strategy).
+   - `groq/openai/gpt-oss-20b` failed under tight token limits due to reasoning overhead without auto-suppression enabled.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly. `go vet ./...` clean. `git diff --check` clean. Artifacts saved in `cmd/phase395_hybrid_parsing_fire_test/` and `results/phase395-hybrid-parsing/REPORT.md`.

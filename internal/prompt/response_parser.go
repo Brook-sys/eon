@@ -23,6 +23,7 @@ type ParseStrategy string
 const (
 	ParseStrategyPrimary            ParseStrategy = "primary_prefix"
 	ParseStrategyPositionalFallback ParseStrategy = "positional_fallback"
+	ParseStrategyHybrid             ParseStrategy = "hybrid_prefix_positional"
 	ParseStrategyNone               ParseStrategy = "none"
 )
 
@@ -91,31 +92,27 @@ func ParseResponse(text string, keys []string) ParseResult {
 		}
 	}
 
-	// Fallback: only when zero keys were found by prefix AND non-empty line
-	// count matches key count. This avoids false positives on mixed-format
-	// or prose responses.
+	// Collect non-empty lines for fallback analysis.
 	nonEmptyCount := 0
+	nonEmptyLines := make([]string, 0)
 	for _, line := range strings.Split(cleanText, "\n") {
-		if strings.TrimSpace(line) != "" {
+		s := strings.TrimSpace(line)
+		if s != "" {
 			nonEmptyCount++
+			nonEmptyLines = append(nonEmptyLines, s)
 		}
 	}
 	result.NonEmptyLineCount = nonEmptyCount
 
-	if len(result.FoundKeys) > 0 {
+	if len(result.FoundKeys) == len(keys) {
+		// All keys found by prefix — primary strategy.
 		result.Strategy = ParseStrategyPrimary
 		result.FormatComplianceScore = float64(len(result.FoundKeys)) / float64(len(keys))
 	} else if len(result.FoundKeys) == 0 {
-		nonEmpty := make([]string, 0, nonEmptyCount)
-		for _, line := range strings.Split(cleanText, "\n") {
-			s := strings.TrimSpace(line)
-			if s != "" {
-				nonEmpty = append(nonEmpty, s)
-			}
-		}
-		if len(nonEmpty) == len(keys) {
+		// No keys found by prefix — try pure positional fallback.
+		if len(nonEmptyLines) == len(keys) {
 			for i, k := range keys {
-				result.Values[k] = nonEmpty[i]
+				result.Values[k] = nonEmptyLines[i]
 				result.FoundByFallback = append(result.FoundByFallback, k)
 			}
 			result.UsedFallback = true
@@ -124,6 +121,67 @@ func ParseResponse(text string, keys []string) ParseResult {
 		} else {
 			result.Strategy = ParseStrategyNone
 			result.FormatComplianceScore = 0.0
+		}
+	} else {
+		// Partial prefix match — try hybrid positional fallback for missing keys.
+		// Phase 383 adversarial sweep found models sometimes emit one key with
+		// prefix and another as a bare value. The hybrid fallback collects
+		// non-empty lines that were NOT consumed by prefix matches and assigns
+		// them to missing keys in order. Only applies when the count of
+		// unmatched non-empty lines equals the count of missing keys.
+		missingKeys := make([]string, 0)
+		foundSet := make(map[string]bool, len(result.FoundKeys))
+		for _, k := range result.FoundKeys {
+			foundSet[strings.ToLower(k)] = true
+		}
+		for _, k := range keys {
+			if !foundSet[strings.ToLower(k)] {
+				missingKeys = append(missingKeys, k)
+			}
+		}
+
+		// Collect non-empty lines not consumed by a prefix match.
+		consumedLines := make(map[int]bool)
+		for _, line := range strings.Split(cleanText, "\n") {
+			trimmed := strings.TrimSpace(line)
+			colon := strings.Index(trimmed, ":")
+			if colon <= 0 {
+				continue
+			}
+			prefix := strings.TrimSpace(trimmed[:colon])
+			for _, k := range keys {
+				if strings.EqualFold(prefix, k) {
+					// Mark this line index as consumed.
+					for i, ne := range nonEmptyLines {
+						if ne == trimmed && !consumedLines[i] {
+							consumedLines[i] = true
+							break
+						}
+					}
+					break
+				}
+			}
+		}
+
+		unmatchedLines := make([]string, 0)
+		for i, ne := range nonEmptyLines {
+			if !consumedLines[i] {
+				unmatchedLines = append(unmatchedLines, ne)
+			}
+		}
+
+		if len(unmatchedLines) == len(missingKeys) && len(missingKeys) > 0 {
+			for i, k := range missingKeys {
+				result.Values[k] = unmatchedLines[i]
+				result.FoundByFallback = append(result.FoundByFallback, k)
+			}
+			result.UsedFallback = true
+			result.Strategy = ParseStrategyHybrid
+			result.FormatComplianceScore = float64(len(result.FoundKeys)+len(result.FoundByFallback)) / float64(len(keys))
+		} else {
+			// Hybrid fallback not applicable — keep partial primary result.
+			result.Strategy = ParseStrategyPrimary
+			result.FormatComplianceScore = float64(len(result.FoundKeys)) / float64(len(keys))
 		}
 	}
 

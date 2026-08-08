@@ -74,19 +74,46 @@ func TestParseResponse_NoFallbackOnProse(t *testing.T) {
 	}
 }
 
-func TestParseResponse_PartialMatchNoFallback(t *testing.T) {
-	// When some keys are found by prefix, fallback is not used even if
-	// other keys are missing.
+func TestParseResponse_PartialMatchHybridFallback(t *testing.T) {
+	// Phase 395: When some keys are found by prefix and the remaining
+	// non-empty lines match the count of missing keys, hybrid fallback
+	// assigns the unmatched lines to missing keys in order.
 	text := "DATE: 2025-11-03\nS-17"
 	r := ParseResponse(text, []string{"DATE", "SOURCE"})
+	if !r.UsedFallback {
+		t.Fatal("hybrid fallback should fire when prefix matches some keys and unmatched lines equal missing keys")
+	}
+	if r.Strategy != ParseStrategyHybrid {
+		t.Fatalf("expected Strategy %q, got %q", ParseStrategyHybrid, r.Strategy)
+	}
+	if r.Values["DATE"] != "2025-11-03" {
+		t.Errorf("DATE=%q", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "S-17" {
+		t.Errorf("SOURCE=%q, want S-17", r.Values["SOURCE"])
+	}
+	if r.FormatComplianceScore != 1.0 {
+		t.Errorf("FormatComplianceScore=%f, want 1.0", r.FormatComplianceScore)
+	}
+}
+
+func TestParseResponse_PartialMatchNoFallbackLineCountMismatch(t *testing.T) {
+	// When partial prefix match occurs but unmatched non-empty lines
+	// do NOT equal the count of missing keys, hybrid fallback should
+	// not fire — keeping the partial primary result.
+	text := "DATE: 2025-11-03\nextra line\nS-17"
+	r := ParseResponse(text, []string{"DATE", "SOURCE"})
 	if r.UsedFallback {
-		t.Fatal("fallback must not fire when primary found at least one key")
+		t.Fatal("hybrid fallback must not fire when unmatched line count != missing key count")
 	}
 	if r.Values["DATE"] != "2025-11-03" {
 		t.Errorf("DATE=%q", r.Values["DATE"])
 	}
 	if _, ok := r.Values["SOURCE"]; ok {
-		t.Error("SOURCE should be missing (no prefix match, no fallback)")
+		t.Error("SOURCE should be missing (line count mismatch prevents hybrid)")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected Strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
 	}
 }
 
@@ -126,6 +153,15 @@ func TestParseResponse_StrategyAndComplianceScore(t *testing.T) {
 	}
 	if r2.FormatComplianceScore != 1.0 {
 		t.Errorf("r2 FormatComplianceScore=%f, want 1.0", r2.FormatComplianceScore)
+	}
+
+	// Hybrid (partial prefix + positional for missing)
+	r3b := ParseResponse("DATE: 2025-11-03\nS-17", []string{"DATE", "SOURCE"})
+	if r3b.Strategy != ParseStrategyHybrid {
+		t.Errorf("r3b Strategy=%q, want %q", r3b.Strategy, ParseStrategyHybrid)
+	}
+	if r3b.FormatComplianceScore != 1.0 {
+		t.Errorf("r3b FormatComplianceScore=%f, want 1.0", r3b.FormatComplianceScore)
 	}
 
 	// None
