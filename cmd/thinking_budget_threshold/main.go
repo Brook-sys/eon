@@ -164,8 +164,8 @@ func main() {
 	var trials []trial
 
 	models := []string{
-		"qwen/qwen3.6-27b",          // thinking model — the subject
-		"llama-3.3-70b-versatile",   // non-thinking control
+		"qwen/qwen3.6-27b",        // thinking model — the subject
+		"llama-3.3-70b-versatile", // non-thinking control
 	}
 
 	tokenLevels := []int{128, 256, 384, 512, 768, 1024, 2048}
@@ -229,7 +229,7 @@ func main() {
 	sb.WriteString("|-------|---------|---|--------|--------|------------|--------------|---------------|-------------|\n")
 
 	type aggKey struct {
-		model    string
+		model     string
 		maxTokens int
 	}
 	type aggVal struct {

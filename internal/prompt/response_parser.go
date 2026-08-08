@@ -17,6 +17,15 @@ import (
 // It carries no semantic answer — it only extracts labelled or positional
 // values from already-generated text.
 
+// ParseStrategy identifies the parsing technique used to extract values.
+type ParseStrategy string
+
+const (
+	ParseStrategyPrimary            ParseStrategy = "primary_prefix"
+	ParseStrategyPositionalFallback ParseStrategy = "positional_fallback"
+	ParseStrategyNone               ParseStrategy = "none"
+)
+
 // ParseResult holds the outcome of parsing a structured response.
 type ParseResult struct {
 	// Values maps each requested key to the extracted value. When a key is
@@ -29,6 +38,12 @@ type ParseResult struct {
 	UsedFallback bool
 	// FoundByFallback lists keys recovered by the positional fallback.
 	FoundByFallback []string
+	// Strategy indicates the strategy used to extract values.
+	Strategy ParseStrategy
+	// FormatComplianceScore is the ratio of extracted keys to total requested keys (0.0 to 1.0).
+	FormatComplianceScore float64
+	// NonEmptyLineCount is the count of non-empty text lines after normalization.
+	NonEmptyLineCount int
 }
 
 // ParseResponse parses a model response text against an ordered list of
@@ -79,8 +94,19 @@ func ParseResponse(text string, keys []string) ParseResult {
 	// Fallback: only when zero keys were found by prefix AND non-empty line
 	// count matches key count. This avoids false positives on mixed-format
 	// or prose responses.
-	if len(result.FoundKeys) == 0 {
-		nonEmpty := make([]string, 0)
+	nonEmptyCount := 0
+	for _, line := range strings.Split(cleanText, "\n") {
+		if strings.TrimSpace(line) != "" {
+			nonEmptyCount++
+		}
+	}
+	result.NonEmptyLineCount = nonEmptyCount
+
+	if len(result.FoundKeys) > 0 {
+		result.Strategy = ParseStrategyPrimary
+		result.FormatComplianceScore = float64(len(result.FoundKeys)) / float64(len(keys))
+	} else if len(result.FoundKeys) == 0 {
+		nonEmpty := make([]string, 0, nonEmptyCount)
 		for _, line := range strings.Split(cleanText, "\n") {
 			s := strings.TrimSpace(line)
 			if s != "" {
@@ -93,6 +119,11 @@ func ParseResponse(text string, keys []string) ParseResult {
 				result.FoundByFallback = append(result.FoundByFallback, k)
 			}
 			result.UsedFallback = true
+			result.Strategy = ParseStrategyPositionalFallback
+			result.FormatComplianceScore = float64(len(result.FoundByFallback)) / float64(len(keys))
+		} else {
+			result.Strategy = ParseStrategyNone
+			result.FormatComplianceScore = 0.0
 		}
 	}
 

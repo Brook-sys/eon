@@ -225,6 +225,75 @@ func TestBudgetGuardAutoSuppressesReasoningEffort(t *testing.T) {
 	}
 }
 
+func TestFormatAnchoringStrictAppendsRule(t *testing.T) {
+	spec := validSpec()
+	spec.MaxOutputTokens = 200
+	spec.Budget.Tokens = 1000
+	spec.SafetyMargin = 3
+	input := Input{
+		Task:            "Extract date.",
+		AllowedOutputs:  []string{"DATE: value"},
+		AnswerFormat:    "DATE: 2025-11-03",
+		FormatAnchoring: FormatAnchoringStrict,
+	}
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
+	if err != nil {
+		t.Fatalf("unexpected compile error: %v", err)
+	}
+	if !result.FormatAnchoringApplied {
+		t.Fatalf("expected FormatAnchoringApplied to be true")
+	}
+	if !strings.Contains(result.Request.Prompt, "FORMAT RULE") {
+		t.Fatalf("expected prompt to contain 'FORMAT RULE':\n%s", result.Request.Prompt)
+	}
+}
+
+func TestFormatAnchoringAutoTriggersOnLowOutputTokens(t *testing.T) {
+	spec := validSpec()
+	spec.MaxOutputTokens = 64 // <= 128
+	spec.Budget.Tokens = 1000
+	spec.SafetyMargin = 3
+	input := Input{
+		Task:            "Extract date.",
+		AllowedOutputs:  []string{"DATE: value"},
+		AnswerFormat:    "DATE: 2025-11-03",
+		FormatAnchoring: FormatAnchoringAuto,
+	}
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
+	if err != nil {
+		t.Fatalf("unexpected compile error: %v", err)
+	}
+	if !result.FormatAnchoringApplied {
+		t.Fatalf("expected FormatAnchoringApplied to be true for MaxOutputTokens=64")
+	}
+	if !strings.Contains(result.Request.Prompt, "FORMAT RULE") {
+		t.Fatalf("expected prompt to contain 'FORMAT RULE':\n%s", result.Request.Prompt)
+	}
+}
+
+func TestFormatAnchoringAutoDoesNotTriggerOnHighOutputTokens(t *testing.T) {
+	spec := validSpec()
+	spec.MaxOutputTokens = 256 // > 128
+	spec.Budget.Tokens = 1000
+	spec.SafetyMargin = 3
+	input := Input{
+		Task:            "Extract date.",
+		AllowedOutputs:  []string{"DATE: value"},
+		AnswerFormat:    "DATE: 2025-11-03",
+		FormatAnchoring: FormatAnchoringAuto,
+	}
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 2000}).Compile(spec, input)
+	if err != nil {
+		t.Fatalf("unexpected compile error: %v", err)
+	}
+	if result.FormatAnchoringApplied {
+		t.Fatalf("expected FormatAnchoringApplied to be false for MaxOutputTokens=256")
+	}
+	if strings.Contains(result.Request.Prompt, "FORMAT RULE") {
+		t.Fatalf("expected prompt NOT to contain 'FORMAT RULE':\n%s", result.Request.Prompt)
+	}
+}
+
 func TestEstimateMinOutputTokens(t *testing.T) {
 	cases := []struct {
 		format   string

@@ -74,9 +74,9 @@ func main() {
 				{ID: "F1", Text: "The transaction was recorded on 2026-08-08.", Required: true},
 				{ID: "F2", Text: "Source system identifier is SYS-ALPHA-99.", Required: true},
 			},
-			AllowedOutputs: []string{"DATE: <YYYY-MM-DD>", "SOURCE: <ID>"},
-			AnswerFormat:   "DATE: YYYY-MM-DD\nSOURCE: SYS-ALPHA-99",
-			FormatExample:  "DATE: 2026-08-08\nSOURCE: SYS-ALPHA-99",
+			AllowedOutputs:         []string{"DATE: <YYYY-MM-DD>", "SOURCE: <ID>"},
+			AnswerFormat:           "DATE: YYYY-MM-DD\nSOURCE: SYS-ALPHA-99",
+			FormatExample:          "DATE: 2026-08-08\nSOURCE: SYS-ALPHA-99",
 			ThinkingOverheadTokens: m.overhead,
 		}
 

@@ -53,6 +53,13 @@ type Input struct {
 	// most effective prompt intervention: it lifted 70B model format
 	// compliance from 0% to 100% under PT-BR language pressure.
 	FormatExample string
+	// FormatAnchoring controls whether explicit format anchoring rules are
+	// appended to the rendered prompt.
+	// - FormatAnchoringNone (0): no anchoring rule rendered.
+	// - FormatAnchoringStrict (1): forcibly append FORMAT RULE block.
+	// - FormatAnchoringAuto (2): automatically append FORMAT RULE block
+	//   when MaxOutputTokens <= 128.
+	FormatAnchoring FormatAnchoringMode
 	// MinOutputTokens is the caller's estimate of the minimum tokens the
 	// model must produce to satisfy AnswerFormat. When zero, the compiler
 	// estimates it from AnswerFormat length. When the spec's MaxOutputTokens
@@ -69,6 +76,15 @@ type Input struct {
 	// When non-zero, this overhead is added to the BudgetGuard floor.
 	ThinkingOverheadTokens int
 }
+
+// FormatAnchoringMode defines format anchoring behavior in prompt compilation.
+type FormatAnchoringMode int
+
+const (
+	FormatAnchoringNone   FormatAnchoringMode = 0
+	FormatAnchoringStrict FormatAnchoringMode = 1
+	FormatAnchoringAuto   FormatAnchoringMode = 2
+)
 
 // ErrOutputBudgetInsufficient is returned when MaxOutputTokens is below the
 // minimum tokens estimated to contain the answer format. This prevents sending
@@ -89,6 +105,9 @@ type Result struct {
 	// reasoning effort to "none" because MaxOutputTokens could accommodate the
 	// answer format floor but not the thinking overhead tokens.
 	ReasoningEffortSuppressed bool
+	// FormatAnchoringApplied is true when a FORMAT RULE block was appended
+	// to the compiled prompt.
+	FormatAnchoringApplied bool
 }
 
 type Compiler struct {
@@ -150,7 +169,10 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	}
 	sort.SliceStable(optional, func(i, j int) bool { return optional[i].Priority > optional[j].Priority })
 
-	promptText := render(spec.TemplateVersion, input, selected)
+	formatAnchored := input.FormatAnchoring == FormatAnchoringStrict ||
+		(input.FormatAnchoring == FormatAnchoringAuto && spec.MaxOutputTokens <= 128)
+
+	promptText := render(spec.TemplateVersion, input, selected, formatAnchored)
 	count, err := c.Estimator.Count(promptText)
 	if err != nil {
 		return Result{}, fmt.Errorf("estimate required prompt: %w", err)
@@ -161,7 +183,7 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	omitted := make([]indexedFact, 0)
 	for _, candidate := range optional {
 		trial := append(append([]Fact(nil), selected...), candidate.Fact)
-		trialPrompt := render(spec.TemplateVersion, input, trial)
+		trialPrompt := render(spec.TemplateVersion, input, trial, formatAnchored)
 		trialCount, err := c.Estimator.Count(trialPrompt)
 		if err != nil {
 			return Result{}, fmt.Errorf("estimate optional fact %q: %w", candidate.ID, err)
@@ -193,6 +215,7 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 		OmittedFactIDs:            omittedIDs,
 		MinOutputTokens:           minOutput,
 		ReasoningEffortSuppressed: reasoningSuppressed,
+		FormatAnchoringApplied:    formatAnchored,
 	}, nil
 }
 
@@ -223,7 +246,7 @@ func estimateMinOutputTokens(answerFormat string) int {
 	return estimate
 }
 
-func render(version uint64, input Input, facts []Fact) string {
+func render(version uint64, input Input, facts []Fact, formatAnchored bool) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "TEMPLATE v%d\n\nTASK\n%s\n", version, strings.TrimSpace(input.Task))
 	if len(facts) > 0 {
@@ -245,6 +268,9 @@ func render(version uint64, input Input, facts []Fact) string {
 	fmt.Fprintf(&b, "\nANSWER\n%s\n", strings.TrimSpace(input.AnswerFormat))
 	if strings.TrimSpace(input.FormatExample) != "" {
 		fmt.Fprintf(&b, "\nEXAMPLE\n%s\n", strings.TrimSpace(input.FormatExample))
+	}
+	if formatAnchored {
+		b.WriteString("\nFORMAT RULE\nOutput ONLY the requested response format lines. Do not include markdown code blocks, conversational preamble, or explanations.\n")
 	}
 	return b.String()
 }

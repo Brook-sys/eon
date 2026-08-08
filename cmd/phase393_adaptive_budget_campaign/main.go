@@ -15,21 +15,21 @@ import (
 )
 
 type Target struct {
-	Name        string
-	Model       string
-	BaseURL     string
-	APIKey      string
-	Thinking    int
+	Name     string
+	Model    string
+	BaseURL  string
+	APIKey   string
+	Thinking int
 }
 
 type Scenario struct {
-	Name           string
-	MaxTokens      int
-	Task           string
-	AnswerFormat   string
-	FormatExample  string
-	ExpectedKey    string
-	ExpectedVal    string
+	Name          string
+	MaxTokens     int
+	Task          string
+	AnswerFormat  string
+	FormatExample string
+	ExpectedKey   string
+	ExpectedVal   string
 }
 
 type TrialResult struct {

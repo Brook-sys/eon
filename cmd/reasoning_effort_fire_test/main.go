@@ -22,16 +22,16 @@ type testCase struct {
 }
 
 type resultRow struct {
-	Model           string        `json:"model"`
-	ReasoningEffort string        `json:"reasoning_effort"`
-	ProbeConfirmed  bool          `json:"probe_confirmed"`
-	LatencyMs       int64         `json:"latency_ms"`
-	InputTokens     int           `json:"input_tokens"`
-	OutputTokens    int           `json:"output_tokens"`
-	StrippedThought bool          `json:"stripped_thought"`
+	Model           string            `json:"model"`
+	ReasoningEffort string            `json:"reasoning_effort"`
+	ProbeConfirmed  bool              `json:"probe_confirmed"`
+	LatencyMs       int64             `json:"latency_ms"`
+	InputTokens     int               `json:"input_tokens"`
+	OutputTokens    int               `json:"output_tokens"`
+	StrippedThought bool              `json:"stripped_thought"`
 	ParsedValues    map[string]string `json:"parsed_values"`
-	UsedFallback    bool          `json:"used_fallback"`
-	Error           string        `json:"error,omitempty"`
+	UsedFallback    bool              `json:"used_fallback"`
+	Error           string            `json:"error,omitempty"`
 }
 
 func main() {

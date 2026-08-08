@@ -58,21 +58,21 @@ type trialResult struct {
 }
 
 type summary struct {
-	TotalTrials   int           `json:"total_trials"`
-	TotalErrors   int           `json:"total_errors"`
-	Total429      int           `json:"total_429"`
-	TotalOK       int           `json:"total_ok"`
-	ByModel       map[string]*modelSummary `json:"by_model"`
-	LatencyP50    int64         `json:"latency_p50_ms"`
-	LatencyP95    int64         `json:"latency_p95_ms"`
-	LatencyMax    int64         `json:"latency_max_ms"`
+	TotalTrials int                      `json:"total_trials"`
+	TotalErrors int                      `json:"total_errors"`
+	Total429    int                      `json:"total_429"`
+	TotalOK     int                      `json:"total_ok"`
+	ByModel     map[string]*modelSummary `json:"by_model"`
+	LatencyP50  int64                    `json:"latency_p50_ms"`
+	LatencyP95  int64                    `json:"latency_p95_ms"`
+	LatencyMax  int64                    `json:"latency_max_ms"`
 }
 
 type modelSummary struct {
-	Trials        int `json:"trials"`
-	FormatOK      int `json:"format_ok"`
-	SemanticOK    int `json:"semantic_ok"`
-	Errors        int `json:"errors"`
+	Trials         int `json:"trials"`
+	FormatOK       int `json:"format_ok"`
+	SemanticOK     int `json:"semantic_ok"`
+	Errors         int `json:"errors"`
 	AutoSuppressed int `json:"auto_suppressed"`
 }
 
@@ -103,8 +103,8 @@ func main() {
 	}
 
 	budgets := []struct {
-		name       string
-		maxTokens  int
+		name      string
+		maxTokens int
 	}{
 		{"tight-64", 64},
 		{"moderate-256", 256},

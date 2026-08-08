@@ -98,6 +98,44 @@ func TestParseResponse_EmptyText(t *testing.T) {
 	if len(r.FoundKeys) != 0 {
 		t.Fatalf("expected 0 found keys, got %d", len(r.FoundKeys))
 	}
+	if r.Strategy != ParseStrategyNone {
+		t.Fatalf("expected Strategy to be ParseStrategyNone, got %q", r.Strategy)
+	}
+	if r.FormatComplianceScore != 0.0 {
+		t.Fatalf("expected FormatComplianceScore 0.0, got %f", r.FormatComplianceScore)
+	}
+}
+
+func TestParseResponse_StrategyAndComplianceScore(t *testing.T) {
+	// Primary
+	r1 := ParseResponse("DATE: 2025-11-03\nSOURCE: S-17", []string{"DATE", "SOURCE"})
+	if r1.Strategy != ParseStrategyPrimary {
+		t.Errorf("r1 Strategy=%q, want %q", r1.Strategy, ParseStrategyPrimary)
+	}
+	if r1.FormatComplianceScore != 1.0 {
+		t.Errorf("r1 FormatComplianceScore=%f, want 1.0", r1.FormatComplianceScore)
+	}
+	if r1.NonEmptyLineCount != 2 {
+		t.Errorf("r1 NonEmptyLineCount=%d, want 2", r1.NonEmptyLineCount)
+	}
+
+	// Positional Fallback
+	r2 := ParseResponse("2025-11-03\nS-17", []string{"DATE", "SOURCE"})
+	if r2.Strategy != ParseStrategyPositionalFallback {
+		t.Errorf("r2 Strategy=%q, want %q", r2.Strategy, ParseStrategyPositionalFallback)
+	}
+	if r2.FormatComplianceScore != 1.0 {
+		t.Errorf("r2 FormatComplianceScore=%f, want 1.0", r2.FormatComplianceScore)
+	}
+
+	// None
+	r3 := ParseResponse("random prose text", []string{"DATE", "SOURCE"})
+	if r3.Strategy != ParseStrategyNone {
+		t.Errorf("r3 Strategy=%q, want %q", r3.Strategy, ParseStrategyNone)
+	}
+	if r3.FormatComplianceScore != 0.0 {
+		t.Errorf("r3 FormatComplianceScore=%f, want 0.0", r3.FormatComplianceScore)
+	}
 }
 
 func TestParseResponse_EmptyKeys(t *testing.T) {

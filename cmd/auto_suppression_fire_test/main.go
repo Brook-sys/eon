@@ -14,19 +14,19 @@ import (
 )
 
 type testRow struct {
-	CaseName         string `json:"case_name"`
-	Model            string `json:"model"`
-	MaxTokens        int    `json:"max_tokens"`
-	ThinkingOverhead int    `json:"thinking_overhead"`
-	Suppressed       bool   `json:"suppressed"`
-	WireEffort       string `json:"wire_effort"`
-	LatencyMs        int64  `json:"latency_ms"`
-	InputTokens      int    `json:"input_tokens"`
-	OutputTokens     int    `json:"output_tokens"`
-	FinishReason     string `json:"finish_reason"`
-	ThoughtStripped  bool   `json:"thought_stripped"`
+	CaseName         string            `json:"case_name"`
+	Model            string            `json:"model"`
+	MaxTokens        int               `json:"max_tokens"`
+	ThinkingOverhead int               `json:"thinking_overhead"`
+	Suppressed       bool              `json:"suppressed"`
+	WireEffort       string            `json:"wire_effort"`
+	LatencyMs        int64             `json:"latency_ms"`
+	InputTokens      int               `json:"input_tokens"`
+	OutputTokens     int               `json:"output_tokens"`
+	FinishReason     string            `json:"finish_reason"`
+	ThoughtStripped  bool              `json:"thought_stripped"`
 	ParsedValues     map[string]string `json:"parsed_values"`
-	Error            string `json:"error,omitempty"`
+	Error            string            `json:"error,omitempty"`
 }
 
 func main() {
