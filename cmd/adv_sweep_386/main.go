@@ -262,12 +262,12 @@ Now extract from this text: Published on 2025-11-03 by team S-17. The methodolog
 }
 
 type chatRequest struct {
-	Model            string        `json:"model"`
-	Messages         []chatMessage `json:"messages"`
-	Temperature      float64       `json:"temperature"`
-	MaxTokens        int           `json:"max_tokens"`
-	ReasoningEffort  string        `json:"reasoning_effort,omitempty"`
-	Seed             *int64        `json:"seed,omitempty"`
+	Model           string        `json:"model"`
+	Messages        []chatMessage `json:"messages"`
+	Temperature     float64       `json:"temperature"`
+	MaxTokens       int           `json:"max_tokens"`
+	ReasoningEffort string        `json:"reasoning_effort,omitempty"`
+	Seed            *int64        `json:"seed,omitempty"`
 }
 
 type chatMessage struct {

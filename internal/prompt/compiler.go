@@ -53,7 +53,20 @@ type Input struct {
 	// most effective prompt intervention: it lifted 70B model format
 	// compliance from 0% to 100% under PT-BR language pressure.
 	FormatExample string
+	// MinOutputTokens is the caller's estimate of the minimum tokens the
+	// model must produce to satisfy AnswerFormat. When zero, the compiler
+	// estimates it from AnswerFormat length. When the spec's MaxOutputTokens
+	// is below this floor, Compile returns ErrOutputBudgetInsufficient.
+	// Phase 386 adversarial sweep found that max_tokens=20 causes
+	// deterministic truncation on gpt-oss-120b/20b (0/8 format compliance)
+	// because the models cannot compress DATE+SOURCE into 20 tokens.
+	MinOutputTokens int
 }
+
+// ErrOutputBudgetInsufficient is returned when MaxOutputTokens is below the
+// minimum tokens estimated to contain the answer format. This prevents sending
+// requests that are guaranteed to fail on truncation (finish_reason=length).
+var ErrOutputBudgetInsufficient = errors.New("max output tokens is below the minimum needed for the answer format")
 
 type Result struct {
 	Request              port.CompletionRequest
@@ -61,6 +74,10 @@ type Result struct {
 	EstimatedInputTokens int
 	InputTokenLimit      int
 	OmittedFactIDs       []string
+	// MinOutputTokens is the computed minimum output token estimate for the
+	// answer format. Callers can use it to decide whether to degrade the
+	// format or increase the output budget.
+	MinOutputTokens int
 }
 
 type Compiler struct {
@@ -81,6 +98,20 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 	if strings.TrimSpace(input.Task) == "" || strings.TrimSpace(input.AnswerFormat) == "" || len(input.AllowedOutputs) == 0 {
 		return Result{}, errors.New("task, allowed outputs, and answer format are required")
 	}
+
+	// BudgetGuard: estimate the minimum output tokens needed to contain the
+	// answer format. When MaxOutputTokens is below this floor, the request is
+	// guaranteed to fail on truncation (finish_reason=length). Phase 386
+	// evidence: gpt-oss-120b/20b scored 0/8 on budget-starvation at
+	// max_tokens=20 because DATE+SOURCE cannot fit in 20 output tokens.
+	minOutput := input.MinOutputTokens
+	if minOutput <= 0 {
+		minOutput = estimateMinOutputTokens(input.AnswerFormat)
+	}
+	if spec.MaxOutputTokens < minOutput {
+		return Result{MinOutputTokens: minOutput}, fmt.Errorf("%w: need %d, have %d", ErrOutputBudgetInsufficient, minOutput, spec.MaxOutputTokens)
+	}
+
 	effective := min(spec.Budget.Tokens, c.ProviderContextTokens)
 	inputLimit := effective - spec.MaxOutputTokens - spec.SafetyMargin
 	if inputLimit <= 0 {
@@ -132,12 +163,35 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 		Request:         port.CompletionRequest{Prompt: promptText, MaxOutputTokens: spec.MaxOutputTokens, Temperature: 0},
 		TemplateVersion: spec.TemplateVersion, EstimatedInputTokens: count,
 		InputTokenLimit: inputLimit, OmittedFactIDs: omittedIDs,
+		MinOutputTokens: minOutput,
 	}, nil
 }
 
 type indexedFact struct {
 	Fact
 	index int
+}
+
+// estimateMinOutputTokens produces a conservative floor for the minimum
+// tokens a model needs to emit the answer format. It uses the same
+// ConservativeEstimator logic (bytes/3) on the answer format string,
+// then adds a 20% overhead for model verbosity and format overhead
+// (newlines, delimiters, colons). The floor is at least 8 tokens to
+// account for the smallest meaningful structured response (e.g.
+// "A: yes").
+func estimateMinOutputTokens(answerFormat string) int {
+	text := strings.TrimSpace(answerFormat)
+	if text == "" {
+		return 8
+	}
+	// Conservative estimate: len(bytes)/3, same as ConservativeEstimator.
+	estimate := (len([]byte(text)) + 2) / 3
+	// Add 20% overhead for model verbosity and format delimiters.
+	estimate = estimate + estimate/5
+	if estimate < 8 {
+		estimate = 8
+	}
+	return estimate
 }
 
 func render(version uint64, input Input, facts []Fact) string {
