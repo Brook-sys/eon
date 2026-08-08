@@ -7433,3 +7433,23 @@ Implementação:
    - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 780ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase404_bracket_separator_fire_test/` and `results/phase404-bracket-separator-parser/`.
+
+## Phase 405 — arrow & assignment key-value separator parsing & multi-provider live fire campaign (2026-08-08 23:25 -03)
+
+**Objective and implementation.** Resolved key parsing resilience for arrow separators (`->`, `=>`), assignment/typing operators (`:=`, `::`), and leading value noise (`>`, `=`, `:`), executing a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **Arrow & Assignment Separator Support (`ResponseParser`)**:
+   - Extended `findAlternateSeparator()` in `internal/prompt/response_parser.go` to support arrow separators (` -> `, ` ->`, ` => `, ` =>`), assignment operators (`:=`, `::`), and spaced colons (` : `).
+   - Added `cleanValue()` helper to clean leading value artifacts (`>`, `=`, `:`, `->`, `=>`, `- `, `– `) extracted after matching alternate separators.
+2. **Unit Test Expansion (`response_parser_test.go`)**: Added `TestParseResponse_ArrowAndAssignmentSeparators` covering ASCII arrows, assignment operators, typed declarations, and bulleted mix.
+3. **Live Fire Campaign Phase 405**: Formulated and executed a 15-trial live fire campaign (`cmd/phase405_arrow_assignment_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`arrow_separators`, `assignment_separators`, `bulleted_arrow_mix`).
+4. **Live campaign findings**:
+   - **Perfect 100.0% Success Rate (15/15 trials OK)** across all 5 models and all 3 scenarios.
+   - **`primary_prefix` strategy achieved 100% (15/15)** across all models post-fix.
+   - **P50 Latency: 415 ms**, P95 Latency: 897 ms, average format compliance: 1.00.
+   - **`groq/llama-3.1-8b-instant`**: **3/3 (100%) success**, P50 latency 305ms.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 340ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 573ms.
+   - **`groq/openai/gpt-oss-20b`**: **3/3 (100%) success**, P50 latency 369ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 522ms.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase405_arrow_assignment_fire_test/` and `results/phase405-arrow-assignment-parser/`.

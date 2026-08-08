@@ -21,11 +21,11 @@ import (
 type ParseStrategy string
 
 const (
-	ParseStrategyPrimary                  ParseStrategy = "primary_prefix"
-	ParseStrategyPositionalFallback       ParseStrategy = "positional_fallback"
+	ParseStrategyPrimary                   ParseStrategy = "primary_prefix"
+	ParseStrategyPositionalFallback        ParseStrategy = "positional_fallback"
 	ParseStrategyPositionalFallbackRelaxed ParseStrategy = "positional_fallback_relaxed"
-	ParseStrategyHybrid                   ParseStrategy = "hybrid_prefix_positional"
-	ParseStrategyNone                     ParseStrategy = "none"
+	ParseStrategyHybrid                    ParseStrategy = "hybrid_prefix_positional"
+	ParseStrategyNone                      ParseStrategy = "none"
 )
 
 // ParseResult holds the outcome of parsing a structured response.
@@ -141,8 +141,8 @@ func stripMarkdownEmphasis(s string) string {
 }
 
 // extractLinePrefixAndValue parses a line for "KEY: value" or alternate
-// separator patterns (" - ", " – ", " — ", " = ", "=") and returns the cleaned prefix
-// and trimmed value. hasKey is true if a valid prefix and separator were found.
+// separator patterns (" - ", " – ", " — ", " = ", "=", " -> ", " => ", etc.) and returns the cleaned prefix
+// and cleaned value. hasKey is true if a valid prefix and separator were found.
 func extractLinePrefixAndValue(line string) (prefix string, value string, hasKey bool) {
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" {
@@ -160,12 +160,43 @@ func extractLinePrefixAndValue(line string) (prefix string, value string, hasKey
 	}
 
 	pref := cleanPrefix(prefStr)
-	val := strings.TrimSpace(valStr)
+	val := cleanValue(valStr)
 	return pref, val, true
 }
 
+func cleanValue(valStr string) string {
+	s := strings.TrimSpace(valStr)
+	for {
+		orig := s
+		switch {
+		case strings.HasPrefix(s, "->"):
+			s = strings.TrimSpace(s[2:])
+		case strings.HasPrefix(s, "=>"):
+			s = strings.TrimSpace(s[2:])
+		case strings.HasPrefix(s, ">"):
+			s = strings.TrimSpace(s[1:])
+		case strings.HasPrefix(s, "="):
+			s = strings.TrimSpace(s[1:])
+		case strings.HasPrefix(s, ":"):
+			s = strings.TrimSpace(s[1:])
+		case strings.HasPrefix(s, "- "):
+			s = strings.TrimSpace(s[2:])
+		case strings.HasPrefix(s, "– "):
+			s = strings.TrimSpace(s[2:])
+		}
+		if s == orig {
+			break
+		}
+	}
+	return s
+}
+
 func findAlternateSeparator(s string) (int, int) {
-	seps := []string{" - ", " – ", " — ", " = ", "="}
+	seps := []string{
+		" - ", " – ", " — ", " = ", "=",
+		" -> ", " ->", " => ", " =>",
+		":: ", ":=", " : ",
+	}
 	for _, sep := range seps {
 		if idx := strings.Index(s, sep); idx > 0 {
 			return idx, len(sep)

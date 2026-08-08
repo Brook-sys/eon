@@ -524,11 +524,11 @@ func TestStripMarkdownEmphasis(t *testing.T) {
 		{"(BUILD)", "BUILD"},
 		{"【BUILD】", "BUILD"},
 		{"BUILD", "BUILD"},
-		{"**", "**"},   // empty inner — not stripped
-		{"*", "*"},     // single char — not stripped
+		{"**", "**"}, // empty inner — not stripped
+		{"*", "*"},   // single char — not stripped
 		{"", ""},
-		{"**B", "**B"},  // unbalanced — not stripped
-		{"B**", "B**"},  // unbalanced — not stripped
+		{"**B", "**B"}, // unbalanced — not stripped
+		{"B**", "B**"}, // unbalanced — not stripped
 	}
 	for _, c := range cases {
 		got := stripMarkdownEmphasis(c.input)
@@ -647,11 +647,11 @@ func TestParseResponse_BracketAndParenthesesKeys(t *testing.T) {
 	}
 }
 
-func TestParseResponse_AlternateSeparators(t *testing.T) {
-	text := "DATE - 2026-08-08\nSOURCE — Document B\nSTATUS = ACTIVE"
-	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+func TestParseResponse_ArrowAndAssignmentSeparators(t *testing.T) {
+	text := "DATE -> 2026-08-08\nSOURCE => Document C\nSTATUS := ACTIVE\nVERDICT :: PASS"
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS", "VERDICT"})
 	if r.UsedFallback {
-		t.Fatal("should match primary keys with alternate dash/equals separators")
+		t.Fatal("should match primary keys with arrow and assignment separators")
 	}
 	if r.Strategy != ParseStrategyPrimary {
 		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
@@ -659,10 +659,13 @@ func TestParseResponse_AlternateSeparators(t *testing.T) {
 	if r.Values["DATE"] != "2026-08-08" {
 		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
 	}
-	if r.Values["SOURCE"] != "Document B" {
-		t.Errorf("SOURCE=%q, want Document B", r.Values["SOURCE"])
+	if r.Values["SOURCE"] != "Document C" {
+		t.Errorf("SOURCE=%q, want Document C", r.Values["SOURCE"])
 	}
 	if r.Values["STATUS"] != "ACTIVE" {
 		t.Errorf("STATUS=%q, want ACTIVE", r.Values["STATUS"])
+	}
+	if r.Values["VERDICT"] != "PASS" {
+		t.Errorf("VERDICT=%q, want PASS", r.Values["VERDICT"])
 	}
 }
