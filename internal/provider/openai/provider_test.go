@@ -529,3 +529,47 @@ func TestProviderSetsUserAgentOnAllRequests(t *testing.T) {
 		t.Fatalf("fake server failures: %v", failures)
 	}
 }
+
+func TestProviderRetriesWithoutReasoningEffortOnHTTP400(t *testing.T) {
+	server := fakeserver.New(
+		fakeserver.Exchange{
+			ExpectedReasoningEffort: "none",
+			StatusCode:              http.StatusBadRequest,
+			RawBody:                 `{"error":{"message":"reasoning_effort is not supported with this model","type":"invalid_request_error"}}`,
+		},
+		fakeserver.Exchange{
+			ExpectedReasoningEffort: "",
+			ResponseText:            "READY",
+			ResponseModel:           "standard-model",
+		},
+	)
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "secret", Model: "standard-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "choose A or B",
+		MaxOutputTokens: 256,
+		ReasoningEffort: "none",
+	})
+	if err != nil {
+		t.Fatalf("expected successful retry without reasoning_effort, got error: %v", err)
+	}
+	if result.Text != "READY" {
+		t.Fatalf("unexpected result text: %q", result.Text)
+	}
+	requests := server.Requests()
+	if len(requests) != 2 {
+		t.Fatalf("expected 2 requests (initial + retry), got %d", len(requests))
+	}
+	if requests[0].ReasoningEffort != "none" {
+		t.Fatalf("expected first request reasoning_effort 'none', got %q", requests[0].ReasoningEffort)
+	}
+	if requests[1].ReasoningEffort != "" {
+		t.Fatalf("expected second request reasoning_effort empty, got %q", requests[1].ReasoningEffort)
+	}
+	if failures := server.Failures(); len(failures) != 0 {
+		t.Fatalf("fake server failures: %v", failures)
+	}
+}

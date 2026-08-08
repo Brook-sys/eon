@@ -400,6 +400,14 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, p.maxResponseBytes+1))
+		// If the provider rejected the request with HTTP 400 (Bad Request) and reasoning_effort was set,
+		// retry once without reasoning_effort. Baseline standard models or provider variants (e.g. Groq)
+		// return HTTP 400 when reasoning_effort is unsupported or invalid.
+		if response.StatusCode == http.StatusBadRequest && strings.TrimSpace(request.ReasoningEffort) != "" {
+			fallbackReq := request
+			fallbackReq.ReasoningEffort = ""
+			return p.complete(ctx, fallbackReq, tools)
+		}
 		return port.CompletionResult{}, &Error{
 			Kind:       ErrorHTTP,
 			StatusCode: response.StatusCode,

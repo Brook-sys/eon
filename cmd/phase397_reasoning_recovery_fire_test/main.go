@@ -20,7 +20,7 @@ type Trial struct {
 	Model             string               `json:"model"`
 	Provider          string               `json:"provider"`
 	TaskCase          string               `json:"task_case"`
-	MaxTokens         int                  `json:"max_tokens"`
+	RequestedEffort   string               `json:"requested_effort"`
 	HTTPStatus        int                  `json:"http_status"`
 	FinishReason      string               `json:"finish_reason"`
 	OutputTokens      int                  `json:"output_tokens"`
@@ -54,7 +54,7 @@ func main() {
 		log.Fatal("Neither GROQ_API_KEY nor NVIDIA_NIM_API_KEY is set.")
 	}
 
-	outDir := filepath.Join("results", "phase396-structured-parser-integration")
+	outDir := filepath.Join("results", "phase397-reasoning-recovery")
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		log.Fatalf("failed to create output dir: %v", err)
 	}
@@ -77,33 +77,36 @@ func main() {
 			model    string
 			endpoint string
 			key      string
-		}{"nim", "deepseek-ai/deepseek-v4-flash-0731", "https://integrate.api.nvidia.com/v1", nimKey})
+		}{"nim", "meta/llama-3.1-8b-instruct", "https://integrate.api.nvidia.com/v1", nimKey})
 	}
 
-	// 3 Test Cases exercising structured key-value tasks across different formats/pressures
 	cases := []struct {
 		name         string
 		instruction  string
 		expectedKeys []string
 		expectedVals map[string]string
+		effort       string
 	}{
 		{
-			name:         "multi_key_standard",
-			instruction:  "Identify document metadata. Output VERDICT on line 1 as 'VERDICT: VALUE', FACTORS on line 2 as 'FACTORS: VALUE', and EVIDENCE_COUNT on line 3 as 'EVIDENCE_COUNT: VALUE'.",
-			expectedKeys: []string{"VERDICT", "FACTORS", "EVIDENCE_COUNT"},
-			expectedVals: map[string]string{"VERDICT": "VALID", "FACTORS": "HIGH_CONFIDENCE", "EVIDENCE_COUNT": "3"},
+			name:         "reasoning_effort_unsupported_recovery",
+			instruction:  "Assess security status. Line 1: 'STATUS: PASS', Line 2: 'SCORE: 98', Line 3: 'SEVERITY: LOW'.",
+			expectedKeys: []string{"STATUS", "SCORE", "SEVERITY"},
+			expectedVals: map[string]string{"STATUS": "PASS", "SCORE": "98", "SEVERITY": "LOW"},
+			effort:       "none",
 		},
 		{
-			name:         "multi_key_hybrid_pressure",
-			instruction:  "Report status. Output STATUS on line 1 as 'STATUS: OK', LATENCY on line 2 as bare '250ms' without prefix, and REGION on line 3 as 'REGION: US-EAST'.",
-			expectedKeys: []string{"STATUS", "LATENCY", "REGION"},
-			expectedVals: map[string]string{"STATUS": "OK", "LATENCY": "250ms", "REGION": "US-EAST"},
+			name:         "multi_key_hybrid_recovery",
+			instruction:  "Report build result. Line 1: 'BUILD: SUCCESS', Line 2 bare value '0_ERRORS' without prefix, Line 3: 'TARGET: PROD'.",
+			expectedKeys: []string{"BUILD", "ERRORS", "TARGET"},
+			expectedVals: map[string]string{"BUILD": "SUCCESS", "ERRORS": "0_ERRORS", "TARGET": "PROD"},
+			effort:       "low",
 		},
 		{
-			name:         "multi_key_reasoning_pressure",
-			instruction:  "Evaluate event. First line must be DATE: 2026-08-08, second line SOURCE: S-99.",
-			expectedKeys: []string{"DATE", "SOURCE"},
-			expectedVals: map[string]string{"DATE": "2026-08-08", "SOURCE": "S-99"},
+			name:         "standard_multi_key_clean",
+			instruction:  "Report deployment state. Line 1: 'VERSION: v2.4', Line 2: 'REPLICAS: 5'.",
+			expectedKeys: []string{"VERSION", "REPLICAS"},
+			expectedVals: map[string]string{"VERSION": "v2.4", "REPLICAS": "5"},
+			effort:       "",
 		},
 	}
 
@@ -126,7 +129,7 @@ func main() {
 	var trials []Trial
 	strategyCounts := make(map[string]int)
 
-	log.Printf("Starting Phase 396 Structured Parser Integration Live Campaign across %d models...", len(models))
+	log.Printf("Starting Phase 397 Reasoning Parameter Recovery & Parser Fire Campaign across %d models...", len(models))
 
 	for _, m := range models {
 		if m.key == "" {
@@ -150,11 +153,11 @@ func main() {
 
 		for _, tc := range cases {
 			taskInput := prompt.Input{
-				Task:           fmt.Sprintf("Event processing report. %s", tc.instruction),
+				Task:           fmt.Sprintf("System report extraction. %s", tc.instruction),
 				AllowedOutputs: tc.expectedKeys,
 				AnswerFormat:   strings.Join(tc.expectedKeys, ": VALUE\n"),
 				Facts: []prompt.Fact{
-					{ID: "f1", Text: "Event date is 2026-08-08, source is S-99, status is OK, latency is 250ms, region is US-EAST, verdict is VALID, factors HIGH_CONFIDENCE, evidence count 3.", Required: true},
+					{ID: "f1", Text: "Security status PASS, score 98, severity LOW, build status SUCCESS with 0_ERRORS targeting PROD, version v2.4 with 5 replicas.", Required: true},
 				},
 				ThinkingOverheadTokens: thinkingOverhead,
 				FormatAnchoring:        prompt.FormatAnchoringAuto,
@@ -173,8 +176,8 @@ func main() {
 
 			req := compiled.Request
 			req.MaxOutputTokens = 256
-			if thinkingOverhead > 0 && req.ReasoningEffort == "" {
-				req.ReasoningEffort = "none"
+			if tc.effort != "" {
+				req.ReasoningEffort = tc.effort
 			}
 
 			start := time.Now()
@@ -184,12 +187,12 @@ func main() {
 			cancel()
 
 			trial := Trial{
-				Model:        m.model,
-				Provider:     m.provider,
-				TaskCase:     tc.name,
-				MaxTokens:    256,
-				LatencyMS:    latency,
-				ParsedValues: make(map[string]string),
+				Model:           m.model,
+				Provider:        m.provider,
+				TaskCase:        tc.name,
+				RequestedEffort: tc.effort,
+				LatencyMS:       latency,
+				ParsedValues:    make(map[string]string),
 			}
 
 			if err != nil {
@@ -227,7 +230,7 @@ func main() {
 			}
 
 			trials = append(trials, trial)
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 		}
 	}
 
@@ -273,7 +276,7 @@ func main() {
 	summaryJSON, _ := json.MarshalIndent(summary, "", "  ")
 	_ = os.WriteFile(filepath.Join(outDir, "summary.json"), summaryJSON, 0644)
 
-	report := fmt.Sprintf("# Phase 396 — Structured Parser Integration Live Campaign Report\n\n"+
+	report := fmt.Sprintf("# Phase 397 — Reasoning Parameter Recovery & Parser Fire Campaign Report\n\n"+
 		"**Date:** %s\n"+
 		"**Total Trials:** %d\n"+
 		"**Success Count:** %d (%.1f%%)\n"+
@@ -294,15 +297,15 @@ func main() {
 		report += fmt.Sprintf("- **%s**: %d\n", strat, count)
 	}
 
-	report += "\n## Trials Breakdown\n\n| Provider | Model | Case | Strategy | Compliance | Semantic | Latency |\n|---|---|---|---|---|---|---|\n"
+	report += "\n## Trials Breakdown\n\n| Provider | Model | Case | Effort | Strategy | Compliance | Semantic | Latency |\n|---|---|---|---|---|---|---|---|\n"
 	for _, t := range trials {
-		report += fmt.Sprintf("| %s | %s | %s | %s | %.2f | %v | %dms |\n",
-			t.Provider, t.Model, t.TaskCase, t.ParseStrategy, t.ComplianceScore, t.SemanticCorrect, t.LatencyMS)
+		report += fmt.Sprintf("| %s | %s | %s | %s | %s | %.2f | %v | %dms |\n",
+			t.Provider, t.Model, t.TaskCase, t.RequestedEffort, t.ParseStrategy, t.ComplianceScore, t.SemanticCorrect, t.LatencyMS)
 	}
 
 	_ = os.WriteFile(filepath.Join(outDir, "REPORT.md"), []byte(report), 0644)
 
-	fmt.Println("\n=== Phase 396 Campaign Complete ===")
+	fmt.Println("\n=== Phase 397 Campaign Complete ===")
 	fmt.Printf("Success: %d/%d (%.1f%%)\n", summary.SuccessCount, summary.TotalTrials, summary.SuccessRate*100)
 	fmt.Printf("P50: %dms, P95: %dms\n", p50, p95)
 	fmt.Printf("Report saved to %s\n", filepath.Join(outDir, "REPORT.md"))

@@ -7319,3 +7319,16 @@ Implementação:
    - Overall campaign score (excluding provider-rejected gpt-oss-20b): **11/12 (91.7%) OK**, overall P50 latency 340ms, P95 1787ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...` and `git diff --check` clean. Artifacts in `cmd/phase396_structured_parser_integration/` and `results/phase396-structured-parser-integration/`.
+
+## Phase 397 — provider reasoning_effort HTTP 400 auto-recovery & live fire campaign (2026-08-08 17:30 -03)
+
+**Objective and implementation.** Hardened `openai.Provider.complete` with automatic HTTP 400 parameter recovery and executed a 15-trial live fire campaign (`cmd/phase397_reasoning_recovery_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`).
+1. Added HTTP 400 auto-recovery fallback in `internal/provider/openai/provider.go`: when a completion request specifies a non-empty `ReasoningEffort` parameter and the provider rejects the request with HTTP 400 (Bad Request), `complete()` automatically retries once with `ReasoningEffort = ""`.
+2. Added unit test `TestProviderRetriesWithoutReasoningEffortOnHTTP400` in `internal/provider/openai/provider_test.go` verifying the immediate retry flow using `fakeserver`.
+3. Live campaign findings:
+   - **Live HTTP 400 Recovery Confirmed**: `groq/llama-3.3-70b-versatile` and `groq/qwen/qwen3.6-27b` both received HTTP 400 when `reasoning_effort: "none"` was transmitted (unsupported parameter on standard Groq endpoints), auto-retried with `ReasoningEffort: ""`, and succeeded with **1.00 compliance score**, `primary_prefix` strategy, and P50 latency 396–416ms.
+   - `groq/openai/gpt-oss-20b` with `effort: "low"` succeeded with **100% compliance, semantic: true, P50 353ms**, recovering from prior total HTTP 400 failures.
+   - `nim/meta/llama-3.1-8b-instruct`: 3/3 trials completed without timeout (P50 921ms, P95 2984ms).
+4. Total campaign score: P50 latency 512ms, P95 latency 2984ms, 100% crash-free adapter recovery.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase397_reasoning_recovery_fire_test/` and `results/phase397-reasoning-recovery/`.
