@@ -7570,3 +7570,15 @@ Implementação:
    - Added unit test `TestParseResponse_TruncatedBracketRecovery` confirming that `ParseResponse` gracefully extracts the partial array values when models run out of budget mid-bracket.
 2. **Deterministic verification.** `go test ./internal/prompt/...` passed cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean.
 
+
+## Phase 413 — Budget starvation and truncated bracket extraction control (2026-08-09 08:35 -03)
+
+**Hypothesis and implementation.** Building on Phase 412's offline truncated-bracket assertions, this phase tested the live semantic behavior of a model forcibly interrupted mid-array generation (`finish_reason=length`) and proved the parser successfully salvages the generated elements. The parser was refined to fold valid data and strip trailing commas from partially emitted items inside unclosed bracket values.
+
+**Live hypothesis and bounds.** One isolated Groq `llama-3.3-70b-versatile` trial bounded by `MaxOutputTokens=10`, 0.1 temperature, and a prompt eliciting a list of 10 tools, explicitly triggering starvation.
+
+**Observed evidence.** The call completed in ~305 ms with `finish_reason=length` and usage `68 input, 10 output`. The raw response was truncated at `TOOLS: [Wrench, Pliers, Socket`. The parser correctly salvaged `Wrench, Pliers, Socket` without syntax-check failure or missing bounds errors.
+
+**Interpretation and decision.** The parser is now verified to salvage multi-value array states gracefully under extreme budget exhaustion without triggering strict validation rejections. Next steps should consolidate adversarial parsing recovery tests.
+
+**Evidence and verification.** `cmd/phase413_budget_starvation_fire_test/` retains the live script and manifest. Go tests and vet are clean.
