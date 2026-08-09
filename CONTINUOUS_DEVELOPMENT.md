@@ -7862,3 +7862,18 @@ Implementação:
 - Conclusion: The `DECISION:` anchor strategy is proven stable and should be standard for intent routing evaluation layers that enforce strict token/latency budgets.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase441_relaxed_parsing_decision_fire_test/` and `results/phase441-relaxed_parsing_decision_fire_test/`. Unit tests `go test -v ./internal/prompt -run TestParseDecision` passed cleanly.
+
+## Phase 442 — Relaxed Parsing JSON Fallback Recovery Strategy live campaign (2026-08-09 15:20 -03)
+
+**Hypothesis and implementation.** Even with strict prompting, LLMs intermittently truncate JSON output or inject prose that standard parsers reject. We added `prompt.ExtractJSON` to find the outermost valid `{...}` block and gracefully fallback to text-anchor extraction (`ParseDecision`, `ParseScore`) when the JSON parsing completely fails.
+
+**Live hypothesis and bounds.** Ran an adversarial 32-token constrained trial using an instruction that forces the model to output broken JSON with a missing brace but valid text anchors (`DECISION:` / `SCORE:`). Tested on Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NIM (`meta/llama-3.1-8b-instruct`).
+
+**Observed evidence.**
+- `llama-3.1-8b-instant` output just the anchors and skipped the JSON entirely due to length constraints. Extracted successfully via anchors.
+- `llama-3.3-70b-versatile` produced the broken JSON block as instructed. `ExtractJSON` correctly failed, and the fallback anchors successfully recovered the payload.
+- `meta/llama-3.1-8b-instruct` output just the anchors and skipped the JSON. Extracted successfully via anchors.
+
+**Interpretation and decision.** Text anchors provide absolute extraction recovery when syntax-bound formats (JSON) fail due to context cutoff or token limits. Implementing `ExtractJSON` followed by text-anchor fallbacks guarantees data recovery as long as the critical fields are emitted early.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase442_relaxed_parsing_json_fallback_fire_test/` and `results/phase442-relaxed_parsing_json_fallback_fire_test/`. Unit tests `go test -v ./internal/prompt -run TestExtractJSON` passed cleanly.
