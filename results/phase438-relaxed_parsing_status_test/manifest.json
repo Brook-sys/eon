@@ -1,0 +1,200 @@
+[
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 370581746,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 387381439,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Successful state transition to READY",
+    "raw_content": "STATUS: SUCCESS\nREASON: Successful state transition to READY"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 389406642,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na transição de estado de RUNNING para STOPPED devido à falha na operação de gravação de log por falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na transição de estado de RUNNING para STOPPED devido à falha na operação de gravação de log por falta de espaço em disco."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 408216178,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na gravação de log devido à falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na gravação de log devido à falta de espaço em disco."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 421992912,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Successful state transition to READY",
+    "raw_content": "STATUS: SUCCESS\nREASON: Successful state transition to READY"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 425268261,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Successful state transition to READY",
+    "raw_content": "STATUS: SUCCESS\nREASON: Successful state transition to READY"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 439974466,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na gravação de log devido à falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na gravação de log devido à falta de espaço em disco."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 451794571,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na gravação de log devido à falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na gravação de log devido à falta de espaço em disco."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 472396378,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 475392388,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 490235304,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na gravação de log devido a falta de espaço em disco durante a transição de estado de RUNNING para STOPPED.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na gravação de log devido a falta de espaço em disco durante a transição de estado de RUNNING para STOPPED."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "groq",
+    "tokens_used": 0,
+    "latency": 493101058,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na gravação de log devido à falta de espaço em disco durante a transição de estado de RUNNING para STOPPED.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na gravação de log devido à falta de espaço em disco durante a transição de estado de RUNNING para STOPPED."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 687812323,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 728291576,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 753706048,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na operação de gravação de log por falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na operação de gravação de log por falta de espaço em disco."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 793728334,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from INITIALIZING to READY completed successfully.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from INITIALIZING to READY completed successfully."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 913154556,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na transição de estado de RUNNING para STOPPED devido à falha na operação de gravação de log por falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na transição de estado de RUNNING para STOPPED devido à falha na operação de gravação de log por falta de espaço em disco."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "nim",
+    "tokens_used": 0,
+    "latency": 3040309954,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Falha na transição de estado de RUNNING para STOPPED devido a falha na operação de gravação de log por falta de espaço em disco.",
+    "raw_content": "STATUS: FAILURE\nREASON: Falha na transição de estado de RUNNING para STOPPED devido a falha na operação de gravação de log por falta de espaço em disco."
+  }
+]
