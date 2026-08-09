@@ -41,13 +41,63 @@ func Alerts() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"alertsState()\" x-init=\"start()\" class=\"space-y-6\"><div class=\"flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5\"><span class=\"inline-flex items-center gap-2 font-medium\"><span class=\"w-2 h-2 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-show=\"connected\">Inspect API acessível</span> <span class=\"text-[var(--text)]\" x-show=\"!connected\">sem resposta da Inspect API</span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-3\" x-show=\"generatedAt\">atualizado <span x-text=\"generatedAgo\"></span></span> <button class=\"ml-auto px-3 py-1 rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] transition-all font-medium\" x-on:click=\"refresh()\">↻ Atualizar</button></div><!-- KPIs por severidade --><div class=\"grid gap-4 grid-cols-2 md:grid-cols-4\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Total de Alertas</div><div class=\"text-3xl font-bold text-[var(--text)] font-mono tracking-tight mt-1\" x-text=\"snap?.total ?? 0\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Alertas Críticos</div><div class=\"text-3xl font-bold text-[var(--err)] font-mono tracking-tight mt-1\" x-text=\"snap?.critical ?? 0\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Advertências</div><div class=\"text-3xl font-bold text-[var(--warn)] font-mono tracking-tight mt-1\" x-text=\"snap?.warnings ?? 0\"></div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Informativos</div><div class=\"text-3xl font-bold text-[var(--accent)] font-mono tracking-tight mt-1\" x-text=\"(snap?.total ?? 0) - (snap?.critical ?? 0) - (snap?.warnings ?? 0)\"></div></div></div><!-- Lista agrupada por código --><template x-if=\"(snap?.alerts ?? []).length === 0\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-6 text-center text-xs text-[var(--muted)]\">Nenhum alerta ativo no sistema. O runtime está operando normalmente.</div></template><template x-for=\"group in groupedAlerts()\" x-bind:key=\"group.code\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 space-y-3\"><div class=\"flex gap-3 items-start justify-between border-b border-[var(--border-subtle)] pb-2.5\"><div class=\"min-w-0\"><h4 class=\"font-bold text-xs text-[var(--text)] font-mono\" x-text=\"group.code\"></h4><p class=\"text-xs text-[var(--muted)]\" x-text=\"group.summary\"></p></div><div class=\"flex items-center gap-2 shrink-0\"><span class=\"px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider\" x-bind:class=\"{\n\t\t\t\t\t\t\t\t\t'bg-[var(--err)]/15 text-[var(--err)]': group.severity === 'critical',\n\t\t\t\t\t\t\t\t\t'bg-[var(--warn)]/15 text-[var(--warn)]': group.severity === 'warning',\n\t\t\t\t\t\t\t\t\t'bg-[var(--accent)]/15 text-[var(--accent)]': group.severity === 'info',\n\t\t\t\t\t\t\t\t\t'bg-white/[0.06] text-[var(--muted)]': !['critical','warning','info'].includes(group.severity),\n\t\t\t\t\t\t\t\t}\" x-text=\"group.severity\"></span> <span class=\"text-xs font-mono text-[var(--muted)]\" x-text=\"'×' + group.items.length\"></span></div></div><ul class=\"space-y-1.5 pt-1\"><template x-for=\"a in group.items\" x-bind:key=\"a.observed_at + (a.detail ?? '')\"><li class=\"text-xs flex gap-2.5 items-baseline\"><span class=\"text-[11px] font-mono text-[var(--muted)] shrink-0\" x-text=\"fmtTime(a.observed_at)\"></span> <span class=\"text-[var(--text)]\" x-text=\"a.detail ?? a.summary\"></span></li></template></ul></div></template></div><script>\n\t\t\tfunction alertsState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tgeneratedAt: null,\n\t\t\t\t\tsnap: null,\n\n\t\t\t\t\tget generatedAgo() {\n\t\t\t\t\t\tif (!this.generatedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.generatedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tgroupedAlerts() {\n\t\t\t\t\t\tconst list = this.snap?.alerts ?? [];\n\t\t\t\t\t\tconst map = new Map();\n\t\t\t\t\t\tfor (const a of list) {\n\t\t\t\t\t\t\tconst code = a.code ?? a.id ?? 'ALERT';\n\t\t\t\t\t\t\tif (!map.has(code)) {\n\t\t\t\t\t\t\t\tmap.set(code, {\n\t\t\t\t\t\t\t\t\tcode,\n\t\t\t\t\t\t\t\t\tsummary: a.summary ?? a.message ?? code,\n\t\t\t\t\t\t\t\t\tseverity: a.severity ?? 'warning',\n\t\t\t\t\t\t\t\t\titems: [],\n\t\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tmap.get(code).items.push(a);\n\t\t\t\t\t\t}\n\t\t\t\t\t\treturn Array.from(map.values());\n\t\t\t\t\t},\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst data = await fetch('/dash/api/alerts').then(r => r.json());\n\t\t\t\t\t\t\tthis.snap = data ?? null;\n\t\t\t\t\t\t\tthis.generatedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tfmtTime(t) {\n\t\t\t\t\t\tif (!t) return '–';\n\t\t\t\t\t\tconst d = new Date(t);\n\t\t\t\t\t\treturn isNaN(d) ? '–' : d.toLocaleTimeString('pt-BR');\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"alertsState()\" x-init=\"start()\" class=\"space-y-8\"><div class=\"flex items-center gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-4 shadow-sm\"><span class=\"inline-flex items-center gap-3 font-bold\"><span class=\"w-3 h-3 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-text=\"connected ? 'Conectado à API' : 'Sem conexão'\"></span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium\" x-show=\"generatedAt\">atualizado <span x-text=\"generatedAgo\"></span></span> <button class=\"ml-auto px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold text-sm shadow-sm cursor-pointer\" x-on:click=\"refresh()\">↻ Atualizar</button></div><div class=\"grid gap-6 grid-cols-1 sm:grid-cols-3\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Total de Alertas", "fmt(alerts.length)", "ativos no sistema", "text-[var(--text)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Alertas Críticos", "fmt(criticalCount)", "requerem atenção", "text-[var(--err)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Avisos", "fmt(warningCount)", "verificar em breve", "text-[var(--warn)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Var3 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+				if !templ_7745c5c3_IsBuffer {
+					defer func() {
+						templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+						if templ_7745c5c3_Err == nil {
+							templ_7745c5c3_Err = templ_7745c5c3_BufErr
+						}
+					}()
+				}
+				ctx = templ.InitializeContext(ctx)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"space-y-4\"><template x-if=\"alerts.length === 0\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = EmptyState("Nenhum alerta registrado no momento. Tudo operando normalmente.").Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</template><template x-for=\"a in alerts\" x-bind:key=\"a.id ?? Math.random()\"><div class=\"p-5 rounded-2xl border flex items-start gap-4 shadow-sm hover:border-[var(--border-focus)]/50 transition-colors\" x-bind:class=\"({\n\t\t\t\t\t\t\t\tcritical:'bg-[var(--err)]/5 border-[var(--err)]/20',\n\t\t\t\t\t\t\t\twarning:'bg-[var(--warn)]/5 border-[var(--warn)]/20',\n\t\t\t\t\t\t\t\tinfo:'bg-[var(--accent)]/5 border-[var(--accent)]/20'\n\t\t\t\t\t\t\t})[a.severity] ?? 'bg-[var(--bg)] border-[var(--border)]'\"><div class=\"shrink-0 mt-0.5 text-xl opacity-90\"><template x-if=\"a.severity === 'critical'\">⚠</template><template x-if=\"a.severity === 'warning'\">⚡</template><template x-if=\"a.severity === 'info'\">ℹ</template><template x-if=\"!a.severity || (a.severity !== 'critical' && a.severity !== 'warning' && a.severity !== 'info')\">▪</template></div><div class=\"space-y-2 grow\"><div class=\"flex items-center justify-between gap-4\"><div class=\"font-bold text-sm text-[var(--text)]\" x-text=\"a.message\"></div><span class=\"text-xs font-mono text-[var(--muted)] font-medium bg-[var(--bg)]/50 px-2 py-1 rounded\" x-text=\"a.timestamp\"></span></div><div class=\"font-mono text-xs text-[var(--muted)] opacity-80\" x-show=\"a.details\" x-text=\"a.details\"></div></div></div></template></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				return nil
+			})
+			templ_7745c5c3_Err = card("Log de Alertas").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><script>\n\t\t\tfunction alertsState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tgeneratedAt: null,\n\t\t\t\t\talerts: [],\n\t\t\t\t\t\n\t\t\t\t\tget generatedAgo() {\n\t\t\t\t\t\tif (!this.generatedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.generatedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\t\t\t\t\tget criticalCount() { return this.alerts.filter(a => a.severity === 'critical').length; },\n\t\t\t\t\tget warningCount() { return this.alerts.filter(a => a.severity === 'warning').length; },\n\t\t\t\t\t\n\t\t\t\t\tfmt(n) { return n == null ? '0' : Number(n).toLocaleString('pt-BR'); },\n\t\t\t\t\t\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst res = await fetch('/dash/api/alerts');\n\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\tthis.alerts = data?.alerts || [];\n\t\t\t\t\t\t\tthis.generatedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\tthis.connected = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\t\t\t\t\t\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = layout("Alertas & Telemetria", "/dash/alerts", StandardNav("/dash/alerts")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layout("Alertas & Notificações", "/dash/alerts", StandardNav("/dash/alerts")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

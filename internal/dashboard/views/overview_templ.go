@@ -8,7 +8,7 @@ package views
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func Overview() templ.Component {
+func StatCardAlpine(label string, xValue string, sub string, colorClass string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -29,7 +29,107 @@ func Overview() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var2 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-all hover:border-[var(--border-focus)]/50 group\"><div class=\"text-xs uppercase tracking-widest text-[var(--muted)] font-bold mb-2 group-hover:text-[var(--text)] transition-colors\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/overview.templ`, Line: 5, Col: 140}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 = []any{"text-3xl lg:text-4xl font-bold font-mono tracking-tight my-2", colorClass}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var3...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var3).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/overview.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" x-text=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(xValue)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/overview.templ`, Line: 6, Col: 107}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if sub != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"text-xs text-[var(--subtle)] mt-2 font-medium\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 string
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(sub)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/overview.templ`, Line: 9, Col: 67}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func Overview() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var7 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var7 == nil {
+			templ_7745c5c3_Var7 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var8 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -41,11 +141,31 @@ func Overview() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div x-data=\"overviewState()\" x-init=\"start()\" class=\"space-y-6\"><!-- Status de conexão --><div class=\"flex items-center gap-3 text-xs bg-[var(--panel)] border border-[var(--border)] rounded-xl px-4 py-2.5\"><span class=\"inline-flex items-center gap-2 font-medium\"><span class=\"w-2 h-2 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-text=\"connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'\"></span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-3\" x-show=\"generatedAt\">atualizado <span x-text=\"generatedAgo\"></span></span> <button class=\"ml-auto px-3 py-1 rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.04] transition-all\" x-on:click=\"refresh()\">↻ Atualizar</button></div><!-- Contadores operacionais --><div class=\"grid gap-4 grid-cols-2 lg:grid-cols-4\"><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Comandos pendentes</div><div class=\"text-3xl font-bold text-[var(--accent)] font-mono tracking-tight my-1\" x-text=\"fmt(ov.pending_commands)\"></div><div class=\"text-[11px] text-[var(--muted)]\">aguardando o kernel</div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Perguntas pendentes</div><div class=\"text-3xl font-bold text-[var(--warn)] font-mono tracking-tight my-1\" x-text=\"fmt(ov.pending_operator_questions)\"></div><div class=\"text-[11px] text-[var(--muted)]\">intervenção humana necessária</div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Subagents evictos</div><div class=\"text-3xl font-bold text-[var(--err)] font-mono tracking-tight my-1\" x-text=\"fmt(ov.evicted_subagents)\"></div><div class=\"text-[11px] text-[var(--muted)]\">lease perdido</div></div><div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-xl p-4 flex flex-col justify-between\"><div class=\"text-[11px] uppercase tracking-wider text-[var(--muted)] font-medium\">Head de eventos</div><div class=\"text-3xl font-bold text-[var(--ok)] font-mono tracking-tight my-1\" x-text=\"fmt(ov.event_head_sequence)\"></div><div class=\"text-[11px] text-[var(--muted)]\">sequência no log</div></div></div><!-- Controle Operacional do Runtime e Missão -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div x-data=\"overviewState()\" x-init=\"start()\" class=\"space-y-8\"><!-- Status de conexão --><div class=\"flex items-center gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-3.5 shadow-sm\"><span class=\"inline-flex items-center gap-3 font-bold\"><span class=\"w-3 h-3 rounded-full\" x-bind:class=\"connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'\"></span> <span class=\"text-[var(--text)]\" x-text=\"connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'\"></span></span> <span class=\"text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium\" x-show=\"generatedAt\">atualizado <span x-text=\"generatedAgo\"></span></span> <button class=\"ml-auto px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold shadow-sm cursor-pointer\" x-on:click=\"refresh()\">↻ Atualizar</button></div><!-- Contadores operacionais --><div class=\"grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var3 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Err = StatCardAlpine("Comandos pendentes", "fmt(ov.pending_commands)", "aguardando o kernel", "text-[var(--accent)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Perguntas pendentes", "fmt(ov.pending_operator_questions)", "intervenção humana necessária", "text-[var(--warn)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Subagents evictos", "fmt(ov.evicted_subagents)", "lease perdido", "text-[var(--err)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = StatCardAlpine("Head de eventos", "fmt(ov.event_head_sequence)", "sequência no log", "text-[var(--ok)]").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div><!-- Controle Operacional do Runtime e Missão -->")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Var9 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -57,21 +177,21 @@ func Overview() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"space-y-4 text-xs\"><div class=\"flex flex-wrap items-center gap-3\"><span class=\"font-medium text-[var(--muted)]\">Estado do Despacho:</span> <span class=\"px-2.5 py-1 rounded-md text-xs font-mono font-semibold uppercase tracking-wider\" x-bind:class=\"ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)]/15 text-[var(--warn)]' : 'bg-[var(--ok)]/15 text-[var(--ok)]'\" x-text=\"ov.process_mode ?? 'STANDBY'\"></span> <span class=\"text-xs text-[var(--muted)] font-mono ml-auto\" x-show=\"ov.mission && ov.mission.mission_id\">Missão: <strong class=\"text-[var(--text)]\" x-text=\"ov.mission.mission_id\"></strong> (Rev <span x-text=\"ov.mission.active_revision\"></span>)</span></div><div class=\"flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--border)]\"><button type=\"button\" class=\"px-3.5 py-1.5 rounded-lg bg-[var(--warn)]/15 text-[var(--warn)] hover:bg-[var(--warn)]/25 font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode === 'PAUSED'\" x-on:click=\"pauseMission()\">⏸ Pausar Missão</button> <button type=\"button\" class=\"px-3.5 py-1.5 rounded-lg bg-[var(--ok)]/15 text-[var(--ok)] hover:bg-[var(--ok)]/25 font-semibold text-xs transition-all flex items-center gap-2 disabled:opacity-40 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode !== 'PAUSED'\" x-on:click=\"resumeMission()\">▶ Retomar Missão</button> <button type=\"button\" class=\"px-3.5 py-1.5 rounded-lg bg-[var(--err)]/15 text-[var(--err)] hover:bg-[var(--err)]/25 font-semibold text-xs transition-all flex items-center gap-2 ml-auto disabled:opacity-40 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id\" x-on:click=\"cancelMission()\">⏹ Cancelar Missão</button></div><!-- Feedback de comandos --><div x-show=\"cmdStatus\" class=\"mt-3 text-xs font-mono p-2.5 rounded-lg bg-[var(--panel-sub)] border border-[var(--border)]\" x-bind:class=\"cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'\" x-text=\"cmdStatus\"></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"space-y-5 text-sm\"><div class=\"flex flex-wrap items-center gap-4\"><span class=\"font-bold text-[var(--text)]\">Estado do Despacho:</span> <span class=\"px-3 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-widest shadow-sm\" x-bind:class=\"ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)] text-[#000]' : 'bg-[var(--ok)] text-[#000]'\" x-text=\"ov.process_mode ?? 'STANDBY'\"></span> <span class=\"text-sm text-[var(--muted)] font-mono ml-auto font-medium\" x-show=\"ov.mission && ov.mission.mission_id\">Missão: <strong class=\"text-[var(--text)]\" x-text=\"ov.mission.mission_id\"></strong> (Rev <span x-text=\"ov.mission.active_revision\"></span>)</span></div><div class=\"flex flex-wrap items-center gap-4 pt-5 border-t border-[var(--border)]\"><button type=\"button\" class=\"px-5 py-2.5 rounded-xl bg-[var(--warn)]/10 border border-[var(--warn)]/20 text-[var(--warn)] hover:bg-[var(--warn)]/20 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode === 'PAUSED'\" x-on:click=\"pauseMission()\">⏸ Pausar Missão</button> <button type=\"button\" class=\"px-5 py-2.5 rounded-xl bg-[var(--ok)]/10 border border-[var(--ok)]/20 text-[var(--ok)] hover:bg-[var(--ok)]/20 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode !== 'PAUSED'\" x-on:click=\"resumeMission()\">▶ Retomar Missão</button> <button type=\"button\" class=\"px-5 py-2.5 rounded-xl bg-[var(--err)]/10 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 font-bold text-sm transition-all flex items-center gap-2 ml-auto disabled:opacity-50 cursor-pointer\" x-bind:disabled=\"cmdLoading || !ov.mission || !ov.mission.mission_id\" x-on:click=\"cancelMission()\">⏹ Cancelar Missão</button></div><!-- Feedback de comandos --><div x-show=\"cmdStatus\" class=\"mt-4 text-sm font-mono p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] shadow-inner\" x-bind:class=\"cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'\" x-text=\"cmdStatus\"></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Controle Operacional & Execução").Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Controle Operacional & Execução").Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<!-- Perguntas Pendentes do Operador --><div x-show=\"questions.length > 0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<!-- Perguntas Pendentes do Operador --><div x-show=\"questions.length > 0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var4 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var10 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -83,21 +203,21 @@ func Overview() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"space-y-3 text-xs\"><template x-for=\"q in questions\" x-bind:key=\"q.id\"><div class=\"p-3 rounded-lg bg-[var(--warn)]/5 border border-[var(--warn)]/20 space-y-2\"><div class=\"flex justify-between items-start\"><div class=\"font-semibold text-[var(--text)]\" x-text=\"q.prompt\"></div><span class=\"text-[11px] font-mono text-[var(--muted)]\" x-text=\"q.id\"></span></div><div class=\"flex gap-2 items-center\" x-data=\"{ ansText: '' }\"><input type=\"text\" class=\"flex-1 px-3 py-1.5 text-xs rounded-md bg-[var(--panel-sub)] border border-[var(--border)] text-[var(--text)]\" placeholder=\"Digite sua resposta...\" x-model=\"ansText\" x-on:keydown.enter=\"submitAnswer(q, ansText)\"> <button type=\"button\" class=\"px-3.5 py-1.5 rounded-md bg-[var(--accent)] text-[#090d16] font-bold text-xs hover:opacity-90 transition-all cursor-pointer\" x-on:click=\"submitAnswer(q, ansText)\">Responder</button></div></div></template></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"space-y-4 text-sm\"><template x-for=\"q in questions\" x-bind:key=\"q.id\"><div class=\"p-5 rounded-2xl bg-[var(--warn)]/10 border border-[var(--warn)]/30 space-y-4 shadow-sm\"><div class=\"flex justify-between items-start gap-4\"><div class=\"font-bold text-[var(--text)] text-base\" x-text=\"q.prompt\"></div><span class=\"text-xs font-mono text-[var(--warn)] opacity-80 px-2 py-1 bg-[var(--warn)]/10 rounded-md\" x-text=\"q.id\"></span></div><div class=\"flex gap-3 items-center\" x-data=\"{ ansText: '' }\"><input type=\"text\" class=\"flex-1 px-4 py-2 text-sm rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] shadow-inner\" placeholder=\"Digite sua resposta...\" x-model=\"ansText\" x-on:keydown.enter=\"submitAnswer(q, ansText)\"> <button type=\"button\" class=\"px-5 py-2 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30\" x-on:click=\"submitAnswer(q, ansText)\">Responder</button></div></div></template></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Perguntas Pendentes do Operador").Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Perguntas Pendentes do Operador").Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><!-- Saúde do runtime e alertas --><div class=\"grid gap-5 md:grid-cols-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div><!-- Saúde do runtime e alertas --><div class=\"grid gap-6 md:grid-cols-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var11 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -109,17 +229,17 @@ func Overview() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"space-y-2 text-xs\"><div class=\"flex justify-between items-center py-1 border-b border-[var(--border-subtle)]\"><span class=\"text-[var(--muted)]\">Status de Saúde</span> <span class=\"font-semibold font-mono\" x-bind:class=\"health.status === 'OK' ? 'text-[var(--ok)]' : 'text-[var(--warn)]'\" x-text=\"health.status ?? '—'\"></span></div><div class=\"flex justify-between items-center py-1 border-b border-[var(--border-subtle)]\"><span class=\"text-[var(--muted)]\">Versão do Engine</span> <span class=\"font-mono text-[var(--text)]\" x-text=\"(ov.runtime && ov.runtime.version) ?? '—'\"></span></div><div class=\"flex justify-between items-center py-1 border-b border-[var(--border-subtle)]\"><span class=\"text-[var(--muted)]\">Modo do Processo</span> <span class=\"font-mono text-[var(--text)]\" x-text=\"ov.process_mode ?? '—'\"></span></div><div class=\"flex justify-between items-center py-1 border-b border-[var(--border-subtle)]\"><span class=\"text-[var(--muted)]\">Revisão de Controle</span> <span class=\"font-mono text-[var(--accent)]\" x-text=\"fmt(ov.control_revision)\"></span></div><div class=\"flex justify-between items-center py-1\"><span class=\"text-[var(--muted)]\">ID da Missão</span> <span class=\"font-mono text-[var(--text)]\" x-text=\"(ov.mission && ov.mission.mission_id) ?? 'nenhuma'\"></span></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"space-y-1 text-sm\"><div class=\"flex justify-between items-center py-2.5 border-b border-[var(--border)]\"><span class=\"text-[var(--muted)] font-medium\">Status de Saúde</span> <span class=\"font-bold font-mono\" x-bind:class=\"health.status === 'OK' ? 'text-[var(--ok)]' : 'text-[var(--warn)]'\" x-text=\"health.status ?? '—'\"></span></div><div class=\"flex justify-between items-center py-2.5 border-b border-[var(--border)]\"><span class=\"text-[var(--muted)] font-medium\">Versão do Engine</span> <span class=\"font-mono text-[var(--text)] font-semibold\" x-text=\"(ov.runtime && ov.runtime.version) ?? '—'\"></span></div><div class=\"flex justify-between items-center py-2.5 border-b border-[var(--border)]\"><span class=\"text-[var(--muted)] font-medium\">Modo do Processo</span> <span class=\"font-mono text-[var(--text)] font-semibold\" x-text=\"ov.process_mode ?? '—'\"></span></div><div class=\"flex justify-between items-center py-2.5 border-b border-[var(--border)]\"><span class=\"text-[var(--muted)] font-medium\">Revisão de Controle</span> <span class=\"font-mono text-[var(--accent)] font-bold\" x-text=\"fmt(ov.control_revision)\"></span></div><div class=\"flex justify-between items-center py-2.5\"><span class=\"text-[var(--muted)] font-medium\">ID da Missão</span> <span class=\"font-mono text-[var(--text)] font-semibold\" x-text=\"(ov.mission && ov.mission.mission_id) ?? 'nenhuma'\"></span></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Saúde do Runtime").Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Saúde do Runtime").Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var12 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -131,33 +251,33 @@ func Overview() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<template x-if=\"alerts.length === 0\"><div class=\"p-3 text-center text-xs text-[var(--muted)]\">Nenhum alerta crítico ou aviso no sistema.</div></template><ul class=\"space-y-2 text-xs\" x-show=\"alerts.length > 0\"><template x-for=\"a in alerts.slice(0, 8)\" x-bind:key=\"a.id ?? a.message\"><li class=\"flex gap-2.5 items-start\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<template x-if=\"alerts.length === 0\"><div class=\"p-6 text-center text-sm text-[var(--muted)] font-medium\">Nenhum alerta crítico ou aviso no sistema.</div></template><ul class=\"space-y-3 text-sm\" x-show=\"alerts.length > 0\"><template x-for=\"a in alerts.slice(0, 8)\" x-bind:key=\"a.id ?? a.message\"><li class=\"flex gap-3 items-start p-2 rounded-lg hover:bg-[var(--bg)] transition-colors\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.Raw(`<span class="mt-1 w-1.5 h-1.5 shrink-0 rounded-full"
+				templ_7745c5c3_Err = templ.Raw(`<span class="mt-1.5 w-2 h-2 shrink-0 rounded-full"
 									x-bind:class="({
-										critical:'bg-[var(--err)]', warning:'bg-[var(--warn)]',
+										critical:'bg-[var(--err)] shadow-[0_0_6px_var(--err)]', warning:'bg-[var(--warn)] shadow-[0_0_6px_var(--warn)]',
 										info:'bg-[var(--accent)]'
 									})[a.severity] ?? 'bg-[var(--muted)]'"></span>`).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"text-xs\" x-text=\"a.message ?? JSON.stringify(a)\"></span></li></template></ul>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"text-sm font-medium\" x-text=\"a.message ?? JSON.stringify(a)\"></span></li></template></ul>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Alertas Ativos").Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Alertas Ativos").Render(templ.WithChildren(ctx, templ_7745c5c3_Var12), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div><!-- Feed de eventos ao vivo (SSE) -->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div><!-- Feed de eventos ao vivo (SSE) -->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Var7 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_Var13 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 				templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 				templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 				if !templ_7745c5c3_IsBuffer {
@@ -169,23 +289,23 @@ func Overview() templ.Component {
 					}()
 				}
 				ctx = templ.InitializeContext(ctx)
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex items-center gap-2 mb-3 text-xs\"><span class=\"inline-flex items-center gap-1.5 font-medium px-2 py-0.5 rounded-full text-[11px]\" x-bind:class=\"sseOn ? 'bg-[var(--ok)]/15 text-[var(--ok)]' : 'bg-white/[0.06] text-[var(--muted)]'\"><span class=\"w-1.5 h-1.5 rounded-full\" x-bind:class=\"sseOn ? 'bg-[var(--ok)]' : 'bg-[var(--muted)]'\"></span> <span x-text=\"sseOn ? 'Stream SSE Conectada' : 'Stream SSE Desconectada'\"></span></span> <span class=\"text-[var(--muted)] ml-auto font-mono\" x-text=\"events.length + ' eventos recebidos'\"></span></div><div class=\"mono text-xs space-y-1 max-h-80 overflow-y-auto pr-1 divide-y divide-[var(--border-subtle)]\"><template x-if=\"events.length === 0\"><p class=\"text-[var(--muted)] py-3 text-center\">Aguardando novos eventos do kernel...</p></template><template x-for=\"e in events\" x-bind:key=\"e.seq ?? Math.random()\"><div class=\"flex gap-2.5 items-baseline py-1.5\"><span class=\"text-[var(--muted)] shrink-0 font-mono text-[11px]\" x-text=\"'#' + (e.sequence ?? '?')\"></span> <span class=\"shrink-0 px-1.5 py-0.2 rounded text-[10px] font-semibold uppercase\" x-bind:class=\"({\n\t\t\t\t\t\t\t\t\terror: 'bg-[var(--err)]/15 text-[var(--err)]',\n\t\t\t\t\t\t\t\t\twarning: 'bg-[var(--warn)]/15 text-[var(--warn)]'\n\t\t\t\t\t\t\t\t})[e.type] ?? 'bg-[var(--accent)]/15 text-[var(--accent)]'\" x-text=\"e.type\"></span> <span class=\"truncate text-[var(--text)]\" x-text=\"e.summary ?? JSON.stringify(e).slice(0, 120)\"></span></div></template></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"flex items-center gap-3 mb-4 text-sm border-b border-[var(--border)] pb-4\"><span class=\"inline-flex items-center gap-2 font-bold px-3 py-1 rounded-lg text-xs tracking-wide shadow-sm\" x-bind:class=\"sseOn ? 'bg-[var(--ok)]/10 text-[var(--ok)] border border-[var(--ok)]/20' : 'bg-[var(--bg)] text-[var(--muted)] border border-[var(--border)]'\"><span class=\"w-2 h-2 rounded-full\" x-bind:class=\"sseOn ? 'bg-[var(--ok)] shadow-[0_0_6px_var(--ok)]' : 'bg-[var(--muted)]'\"></span> <span x-text=\"sseOn ? 'Stream SSE Conectada' : 'Stream SSE Desconectada'\"></span></span> <span class=\"text-[var(--muted)] ml-auto font-mono text-xs font-bold\" x-text=\"events.length + ' eventos recebidos'\"></span></div><div class=\"font-mono text-xs space-y-2 max-h-96 overflow-y-auto pr-2\"><template x-if=\"events.length === 0\"><p class=\"text-[var(--muted)] py-6 text-center font-medium text-sm\">Aguardando novos eventos do kernel...</p></template><template x-for=\"e in events\" x-bind:key=\"e.seq ?? Math.random()\"><div class=\"flex gap-3 items-start py-2.5 px-3 rounded-xl hover:bg-[var(--bg)] transition-colors border border-transparent hover:border-[var(--border)]\"><span class=\"text-[var(--subtle)] shrink-0 text-[11px] mt-0.5 w-12 text-right\" x-text=\"'#' + (e.sequence ?? '?')\"></span> <span class=\"shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider\" x-bind:class=\"({\n\t\t\t\t\t\t\t\t\terror: 'bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/20',\n\t\t\t\t\t\t\t\t\twarning: 'bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/20'\n\t\t\t\t\t\t\t\t})[e.type] ?? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'\" x-text=\"e.type\"></span> <span class=\"truncate text-[var(--text)] mt-0.5\" x-text=\"e.summary ?? JSON.stringify(e).slice(0, 120)\"></span></div></template></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = card("Eventos Recentes do Log (SSE)").Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = card("Eventos Recentes do Log (SSE)").Render(templ.WithChildren(ctx, templ_7745c5c3_Var13), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div><script>\n\t\t\tfunction overviewState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tgeneratedAt: null,\n\t\t\t\t\tov: {},\n\t\t\t\t\thealth: {},\n\t\t\t\t\talerts: [],\n\t\t\t\t\tquestions: [],\n\t\t\t\t\tevents: [],\n\t\t\t\t\tsseOn: false,\n\t\t\t\t\tcmdLoading: false,\n\t\t\t\t\tcmdStatus: '',\n\t\t\t\t\tcmdIsErr: false,\n\n\t\t\t\t\tget generatedAgo() {\n\t\t\t\t\t\tif (!this.generatedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.generatedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tfmt(n) { return n == null ? '–' : Number(n).toLocaleString('pt-BR'); },\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst [o, h, a, q] = await Promise.all([\n\t\t\t\t\t\t\t\tfetch('/dash/api/overview').then(r => r.json()),\n\t\t\t\t\t\t\t\tfetch('/dash/api/health').then(r => r.json()).catch(() => ({})),\n\t\t\t\t\t\t\t\tfetch('/dash/api/alerts').then(r => r.json()).catch(() => ({ alerts: [] })),\n\t\t\t\t\t\t\t\tfetch('/dash/api/control/questions/pending').then(r => r.json()).catch(() => ({ questions: [] }))\n\t\t\t\t\t\t\t]);\n\t\t\t\t\t\t\tthis.ov = o ?? {};\n\t\t\t\t\t\t\tthis.health = h ?? {};\n\t\t\t\t\t\t\tthis.alerts = a?.alerts ?? [];\n\t\t\t\t\t\t\tthis.questions = q?.questions ?? [];\n\t\t\t\t\t\t\tthis.generatedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tasync pauseMission() {\n\t\t\t\t\t\tif (!confirm(\"Deseja pausar o despacho da missão atual?\")) return;\n\t\t\t\t\t\tawait this.sendControlCommand(\"PAUSE_MISSION\", \"Missão pausada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync resumeMission() {\n\t\t\t\t\t\tawait this.sendControlCommand(\"RESUME_MISSION\", \"Missão retomada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync cancelMission() {\n\t\t\t\t\t\tif (!confirm(\"ATENÇÃO: Deseja cancelar definitivamente a execução da missão atual?\")) return;\n\t\t\t\t\t\tawait this.sendControlCommand(\"CANCEL_MISSION\", \"Missão cancelada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync sendControlCommand(cmdKind, successMsg) {\n\t\t\t\t\t\tthis.cmdLoading = true;\n\t\t\t\t\t\tthis.cmdStatus = 'Enviando comando ' + cmdKind + '...';\n\t\t\t\t\t\tthis.cmdIsErr = false;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst res = await fetch('/dash/api/control/commands', {\n\t\t\t\t\t\t\t\tmethod: 'POST',\n\t\t\t\t\t\t\t\theaders: { 'Content-Type': 'application/json' },\n\t\t\t\t\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\t\t\t\t\tcommand: cmdKind,\n\t\t\t\t\t\t\t\t\tmission_id: this.ov?.mission?.mission_id || ''\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\tif (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));\n\t\t\t\t\t\t\tthis.cmdStatus = successMsg;\n\t\t\t\t\t\t\tif (window.notify) window.notify(successMsg, 'success');\n\t\t\t\t\t\t\tawait this.refresh();\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tthis.cmdStatus = 'Erro: ' + err.message;\n\t\t\t\t\t\t\tthis.cmdIsErr = true;\n\t\t\t\t\t\t\tif (window.notify) window.notify('Erro ao executar comando: ' + err.message, 'error');\n\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\tthis.cmdLoading = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tasync submitAnswer(q, text) {\n\t\t\t\t\t\tif (!text) return;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst res = await fetch('/dash/api/control/questions/' + encodeURIComponent(q.id) + '/answer', {\n\t\t\t\t\t\t\t\tmethod: 'POST',\n\t\t\t\t\t\t\t\theaders: { 'Content-Type': 'application/json' },\n\t\t\t\t\t\t\t\tbody: JSON.stringify({ answer: text })\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\tif (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));\n\t\t\t\t\t\t\tif (window.notify) window.notify('Resposta enviada com sucesso!', 'success');\n\t\t\t\t\t\t\tawait this.refresh();\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tif (window.notify) window.notify('Erro ao enviar resposta: ' + err.message, 'error');\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tstartSSE() {\n\t\t\t\t\t\tconst es = new EventSource('/dash/api/events/stream');\n\t\t\t\t\t\tes.onopen = () => { this.sseOn = true; };\n\t\t\t\t\t\tes.onerror = () => { this.sseOn = false; };\n\t\t\t\t\t\tes.onmessage = (m) => {\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tconst d = JSON.parse(m.data);\n\t\t\t\t\t\t\t\tthis.events.unshift({\n\t\t\t\t\t\t\t\t\tseq: d.sequence,\n\t\t\t\t\t\t\t\t\ttype: d.kind ?? 'event',\n\t\t\t\t\t\t\t\t\tsummary: d.summary ?? d.kind ?? JSON.stringify(d).slice(0, 100)\n\t\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\t\tif (this.events.length > 50) this.events.pop();\n\t\t\t\t\t\t\t} catch {}\n\t\t\t\t\t\t};\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tthis.startSSE();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div><script>\n\t\t\tfunction overviewState() {\n\t\t\t\treturn {\n\t\t\t\t\tconnected: false,\n\t\t\t\t\tgeneratedAt: null,\n\t\t\t\t\tov: {},\n\t\t\t\t\thealth: {},\n\t\t\t\t\talerts: [],\n\t\t\t\t\tquestions: [],\n\t\t\t\t\tevents: [],\n\t\t\t\t\tsseOn: false,\n\t\t\t\t\tcmdLoading: false,\n\t\t\t\t\tcmdStatus: '',\n\t\t\t\t\tcmdIsErr: false,\n\n\t\t\t\t\tget generatedAgo() {\n\t\t\t\t\t\tif (!this.generatedAt) return '';\n\t\t\t\t\t\tconst s = Math.max(0, (Date.now() - this.generatedAt) / 1000 | 0);\n\t\t\t\t\t\treturn s < 60 ? `${s}s atrás` : `${s/60|0}min atrás`;\n\t\t\t\t\t},\n\n\t\t\t\t\tfmt(n) { return n == null ? '–' : Number(n).toLocaleString('pt-BR'); },\n\n\t\t\t\t\tasync refresh() {\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst [o, h, a, q] = await Promise.all([\n\t\t\t\t\t\t\t\tfetch('/dash/api/overview').then(r => r.json()),\n\t\t\t\t\t\t\t\tfetch('/dash/api/health').then(r => r.json()).catch(() => ({})),\n\t\t\t\t\t\t\t\tfetch('/dash/api/alerts').then(r => r.json()).catch(() => ({ alerts: [] })),\n\t\t\t\t\t\t\t\tfetch('/dash/api/control/questions/pending').then(r => r.json()).catch(() => ({ questions: [] }))\n\t\t\t\t\t\t\t]);\n\t\t\t\t\t\t\tthis.ov = o ?? {};\n\t\t\t\t\t\t\tthis.health = h ?? {};\n\t\t\t\t\t\t\tthis.alerts = a?.alerts ?? [];\n\t\t\t\t\t\t\tthis.questions = q?.questions ?? [];\n\t\t\t\t\t\t\tthis.generatedAt = Date.now();\n\t\t\t\t\t\t\tthis.connected = true;\n\t\t\t\t\t\t} catch (e) { this.connected = false; }\n\t\t\t\t\t},\n\n\t\t\t\t\tasync pauseMission() {\n\t\t\t\t\t\tif (!confirm(\"Deseja pausar o despacho da missão atual?\")) return;\n\t\t\t\t\t\tawait this.sendControlCommand(\"PAUSE_MISSION\", \"Missão pausada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync resumeMission() {\n\t\t\t\t\t\tawait this.sendControlCommand(\"RESUME_MISSION\", \"Missão retomada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync cancelMission() {\n\t\t\t\t\t\tif (!confirm(\"ATENÇÃO: Deseja cancelar definitivamente a execução da missão atual?\")) return;\n\t\t\t\t\t\tawait this.sendControlCommand(\"CANCEL_MISSION\", \"Missão cancelada com sucesso!\");\n\t\t\t\t\t},\n\n\t\t\t\t\tasync sendControlCommand(cmdKind, successMsg) {\n\t\t\t\t\t\tthis.cmdLoading = true;\n\t\t\t\t\t\tthis.cmdStatus = 'Enviando comando ' + cmdKind + '...';\n\t\t\t\t\t\tthis.cmdIsErr = false;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst res = await fetch('/dash/api/control/commands', {\n\t\t\t\t\t\t\t\tmethod: 'POST',\n\t\t\t\t\t\t\t\theaders: { 'Content-Type': 'application/json' },\n\t\t\t\t\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\t\t\t\t\tcommand: cmdKind,\n\t\t\t\t\t\t\t\t\tmission_id: this.ov?.mission?.mission_id || ''\n\t\t\t\t\t\t\t\t})\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\tif (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));\n\t\t\t\t\t\t\tthis.cmdStatus = successMsg;\n\t\t\t\t\t\t\tif (window.notify) window.notify(successMsg, 'success');\n\t\t\t\t\t\t\tawait this.refresh();\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tthis.cmdStatus = 'Erro: ' + err.message;\n\t\t\t\t\t\t\tthis.cmdIsErr = true;\n\t\t\t\t\t\t\tif (window.notify) window.notify('Erro ao executar comando: ' + err.message, 'error');\n\t\t\t\t\t\t} finally {\n\t\t\t\t\t\t\tthis.cmdLoading = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tasync submitAnswer(q, text) {\n\t\t\t\t\t\tif (!text) return;\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tconst res = await fetch('/dash/api/control/questions/' + encodeURIComponent(q.id) + '/answer', {\n\t\t\t\t\t\t\t\tmethod: 'POST',\n\t\t\t\t\t\t\t\theaders: { 'Content-Type': 'application/json' },\n\t\t\t\t\t\t\t\tbody: JSON.stringify({ answer: text })\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\tif (!res.ok) throw new Error(data.error?.message || ('HTTP ' + res.status));\n\t\t\t\t\t\t\tif (window.notify) window.notify('Resposta enviada com sucesso!', 'success');\n\t\t\t\t\t\t\tawait this.refresh();\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tif (window.notify) window.notify('Erro ao enviar resposta: ' + err.message, 'error');\n\t\t\t\t\t\t}\n\t\t\t\t\t},\n\n\t\t\t\t\tstartSSE() {\n\t\t\t\t\t\tconst es = new EventSource('/dash/api/events/stream');\n\t\t\t\t\t\tes.onopen = () => { this.sseOn = true; };\n\t\t\t\t\t\tes.onerror = () => { this.sseOn = false; };\n\t\t\t\t\t\tes.onmessage = (m) => {\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tconst d = JSON.parse(m.data);\n\t\t\t\t\t\t\t\tthis.events.unshift({\n\t\t\t\t\t\t\t\t\tseq: d.sequence,\n\t\t\t\t\t\t\t\t\ttype: d.kind ?? 'event',\n\t\t\t\t\t\t\t\t\tsummary: d.summary ?? d.kind ?? JSON.stringify(d).slice(0, 100)\n\t\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\t\tif (this.events.length > 50) this.events.pop();\n\t\t\t\t\t\t\t} catch {}\n\t\t\t\t\t\t};\n\t\t\t\t\t},\n\n\t\t\t\t\tstart() {\n\t\t\t\t\t\tthis.refresh();\n\t\t\t\t\t\tthis.startSSE();\n\t\t\t\t\t\tsetInterval(() => this.refresh(), 10000);\n\t\t\t\t\t}\n\t\t\t\t};\n\t\t\t}\n\t\t</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = layout("Visão Geral", "/dash", StandardNav("/dash")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = layout("Visão Geral", "/dash", StandardNav("/dash")).Render(templ.WithChildren(ctx, templ_7745c5c3_Var8), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
