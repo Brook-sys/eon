@@ -7470,3 +7470,24 @@ Implementação:
    - **Multi-line folding validation**: Multi-line descriptions were cleanly folded and matched by `primary_prefix` for 70B, 120B, and Qwen 27B models on live completions.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase406_multiline_folding_fire_test/` and `results/phase406-multiline-folding-parser/`.
+
+## Phase 407 — XML/HTML angle bracket key parsing & multi-provider live fire campaign (2026-08-09 01:45 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for XML/HTML tag formatted key names (`<KEY>: VALUE`, `<KEY>VALUE</KEY>`, `**<KEY>** : VALUE`) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **XML/HTML Angle Bracket Key Support (`ResponseParser`)**:
+   - Enhanced `stripMarkdownEmphasis()` in `internal/prompt/response_parser.go` to support matched `<` and `>` angle bracket pairs surrounding key names (e.g., `<DATE>`, `<SOURCE>`, `<STATUS>`).
+   - Updated `cleanPrefix()` comments and behavior to strip outer angle brackets cleanly alongside markdown emphasis and list bullets.
+2. **Unit Test Expansion (`response_parser_test.go`)**: Added unit test `TestParseResponse_XMLAndHTMLAngleBracketKeys` covering XML angle bracket key extraction.
+3. **Live Fire Campaign Phase 407**: Formulated and executed a 15-trial live fire campaign (`cmd/phase407_xml_angle_bracket_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`xml_angle_bracket_keys`, `bulleted_xml_keys`, `bold_xml_mixed_keys`).
+4. **Live campaign findings**:
+   - **86.7% Overall Success Rate (13/15 trials OK)** across all 5 models.
+   - **Format compliance: 100% (15/15)** across all models and scenarios.
+   - **P50 Latency: 372 ms**, P95 Latency: 726 ms, average format compliance: 1.00.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 327ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 248ms.
+   - **`groq/openai/gpt-oss-120b`**: **3/3 (100%) success**, P50 latency 586ms.
+   - **`groq/llama-3.1-8b-instant`**: 2/3 (66.7%) success; 1 trial failed semantic check due to emitting key names as values on bold XML mix.
+   - **`nim/meta/llama-3.1-8b-instruct`**: 2/3 (66.7%) success; 1 trial failed semantic check on bold XML mix.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt`, and `git diff --check` clean. Artifacts in `cmd/phase407_xml_angle_bracket_fire_test/` and `results/phase407-xml-angle-bracket-parser/`.
+

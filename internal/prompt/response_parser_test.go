@@ -648,6 +648,26 @@ func TestParseResponse_BracketAndParenthesesKeys(t *testing.T) {
 	}
 }
 
+func TestParseResponse_XMLAndHTMLAngleBracketKeys(t *testing.T) {
+	text := "<DATE>: 2026-08-08\n<SOURCE>: Audit Document B\n<STATUS>: APPROVED"
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+	if r.UsedFallback {
+		t.Fatal("should match primary keys with XML/HTML angle brackets")
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Fatalf("expected strategy %q, got %q", ParseStrategyPrimary, r.Strategy)
+	}
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "Audit Document B" {
+		t.Errorf("SOURCE=%q, want Audit Document B", r.Values["SOURCE"])
+	}
+	if r.Values["STATUS"] != "APPROVED" {
+		t.Errorf("STATUS=%q, want APPROVED", r.Values["STATUS"])
+	}
+}
+
 func TestParseResponse_ArrowAndAssignmentSeparators(t *testing.T) {
 	text := "DATE -> 2026-08-08\nSOURCE => Document C\nSTATUS := ACTIVE\nVERDICT :: PASS"
 	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS", "VERDICT"})

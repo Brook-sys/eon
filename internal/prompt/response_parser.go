@@ -49,10 +49,10 @@ type ParseResult struct {
 }
 
 // cleanPrefix strips leading markdown list markers (bullets, numbers, quotes),
-// bracket tags, and inline emphasis formatting (bold, italic, quotes, backticks,
-// brackets) from a line prefix before matching against expected keys
-// (e.g. "- KEY", "* KEY", "1. KEY", "**KEY**", "[KEY]", "(KEY)", "【KEY】",
-// "- **[KEY]**").
+// bracket tags, XML/HTML tags (e.g. <key>, <field_name>), and inline emphasis
+// formatting (bold, italic, quotes, backticks, brackets) from a line prefix
+// before matching against expected keys (e.g. "- KEY", "* KEY", "1. KEY",
+// "**KEY**", "[KEY]", "(KEY)", "<KEY>", "【KEY】", "- **[KEY]**").
 func cleanPrefix(prefix string) string {
 	s := strings.TrimSpace(prefix)
 	for {
@@ -98,7 +98,7 @@ func cleanPrefix(prefix string) string {
 				s = strings.TrimSpace(s[closeIdx+1:])
 			}
 		}
-		// Strip markdown emphasis markers (**key**, *key*, __key__, _key_, [key], (key), 【key】).
+		// Strip markdown emphasis markers (**key**, *key*, __key__, _key_, [key], (key), <key>, 【key】).
 		s = strings.TrimSpace(s)
 		s = stripMarkdownEmphasis(s)
 		s = strings.TrimSpace(s)
@@ -110,11 +110,11 @@ func cleanPrefix(prefix string) string {
 }
 
 // stripMarkdownEmphasis removes surrounding markdown bold/italic markers,
-// double/single quotes, backticks, brackets, and CJK full-width brackets
-// from a string: **...**, *...*, __...__, _..._, "... ", '...', `...`,
-// [...], (...), 【...】. It only strips matched pairs at the boundaries to
-// avoid corrupting values containing internal symbols. The input is expected
-// to be already trimmed of leading/trailing whitespace.
+// double/single quotes, backticks, brackets, XML/HTML angle brackets, and
+// CJK full-width brackets from a string: **...**, *...*, __...__, _..._,
+// "... ", '...', `...`, [...], (...), <...>, 【...】. It only strips matched
+// pairs at the boundaries to avoid corrupting values containing internal symbols.
+// The input is expected to be already trimmed of leading/trailing whitespace.
 func stripMarkdownEmphasis(s string) string {
 	pairs := []struct{ open, close string }{
 		{"**", "**"},
@@ -126,6 +126,7 @@ func stripMarkdownEmphasis(s string) string {
 		{"`", "`"},
 		{"[", "]"},
 		{"(", ")"},
+		{"<", ">"},
 		{"【", "】"},
 	}
 	for _, p := range pairs {
