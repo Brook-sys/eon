@@ -7704,3 +7704,15 @@ Implementação:
 - Unlike Phase 421 and Phase 422 where 8B models successfully bounded themselves, this test saw `finish_reason=length` on 8B models in both PT-BR pressure (48 tokens) and the primary structural trailing-JSON test (64 tokens). However, because OpenClaw's structured JSON parser (`prompt.ParseResponse`) uses robust brace-stacking heuristics, it successfully extracted the key-value structures from the truncated payload prefixes.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase423_subagent_rpc_reconcile_fire_test/` and `results/phase423-subagent_rpc_reconcile/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 424 — Subagent record validation live campaign (2026-08-09 11:10 -03)
+
+**Hypothesis and implementation.** Continuing across the `domain` components, we tested whether models correctly interpret SubagentRecord constraints: specifically if `Attempt == MaxAttempts` (exhaustion) and `Deadline < StartedAt` constitute validation failures.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We applied 48 tokens (PT-BR) and 64 tokens (structural tests) as constraints. Requested schema: `IS_VALID`, `REASON`, and `VALIDATION_TARGET`.
+
+**Observed evidence and decision.** The campaign logged a 100% success rate (9/9).
+- Compliance hit 1.00 globally.
+- Notably, in the 48-token PT-BR constraint, the models resumed successfully containing the JSON output and exited with `finish_reason=stop` instead of `length`, demonstrating that token bloat is highly dependent on the semantic target. When reasoning about simple temporal or integer comparisons (rather than text-heavy RPC decoders as seen in Phase 423), models can optimize their explanation length effectively.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase424_subagent_record_validation_fire_test/` and `results/phase424-subagent_record_validation/`. `go test ./...` and `git diff --check` remain clean.
