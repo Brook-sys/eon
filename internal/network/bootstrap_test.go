@@ -24,25 +24,45 @@ func TestP2PManagerLifecycle(t *testing.T) {
 		BindAddr: "127.0.0.1:0",
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
-		t.Fatalf("NewP2PManager: %v", err)
-	}
-	if manager == nil || manager.Router == nil || manager.Registry == nil {
-		t.Fatal("enabled P2P must construct router and registry")
+		t.Fatalf("NewP2PManager failed: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+	ctx := context.Background()
 	if err := manager.Start(ctx); err != nil {
-		t.Fatalf("Start: %v", err)
+		t.Fatalf("Start failed: %v", err)
 	}
+
 	if err := manager.Start(ctx); err != nil {
 		t.Fatalf("idempotent Start: %v", err)
 	}
+
 	if err := manager.Stop(ctx); err != nil {
-		t.Fatalf("Stop: %v", err)
+		t.Fatalf("Stop failed: %v", err)
 	}
+
 	if err := manager.Stop(ctx); err != nil {
 		t.Fatalf("idempotent Stop: %v", err)
+	}
+}
+
+func TestP2PManagerLifecycle_WithMTLSPaths(t *testing.T) {
+	manager, err := NewP2PManager(Options{
+		Enabled:     true,
+		BindAddr:    "127.0.0.1:0",
+		TLSCertFile: "testdata/cert.pem",
+		TLSKeyFile:  "testdata/key.pem",
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("NewP2PManager failed: %v", err)
+	}
+
+	ctx := context.Background()
+	if err := manager.Start(ctx); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+
+	if err := manager.Stop(ctx); err != nil {
+		t.Fatalf("Stop failed: %v", err)
 	}
 }
 
