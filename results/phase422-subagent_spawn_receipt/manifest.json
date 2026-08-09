@@ -1,0 +1,120 @@
+{
+  "phase": "422",
+  "timestamp": "2026-08-09T13:50:25.681175891Z",
+  "total_trials": 9,
+  "successful": 9,
+  "failed": 0,
+  "global_p50_ms": 874,
+  "global_p95_ms": 764,
+  "average_compliance": 1,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-spawn-legacy-queue",
+      "latency_ms": 326,
+      "input_tokens": 109,
+      "output_tokens": 29,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"no\", \"REASON\": \"empty status and zero UpdatedAt\", \"QUEUE_STATE\": \"legacy\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-spawn-legacy-queue",
+      "latency_ms": 332,
+      "input_tokens": 109,
+      "output_tokens": 31,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"no\", \"REASON\": \"Empty status string and zero UpdatedAt time\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-spawn-recovery-pressure",
+      "latency_ms": 284,
+      "input_tokens": 115,
+      "output_tokens": 35,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"yes\", \"REASON\": \"Expire lease necessita de reabertura de SpawnReceipt\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-spawn-conflicting-payload",
+      "latency_ms": 321,
+      "input_tokens": 109,
+      "output_tokens": 28,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"yes\", \"REASON\": \"Payload indicates due for work\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-spawn-conflicting-payload",
+      "latency_ms": 874,
+      "input_tokens": 109,
+      "output_tokens": 25,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"yes\", \"REASON\": \"lease recovery\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-spawn-recovery-pressure",
+      "latency_ms": 272,
+      "input_tokens": 115,
+      "output_tokens": 38,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"yes\", \"REASON\": \"RecoverExpiredSubagentSpawnReceipt avalia a expiração de lease\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-spawn-conflicting-payload",
+      "latency_ms": 356,
+      "input_tokens": 109,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"yes\", \"REASON\": \"spawn rules evaluated\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-spawn-legacy-queue",
+      "latency_ms": 675,
+      "input_tokens": 109,
+      "output_tokens": 31,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"no\", \"REASON\": \"Empty status string and zero UpdatedAt time\", \"QUEUE_STATE\": \"normalized\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-spawn-recovery-pressure",
+      "latency_ms": 764,
+      "input_tokens": 115,
+      "output_tokens": 46,
+      "finish_reason": "stop",
+      "raw_content": "{\"DUE_FOR_WORK\": \"no\", \"REASON\": \"A expiração de lease não é necessária para subagente spawn receipt pois ele não possui recursos em uso\", \"QUEUE_STATE\": \"legacy\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
