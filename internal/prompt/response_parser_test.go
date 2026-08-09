@@ -845,3 +845,26 @@ SOURCE&#58; https://example.com
 		t.Errorf("Strategy=%v, want %v", r.Strategy, ParseStrategyPrimary)
 	}
 }
+
+func TestParseResponse_TruncatedKeyPrefixRecovery(t *testing.T) {
+	// When output is truncated by max_tokens, key names may be cut short.
+	// "SOUR" should be recovered as "SOURCE" if unambiguous.
+	text := `DATE: 2026-08-09
+SOUR: Audit Log Beta
+STAT: PENDING`
+
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+
+	if r.Values["DATE"] != "2026-08-09" {
+		t.Errorf("DATE=%q, want '2026-08-09'", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "Audit Log Beta" {
+		t.Errorf("SOURCE=%q, want 'Audit Log Beta'", r.Values["SOURCE"])
+	}
+	if r.Values["STATUS"] != "PENDING" {
+		t.Errorf("STATUS=%q, want 'PENDING'", r.Values["STATUS"])
+	}
+	if len(r.FoundByTruncated) != 2 {
+		t.Errorf("FoundByTruncated count=%d, want 2", len(r.FoundByTruncated))
+	}
+}
