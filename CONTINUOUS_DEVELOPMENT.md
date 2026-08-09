@@ -7609,3 +7609,14 @@ Implementação:
    - **P50 Latency:** 253 ms, proving extreme speed and no fallback loop timeouts.
 
 **Deterministic verification.** Tested parsing offline in preceding phases. Result artifacts in `results/phase416-stacked_adversarial_parsing/`.
+
+## Phase 358 — credential vault batch search endpoints (2026-08-09 09:30 -03)
+
+**Objective and implementation.** Added `BatchSearch` capabilities for discovering and listing multiple secret prefixes or substrings in a single HTTP request, sharing the same `sort.Slice` behavior for deterministic output ordering.
+1. Implemented `BatchSearchItem`, `BatchSearchResult`, and `BatchSearch` in `Vault` which acquires the lock once and applies the filter slice over the loaded configuration.
+2. Included `POST /secrets/batch-search` to handle requests with up to 100 filter definitions.
+3. Expanded unit tests to handle missing files, multiple returned subsets, expired secret flagging, case insensitivity, combined prefix+substring logic, lock refusal, HTTP success parsing, and validation bounds check (`invalid_request`).
+
+**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM `meta/llama-3.1-8b-instruct` on adversarial robustness format pressure (`adv-format-pressure`), language degradation (`adv-language-degradation`), and conflicting data payload formatting (`adv-conflicting-data`): 30 parallel isolated trials, variable token ceilings up to 48, strict JSON structural requirements. 
+
+**Observed evidence and decision.** NVIDIA NIM `meta/llama-3.1-8b-instruct` maintained 100% format and semantic success across all 30 tests (both zero-shot and few-shot/example paths). Average latencies ranged from 510ms (language degradation) to 834ms (conflicting data) without dropping JSON brackets. No canonical writes or state promotion. `go vet`, `gofmt`, and all unit tests passed cleanly across the vault package before commit.
