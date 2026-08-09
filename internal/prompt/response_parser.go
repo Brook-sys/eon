@@ -377,7 +377,9 @@ func ParseResponse(text string, keys []string) ParseResult {
 				if _, exists := result.Values[k]; !exists {
 					// Next-line value recovery: if value is empty on line i,
 					// look ahead up to 2 lines for a non-empty value line.
-					if value == "" {
+					// Also do this if the value is purely a structural token
+					// like an open bracket or brace indicating block start.
+					if value == "" || value == "[" || value == "{" {
 						for lookAhead := i + 1; lookAhead <= i+2 && lookAhead < len(lines); lookAhead++ {
 							nextRaw := lines[lookAhead]
 							next := strings.TrimSpace(nextRaw)
@@ -385,14 +387,22 @@ func ParseResponse(text string, keys []string) ParseResult {
 								continue
 							}
 							if _, isKey := linesForKey(next); !isKey {
-								value = next
+								if value != "" {
+									value += " "
+								}
+								value += next
 								foldedLines[lookAhead] = true
+								
+								// We only absorb ONE non-blank line as the initial value when it was blank,
+								// the rest will be picked up by the multi-line folding loop below
+								// Exception: if we just absorbed a value and it still looks incomplete, we
+								// don't advance i so the normal fold loop can get it.
 								break
 							}
 							break
 						}
 					}
-					if value == "" {
+					if value == "" || value == "[" || value == "{" {
 						continue
 					}
 					// Multi-line value folding: collect continuation lines.
@@ -401,6 +411,10 @@ func ParseResponse(text string, keys []string) ParseResult {
 					// open bracket/paren, or continuation conjunctions).
 					foldedValue := value
 					for j := i + 1; j < len(lines); j++ {
+						// Don't fold a line we already absorbed during initial look-ahead
+						if foldedLines[j] {
+							continue
+						}
 						rawLine := lines[j]
 						next := strings.TrimSpace(rawLine)
 						if next == "" {
@@ -411,22 +425,32 @@ func ParseResponse(text string, keys []string) ParseResult {
 							break
 						}
 						// Stop if the line looks like a key-value pair with a colon
-						// but the prefix is not a recognized key.
-						if p, _, hasSep := extractLinePrefixAndValue(next); hasSep && !keySet[strings.ToLower(p)] {
-							break
+						// but the prefix is not a recognized key, UNLESS we're inside an unclosed array
+						// (URLs like https:// often contain colons)
+						isInsideArray := strings.HasPrefix(strings.TrimSpace(foldedValue), "[") && !strings.Contains(foldedValue, "]")
+						if !isInsideArray {
+							if p, _, hasSep := extractLinePrefixAndValue(next); hasSep && !keySet[strings.ToLower(p)] {
+								break
+							}
 						}
 						// Check if line is a continuation:
 						// 1) Must be indented (starts with space/tab) OR
 						// 2) Start with continuation punctuation (, ;) or continuation words (and , or , with ) OR
-						// 3) Start with a lowercase letter (standard word wrapping).
+						// 3) Start with a lowercase letter (standard word wrapping) OR
+						// 4) Inside an unclosed array (value starts with [ but doesn't end with ]).
 						isIndented := strings.HasPrefix(rawLine, " ") || strings.HasPrefix(rawLine, "\t")
 						isPunct := strings.HasPrefix(next, ",") || strings.HasPrefix(next, ";")
 						lowerNext := strings.ToLower(next)
 						isConj := strings.HasPrefix(lowerNext, "and ") || strings.HasPrefix(lowerNext, "or ") || strings.HasPrefix(lowerNext, "with ")
+						isQuote := strings.HasPrefix(next, "\"") || strings.HasPrefix(next, "'")
 						firstRune := []rune(next)[0]
 						isLowercase := firstRune >= 'a' && firstRune <= 'z'
+						
+						// Check the accumulated foldedValue to see if we're inside an unclosed array
+						// (already computed above)
+						// isInsideArray := strings.HasPrefix(strings.TrimSpace(foldedValue), "[") && !strings.Contains(foldedValue, "]")
 
-						if !isIndented && !isPunct && !isConj && !isLowercase {
+						if !isIndented && !isPunct && !isConj && !isLowercase && !isQuote && !isInsideArray {
 							break
 						}
 
@@ -434,10 +458,41 @@ func ParseResponse(text string, keys []string) ParseResult {
 						if j-i > 3 {
 							break
 						}
-						foldedValue += " " + next
+						if foldedValue != "" {
+							foldedValue += " "
+						}
+						foldedValue += next
 						foldedLines[j] = true
 					}
-					result.Values[k] = foldedValue
+
+					// Post-process folded value to strip array bounds (brackets, quotes) if truncated
+					fv := strings.TrimSpace(foldedValue)
+					if strings.HasPrefix(fv, "[") {
+						fv = fv[1:]
+						// Only trim closing bracket if it actually exists at the end
+						if strings.HasSuffix(fv, "]") {
+							fv = fv[:len(fv)-1]
+						}
+						fv = strings.TrimSpace(fv)
+						// Only trim trailing comma if it actually exists at the end
+						if strings.HasSuffix(fv, ",") {
+							fv = fv[:len(fv)-1]
+						}
+						fv = strings.ReplaceAll(fv, "\"", "")
+					}
+					// Also clean internal newlines for unclosed bracket cases where folding joins with space
+					fv = strings.ReplaceAll(fv, "\n", " ")
+					// Remove internal quotes that might be left over from unclosed JSON-like arrays
+					fv = strings.ReplaceAll(fv, "\"", "")
+					// Only trim trailing comma if it was left from a JSON-like array parse
+					if strings.HasSuffix(fv, ",") {
+						fv = fv[:len(fv)-1]
+					}
+					// Strip any extra spaces created by replacement
+					for strings.Contains(fv, "  ") {
+						fv = strings.ReplaceAll(fv, "  ", " ")
+					}
+					result.Values[k] = strings.TrimSpace(fv)
 					result.FoundKeys = append(result.FoundKeys, k)
 				}
 				matched = true

@@ -1,0 +1,8 @@
+{
+  "test_mode": "budget_starvation_truncation_recovery",
+  "target_model": "llama-3.3-70b-versatile",
+  "provider": "Groq",
+  "budget": 10,
+  "trials": 3,
+  "objective": "Verify the prompt parser gracefully extracts truncated unclosed bracket values when a model is constrained by token limits, preventing silent data loss."
+}
