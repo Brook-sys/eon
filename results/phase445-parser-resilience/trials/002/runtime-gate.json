@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "name": "phase445-parser-resilience",
+  "started_at": "2026-08-09T19:09:36.41597702Z",
+  "completed_at": "2026-08-09T19:09:39.385465182Z",
+  "max_calls": 1,
+  "external_calls": 1,
+  "seeded_circuit": "model-binding:b2",
+  "selected_provider_id": "nim-deepseek",
+  "selected_binding_id": "b1",
+  "route_rejected": {
+    "b2": "circuit_open"
+  },
+  "provider_succeeded": true,
+  "provider_latency": 2775199406,
+  "observed_input_tokens": 127,
+  "observed_output_tokens": 15,
+  "finish_reason": "stop",
+  "response_bytes": 41,
+  "response_sha256": "393b4e5c3db492f50dd5daf2fcf8f86fba1f43cbd9734d8505024f9dcbef416d",
+  "expected_response_set": true,
+  "expected_response_match": false,
+  "response_json_valid": true,
+  "response_framing_class": "valid_json_mismatch",
+  "second_acquire_reason": "resource_resource_rate_limit",
+  "second_acquire_wait_until": "2026-08-09T19:10:00Z",
+  "operation_state": "WAITING_TIME",
+  "usages": [
+    {
+      "resource": "model-binding:b1",
+      "in_flight": 0,
+      "minute_window_start": "2026-08-09T19:09:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-08-09T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-08-09T19:09:00Z",
+      "token_minute_count": 142,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-binding:b2",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 1,
+      "circuit_open_until": "2026-08-09T19:10:06.41597702Z",
+      "last_failure_at": "2026-08-09T19:09:36.41597702Z"
+    },
+    {
+      "resource": "model-provider:groq",
+      "in_flight": 0,
+      "minute_window_start": "0001-01-01T00:00:00Z",
+      "minute_count": 0,
+      "day_window_start": "0001-01-01T00:00:00Z",
+      "day_count": 0,
+      "token_minute_window_start": "0001-01-01T00:00:00Z",
+      "token_minute_count": 0,
+      "consecutive_failures": 0
+    },
+    {
+      "resource": "model-provider:nim-deepseek",
+      "in_flight": 0,
+      "minute_window_start": "2026-08-09T19:09:00Z",
+      "minute_count": 1,
+      "day_window_start": "2026-08-09T00:00:00Z",
+      "day_count": 1,
+      "token_minute_window_start": "2026-08-09T19:09:00Z",
+      "token_minute_count": 142,
+      "consecutive_failures": 0
+    }
+  ],
+  "durable_reopen": true
+}

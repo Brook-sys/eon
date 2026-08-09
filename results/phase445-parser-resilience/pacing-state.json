@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "campaign_name": "phase445-parser-resilience",
+  "planned_trials": 3,
+  "completed_trials": 3,
+  "next_trial_not_before": "2026-08-09T19:09:40.521753366Z"
+}

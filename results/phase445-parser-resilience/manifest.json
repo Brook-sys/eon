@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "name": "phase445-parser-resilience",
+  "timeout_seconds": 45,
+  "max_calls": 1,
+  "max_output_tokens": 512,
+  "output_schema": "exact_json",
+  "probe_prompt": "You are a categorical intent router. Route the following text to either BILLING, SUPPORT, or SALES. \nUser: 'I want to cancel my subscription'.\nProvide the output strictly in this JSON format: {\"decision\": \"CATEGORY\", \"confidence\": 95}",
+  "expected_response": "{\"decision\":\"BILLING\",\"confidence\":95}",
+  "seed_primary_circuit_seconds": 30,
+  "bindings": [
+    {
+      "provider": "nim-deepseek",
+      "provider_kind": "openai_compatible",
+      "binding_id": "b1",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "deepseek-ai/deepseek-v4-flash-0731",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 128000,
+      "priority": 100
+    },
+    {
+      "provider": "groq",
+      "provider_kind": "openai_compatible",
+      "binding_id": "b2",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 50
+    }
+  ]
+}
