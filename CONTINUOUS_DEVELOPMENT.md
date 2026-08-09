@@ -7562,3 +7562,11 @@ Implementação:
    - **Truncation semantics**: Models hit `finish_reason=length` accurately when starved (e.g., `qwen3.6-27b` and `gpt-oss-120b`), but the parser recovered the partial payloads gracefully. `gpt-oss-120b` triggered budget auto-scaling to recover.
 
 **Deterministic verification.** `go test ./internal/prompt/...` passed 100% cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean. Artifacts in `cmd/phase410_truncation_resilience_fire_test/` and `results/phase410-truncation-resilience/`.
+
+## Phase 412 — Truncated array bracket value recovery live fire campaign (2026-08-09 07:15 -03)
+
+**Objective and implementation.** Expand parser resilience to handle models emitting truncated array structures or open bracket values (e.g. `SOURCES: [https://example.com,`) under severe budget starvation, preventing the parser from choking on unbalanced structures when standard fallback mechanisms apply.
+1. **Truncated Bracket Recovery Tests**:
+   - Added unit test `TestParseResponse_TruncatedBracketRecovery` confirming that `ParseResponse` gracefully extracts the partial array values when models run out of budget mid-bracket.
+2. **Deterministic verification.** `go test ./internal/prompt/...` passed cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean.
+
