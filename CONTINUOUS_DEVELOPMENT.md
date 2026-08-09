@@ -7630,3 +7630,16 @@ Implementação:
 **Observed evidence and decision.** The campaign achieved a 100% success rate (9/9 OK) with perfect 1.00 average format compliance across all three models and all scenarios. P50 latency was 715ms (weighed by NIM) and P95 was 295ms. All models flawlessly identified the conflicting payload structure and maintained strict format output without hallucinating markdown or wrapping the JSON structure incorrectly. The `ResponseParser` correctly extracted the JSON keys via the `json_fallback` logic regardless of starvation or PT-BR input requests. 
 
 **Evidence and verification.** Script `cmd/phase417_vault_batch_search_fire_test/` and artifacts in `results/phase417-vault_batch_search/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 418 — SQLite durability commit boundary reasoning live campaign (2026-08-09 16:30 -03)
+
+**Hypothesis and implementation.** Building upon Phase 417's cross-provider policy schema enforcement, this phase explicitly tested cross-provider reasoning over the SQLite crash recovery matrix (`FailpointBeforeDurableCommit`, `FailpointAfterDurableCommit`). Models evaluated process loss boundaries across adversarial starvation, conflicting payload instructions, and PT-BR pressure prompts.
+
+**Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Max output tokens were restricted down to 48. Expected strict JSON payload matching `COMMIT_BOUNDARY`, `REASON`, and `CRASH_STATUS`.
+
+**Observed evidence and decision.** The campaign achieved a 77.8% success rate (7/9 OK).
+- **`llama-3.3-70b-versatile`** achieved 100% success (3/3), accurately maintaining strict JSON schema over complex database transaction logic across PT-BR constraint and payload-injection tests.
+- **`llama-3.1-8b-instant` and NIM `llama-3.1-8b-instruct`** successfully completed the conflicting payload and baseline test but failed the PT-BR failpoint starvation constraint (`finish_reason=length`). The 8B models expended too many tokens wrapping the structured response or padding the `REASON` field, proving that smaller deployments need either looser token budgets or stricter character-level instruction prompts for deeply technical schema outputs.
+- Overall format compliance averaged 0.78, heavily skewed by the two truncation failures. 
+
+**Evidence and verification.** Artifacts captured in `cmd/phase418_sqlite_commit_boundary_fire_test/` and `results/phase418-sqlite_commit_boundary/`. `go test ./...` and `git diff --check` remain clean.
