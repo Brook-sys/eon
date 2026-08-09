@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* In Tailwind v4, we use the @source directive to specify the content paths */
+@source "../../internal/dashboard/views/**/*.templ";
+@source "../../internal/dashboard/views/**/*.go";
+
 /*
   Dashboard v2 theme tokens. Consumed via var(--...) in templ components.
   Keep in sync with the <style> block in views/layout.templ.
