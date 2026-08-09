@@ -7849,3 +7849,16 @@ Implementação:
 - Conclusion: Text-anchored numeric extraction (`SCORE: \d+`) is highly stable under extreme token compression and can be adopted for token-bounded quantitative assessments.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase440_relaxed_parsing_score_fire_test/` and `results/phase440-relaxed_parsing_score_fire_test/`. Unit tests `go test -v ./internal/prompt -run TestParseScore` passed cleanly.
+
+## Phase 441 — Relaxed Parsing for Categorical Decisions live campaign (2026-08-09 15:20 -03)
+
+**Hypothesis and implementation.** Continuing to substitute strict JSON with highly resilient text-anchored formats for tightly bounded workflows, we implemented `prompt.ParseDecision`. This uses the `DECISION: [A-Za-z0-9_\-]+` anchor to extract multiple-choice routing categories or intents (e.g., `TECH_SUPPORT`, `BILLING`) directly from truncated responses.
+
+**Live hypothesis and bounds.** Executed 18 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We applied an extreme 32-token constraint for an intent routing problem in both English and Portuguese to verify extraction stability.
+
+**Observed evidence and decision.** The campaign achieved a **100% success rate (18/18)**.
+- All models, across both providers and language contexts, successfully routed the input (e.g., "Quero cancelar minha assinatura" -> `BILLING`).
+- The regex extractor `prompt.ParseDecision` perfectly extracted the choices despite the 32-token ceiling clipping the `REASON:` explanations abruptly across many of the 8B model trials.
+- Conclusion: The `DECISION:` anchor strategy is proven stable and should be standard for intent routing evaluation layers that enforce strict token/latency budgets.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase441_relaxed_parsing_decision_fire_test/` and `results/phase441-relaxed_parsing_decision_fire_test/`. Unit tests `go test -v ./internal/prompt -run TestParseDecision` passed cleanly.
