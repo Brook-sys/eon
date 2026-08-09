@@ -7643,3 +7643,16 @@ Implementação:
 - Overall format compliance averaged 0.78, heavily skewed by the two truncation failures. 
 
 **Evidence and verification.** Artifacts captured in `cmd/phase418_sqlite_commit_boundary_fire_test/` and `results/phase418-sqlite_commit_boundary/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 419 — Resource gate deadline reasoning live campaign (2026-08-09 10:45 -03)
+
+**Hypothesis and implementation.** Continuing structural reasoning tests, this campaign evaluated model understanding of `ReportFailure` logic established in Phase 322: Retry-After boundary parsing, computed cooldown clamping, and circuit persistence. This ensures that models accurately grasp system domain constraints when extracting status semantics.
+
+**Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Max output tokens were kept adversarial (48 tokens for the clamping test, 64 for others) over structured JSON output. Expected keys: `DEADLINE_PERSISTENCE`, `REASON`, and `INFLIGHT_RELEASED`.
+
+**Observed evidence and decision.** The campaign achieved an 88.9% success rate (8/9 OK).
+- **`llama-3.3-70b-versatile`** and **`llama-3.1-8b-instant`** achieved 100% success (3/3), cleanly extracting JSON structures under budget starvation.
+- **NIM `meta/llama-3.1-8b-instruct`** successfully completed the conflicting payload and persistence tests but truncated during the PT-BR clamping pressure test, expending too many tokens in formatting. 
+- Format compliance averaged 0.89. The test confirms that 70B models handle structured constraint output perfectly under token starvation, but 8B NIM defaults require relaxed maximums for verbose PT-BR answers.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase419_resource_gate_deadline_campaign/` and `results/phase419-resource_gate_deadline/`. `go test ./...` and `git diff --check` remain clean.
