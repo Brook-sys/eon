@@ -7769,3 +7769,16 @@ Implementação:
 - This suggests that reasoning about crash safety protocols and transaction ordering requires a larger generation budget for the smaller models to "think" before emitting structured answers.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase428_runtime_gate_receipt_boundary_fire_test/` and `results/phase428-runtime_gate_receipt_boundary/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 429 — Runtime gate receipt settlement idempotent marker campaign (2026-08-09 11:55 -03)
+
+**Hypothesis and implementation.** Continuing from Phase 428's receipt transaction boundary, we tested whether models can classify the atomicity requirement of the *settlement* process. Specifically, that marking a receipt as settled must happen in the same atomic transaction as the accounting permit release, otherwise a crash between them could lead to duplicate permit releases during recovery replay.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR constraint) and 64 (structural bounds). Required JSON schema: `IS_IDEMPOTENT`, `REASON`, and `CRASH_SAFE`.
+
+**Observed evidence and decision.** The campaign logged a 44.4% success rate (4/9).
+- Compliance averaged 0.85. 
+- The 70B model (`llama-3.3-70b-versatile`) succeeded perfectly (3/3), cleanly navigating the atomicity constraints and accurately flagging the split-transaction negative test.
+- The 8B models (both Groq and NIM) failed heavily again. They correctly flagged the split-transaction failure (`llama-3.1-8b-instant` got it right before `finish_reason=stop`), but fundamentally misunderstood the affirmative idempotent tests. They both output `IS_IDEMPOTENT=false` or `CRASH_SAFE=false` on the affirmative test, suggesting they struggle to reason about idempotency and replay scenarios under tight token bounds, or simply failed to output valid JSON within the PT-BR 48-token limit (hitting `finish_reason=length`).
+
+**Evidence and verification.** Artifacts captured in `cmd/phase429_runtime_gate_receipt_settlement_fire_test/` and `results/phase429-runtime_gate_receipt_settlement/`. `go test ./...` and `git diff --check` remain clean.
