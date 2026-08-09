@@ -7891,3 +7891,18 @@ Implementação:
 - Decision: We will promote `deepseek-ai/deepseek-v4-flash-0731` as our primary candidate for NIM-side multi-shot reasoning tests, as the other high-capacity identifiers require credential elevation or have been removed. We have confirmed the OpenAI adapter properly translates network failures (404) and content failures (empty_content) back to the kernel.
 
 **Evidence and verification.** Conducted live testing. Reverted the test artifacts to keep the `cmd/` directory clean. Commit pushed directly to main.
+
+## Phase 444 — DeepSeek V4 Flash Base Integration and Extraction Recovery Pipeline Evaluation (2026-08-09 19:10 -03)
+
+**Objective.** Following Phase 443's discovery that previous NVIDIA NIM aliases for high-capacity models returned 404s or empty completions under pressure, we promoted `deepseek-ai/deepseek-v4-flash-0731` as the primary NIM candidate for multi-shot and rigorous parsing tasks. This phase runs an authenticated, bounded runtime-gate campaign to verify structural evaluation resilience across both `meta/llama-3.1-8b-instruct` and `deepseek-v4-flash-0731`.
+
+**Live hypothesis and bounds.** Executed an authenticated `RuntimeGateCampaign` (isolated SQLite, 45s deadline, strict JSON framing plus fallback extraction recovery, max 512 tokens). `meta/llama-3.1-8b-instruct` was configured as the seeded alternate circuit (opened explicitly prior to evaluation) to enforce failover to `deepseek-v4-flash-0731`. The probe prompt requested a deterministic `READY` status payload.
+
+**Observed evidence and decision.** The campaign successfully opened the circuit on `meta/llama-3.1-8b-instruct` (logging a `circuit_open` rejection), cleanly falling back to `deepseek-ai/deepseek-v4-flash-0731`.
+- `deepseek-v4-flash-0731` completed the exact expected completion (`READY`) in 695.2 ms, with a stop reason of `stop`.
+- The payload required 132 prompt tokens and exactly 3 completion tokens.
+- SQLite successfully handled the durable reopening constraint and localized tracking logic, observing a natural `resource_rate_limit` (second acquire waiting until the minute clock rolls).
+- Zero canonical state was promoted.
+- The outcome proves the new DeepSeek endpoint is viable, successfully bounded by the `openai_compatible` provider runtime, correctly emits deterministic output when constrained, and supports our robust failover mechanisms.
+
+**Evidence and verification.** Artifacts captured in `results/phase444-deepseek_evaluation/`. Tests verified with `go test -v ./internal/gatecampaign -run ".*"`. `git diff --check` executed.
