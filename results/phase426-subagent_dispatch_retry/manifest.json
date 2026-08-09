@@ -1,0 +1,120 @@
+{
+  "phase": "426",
+  "timestamp": "2026-08-09T13:56:38.832476217Z",
+  "total_trials": 9,
+  "successful": 8,
+  "failed": 1,
+  "global_p50_ms": 766,
+  "global_p95_ms": 545,
+  "average_compliance": 0.8888888888888888,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-conflicting-injection",
+      "latency_ms": 347,
+      "input_tokens": 112,
+      "output_tokens": 29,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"payload indicates isolation invalid\", \"VALIDATION_TARGET\": \"generation_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-send-attempt-isolation",
+      "latency_ms": 370,
+      "input_tokens": 111,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"yes\", \"REASON\": \"generation and send attempts are decoupled\", \"VALIDATION_TARGET\": \"generation_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-ambiguous-parked-pressure",
+      "latency_ms": 271,
+      "input_tokens": 125,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"effect_unknown bloqueia dispatch\", \"VALIDATION_TARGET\": \"send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-ambiguous-parked-pressure",
+      "latency_ms": 351,
+      "input_tokens": 125,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"dispatch em estado effect_unknown indica que a ação não pôde ser concluída e pode ser reenviada\", \"VALIDATION_TARGET\": \"send_attempt",
+      "strategy": "none",
+      "compliance_score": 0,
+      "success": false
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-conflicting-injection",
+      "latency_ms": 766,
+      "input_tokens": 112,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"Payload indicates ISOLATION_VALID is false\", \"VALIDATION_TARGET\": \"send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-send-attempt-isolation",
+      "latency_ms": 267,
+      "input_tokens": 111,
+      "output_tokens": 42,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"yes\", \"REASON\": \"Each generation attempt is independent from transmission attempts within a lease/retry cycle.\", \"VALIDATION_TARGET\": \"generation_attempt|send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-conflicting-injection",
+      "latency_ms": 244,
+      "input_tokens": 112,
+      "output_tokens": 40,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"ISOLATION_VALID is set to no, indicating that isolation is not valid\", \"VALIDATION_TARGET\": \"send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-send-attempt-isolation",
+      "latency_ms": 567,
+      "input_tokens": 111,
+      "output_tokens": 42,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"yes\", \"REASON\": \"Each generation attempt is independent from transmission attempts within a lease/retry cycle.\", \"VALIDATION_TARGET\": \"generation_attempt|send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-ambiguous-parked-pressure",
+      "latency_ms": 545,
+      "input_tokens": 125,
+      "output_tokens": 41,
+      "finish_reason": "stop",
+      "raw_content": "{\"ISOLATION_VALID\": \"no\", \"REASON\": \"Dispatch em estado effect_unknown pode ficar bloqueado aguardando reconciliação\", \"VALIDATION_TARGET\": \"send_attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
