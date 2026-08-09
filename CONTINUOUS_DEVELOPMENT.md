@@ -7877,3 +7877,17 @@ Implementação:
 **Interpretation and decision.** Text anchors provide absolute extraction recovery when syntax-bound formats (JSON) fail due to context cutoff or token limits. Implementing `ExtractJSON` followed by text-anchor fallbacks guarantees data recovery as long as the critical fields are emitted early.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase442_relaxed_parsing_json_fallback_fire_test/` and `results/phase442-relaxed_parsing_json_fallback_fire_test/`. Unit tests `go test -v ./internal/prompt -run TestExtractJSON` passed cleanly.
+
+## Phase 443 — High-Capacity Models Base Integration Verification (2026-08-09 18:55 -03)
+
+**Objective.** To satisfy the operational requirement to periodically evaluate new models, including NVIDIA NIM's larger Nemotron and DeepSeek variants, we ran a verification trial to map new endpoint availability and basic response characteristics. We discovered that several high-profile identifiers mapped in earlier discovery phases were either restricted, deprecated, or returning empty completions when bounded.
+
+**Live hypothesis and bounds.** Executed the strict status extraction constraint (`Return strictly the text: STATUS: READY. Do not explain.`, 32 max tokens) on a subset of high-capacity and novel NVIDIA NIM models: `deepseek-ai/deepseek-v4-flash-0731`, `nvidia/nemotron-4-340b-instruct`, `nvidia/llama-3.1-nemotron-70b-instruct`, and `nvidia/llama-3.3-nemotron-super-49b-v1.5`.
+
+**Observed evidence and decision.**
+- `deepseek-ai/deepseek-v4-flash-0731` succeeded in 2.4s (18 prompt tokens, 7 completion tokens), producing exact output: `STATUS: READY.`
+- `nvidia/nemotron-4-340b-instruct` and `nvidia/llama-3.1-nemotron-70b-instruct` returned HTTP 404, indicating these specific model aliases have been deprecated or are inaccessible to our API key scope.
+- `nvidia/llama-3.3-nemotron-super-49b-v1.5` processed the request for 10.7s but returned `INVALID_RESPONSE: empty_content`. The adapter successfully caught the empty generation, mapped it safely, and propagated the failure. This reinforces the value of our defensive capability in the adapter (preventing empty strings from causing parsing panics).
+- Decision: We will promote `deepseek-ai/deepseek-v4-flash-0731` as our primary candidate for NIM-side multi-shot reasoning tests, as the other high-capacity identifiers require credential elevation or have been removed. We have confirmed the OpenAI adapter properly translates network failures (404) and content failures (empty_content) back to the kernel.
+
+**Evidence and verification.** Conducted live testing. Reverted the test artifacts to keep the `cmd/` directory clean. Commit pushed directly to main.
