@@ -7490,6 +7490,27 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -w`, and `git diff --check` clean. Artifacts in `cmd/phase408_htmldecoding_fire_test/` and `results/phase408-htmldecoding-parser/`.
 
+## Phase 409 — bare key next-line value recovery & mixed format adversarial live fire campaign (2026-08-09 04:50 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for bare key names (where a model emits a key name on one line with no separator, e.g. `DATE\n2026-08-09`) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **Bare Key Next-Line Value Recovery (`ResponseParser`)**:
+   - Enhanced `ParseResponse` in `internal/prompt/response_parser.go`: when a line is not matched by `extractLinePrefixAndValue` (i.e. has no colon or separator), the parser checks if the line (after cleaning and HTML unescaping) matches a known key name exactly. If so, it scans up to 2 subsequent non-blank lines for the value if those lines are not key names.
+   - Preserves unconsumed line tracking: bare-key lines and recovered value lines are excluded from hybrid fallback unmatched counts, preventing false-positive fallback triggers.
+2. **Unit Test Expansion (`response_parser_barekey_test.go`)**: Added `TestParseResponse_BareKeyNextLineValue`, `TestParseResponse_BareKeyNextLineValueWithBlankLines`, `TestParseResponse_BareKeyStopsAtNextBareKey`, and `TestParseResponse_BareKeyMixedWithColonKeys`.
+3. **Live Fire Campaign Phase 409**: Formulated and executed a 15-trial live fire campaign (`cmd/phase409_barekey_recovery_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`bare_key_next_line`, `bare_key_value_isolation`, `mixed_format_adversarial`).
+4. **Live campaign findings**:
+   - **Perfect 100.0% Overall Success Rate (15/15 trials OK)** across all 5 models and all 3 scenarios.
+   - **Format compliance: 100% (1.00)** and **semantic correctness: 100%** across all models.
+   - **P50 Latency: 343 ms**, P95 Latency: 691 ms.
+   - **100% Primary Prefix Strategy**: All 15 trials extracted values via `primary_prefix` strategy without needing positional or hybrid fallback.
+   - **`groq/llama-3.1-8b-instant`**: **3/3 (100%) success**, P50 latency 281ms.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 335ms.
+   - **`groq/qwen/qwen3.6-27b`**: **3/3 (100%) success**, P50 latency 252ms.
+   - **`groq/openai/gpt-oss-120b`**: **3/3 (100%) success**, P50 latency 496ms.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 484ms.
+
+**Deterministic verification.** `go test ./internal/prompt/...` passed 100% cleanly. `go vet ./internal/prompt/...`, `gofmt -w`, and `git diff --check` clean. Artifacts in `cmd/phase409_barekey_recovery_fire_test/` and `results/phase409-barekey-recovery/`.
+
 ## Phase 407 — XML/HTML angle bracket key parsing & multi-provider live fire campaign (2026-08-09 01:45 -03)
 
 **Objective and implementation.** Addressed key parsing resilience for XML/HTML tag formatted key names (`<KEY>: VALUE`, `<KEY>VALUE</KEY>`, `**<KEY>** : VALUE`) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.

@@ -272,7 +272,9 @@ func ParseResponse(text string, keys []string) ParseResult {
 		return "", false
 	}
 
-	// Primary parse: scan lines for "KEY: value" pattern with multi-line folding.
+	// bareKeyLines tracks line indices where a bare key name (no separator)
+	// was recognized and the value was recovered from a subsequent line.
+	bareKeyLines := make(map[int]bool)
 	// foldedLines tracks line indices consumed as continuation lines during
 	// multi-line value folding, so the hybrid fallback can exclude them from
 	// the unmatched-line count.
@@ -282,6 +284,37 @@ func ParseResponse(text string, keys []string) ParseResult {
 		line := lines[i]
 		prefix, value, ok := extractLinePrefixAndValue(line)
 		if !ok {
+			// Bare key detection: if the line (after cleaning) is exactly a
+			// known key name with no separator, look ahead for the value on
+			// the next non-blank line. This handles the pattern where models
+			// emit key names on one line and values on the next:
+			//   DATE
+			//   2026-08-09
+			//   SOURCE
+			//   Audit Log Beta
+			cleaned := strings.TrimSpace(unescapeHTMLEntities(line))
+			if cleaned != "" && keySet[strings.ToLower(cleaned)] {
+				for _, k := range keys {
+					if strings.EqualFold(cleaned, k) && result.Values[k] == "" {
+						// Look ahead for value on next non-blank line.
+						for lookAhead := i + 1; lookAhead < len(lines); lookAhead++ {
+							next := strings.TrimSpace(lines[lookAhead])
+							if next == "" {
+								continue
+							}
+							// If next line is another bare key, no value found.
+							if _, isKey := linesForKey(next); isKey || (keySet[strings.ToLower(next)] && !strings.Contains(next, ":") && !strings.Contains(next, " - ") && !strings.Contains(next, " =")) {
+								break
+							}
+							result.Values[k] = next
+							result.FoundKeys = append(result.FoundKeys, k)
+							bareKeyLines[lookAhead] = true
+							break
+						}
+						break
+					}
+				}
+			}
 			continue
 		}
 		// Match against any expected key (case-insensitive).
@@ -461,6 +494,17 @@ func ParseResponse(text string, keys []string) ParseResult {
 			foldedText := strings.TrimSpace(lines[lineIdx])
 			for i, ne := range nonEmptyLines {
 				if ne == foldedText && !consumedLines[i] {
+					consumedLines[i] = true
+					break
+				}
+			}
+		}
+
+		// Also mark lines consumed as bare-key values.
+		for lineIdx := range bareKeyLines {
+			bareText := strings.TrimSpace(lines[lineIdx])
+			for i, ne := range nonEmptyLines {
+				if ne == bareText && !consumedLines[i] {
 					consumedLines[i] = true
 					break
 				}

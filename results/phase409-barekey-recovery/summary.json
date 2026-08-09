@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-08-09T04:48:56Z",
+  "total_trials": 15,
+  "successful": 15,
+  "success_rate": 1,
+  "p50_latency_ms": 343,
+  "p95_latency_ms": 691,
+  "avg_compliance": 1,
+  "model_stats": {
+    "llama-3.1-8b-instant": {
+      "total_trials": 3,
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 281,
+      "p95_latency_ms": 384,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
+    },
+    "llama-3.3-70b-versatile": {
+      "total_trials": 3,
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 335,
+      "p95_latency_ms": 343,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
+    },
+    "meta/llama-3.1-8b-instruct": {
+      "total_trials": 3,
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 484,
+      "p95_latency_ms": 691,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
+    },
+    "openai/gpt-oss-120b": {
+      "total_trials": 3,
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 496,
+      "p95_latency_ms": 551,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
+    },
+    "qwen/qwen3.6-27b": {
+      "total_trials": 3,
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 252,
+      "p95_latency_ms": 264,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
+    }
+  }
+}
