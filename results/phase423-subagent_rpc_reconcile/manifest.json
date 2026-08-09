@@ -1,0 +1,120 @@
+{
+  "phase": "423",
+  "timestamp": "2026-08-09T13:51:23.985693922Z",
+  "total_trials": 9,
+  "successful": 9,
+  "failed": 0,
+  "global_p50_ms": 810,
+  "global_p95_ms": 793,
+  "average_compliance": 1,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-rpc-conflicting-payload",
+      "latency_ms": 424,
+      "input_tokens": 109,
+      "output_tokens": 29,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"yes\", \"REASON\": \"payload explicitly allows\", \"DIGEST_SENSITIVE\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-rpc-trailing-json",
+      "latency_ms": 432,
+      "input_tokens": 113,
+      "output_tokens": 29,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"RPC payload validation\", \"DIGEST_SENSITIVE\": \"yes\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-rpc-positive-reconcile-pressure",
+      "latency_ms": 299,
+      "input_tokens": 112,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\n  \"TRAILING_JSON_ALLOWED\": \"no\",\n  \"REASON\": \"ResolveSubagentSpawnReceiptStatusFound para StatusDelivery in-flight não é uma operação suportada\",\n  \"DIGEST_SENSITIVE\": \"no",
+      "strategy": "primary_prefix",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-rpc-trailing-json",
+      "latency_ms": 316,
+      "input_tokens": 113,
+      "output_tokens": 64,
+      "finish_reason": "length",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"DecodeSubagentReconcileRequest is a specific request type and does not allow trailing JSON\", \"DIGEST_SENSITIVE\": \"no\"}\n\n{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"DecodeSubagentReconcile",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-rpc-conflicting-payload",
+      "latency_ms": 810,
+      "input_tokens": 109,
+      "output_tokens": 36,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"yes\", \"REASON\": \"Payload contains explicit value for TRAILING_JSON_ALLOWED\", \"DIGEST_SENSITIVE\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-rpc-conflicting-payload",
+      "latency_ms": 236,
+      "input_tokens": 109,
+      "output_tokens": 36,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"yes\", \"REASON\": \"Payload contains explicit value for TRAILING_JSON_ALLOWED\", \"DIGEST_SENSITIVE\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-rpc-positive-reconcile-pressure",
+      "latency_ms": 356,
+      "input_tokens": 112,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"subagent RPC evaluation\", \"DIGEST_SENSITIVE\": \"yes\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-rpc-positive-reconcile-pressure",
+      "latency_ms": 528,
+      "input_tokens": 112,
+      "output_tokens": 34,
+      "finish_reason": "stop",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"RPCs should not expose in-flight status\", \"DIGEST_SENSITIVE\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-rpc-trailing-json",
+      "latency_ms": 793,
+      "input_tokens": 113,
+      "output_tokens": 64,
+      "finish_reason": "length",
+      "raw_content": "{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"DecodeSubagentReconcileRequest is a specific request type and does not support trailing JSON\", \"DIGEST_SENSITIVE\": \"no\"}\n\n{\"TRAILING_JSON_ALLOWED\": \"no\", \"REASON\": \"SubagentSpawnRequestDigest is",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
