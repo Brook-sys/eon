@@ -1,6 +1,8 @@
 package prompt
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"motor-autonomo/internal/modeltext"
@@ -25,10 +27,20 @@ const (
 	ParseStrategyPositionalFallback        ParseStrategy = "positional_fallback"
 	ParseStrategyPositionalFallbackRelaxed ParseStrategy = "positional_fallback_relaxed"
 	ParseStrategyHybrid                    ParseStrategy = "hybrid_prefix_positional"
+	ParseStrategyTruncatedPrefix           ParseStrategy = "truncated_prefix"
+	ParseStrategyJSONFallback              ParseStrategy = "json_fallback"
 	ParseStrategyNone                      ParseStrategy = "none"
 )
 
 // ParseResult holds the outcome of parsing a structured response.
+//
+// Truncated key prefix recovery: when a response is cut short (e.g.
+// finish_reason=length), a line may contain an incomplete key prefix like
+// "SOUR" instead of "SOURCE". After primary, hybrid, and positional
+// strategies are exhausted, the parser attempts truncated prefix matching
+// as a last-resort recovery for unmatched keys. This is conservative: it
+// only triggers when the cleaned prefix is at least 3 characters and
+// matches exactly one known key as a string prefix.
 type ParseResult struct {
 	// Values maps each requested key to the extracted value. When a key is
 	// not found, its value is the empty string.
@@ -38,6 +50,8 @@ type ParseResult struct {
 	// UsedFallback is true when the primary prefix parse found zero keys
 	// and the positional fallback was applied instead.
 	UsedFallback bool
+	// FoundByTruncated lists keys recovered by truncated prefix matching.
+	FoundByTruncated []string
 	// FoundByFallback lists keys recovered by the positional fallback.
 	FoundByFallback []string
 	// Strategy indicates the strategy used to extract values.
@@ -245,6 +259,45 @@ func ParseResponse(text string, keys []string) ParseResult {
 	if len(keys) == 0 {
 		return result
 	}
+	
+	// Phase 411: Try pure JSON unmarshaling first before relying on heuristic text parsing.
+	// Many models (especially Qwen/DeepSeek and heavily fine-tuned ones) may emit raw JSON 
+	// when format pressure is high, even when asked for simple key-value pairs.
+	// Find boundaries of potential JSON object `{...}`.
+	firstBrace := strings.Index(text, "{")
+	lastBrace := strings.LastIndex(text, "}")
+	if firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace {
+		potentialJSON := text[firstBrace : lastBrace+1]
+		var decoded map[string]interface{}
+		if err := json.Unmarshal([]byte(potentialJSON), &decoded); err == nil {
+			// Successfully parsed as JSON object.
+			// Verify if it contains the requested keys.
+			matchedKeys := 0
+			for _, k := range keys {
+				if val, ok := decoded[k]; ok {
+					// Convert value to string
+					strVal := fmt.Sprintf("%v", val)
+					// Strip any wrapping quotes from string values if any remain (though Unmarshal normally removes them)
+					result.Values[k] = strings.TrimSpace(strVal)
+					result.FoundKeys = append(result.FoundKeys, k)
+					matchedKeys++
+				}
+			}
+			
+			if matchedKeys > 0 {
+				result.Strategy = ParseStrategyJSONFallback
+				result.FormatComplianceScore = float64(matchedKeys) / float64(len(keys))
+				// Add non-empty line count for compatibility (heuristic based on text length)
+				result.NonEmptyLineCount = matchedKeys
+				return result
+			}
+			// If JSON parsed but contained NO requested keys, fall through to text parsing.
+			// (It might have been JSON from a markdown block that had nothing to do with the requested schema).
+			result.FoundKeys = nil
+			result.Values = make(map[string]string, len(keys))
+		}
+	}
+
 	// Normalize text using modeltext ladder (strips BOM, thinking tags, code fences).
 	norm := modeltext.NormalizeStructuredResponse(text)
 	cleanText := norm.Text
@@ -391,7 +444,24 @@ func ParseResponse(text string, keys []string) ParseResult {
 				break
 			}
 		}
-		_ = matched
+		if !matched && len(prefix) >= 3 {
+			lowerPref := strings.ToLower(prefix)
+			var matchedKey string
+			matchCount := 0
+			for _, k := range keys {
+				if result.Values[k] != "" {
+					continue
+				}
+				if strings.HasPrefix(strings.ToLower(k), lowerPref) {
+					matchedKey = k
+					matchCount++
+				}
+			}
+			if matchCount == 1 && value != "" {
+				result.Values[matchedKey] = value
+				result.FoundByTruncated = append(result.FoundByTruncated, matchedKey)
+			}
+		}
 	}
 
 	// Collect non-empty lines for fallback analysis.
@@ -459,6 +529,9 @@ func ParseResponse(text string, keys []string) ParseResult {
 		for _, k := range result.FoundKeys {
 			foundSet[strings.ToLower(k)] = true
 		}
+		for _, k := range result.FoundByTruncated {
+			foundSet[strings.ToLower(k)] = true
+		}
 		for _, k := range keys {
 			if !foundSet[strings.ToLower(k)] {
 				missingKeys = append(missingKeys, k)
@@ -476,7 +549,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 				continue
 			}
 			for _, k := range keys {
-				if strings.EqualFold(prefix, k) {
+				if strings.EqualFold(prefix, k) || (len(prefix) >= 3 && strings.HasPrefix(strings.ToLower(k), strings.ToLower(prefix))) {
 					// Mark this line index as consumed.
 					for i, ne := range nonEmptyLines {
 						if ne == trimmed && !consumedLines[i] {
