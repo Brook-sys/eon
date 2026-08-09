@@ -7531,3 +7531,20 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt`, and `git diff --check` clean. Artifacts in `cmd/phase407_xml_angle_bracket_fire_test/` and `results/phase407-xml-angle-bracket-parser/`.
 
+
+## Phase 411 — JSON fallback unmarshaling in structured parser & multi-provider live fire campaign (2026-08-09 07:05 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for models that emit JSON objects instead of the requested key-value text format (frequently observed when format pressure is high or models are heavily tuned for JSON) and executed a 15-trial multi-provider live fire campaign.
+1. **JSON Fallback Recovery (`ResponseParser`)**:
+   - Enhanced `ParseResponse` in `internal/prompt/response_parser.go` to intercept potential JSON blocks before text parsing.
+   - It searches for boundaries of a potential JSON object (`{...}`), attempts `json.Unmarshal`, and if successful, checks if it contains the requested keys.
+   - If it matches, the values are extracted and converted to strings, assigning the `ParseStrategyJSONFallback` strategy, gracefully bypassing text-prefix heuristic failures.
+2. **Unit Test Expansion**: (Covered in previous phase) added `TestParseResponse_JSONFallback_Fenced`, `TestParseResponse_JSONFallback_Unfenced`, and `TestParseResponse_JSONFallback_IgnoresIrrelevantJSON`.
+3. **Live Fire Campaign Phase 411**: Formulated and executed a 15-trial live fire campaign (`cmd/phase411_json_fallback_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`json_fenced_response`, `json_unfenced_response`, `json_with_nested_structure`).
+4. **Live campaign findings**:
+   - **Perfect 100.0% Overall Success Rate (15/15 trials OK)** across all 5 models and all 3 scenarios.
+   - **Format compliance: 100% (1.00)** and **semantic correctness: 100%** across all models.
+   - **P50 Latency: 407 ms**, P95 Latency: 1742 ms (due to NIM tail latency on trial 1).
+   - **100% JSON Fallback Strategy**: All 15 trials correctly recognized and parsed the JSON payload via the `json_fallback` strategy without needing heuristic text fallback.
+
+**Deterministic verification.** `go test ./internal/prompt/...` passed 100% cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean. Artifacts in `cmd/phase411_json_fallback_fire_test/` and `results/phase411-json-fallback-parser/`.
