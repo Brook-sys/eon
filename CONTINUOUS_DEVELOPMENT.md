@@ -7741,3 +7741,17 @@ Implementação:
 - NIM's 8B model and Groq's 70B model successfully constrained their responses to fit under the 48-token boundary.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase426_subagent_dispatch_retry_fire_test/` and `results/phase426-subagent_dispatch_retry/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 427 — Subagent dispatch reconciliation boundary reasoning live campaign (2026-08-09 11:35 -03)
+
+**Hypothesis and implementation.** Following Phase 426's test on `EFFECT_UNKNOWN` isolation, this campaign tested if LLMs can accurately reason about state transition validation during reconciliation. Specifically, it checked model understanding that `CancelSubagentDispatch` rejects cancellation for `EFFECT_UNKNOWN` rows, and that `CompleteSubagentDispatchAfterReconcile` permits direct transitions to `DELIVERED` when the receiver acknowledges the ping.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials on Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR context testing the cancellation guard) and 64 (structural test for direct terminal sync and deferral injection). The requested JSON schema required `REQUIRES_RECONCILE`, `REASON`, and `TERMINAL_SAFE`.
+
+**Observed evidence and decision.** The campaign achieved an 88.9% success rate (8/9 OK).
+- Average compliance was 0.89 globally.
+- Both Groq models (`llama-3.1-8b-instant` and `llama-3.3-70b-versatile`) succeeded perfectly, fitting responses within bounds and achieving 1.00 score. 
+- The NIM `meta/llama-3.1-8b-instruct` model failed in the 48-token PT-BR scenario by hitting `finish_reason=length` without outputting a sufficiently structured JSON prefix for `prompt.ParseResponse` to construct the target fields. It succeeded in the 64-token structural tests.
+- This reaffirms the pattern that 8B NIM models struggle with aggressive token clamping in PT-BR context compared to their 8B Groq counterparts, though both typically handle simple boolean extraction successfully. 
+
+**Evidence and verification.** Artifacts captured in `cmd/phase427_subagent_rpc_reconcile_sync_fire_test/` and `results/phase427-subagent_rpc_reconcile_sync/`. `go test ./...` and `git diff --check` remain clean.
