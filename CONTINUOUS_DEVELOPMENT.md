@@ -7620,3 +7620,13 @@ Implementação:
 **Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM `meta/llama-3.1-8b-instruct` on adversarial robustness format pressure (`adv-format-pressure`), language degradation (`adv-language-degradation`), and conflicting data payload formatting (`adv-conflicting-data`): 30 parallel isolated trials, variable token ceilings up to 48, strict JSON structural requirements. 
 
 **Observed evidence and decision.** NVIDIA NIM `meta/llama-3.1-8b-instruct` maintained 100% format and semantic success across all 30 tests (both zero-shot and few-shot/example paths). Average latencies ranged from 510ms (language degradation) to 834ms (conflicting data) without dropping JSON brackets. No canonical writes or state promotion. `go vet`, `gofmt`, and all unit tests passed cleanly across the vault package before commit.
+
+## Phase 417 — cross-provider adversarial Vault policy evaluation live campaign (2026-08-09 15:45 -03)
+
+**Hypothesis and implementation.** Building upon Phase 358's Vault BatchSearch operations and Phase 416's stacked parsing resilience, this campaign explicitly tested cross-provider model adherence to a zero-shot structured JSON schema representing a strict policy decision (`DECISION`, `REASON`, `BATCH_ID`) under stacked adversarial constraints: budget pressure, language degradation (PT-BR user prompt vs EN system prompt), and conflicting data (prompt injection attempting to spoof JSON arrays/responses). 
+
+**Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Variable output budgets (`MaxOutputTokens` down to 48), tight temperature controls (0.1–0.7), and zero canonical writes or state promotion.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9 OK) with perfect 1.00 average format compliance across all three models and all scenarios. P50 latency was 715ms (weighed by NIM) and P95 was 295ms. All models flawlessly identified the conflicting payload structure and maintained strict format output without hallucinating markdown or wrapping the JSON structure incorrectly. The `ResponseParser` correctly extracted the JSON keys via the `json_fallback` logic regardless of starvation or PT-BR input requests. 
+
+**Evidence and verification.** Script `cmd/phase417_vault_batch_search_fire_test/` and artifacts in `results/phase417-vault_batch_search/`. `go test ./...` and `git diff --check` remain clean.
