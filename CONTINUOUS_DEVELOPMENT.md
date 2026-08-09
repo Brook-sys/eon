@@ -7656,3 +7656,15 @@ Implementação:
 - Format compliance averaged 0.89. The test confirms that 70B models handle structured constraint output perfectly under token starvation, but 8B NIM defaults require relaxed maximums for verbose PT-BR answers.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase419_resource_gate_deadline_campaign/` and `results/phase419-resource_gate_deadline/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 420 — Subagent dispatch transition boundary reasoning live campaign (2026-08-09 10:50 -03)
+
+**Hypothesis and implementation.** To confirm that LLM agents can robustly query and act upon terminal statuses, this phase evaluates whether the models understand that `effect_unknown` dispatches cannot be trivially canceled without reconciliation. 
+
+**Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Max output tokens were 48 for the clamping test and 64 for others. Expected structured output: `CANCELABLE`, `REASON`, and `STATUS_TRANSITION`.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
+- **`llama-3.3-70b-versatile`**, **`llama-3.1-8b-instant`**, and **NIM `meta/llama-3.1-8b-instruct`** all correctly parsed and adhered to the required structure. 
+- The 8B Groq model hit `finish_reason=length` on the 48-token constraint but managed to flush enough parsable JSON before truncation that the `prompt.ParseResponse` extraction succeeded, resulting in 1.00 compliance across the board. 
+
+**Evidence and verification.** Artifacts captured in `cmd/phase420_subagent_dispatch_semantics_fire_test/` and `results/phase420-subagent_dispatch_semantics/`. `go test ./...` and `git diff --check` remain clean.
