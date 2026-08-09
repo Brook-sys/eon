@@ -1,0 +1,120 @@
+{
+  "phase": "420",
+  "timestamp": "2026-08-09T13:48:29.170136246Z",
+  "total_trials": 9,
+  "successful": 9,
+  "failed": 0,
+  "global_p50_ms": 353,
+  "global_p95_ms": 605,
+  "average_compliance": 1,
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-ambiguous-pressure",
+      "latency_ms": 445,
+      "input_tokens": 107,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\"CANCELABLE\": \"yes\", \"REASON\": \"O estado 'ambiguous' não é um estado válido para CancelSubagentDispatch, por isso o pedido de cancelamento é aceito.\", \"STATUS_TRANSITION\": \"canceled\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-cancellation-boundary",
+      "latency_ms": 470,
+      "input_tokens": 110,
+      "output_tokens": 28,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"no\", \"REASON\": \"effect_unknown state is irreversible\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-conflicting-payload",
+      "latency_ms": 713,
+      "input_tokens": 112,
+      "output_tokens": 27,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"yes\", \"REASON\": \"Payload indicates cancelable\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-conflicting-payload",
+      "latency_ms": 319,
+      "input_tokens": 112,
+      "output_tokens": 27,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"yes\", \"REASON\": \"Payload indicates cancelable\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-dispatch-cancellation-boundary",
+      "latency_ms": 353,
+      "input_tokens": 110,
+      "output_tokens": 40,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"no\", \"REASON\": \"Subagent dispatch in 'effect_unknown' state cannot be canceled via CancelSubagentDispatch\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-conflicting-payload",
+      "latency_ms": 387,
+      "input_tokens": 112,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"yes\", \"REASON\": \"dispatch boundary evaluation\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-dispatch-ambiguous-pressure",
+      "latency_ms": 379,
+      "input_tokens": 107,
+      "output_tokens": 28,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"no\", \"REASON\": \"estado ambiguous não é claro\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-ambiguous-pressure",
+      "latency_ms": 499,
+      "input_tokens": 107,
+      "output_tokens": 40,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"no\", \"REASON\": \"CancelSubagentDispatch não pode ser cancelado quando o estado é ambíguo\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-dispatch-cancellation-boundary",
+      "latency_ms": 605,
+      "input_tokens": 110,
+      "output_tokens": 40,
+      "finish_reason": "stop",
+      "raw_content": "{\"CANCELABLE\": \"no\", \"REASON\": \"Subagent dispatch in 'effect_unknown' state cannot be canceled via CancelSubagentDispatch\", \"STATUS_TRANSITION\": \"effect_unknown\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
