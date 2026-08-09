@@ -75,6 +75,12 @@ type Input struct {
 	// because thinking consumes ~350-500 tokens before the answer.
 	// When non-zero, this overhead is added to the BudgetGuard floor.
 	ThinkingOverheadTokens int
+	// PrefillAssistant is an optional opening fragment that the compiler will
+	// propagate to the provider to force the beginning of the model's response.
+	// For example, when AnswerFormat expects strict JSON, setting this to "{"
+	// ensures models like DeepSeek V4 Flash or Groq Llama 3.3 bypass chatty
+	// prose headers and immediately emit the JSON object.
+	PrefillAssistant string
 }
 
 // FormatAnchoringMode defines format anchoring behavior in prompt compilation.
@@ -200,9 +206,10 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 		omittedIDs[i] = omitted[i].ID
 	}
 	req := port.CompletionRequest{
-		Prompt:          promptText,
-		MaxOutputTokens: spec.MaxOutputTokens,
-		Temperature:     0,
+		Prompt:           promptText,
+		MaxOutputTokens:  spec.MaxOutputTokens,
+		Temperature:      0,
+		PrefillAssistant: strings.TrimSpace(input.PrefillAssistant),
 	}
 	if reasoningSuppressed {
 		req.ReasoningEffort = "none"
