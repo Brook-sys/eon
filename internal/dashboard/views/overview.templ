@@ -1,12 +1,16 @@
 package views
 
 templ StatCardAlpine(label string, xValue string, sub string, colorClass string) {
-	<div class="bg-[var(--panel)] border border-[var(--border)] rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-all hover:border-[var(--border-focus)]/50 group">
-		<div class="text-xs uppercase tracking-widest text-[var(--muted)] font-bold mb-2 group-hover:text-[var(--text)] transition-colors">{ label }</div>
-		<div class={ "text-3xl lg:text-4xl font-bold font-mono tracking-tight my-2", colorClass } x-text={ xValue }>
+	<div class="bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-7 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-[var(--border-focus)] group">
+		<div class="flex items-center justify-between mb-4">
+			<div class="text-[13px] font-semibold text-[var(--muted)] group-hover:text-[var(--text)] transition-colors flex items-center gap-2">
+				{ label }
+			</div>
+		</div>
+		<div class={ "text-4xl lg:text-5xl font-extrabold font-mono tracking-tighter my-1", colorClass } x-text={ xValue }>
 		</div>
 		if sub != "" {
-			<div class="text-xs text-[var(--subtle)] mt-2 font-medium">{ sub }</div>
+			<div class="text-[13px] text-[var(--subtle)] mt-4 font-medium flex items-center gap-1.5">{ sub }</div>
 		}
 	</div>
 }
@@ -16,103 +20,128 @@ templ Overview() {
 		<div x-data="overviewState()" x-init="start()" class="space-y-8">
 
 			<!-- Status de conexão -->
-			<div class="flex items-center gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-3.5 shadow-sm">
-				<span class="inline-flex items-center gap-3 font-bold">
-					<span
-						class="w-3 h-3 rounded-full"
-						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
-					></span>
-					<span class="text-[var(--text)]" x-text="connected ? 'Conectado à Inspect API' : 'Sem conexão com Inspect API'"></span>
-				</span>
-				<span class="text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium" x-show="generatedAt">
-					atualizado <span x-text="generatedAgo"></span>
-				</span>
+			<div class="flex items-center justify-between gap-4 bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-6 shadow-sm">
+				<div class="flex items-center gap-5">
+					<div class="relative flex h-3 w-3 items-center justify-center">
+						<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"></span>
+						<span class="relative inline-flex rounded-full h-3 w-3" x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"></span>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-[15px] font-bold text-[var(--text)]" x-text="connected ? 'Conectado ao Engine' : 'Sem conexão com a API'"></span>
+						<span class="text-[13px] text-[var(--muted)]" x-show="generatedAt">Último sync há <span x-text="generatedAgo"></span></span>
+					</div>
+				</div>
 				<button
-					class="ml-auto px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold shadow-sm cursor-pointer"
+					class="px-5 py-2.5 rounded-xl bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] border border-transparent text-[13px] font-semibold text-[var(--text)] transition-all cursor-pointer shadow-sm flex items-center gap-2"
 					x-on:click="refresh()"
-				>↻ Atualizar</button>
+				>
+					<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+					Atualizar
+				</button>
 			</div>
 
 			<!-- Contadores operacionais -->
 			<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-				@StatCardAlpine("Comandos pendentes", "fmt(ov.pending_commands)", "aguardando o kernel", "text-[var(--accent)]")
-				@StatCardAlpine("Perguntas pendentes", "fmt(ov.pending_operator_questions)", "intervenção humana necessária", "text-[var(--warn)]")
-				@StatCardAlpine("Subagents evictos", "fmt(ov.evicted_subagents)", "lease perdido", "text-[var(--err)]")
-				@StatCardAlpine("Head de eventos", "fmt(ov.event_head_sequence)", "sequência no log", "text-[var(--ok)]")
+				@StatCardAlpine("Comandos Pendentes", "fmt(ov.pending_commands)", "aguardando o kernel", "text-[var(--text)]")
+				@StatCardAlpine("Intervenções", "fmt(ov.pending_operator_questions)", "perguntas do operador", "text-[var(--warn)]")
+				@StatCardAlpine("Subagents Evictos", "fmt(ov.evicted_subagents)", "leases perdidos", "text-[var(--err)]")
+				@StatCardAlpine("Eventos Processados", "fmt(ov.event_head_sequence)", "sequence head atual", "text-[var(--info)]")
 			</div>
 
 			<!-- Controle Operacional do Runtime e Missão -->
-			@card("Controle Operacional & Execução") {
-				<div class="space-y-5 text-sm">
-					<div class="flex flex-wrap items-center gap-4">
-						<span class="font-bold text-[var(--text)]">Estado do Despacho:</span>
-						<span
-							class="px-3 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-widest shadow-sm"
-							x-bind:class="ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)] text-[#000]' : 'bg-[var(--ok)] text-[#000]'"
-							x-text="ov.process_mode ?? 'STANDBY'"
-						></span>
-						<span class="text-sm text-[var(--muted)] font-mono ml-auto font-medium" x-show="ov.mission && ov.mission.mission_id">
-							Missão: <strong class="text-[var(--text)]" x-text="ov.mission.mission_id"></strong> (Rev <span x-text="ov.mission.active_revision"></span>)
-						</span>
+			@card("Controle Operacional & Missão") {
+				<div class="space-y-6">
+					<div class="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-2xl bg-[var(--bg)] border border-[var(--border)] shadow-inner">
+						<div class="space-y-1">
+							<div class="text-[13px] font-semibold text-[var(--subtle)]">Estado do Despacho</div>
+							<div class="flex items-center gap-3">
+								<span
+									class="px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-widest border"
+									x-bind:class="ov.process_mode === 'PAUSED' ? 'bg-[var(--warn)]/10 text-[var(--warn)] border-[var(--warn)]/20' : 'bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20'"
+									x-text="ov.process_mode ?? 'STANDBY'"
+								></span>
+							</div>
+						</div>
+						
+						<div class="hidden md:block w-px h-12 bg-[var(--border)]"></div>
+						
+						<div class="space-y-1 grow">
+							<div class="text-[13px] font-semibold text-[var(--subtle)]">Missão Ativa</div>
+							<div class="font-mono text-[14px] font-bold text-[var(--text)]" x-show="ov.mission && ov.mission.mission_id">
+								<span x-text="ov.mission.mission_id"></span> 
+								<span class="text-[var(--muted)] font-normal text-[12px] ml-2">Rev <span x-text="ov.mission.active_revision"></span></span>
+							</div>
+							<div class="text-[14px] text-[var(--muted)] italic" x-show="!ov.mission || !ov.mission.mission_id">Nenhuma missão em execução</div>
+						</div>
 					</div>
 
-					<div class="flex flex-wrap items-center gap-4 pt-5 border-t border-[var(--border)]">
+					<div class="flex flex-wrap items-center gap-4 pt-2">
 						<button
 							type="button"
-							class="px-5 py-2.5 rounded-xl bg-[var(--warn)]/10 border border-[var(--warn)]/20 text-[var(--warn)] hover:bg-[var(--warn)]/20 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+							class="px-6 py-3 rounded-xl bg-[var(--warn)]/10 border border-[var(--warn)]/20 text-[var(--warn)] hover:bg-[var(--warn)]/20 font-semibold text-[14px] transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode === 'PAUSED'"
 							x-on:click="pauseMission()"
 						>
-							⏸ Pausar Missão
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+							Pausar Missão
 						</button>
 						<button
 							type="button"
-							class="px-5 py-2.5 rounded-xl bg-[var(--ok)]/10 border border-[var(--ok)]/20 text-[var(--ok)] hover:bg-[var(--ok)]/20 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+							class="px-6 py-3 rounded-xl bg-[var(--ok)]/10 border border-[var(--ok)]/20 text-[var(--ok)] hover:bg-[var(--ok)]/20 font-semibold text-[14px] transition-all flex items-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id || ov.process_mode !== 'PAUSED'"
 							x-on:click="resumeMission()"
 						>
-							▶ Retomar Missão
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+							Retomar Missão
 						</button>
 						<button
 							type="button"
-							class="px-5 py-2.5 rounded-xl bg-[var(--err)]/10 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 font-bold text-sm transition-all flex items-center gap-2 ml-auto disabled:opacity-50 cursor-pointer"
+							class="px-6 py-3 rounded-xl bg-[var(--err)]/10 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 font-semibold text-[14px] transition-all flex items-center gap-2.5 ml-auto disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
 							x-bind:disabled="cmdLoading || !ov.mission || !ov.mission.mission_id"
 							x-on:click="cancelMission()"
 						>
-							⏹ Cancelar Missão
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+							Cancelar Missão
 						</button>
 					</div>
 
 					<!-- Feedback de comandos -->
-					<div x-show="cmdStatus" class="mt-4 text-sm font-mono p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] shadow-inner" x-bind:class="cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="cmdStatus"></div>
+					<div x-show="cmdStatus" class="mt-4 text-[13px] font-mono p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] shadow-inner flex items-center gap-3" x-bind:class="cmdIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'">
+						<svg x-show="!cmdIsErr" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+						<svg x-show="cmdIsErr" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+						<span x-text="cmdStatus"></span>
+					</div>
 				</div>
 			}
 
 			<!-- Perguntas Pendentes do Operador -->
 			<div x-show="questions.length > 0">
-				@card("Perguntas Pendentes do Operador") {
-					<div class="space-y-4 text-sm">
+				@card("Intervenção Necessária") {
+					<div class="space-y-5">
 						<template x-for="q in questions" x-bind:key="q.id">
-							<div class="p-5 rounded-2xl bg-[var(--warn)]/10 border border-[var(--warn)]/30 space-y-4 shadow-sm">
-								<div class="flex justify-between items-start gap-4">
-									<div class="font-bold text-[var(--text)] text-base" x-text="q.prompt"></div>
-									<span class="text-xs font-mono text-[var(--warn)] opacity-80 px-2 py-1 bg-[var(--warn)]/10 rounded-md" x-text="q.id"></span>
-								</div>
-								<div class="flex gap-3 items-center" x-data="{ ansText: '' }">
-									<input
-										type="text"
-										class="flex-1 px-4 py-2 text-sm rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] shadow-inner"
-										placeholder="Digite sua resposta..."
-										x-model="ansText"
-										x-on:keydown.enter="submitAnswer(q, ansText)"
-									/>
-									<button
-										type="button"
-										class="px-5 py-2 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30"
-										x-on:click="submitAnswer(q, ansText)"
-									>
-										Responder
-									</button>
+							<div class="p-6 rounded-[20px] bg-[var(--warn)]/5 border border-[var(--warn)]/30 shadow-sm relative overflow-hidden">
+								<div class="absolute top-0 left-0 w-1 h-full bg-[var(--warn)]"></div>
+								<div class="flex flex-col gap-5 pl-2">
+									<div class="flex justify-between items-start gap-4">
+										<div class="font-bold text-[var(--text)] text-[16px] leading-relaxed" x-text="q.prompt"></div>
+										<span class="text-[11px] font-mono text-[var(--warn)] px-3 py-1 bg-[var(--warn)]/10 rounded-full font-bold tracking-wider uppercase border border-[var(--warn)]/20" x-text="q.id"></span>
+									</div>
+									<div class="flex gap-4 items-center w-full" x-data="{ ansText: '' }">
+										<input
+											type="text"
+											class="flex-1 px-5 py-3.5 text-[15px] rounded-xl bg-[var(--bg)] border border-[var(--warn)]/30 text-[var(--text)] focus:border-[var(--warn)] focus:ring-1 focus:ring-[var(--warn)]/50 transition-all shadow-inner"
+											placeholder="Digite sua resposta de intervenção..."
+											x-model="ansText"
+											x-on:keydown.enter="submitAnswer(q, ansText)"
+										/>
+										<button
+											type="button"
+											class="px-6 py-3.5 rounded-xl bg-[var(--warn)] text-black font-bold text-[14px] hover:bg-yellow-400 transition-all cursor-pointer shadow-lg shadow-[var(--warn)]/20 flex-shrink-0"
+											x-on:click="submitAnswer(q, ansText)"
+										>
+											Enviar Resposta
+										</button>
+									</div>
 								</div>
 							</div>
 						</template>
@@ -122,45 +151,65 @@ templ Overview() {
 
 			<!-- Saúde do runtime e alertas -->
 			<div class="grid gap-6 md:grid-cols-2">
-				@card("Saúde do Runtime") {
-					<div class="space-y-1 text-sm">
-						<div class="flex justify-between items-center py-2.5 border-b border-[var(--border)]">
-							<span class="text-[var(--muted)] font-medium">Status de Saúde</span>
-							<span class="font-bold font-mono" x-bind:class="health.status === 'OK' ? 'text-[var(--ok)]' : 'text-[var(--warn)]'" x-text="health.status ?? '—'"></span>
+				@card("Diagnóstico do Engine") {
+					<div class="space-y-0">
+						<div class="flex justify-between items-center py-4 border-b border-[var(--border)]">
+							<span class="text-[14px] text-[var(--muted)] font-medium flex items-center gap-2">
+								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+								Status de Saúde
+							</span>
+							<span class="font-bold text-[14px]" x-bind:class="health.status === 'OK' ? 'text-[var(--ok)]' : 'text-[var(--warn)]'" x-text="health.status ?? '—'"></span>
 						</div>
-						<div class="flex justify-between items-center py-2.5 border-b border-[var(--border)]">
-							<span class="text-[var(--muted)] font-medium">Versão do Engine</span>
-							<span class="font-mono text-[var(--text)] font-semibold" x-text="(ov.runtime && ov.runtime.version) ?? '—'"></span>
+						<div class="flex justify-between items-center py-4 border-b border-[var(--border)]">
+							<span class="text-[14px] text-[var(--muted)] font-medium flex items-center gap-2">
+								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+								Versão do Binário
+							</span>
+							<span class="font-mono text-[var(--text)] font-semibold text-[13px] px-2 py-1 bg-[var(--bg)] rounded-md border border-[var(--border)]" x-text="(ov.runtime && ov.runtime.version) ?? '—'"></span>
 						</div>
-						<div class="flex justify-between items-center py-2.5 border-b border-[var(--border)]">
-							<span class="text-[var(--muted)] font-medium">Modo do Processo</span>
-							<span class="font-mono text-[var(--text)] font-semibold" x-text="ov.process_mode ?? '—'"></span>
+						<div class="flex justify-between items-center py-4 border-b border-[var(--border)]">
+							<span class="text-[14px] text-[var(--muted)] font-medium flex items-center gap-2">
+								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+								Modo do Processo
+							</span>
+							<span class="font-mono text-[var(--text)] font-semibold text-[13px]" x-text="ov.process_mode ?? '—'"></span>
 						</div>
-						<div class="flex justify-between items-center py-2.5 border-b border-[var(--border)]">
-							<span class="text-[var(--muted)] font-medium">Revisão de Controle</span>
-							<span class="font-mono text-[var(--accent)] font-bold" x-text="fmt(ov.control_revision)"></span>
-						</div>
-						<div class="flex justify-between items-center py-2.5">
-							<span class="text-[var(--muted)] font-medium">ID da Missão</span>
-							<span class="font-mono text-[var(--text)] font-semibold" x-text="(ov.mission && ov.mission.mission_id) ?? 'nenhuma'"></span>
+						<div class="flex justify-between items-center py-4">
+							<span class="text-[14px] text-[var(--muted)] font-medium flex items-center gap-2">
+								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+								Revisão de Configuração
+							</span>
+							<span class="font-mono text-[var(--text)] font-bold text-[13px]" x-text="fmt(ov.control_revision)"></span>
 						</div>
 					</div>
 				}
 				@card("Alertas Ativos") {
 					<template x-if="alerts.length === 0">
-						<div class="p-6 text-center text-sm text-[var(--muted)] font-medium">
-							Nenhum alerta crítico ou aviso no sistema.
+						<div class="h-full min-h-[200px] flex flex-col items-center justify-center text-center">
+							<div class="w-12 h-12 rounded-full bg-[var(--ok)]/10 flex items-center justify-center mb-4 border border-[var(--ok)]/20">
+								<svg class="w-6 h-6 text-[var(--ok)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+							</div>
+							<div class="text-[14px] text-[var(--text)] font-bold">Tudo operando normalmente</div>
+							<div class="text-[13px] text-[var(--muted)] mt-1">Nenhum alerta crítico no sistema.</div>
 						</div>
 					</template>
-					<ul class="space-y-3 text-sm" x-show="alerts.length > 0">
-						<template x-for="a in alerts.slice(0, 8)" x-bind:key="a.id ?? a.message">
-							<li class="flex gap-3 items-start p-2 rounded-lg hover:bg-[var(--bg)] transition-colors">
-								@templ.Raw(`<span class="mt-1.5 w-2 h-2 shrink-0 rounded-full"
+					<ul class="space-y-3" x-show="alerts.length > 0">
+						<template x-for="a in alerts.slice(0, 5)" x-bind:key="a.id ?? a.message">
+							<li class="flex gap-4 items-start p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)]">
+								@templ.Raw(`<div class="mt-0.5 shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
 									x-bind:class="({
-										critical:'bg-[var(--err)] shadow-[0_0_6px_var(--err)]', warning:'bg-[var(--warn)] shadow-[0_0_6px_var(--warn)]',
-										info:'bg-[var(--accent)]'
-									})[a.severity] ?? 'bg-[var(--muted)]'"></span>`)
-								<span class="text-sm font-medium" x-text="a.message ?? JSON.stringify(a)"></span>
+										critical:'bg-[var(--err)]/10 text-[var(--err)]', 
+										warning:'bg-[var(--warn)]/10 text-[var(--warn)]',
+										info:'bg-[var(--info)]/10 text-[var(--info)]'
+									})[a.severity] ?? 'bg-[var(--panel-sub)] text-[var(--muted)]'">
+									<svg x-show="a.severity === 'critical'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+									<svg x-show="a.severity === 'warning'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+									<svg x-show="a.severity !== 'critical' && a.severity !== 'warning'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+								</div>`)
+								<div class="flex flex-col pt-1">
+									<span class="text-[14px] font-semibold text-[var(--text)] leading-snug" x-text="a.message ?? JSON.stringify(a)"></span>
+									<span class="text-[12px] text-[var(--muted)] mt-1" x-show="a.timestamp" x-text="a.timestamp"></span>
+								</div>
 							</li>
 						</template>
 					</ul>
@@ -168,38 +217,52 @@ templ Overview() {
 			</div>
 
 			<!-- Feed de eventos ao vivo (SSE) -->
-			@card("Eventos Recentes do Log (SSE)") {
-				<div class="flex items-center gap-3 mb-4 text-sm border-b border-[var(--border)] pb-4">
-					<span
-						class="inline-flex items-center gap-2 font-bold px-3 py-1 rounded-lg text-xs tracking-wide shadow-sm"
-						x-bind:class="sseOn ? 'bg-[var(--ok)]/10 text-[var(--ok)] border border-[var(--ok)]/20' : 'bg-[var(--bg)] text-[var(--muted)] border border-[var(--border)]'"
-					>
+			@card("Log de Eventos (SSE)") {
+				<div class="flex items-center justify-between mb-6">
+					<div class="flex items-center gap-3">
 						<span
-							class="w-2 h-2 rounded-full"
-							x-bind:class="sseOn ? 'bg-[var(--ok)] shadow-[0_0_6px_var(--ok)]' : 'bg-[var(--muted)]'"
-						></span>
-						<span x-text="sseOn ? 'Stream SSE Conectada' : 'Stream SSE Desconectada'"></span>
-					</span>
-					<span class="text-[var(--muted)] ml-auto font-mono text-xs font-bold" x-text="events.length + ' eventos recebidos'"></span>
-				</div>
-				<div class="font-mono text-xs space-y-2 max-h-96 overflow-y-auto pr-2">
-					<template x-if="events.length === 0">
-						<p class="text-[var(--muted)] py-6 text-center font-medium text-sm">Aguardando novos eventos do kernel...</p>
-					</template>
-					<template x-for="e in events" x-bind:key="e.seq ?? Math.random()">
-						<div class="flex gap-3 items-start py-2.5 px-3 rounded-xl hover:bg-[var(--bg)] transition-colors border border-transparent hover:border-[var(--border)]">
-							<span class="text-[var(--subtle)] shrink-0 text-[11px] mt-0.5 w-12 text-right" x-text="'#' + (e.sequence ?? '?')"></span>
+							class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full text-[12px] font-bold tracking-wide border transition-colors"
+							x-bind:class="sseOn ? 'bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20' : 'bg-[var(--bg)] text-[var(--muted)] border-[var(--border)]'"
+						>
 							<span
-								class="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
-								x-bind:class="({
-									error: 'bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/20',
-									warning: 'bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/20'
-								})[e.type] ?? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'"
-								x-text="e.type"
+								class="w-2 h-2 rounded-full"
+								x-bind:class="sseOn ? 'bg-[var(--ok)] shadow-[0_0_6px_var(--ok)] animate-pulse' : 'bg-[var(--muted)]'"
 							></span>
-							<span class="truncate text-[var(--text)] mt-0.5" x-text="e.summary ?? JSON.stringify(e).slice(0, 120)"></span>
-						</div>
-					</template>
+							<span x-text="sseOn ? 'Stream Conectada' : 'Stream Desconectada'"></span>
+						</span>
+					</div>
+					<div class="text-[12px] font-mono text-[var(--muted)] bg-[var(--bg)] px-3 py-1.5 rounded-lg border border-[var(--border)]">
+						<strong class="text-[var(--text)]" x-text="events.length"></strong> eventos recebidos
+					</div>
+				</div>
+				
+				<div class="bg-[var(--bg)] border border-[var(--border)] rounded-2xl p-2 relative overflow-hidden">
+					<div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-[var(--bg)] to-transparent z-10 pointer-events-none"></div>
+					<div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[var(--bg)] to-transparent z-10 pointer-events-none"></div>
+					
+					<div class="font-mono text-[13px] space-y-1.5 max-h-[400px] overflow-y-auto px-2 py-4">
+						<template x-if="events.length === 0">
+							<div class="flex flex-col items-center justify-center py-12 text-center text-[var(--muted)]">
+								<svg class="w-8 h-8 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+								<p>Aguardando eventos do motor...</p>
+							</div>
+						</template>
+						<template x-for="e in events" x-bind:key="e.seq ?? Math.random()">
+							<div class="flex gap-4 items-start py-2.5 px-4 rounded-xl hover:bg-[var(--panel-sub)] transition-colors border border-transparent">
+								<span class="text-[var(--subtle)] shrink-0 text-[11px] mt-0.5 w-14 text-right font-bold" x-text="'#' + (e.sequence ?? '?')"></span>
+								<span
+									class="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+									x-bind:class="({
+										error: 'bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/20',
+										warning: 'bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/20',
+										info: 'bg-[var(--info)]/10 text-[var(--info)] border border-[var(--info)]/20'
+									})[e.type] ?? 'bg-[var(--text)]/10 text-[var(--text)] border border-[var(--text)]/20'"
+									x-text="e.type"
+								></span>
+								<span class="text-[var(--text)] mt-0.5 leading-relaxed break-all" x-text="e.summary ?? JSON.stringify(e).slice(0, 120)"></span>
+							</div>
+						</template>
+					</div>
 				</div>
 			}
 		</div>

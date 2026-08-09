@@ -1,60 +1,68 @@
 package views
 
 templ Events() {
-	@layout("Eventos", "/dash/events", StandardNav("/dash/events")) {
+	@layout("Eventos do Sistema", "/dash/events", StandardNav("/dash/events")) {
 		<div x-data="eventsState()" x-init="start()" class="space-y-8">
-			<div class="flex flex-wrap items-center justify-between gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-4 shadow-sm">
-				<div class="flex items-center gap-4">
-					<span class="inline-flex items-center gap-3 font-bold">
-						<span
-							class="w-3 h-3 rounded-full"
-							x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
-						></span>
-						<span class="text-[var(--text)]" x-text="connected ? 'Conectado à API' : 'Sem conexão'"></span>
-					</span>
-					<span class="text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium" x-show="generatedAt">
-						atualizado <span x-text="generatedAgo"></span>
-					</span>
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-6 shadow-sm">
+				<div class="flex items-center gap-5">
+					<div class="relative flex h-3 w-3 items-center justify-center">
+						<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"></span>
+						<span class="relative inline-flex rounded-full h-3 w-3" x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"></span>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-[15px] font-bold text-[var(--text)]" x-text="connected ? 'Conectado à API de Eventos' : 'Sem conexão'"></span>
+						<span class="text-[13px] text-[var(--muted)]" x-show="generatedAt">Último sync há <span x-text="generatedAgo"></span></span>
+					</div>
 				</div>
-				<div class="flex items-center gap-3">
-					<button
-						class="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold text-sm shadow-sm cursor-pointer"
-						x-on:click="refresh()"
-					>↻ Atualizar</button>
-				</div>
+				<button
+					class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-semibold text-[13px] shadow-sm flex items-center gap-2 cursor-pointer"
+					x-on:click="refresh()"
+				>
+					<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+					Atualizar
+				</button>
 			</div>
 
 			<div class="grid gap-6 grid-cols-1 sm:grid-cols-2">
-				@StatCardAlpine("Eventos no Buffer", "fmt(events.length)", "histórico recente em memória", "text-[var(--text)]")
-				@StatCardAlpine("Head Atual", "fmt(events.length > 0 ? events[0].sequence : 0)", "maior sequência observada", "text-[var(--accent)]")
+				@StatCardAlpine("Eventos no Buffer", "fmt(events.length)", "histórico mantido em memória", "text-[var(--text)]")
+				@StatCardAlpine("Head Atual", "fmt(events.length > 0 ? events[0].sequence : 0)", "maior número de sequência", "text-[var(--info)]")
 			</div>
 
-			@card("Log de Eventos (SSE Histórico + Live)") {
-				<div class="font-mono text-xs space-y-2.5 max-h-[40rem] overflow-y-auto pr-3">
-					<template x-if="events.length === 0">
-						@EmptyState("Aguardando eventos do sistema...")
-					</template>
-					<template x-for="e in events" x-bind:key="e.sequence ?? Math.random()">
-						<div class="flex flex-col gap-1 p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] hover:border-[var(--border-focus)]/50 transition-colors shadow-sm cursor-pointer" x-on:click="window.location.href='/dash/events/' + e.sequence">
-							<div class="flex gap-4 items-center">
-								<span class="text-[var(--subtle)] shrink-0 text-xs w-16 text-right font-bold" x-text="'#' + (e.sequence ?? '?')"></span>
-								<span
-									class="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
-									x-bind:class="({
-										error: 'bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/20',
-										warning: 'bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/20',
-										info: 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
-									})[e.kind] ?? 'bg-[var(--panel-sub)] text-[var(--muted)] border border-[var(--border)]'"
-									x-text="e.kind"
-								></span>
-								<span class="truncate text-[var(--text)] font-semibold" x-text="e.summary ?? e.kind"></span>
+			@card("Log de Eventos (Histórico + SSE Live)") {
+				<div class="bg-[var(--bg)] border border-[var(--border)] rounded-2xl relative overflow-hidden">
+					<div class="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-[var(--bg)] to-transparent z-10 pointer-events-none"></div>
+					<div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[var(--bg)] to-transparent z-10 pointer-events-none"></div>
+					
+					<div class="font-mono text-[13px] space-y-2 max-h-[600px] overflow-y-auto px-3 py-5">
+						<template x-if="events.length === 0">
+							<div class="flex flex-col items-center justify-center py-16 text-center text-[var(--muted)]">
+								<svg class="w-8 h-8 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+								<p class="text-[14px]">Aguardando eventos do sistema...</p>
 							</div>
-							<div class="flex gap-4">
-								<div class="w-16 shrink-0"></div>
-								<div class="text-[11px] text-[var(--muted)] opacity-70 truncate" x-show="e.details" x-text="JSON.stringify(e.details).substring(0, 150)"></div>
+						</template>
+						<template x-for="e in events" x-bind:key="e.sequence ?? Math.random()">
+							<div class="flex flex-col gap-2 p-4 rounded-[16px] bg-[var(--panel-sub)]/30 border border-transparent hover:border-[var(--border-focus)]/50 transition-colors cursor-pointer group" x-on:click="window.location.href='/dash/events/' + e.sequence">
+								<div class="flex flex-col md:flex-row md:items-center gap-4">
+									<div class="flex items-center gap-3 md:w-48 shrink-0">
+										<span class="text-[var(--subtle)] text-[12px] w-14 text-right font-bold" x-text="'#' + (e.sequence ?? '?')"></span>
+										<span
+											class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
+											x-bind:class="({
+												error: 'bg-[var(--err)]/10 text-[var(--err)] border border-[var(--err)]/20',
+												warning: 'bg-[var(--warn)]/10 text-[var(--warn)] border border-[var(--warn)]/20',
+												info: 'bg-[var(--info)]/10 text-[var(--info)] border border-[var(--info)]/20'
+											})[e.kind] ?? 'bg-[var(--panel)] text-[var(--muted)] border border-[var(--border)]'"
+											x-text="e.kind"
+										></span>
+									</div>
+									<span class="truncate text-[var(--text)] font-semibold group-hover:text-white transition-colors" x-text="e.summary ?? e.kind"></span>
+								</div>
+								<div class="flex gap-4 pl-[76px]" x-show="e.details">
+									<div class="text-[12px] text-[var(--muted)] opacity-70 truncate max-w-full bg-black/20 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)]" x-text="JSON.stringify(e.details).substring(0, 200)"></div>
+								</div>
 							</div>
-						</div>
-					</template>
+						</template>
+					</div>
 				</div>
 			}
 		</div>

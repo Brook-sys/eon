@@ -4,217 +4,271 @@ templ Models() {
 	@layout("Modelos & LLMs", "/dash/models", StandardNav("/dash/models")) {
 		<div x-data="modelsState()" x-init="start()" class="space-y-8">
 			<!-- Barra de Conexão e Ações -->
-			<div class="flex flex-wrap items-center gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-4 shadow-sm">
-				<span class="inline-flex items-center gap-3 font-bold">
-					<span
-						class="w-3 h-3 rounded-full"
-						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
-					></span>
-					<span class="text-[var(--text)]" x-text="connected ? 'Inspect & Control API acessíveis' : 'Sem resposta das APIs'"></span>
-				</span>
-				<span class="text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium" x-show="observedAt">atualizado <span x-text="observedAgo"></span></span>
-				<div class="ml-auto flex flex-wrap gap-3">
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-6 shadow-sm">
+				<div class="flex items-center gap-5">
+					<div class="relative flex h-3 w-3 items-center justify-center">
+						<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"></span>
+						<span class="relative inline-flex rounded-full h-3 w-3" x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"></span>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-[15px] font-bold text-[var(--text)]" x-text="connected ? 'Inspect & Control API acessíveis' : 'Sem resposta das APIs'"></span>
+						<span class="text-[13px] text-[var(--muted)]" x-show="observedAt">Último sync há <span x-text="observedAgo"></span></span>
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-3">
 					<button
 						type="button"
-						class="px-4 py-2 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30"
+						class="px-5 py-2.5 rounded-xl bg-white text-black font-semibold text-[13px] flex items-center gap-2 hover:bg-[var(--accent-hover)] transition-all cursor-pointer shadow-sm"
 						x-on:click="openAddProviderModal()"
 					>
-						+ Provedor
+						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+						Novo Provedor
 					</button>
 					<button
 						type="button"
-						class="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold text-sm cursor-pointer shadow-sm"
+						class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-semibold text-[13px] flex items-center gap-2 cursor-pointer shadow-sm"
 						x-on:click="openAddBindingModal()"
 					>
-						+ Binding
+						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+						Novo Binding
 					</button>
 					<button
 						type="button"
-						class="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold text-sm shadow-sm cursor-pointer"
+						class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-semibold text-[13px] flex items-center gap-2 shadow-sm cursor-pointer"
 						x-on:click="refresh()"
-					>↻ Atualizar</button>
+					>
+						<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+						Atualizar
+					</button>
 				</div>
 			</div>
 
 			<!-- Status do Cofre de Credenciais -->
-			<div class="p-5 rounded-2xl bg-[var(--panel)] border border-[var(--border)] flex flex-wrap items-center justify-between text-sm gap-4 shadow-sm hover:border-[var(--border-focus)]/50 transition-all">
+			<div class="p-6 rounded-[20px] bg-[var(--panel)] border border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-sm hover:border-[var(--border-focus)] transition-all">
 				<div class="flex items-center gap-4">
-					<span class="font-bold text-[var(--text)]">Cofre de Credenciais Local:</span>
-					<span class="font-mono px-3 py-1 rounded-md bg-[var(--bg)] border border-[var(--border)] text-[var(--muted)] font-bold text-xs shadow-inner" x-text="vaultState"></span>
+					<div class="w-10 h-10 rounded-full bg-[var(--info)]/10 flex items-center justify-center border border-[var(--info)]/20">
+						<svg class="w-5 h-5 text-[var(--info)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+					</div>
+					<div>
+						<div class="font-bold text-[15px] text-[var(--text)]">Cofre de Credenciais Local</div>
+						<div class="text-[13px] text-[var(--muted)] font-mono mt-0.5 flex items-center gap-2">
+							Status: <span class="text-[var(--text)] font-semibold" x-text="vaultState"></span>
+						</div>
+					</div>
 				</div>
 				<div class="flex items-center gap-3" x-data="{ vPass: '' }">
-					<input type="password" placeholder="Senha mestra (mín. 12 chars)..." x-model="vPass" class="px-4 py-2 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-64 shadow-inner" @keyup.enter="unlockVault(vPass)"/>
-					<button type="button" class="px-4 py-2 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 font-bold transition-all cursor-pointer shadow-sm" x-on:click="unlockVault(vPass)">Desbloquear</button>
+					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-5 py-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-full md:w-64 shadow-inner" @keyup.enter="unlockVault(vPass)"/>
+					<button type="button" class="px-6 py-3 rounded-xl bg-[var(--info)] text-white hover:bg-blue-600 font-semibold text-[13px] transition-all cursor-pointer shadow-sm flex-shrink-0" x-on:click="unlockVault(vPass)">Desbloquear</button>
 				</div>
 			</div>
 
-			<!-- Form / Modal para Adicionar ou Editar Provedor LLM (SEM EXIGIR MODELO FIXO) -->
-			<div x-show="showProviderForm" class="p-6 lg:p-8 rounded-3xl bg-[var(--panel)] border-2 border-[var(--accent)]/40 space-y-6 shadow-2xl relative" style="display:none;">
-				<div class="flex justify-between items-center pb-4 border-b border-[var(--border)]">
-					<h3 class="font-bold text-lg text-[var(--text)] flex items-center gap-3">
-						<div class="w-2 h-6 bg-[var(--accent)] rounded-full"></div>
-						<span x-text="providerFormIsEdit ? 'Editar Provedor LLM: ' + providerForm.id : 'Adicionar Novo Provedor LLM'"></span>
-					</h3>
-					<button type="button" class="text-sm font-bold text-[var(--muted)] hover:text-[var(--text)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg)] transition-all cursor-pointer" x-on:click="showProviderForm = false">✕ Fechar</button>
-				</div>
-				<form x-on:submit.prevent="submitProviderForm()" class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-sm">
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">ID do Provedor (Slug)</label>
-						<input type="text" x-model="providerForm.id" x-bind:readonly="providerFormIsEdit" required class="w-full" placeholder="ex: groq, nvidia-nim, ollama"/>
+			<!-- Form / Modal para Adicionar ou Editar Provedor LLM -->
+			<div x-show="showProviderForm" x-transition.opacity.duration.300ms class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style="display:none;">
+				<div class="w-full max-w-2xl bg-[var(--bg)] border border-[var(--border-focus)]/50 rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+					<div class="flex justify-between items-center p-6 border-b border-[var(--border)] bg-[var(--panel)]">
+						<h3 class="font-bold text-lg text-[var(--text)] flex items-center gap-3">
+							<div class="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_white]"></div>
+							<span x-text="providerFormIsEdit ? 'Editar Provedor: ' + providerForm.id : 'Novo Provedor LLM'"></span>
+						</h3>
+						<button type="button" class="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-sub)] transition-all cursor-pointer" x-on:click="showProviderForm = false">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+						</button>
 					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Tipo de Provedor</label>
-						<select x-model="providerForm.kind" class="w-full">
-							<option value="openai_compatible">OpenAI Compatible (Groq / NIM / Ollama)</option>
-						</select>
+					<div class="p-6 overflow-y-auto">
+						<form id="providerForm" x-on:submit.prevent="submitProviderForm()" class="grid gap-6 grid-cols-1 md:grid-cols-2 text-[14px]">
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">ID do Provedor (Slug)</label>
+								<input type="text" x-model="providerForm.id" x-bind:readonly="providerFormIsEdit" required class="w-full font-mono" placeholder="ex: groq, nvidia-nim, ollama" x-bind:class="providerFormIsEdit ? 'opacity-50 cursor-not-allowed' : ''"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Tipo de Provedor</label>
+								<select x-model="providerForm.kind" class="w-full">
+									<option value="openai_compatible">OpenAI Compatible</option>
+								</select>
+							</div>
+							<div class="col-span-1 md:col-span-2 space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Base URL do Endpoint</label>
+								<input type="url" x-model="providerForm.base_url" required class="w-full font-mono text-[13px]" placeholder="https://api.groq.com/openai/v1"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Env Var da API Key</label>
+								<input type="text" x-model="providerForm.api_key_env" required class="w-full font-mono text-[13px]" placeholder="GROQ_API_KEY"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Concorrência Máx.</label>
+								<input type="number" x-model.number="providerForm.max_concurrent" required min="1" max="100" class="w-full font-mono"/>
+							</div>
+							<div class="col-span-1 md:col-span-2 space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider flex justify-between">
+									<span>API Secret (Cofre Local)</span>
+									<span class="text-[10px] text-[var(--info)] normal-case">Opcional</span>
+								</label>
+								<input type="password" x-model="providerForm.secret_value" class="w-full font-mono text-[13px]" placeholder="Preencha para salvar/atualizar no Vault seguro"/>
+							</div>
+						</form>
+						<div x-show="formMsg" class="mt-4 p-4 rounded-xl font-mono text-[13px] border" x-bind:class="formIsErr ? 'bg-[var(--err)]/10 text-[var(--err)] border-[var(--err)]/20' : 'bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20'" x-text="formMsg"></div>
 					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Base URL do Endpoint</label>
-						<input type="url" x-model="providerForm.base_url" required class="w-full font-mono text-xs" placeholder="https://api.groq.com/openai/v1"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Env Var da API Key</label>
-						<input type="text" x-model="providerForm.api_key_env" required class="w-full font-mono text-xs" placeholder="GROQ_API_KEY"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Concorrência Máx.</label>
-						<input type="number" x-model.number="providerForm.max_concurrent" required min="1" max="100" class="w-full font-mono"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">API Secret / Chave (Cofre Local)</label>
-						<input type="password" x-model="providerForm.secret_value" class="w-full font-mono text-xs" placeholder="Opcional: salva diretamente no Vault"/>
-					</div>
-					<div class="md:col-span-3 flex items-center gap-4 pt-4 border-t border-[var(--border)] mt-2">
-						<button type="submit" class="px-6 py-2.5 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30" x-bind:disabled="formSubmitting">
+					<div class="p-6 border-t border-[var(--border)] bg-[var(--panel)] flex justify-end gap-3">
+						<button type="button" class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] font-semibold text-[14px] transition-all cursor-pointer" x-on:click="showProviderForm = false">Cancelar</button>
+						<button type="submit" form="providerForm" class="px-6 py-2.5 rounded-xl bg-white text-black font-semibold text-[14px] hover:bg-[var(--accent-hover)] transition-all cursor-pointer flex items-center gap-2" x-bind:disabled="formSubmitting">
+							<span x-show="formSubmitting" class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
 							<span x-text="providerFormIsEdit ? 'Salvar Alterações' : 'Cadastrar Provedor'"></span>
 						</button>
-						<button type="button" class="px-5 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--panel-hover)] font-bold transition-all cursor-pointer shadow-sm" x-on:click="showProviderForm = false">Cancelar</button>
-						<span x-show="formMsg" class="text-sm font-mono font-bold px-4 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)]" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
 					</div>
-				</form>
+				</div>
 			</div>
 
 			<!-- Form / Modal para Adicionar Preferência de Modelo (Binding Opcional) -->
-			<div x-show="showBindingForm" class="p-6 lg:p-8 rounded-3xl bg-[var(--panel)] border-2 border-[var(--accent)]/40 space-y-6 shadow-2xl relative" style="display:none;">
-				<div class="flex justify-between items-center pb-4 border-b border-[var(--border)]">
-					<h3 class="font-bold text-lg text-[var(--text)] flex items-center gap-3">
-						<div class="w-2 h-6 bg-[var(--accent)] rounded-full"></div>
-						Adicionar Preferência de Modelo (Binding)
-					</h3>
-					<button type="button" class="text-sm font-bold text-[var(--muted)] hover:text-[var(--text)] px-3 py-1.5 rounded-lg hover:bg-[var(--bg)] transition-all cursor-pointer" x-on:click="showBindingForm = false">✕ Fechar</button>
-				</div>
-				<form x-on:submit.prevent="submitBindingForm()" class="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 text-sm">
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Provedor de Origem</label>
-						<select x-model="bindingForm.provider_ref" required class="w-full">
-							<template x-for="p in (cfgPayload.providers || [])" x-bind:key="p.id">
-								<option x-bind:value="p.id" x-text="p.id + ' (' + p.base_url + ')'"></option>
-							</template>
-						</select>
+			<div x-show="showBindingForm" x-transition.opacity.duration.300ms class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style="display:none;">
+				<div class="w-full max-w-2xl bg-[var(--bg)] border border-[var(--border-focus)]/50 rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+					<div class="flex justify-between items-center p-6 border-b border-[var(--border)] bg-[var(--panel)]">
+						<h3 class="font-bold text-lg text-[var(--text)] flex items-center gap-3">
+							<div class="w-2 h-2 rounded-full bg-[var(--info)] shadow-[0_0_8px_var(--info)]"></div>
+							Nova Preferência de Modelo (Binding)
+						</h3>
+						<button type="button" class="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-sub)] transition-all cursor-pointer" x-on:click="showBindingForm = false">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+						</button>
 					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">ID do Modelo</label>
-						<input type="text" x-model="bindingForm.model_id" required class="w-full font-mono text-xs" placeholder="ex: llama-3.3-70b-versatile"/>
+					<div class="p-6 overflow-y-auto">
+						<form id="bindingForm" x-on:submit.prevent="submitBindingForm()" class="grid gap-6 grid-cols-1 md:grid-cols-2 text-[14px]">
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Provedor de Origem</label>
+								<select x-model="bindingForm.provider_ref" required class="w-full">
+									<template x-for="p in (cfgPayload.providers || [])" x-bind:key="p.id">
+										<option x-bind:value="p.id" x-text="p.id"></option>
+									</template>
+								</select>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">ID do Modelo</label>
+								<input type="text" x-model="bindingForm.model_id" required class="w-full font-mono text-[13px]" placeholder="ex: llama-3.3-70b-versatile"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Janela Contexto (tokens)</label>
+								<input type="number" x-model.number="bindingForm.context_tokens" required min="1024" class="w-full font-mono"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Máx. Output Tokens</label>
+								<input type="number" x-model.number="bindingForm.max_output_tokens" required min="256" class="w-full font-mono"/>
+							</div>
+							<div class="col-span-1 md:col-span-2 space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Prioridade (menor = maior prio)</label>
+								<input type="number" x-model.number="bindingForm.priority" required min="1" max="100" class="w-full font-mono"/>
+							</div>
+						</form>
+						<div x-show="formMsg" class="mt-4 p-4 rounded-xl font-mono text-[13px] border" x-bind:class="formIsErr ? 'bg-[var(--err)]/10 text-[var(--err)] border-[var(--err)]/20' : 'bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20'" x-text="formMsg"></div>
 					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Janela de Contexto (tokens)</label>
-						<input type="number" x-model.number="bindingForm.context_tokens" required min="1024" class="w-full font-mono"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Máx. Output Tokens</label>
-						<input type="number" x-model.number="bindingForm.max_output_tokens" required min="256" class="w-full font-mono"/>
-					</div>
-					<div>
-						<label class="block text-[var(--muted)] font-bold mb-1.5 text-xs tracking-wide">Prioridade do Binding</label>
-						<input type="number" x-model.number="bindingForm.priority" required min="1" max="100" class="w-full font-mono"/>
-					</div>
-					<div class="md:col-span-3 flex items-center gap-4 pt-4 border-t border-[var(--border)] mt-2">
-						<button type="submit" class="px-6 py-2.5 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm hover:opacity-90 transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30" x-bind:disabled="formSubmitting">
+					<div class="p-6 border-t border-[var(--border)] bg-[var(--panel)] flex justify-end gap-3">
+						<button type="button" class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] font-semibold text-[14px] transition-all cursor-pointer" x-on:click="showBindingForm = false">Cancelar</button>
+						<button type="submit" form="bindingForm" class="px-6 py-2.5 rounded-xl bg-white text-black font-semibold text-[14px] hover:bg-[var(--accent-hover)] transition-all cursor-pointer flex items-center gap-2" x-bind:disabled="formSubmitting">
+							<span x-show="formSubmitting" class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
 							Salvar Preferência
 						</button>
-						<button type="button" class="px-5 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--panel-hover)] font-bold transition-all cursor-pointer shadow-sm" x-on:click="showBindingForm = false">Cancelar</button>
-						<span x-show="formMsg" class="text-sm font-mono font-bold px-4 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)]" x-bind:class="formIsErr ? 'text-[var(--err)]' : 'text-[var(--ok)]'" x-text="formMsg"></span>
 					</div>
-				</form>
+				</div>
 			</div>
 
 			<!-- Gestão de Provedores LLM Configurados -->
-			@card("Provedores LLM Registrados") {
+			@card("Provedores LLM Configurados") {
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
 					@EmptyState("Nenhum provedor configurado no catálogo ativo.")
 				</template>
-				<div class="grid gap-4 grid-cols-1 xl:grid-cols-2" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+				<div class="grid gap-6 grid-cols-1 xl:grid-cols-2" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
 					<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
-						<div class="p-5 rounded-2xl bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)]/30 transition-all space-y-4">
-							<div class="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-4">
-								<div>
-									<div class="font-bold text-lg text-[var(--text)] font-mono" x-text="p.id"></div>
-									<div class="text-xs text-[var(--subtle)] font-mono mt-1" x-text="p.kind + ' · ' + p.base_url"></div>
+						<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)] transition-all flex flex-col gap-5">
+							<div class="flex flex-wrap items-start justify-between gap-4">
+								<div class="flex items-center gap-4">
+									<div class="w-12 h-12 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex items-center justify-center font-bold text-lg text-[var(--text)] uppercase" x-text="p.id.substring(0,2)"></div>
+									<div>
+										<div class="font-bold text-[18px] text-[var(--text)] font-mono tracking-tight" x-text="p.id"></div>
+										<div class="text-[12px] text-[var(--subtle)] font-mono mt-0.5" x-text="p.kind"></div>
+									</div>
 								</div>
 								<div class="flex items-center gap-2">
 									<button
 										type="button"
-										class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--bg)] border border-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm"
+										class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--panel)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
 										x-on:click="editProvider(p.id)"
 									>
-										✏ Editar
+										<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+										Editar
 									</button>
 									<button
 										type="button"
-										class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--err)]/10 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 transition-all cursor-pointer shadow-sm"
+										class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--err)]/5 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
 										x-on:click="removeProvider(p.id)"
 									>
-										🗑 Remover
+										<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+										Remover
 									</button>
 								</div>
 							</div>
-							<div class="flex items-center gap-4">
-								<button
-									type="button"
-									class="px-4 py-2 rounded-xl text-xs font-bold text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-all cursor-pointer shadow-sm w-full text-center"
-									x-on:click="discoverModelsForProvider(p.id)"
-								>
-									🔍 Descobrir Modelos via API
-								</button>
+							
+							<div class="px-4 py-3 bg-[var(--panel)] rounded-xl border border-[var(--border)] text-[12px] font-mono text-[var(--muted)] truncate" x-text="p.base_url"></div>
+							
+							<div class="grid grid-cols-3 gap-3 border-t border-[var(--border)] pt-5">
+								<div class="flex flex-col gap-1">
+									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Env Key</span>
+									<span class="text-[13px] font-mono text-[var(--text)] bg-[var(--panel)] px-2 py-1 rounded inline-block truncate" x-text="p.api_key_env || 'N/A'"></span>
+								</div>
+								<div class="flex flex-col gap-1">
+									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Concorrência</span>
+									<span class="text-[16px] font-bold text-[var(--text)] mt-1" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></span>
+								</div>
+								<div class="flex flex-col gap-1">
+									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Bindings</span>
+									<span class="text-[16px] font-bold text-white mt-1" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></span>
+								</div>
 							</div>
-							<div class="grid gap-3 grid-cols-3 text-xs font-mono text-[var(--muted)] bg-[var(--panel)] p-3 rounded-xl border border-[var(--border)] shadow-inner">
-								<div>API Key Env:<br/><strong class="text-[var(--text)] text-[10px] bg-[var(--bg)] px-1 py-0.5 rounded mt-1 inline-block" x-text="p.api_key_env || 'N/A'"></strong></div>
-								<div>Concorrência:<br/><strong class="text-[var(--text)] text-[13px] inline-block mt-0.5" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></strong></div>
-								<div>Bindings:<br/><strong class="text-[var(--accent)] text-[13px] inline-block mt-0.5" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></strong></div>
-							</div>
+							
+							<button
+								type="button"
+								class="mt-1 w-full px-4 py-3 rounded-xl text-[13px] font-semibold text-[var(--text)] bg-[var(--panel-sub)] border border-[var(--border)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+								x-on:click="discoverModelsForProvider(p.id)"
+							>
+								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+								Descobrir Modelos via API
+							</button>
 						</div>
 					</template>
 				</div>
 			}
 
 			<!-- Modelos Descobertos Dinamicamente via API OpenAI -->
-			@card("Modelos Descobertos Dinamicamente via API OpenAI") {
-				<div class="space-y-4">
-					<div class="flex flex-wrap items-center justify-between text-sm gap-4 bg-[var(--bg)] p-4 rounded-xl border border-[var(--border)] shadow-sm">
-						<span class="text-[var(--text)] font-medium" x-text="discoveredModelsNote || 'Modelos obtidos dinamicamente da API OpenAI do provedor ativo.'"></span>
+			@card("Modelos Disponíveis (Descoberta Dinâmica)") {
+				<div class="space-y-5">
+					<div class="flex flex-col md:flex-row md:items-center justify-between text-sm gap-4 bg-[var(--panel)] p-5 rounded-[20px] border border-[var(--border)] shadow-sm">
+						<div class="flex items-center gap-3 text-[var(--text)]">
+							<svg class="w-5 h-5 text-[var(--info)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+							<span class="font-medium" x-text="discoveredModelsNote || 'Buscando lista atualizada de modelos no provedor ativo...'"></span>
+						</div>
 						<button
 							type="button"
-							class="px-4 py-2 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm transition-all cursor-pointer shadow-[0_0_12px_var(--accent)]/30 hover:opacity-90 shrink-0"
+							class="px-5 py-2.5 rounded-xl bg-white text-black font-semibold text-[13px] transition-all cursor-pointer shadow-sm hover:bg-[var(--accent-hover)] shrink-0 flex items-center justify-center gap-2"
 							x-on:click="discoverModels()"
 						>
-							🔄 Buscar Modelos
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+							Sincronizar Lista
 						</button>
 					</div>
+					
 					<template x-if="discoveredModels.length === 0">
-						<div class="p-6 text-center text-sm text-[var(--muted)] font-medium bg-[var(--bg)]/50 rounded-xl border border-dashed border-[var(--border)]">
-							Nenhum modelo retornado pela API OpenAI até o momento (clique no botão para buscar).
-						</div>
+						@EmptyState("Nenhum modelo carregado ainda. Clique em Sincronizar para buscar na API.")
 					</template>
+					
 					<div class="flex flex-wrap gap-3 pt-2" x-show="discoveredModels.length > 0">
 						<template x-for="m in discoveredModels" x-bind:key="m">
-							<div class="inline-flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-sm font-mono shadow-sm hover:border-[var(--accent)]/40 transition-colors group">
-								<span class="font-bold text-[var(--text)] group-hover:text-[var(--accent)] transition-colors" x-text="m"></span>
+							<div class="inline-flex items-center justify-between gap-4 pl-4 pr-1.5 py-1.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono shadow-sm hover:border-[var(--border-focus)] transition-colors group">
+								<span class="font-bold text-[var(--text)] tracking-tight" x-text="m"></span>
 								<button
 									type="button"
-									class="text-[11px] font-bold text-[var(--muted)] bg-[var(--panel-sub)] hover:bg-[var(--accent)] hover:text-[#000] px-2 py-1 rounded-md transition-all cursor-pointer"
+									class="text-[12px] font-semibold text-[var(--text)] bg-[var(--panel-sub)] hover:bg-white hover:text-black px-3 py-1.5 rounded-lg transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center gap-1.5"
 									x-on:click="addBindingFromDiscovered(m)"
+									title="Adicionar às preferências"
 								>
-									+ Preferência
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+									Fixar
 								</button>
 							</div>
 						</template>
@@ -223,78 +277,79 @@ templ Models() {
 			}
 
 			<!-- Preferências de Modelo / Bindings Registradas (Opcional) -->
-			@card("Preferências de Modelo / Bindings (Opcional)") {
-				<p class="text-sm text-[var(--muted)] mb-4 font-medium" x-show="note" x-text="note"></p>
-				<div class="overflow-x-auto rounded-xl border border-[var(--border)] shadow-sm">
-					<table class="w-full text-left border-collapse text-sm bg-[var(--bg)]">
-						<thead>
-							<tr class="border-b border-[var(--border)] text-[var(--muted)] font-mono text-xs uppercase tracking-wider bg-[var(--panel)]">
-								<th class="py-3 px-4 font-bold">Slot / Role</th>
-								<th class="py-3 px-4 font-bold">Modelo</th>
-								<th class="py-3 px-4 font-bold">Provedor</th>
-								<th class="py-3 px-4 font-bold">Concorrência</th>
-								<th class="py-3 px-4 font-bold">Contexto</th>
-								<th class="py-3 px-4 font-bold">Max Output</th>
-								<th class="py-3 px-4 font-bold">Prioridade</th>
-								<th class="py-3 px-4 font-bold text-right">Ação</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y divide-[var(--border)] font-mono text-[13px]">
-							<template x-if="bindings.length === 0">
-								<tr><td colspan="8" class="py-8 text-center text-[var(--muted)] font-medium">Nenhuma preferência explícita de modelo cadastrada (o sistema usa descoberta dinâmica).</td></tr>
-							</template>
-							<template x-for="b in bindings" x-bind:key="b.slot ?? b.role ?? Math.random()">
-								<tr class="hover:bg-[var(--panel-hover)]/30 transition-colors">
-									<td class="py-3 px-4 font-bold text-[var(--text)]" x-text="b.slot ?? b.role ?? '–'"></td>
-									<td class="py-3 px-4 text-[var(--accent)] font-bold" x-text="b.model_id ?? b.model ?? '–'"></td>
-									<td class="py-3 px-4 text-[var(--muted)] font-medium" x-text="b.provider ?? '–'"></td>
-									<td class="py-3 px-4 text-[var(--text)] font-bold" x-text="b.max_concurrent ?? '–'"></td>
-									<td class="py-3 px-4 text-[var(--muted)]" x-text="b.context_tokens ? (b.context_tokens + ' tks') : '–'"></td>
-									<td class="py-3 px-4 text-[var(--muted)]" x-text="b.max_output_tokens ? (b.max_output_tokens + ' tks') : '–'"></td>
-									<td class="py-3 px-4 text-[var(--text)] font-bold" x-text="b.priority ?? '–'"></td>
-									<td class="py-3 px-4 text-right">
-										<button
-											type="button"
-											class="text-xs font-bold text-[var(--err)] bg-[var(--err)]/10 hover:bg-[var(--err)]/20 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-											x-on:click="removeBinding(b.id ?? b.slot)"
-										>Remover</button>
-									</td>
+			@card("Regras de Roteamento / Bindings") {
+				<p class="text-[14px] text-[var(--muted)] mb-5 font-medium leading-relaxed" x-show="note" x-text="note"></p>
+				
+				<div class="rounded-[20px] border border-[var(--border)] shadow-sm overflow-hidden bg-[var(--bg)]">
+					<div class="overflow-x-auto">
+						<table class="w-full text-left border-collapse text-[14px]">
+							<thead>
+								<tr class="border-b border-[var(--border)] bg-[var(--panel)]">
+									<th class="py-4 px-6 font-semibold text-[12px] text-[var(--subtle)] uppercase tracking-wider">Slot / Role</th>
+									<th class="py-4 px-6 font-semibold text-[12px] text-[var(--subtle)] uppercase tracking-wider">Modelo</th>
+									<th class="py-4 px-6 font-semibold text-[12px] text-[var(--subtle)] uppercase tracking-wider">Provedor</th>
+									<th class="py-4 px-6 font-semibold text-[12px] text-[var(--subtle)] uppercase tracking-wider text-center">Concorrência</th>
+									<th class="py-4 px-6 font-semibold text-[12px] text-[var(--subtle)] uppercase tracking-wider text-right">Ação</th>
 								</tr>
-							</template>
-						</tbody>
-					</table>
+							</thead>
+							<tbody class="divide-y divide-[var(--border)] font-mono text-[13px]">
+								<template x-if="bindings.length === 0">
+									<tr><td colspan="5" class="py-12 text-center text-[var(--muted)] font-sans font-medium">Nenhuma regra explícita cadastrada (roteamento dinâmico ativo).</td></tr>
+								</template>
+								<template x-for="b in bindings" x-bind:key="b.slot ?? b.role ?? Math.random()">
+									<tr class="hover:bg-[var(--panel-hover)]/30 transition-colors">
+										<td class="py-4 px-6 font-bold text-[var(--text)]" x-text="b.slot ?? b.role ?? '–'"></td>
+										<td class="py-4 px-6 text-white font-bold" x-text="b.model_id ?? b.model ?? '–'"></td>
+										<td class="py-4 px-6 text-[var(--muted)]" x-text="b.provider ?? '–'"></td>
+										<td class="py-4 px-6 text-[var(--text)] font-bold text-center" x-text="b.max_concurrent ?? '–'"></td>
+										<td class="py-4 px-6 text-right">
+											<button
+												type="button"
+												class="text-[12px] font-semibold text-[var(--err)] hover:text-white bg-[var(--err)]/10 hover:bg-[var(--err)] px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+												x-on:click="removeBinding(b.id ?? b.slot)"
+											>Remover</button>
+										</td>
+									</tr>
+								</template>
+							</tbody>
+						</table>
+					</div>
 				</div>
 			}
 
 			<!-- Pressões de Contexto -->
-			@card("Pressão de Contexto dos Modelos") {
-				<p class="text-sm text-[var(--muted)] mb-4 font-medium" x-show="pressureNote" x-text="pressureNote"></p>
-				<div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+			@card("Pressão de Contexto Ativa") {
+				<p class="text-[14px] text-[var(--muted)] mb-6 font-medium leading-relaxed" x-show="pressureNote" x-text="pressureNote"></p>
+				
+				<div class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 					<template x-if="pressures.length === 0">
-						<div class="col-span-full p-6 text-center text-sm text-[var(--muted)] font-medium bg-[var(--bg)]/50 rounded-xl border border-dashed border-[var(--border)]">
-							Nenhum dado de pressão de contexto disponível.
+						<div class="col-span-full">
+							@EmptyState("Nenhum dado de pressão de contexto reportado nas últimas sessões.")
 						</div>
 					</template>
 					<template x-for="p in pressures" x-bind:key="p.model_id ?? Math.random()">
-						<div class="p-5 rounded-2xl bg-[var(--bg)] border border-[var(--border)] shadow-sm space-y-4 hover:border-[var(--border-focus)]/30 transition-colors">
-							<div class="flex justify-between items-center text-sm font-mono">
-								<span class="font-bold text-[var(--text)] truncate mr-2" x-text="p.model_id ?? '–'"></span>
+						<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] shadow-sm space-y-5 hover:border-[var(--border-focus)] transition-colors">
+							<div class="flex justify-between items-center text-[14px] font-mono">
+								<span class="font-bold text-[var(--text)] truncate mr-3" x-text="p.model_id ?? '–'"></span>
 								<span
-									class="px-2 py-1 rounded-md text-xs font-bold tracking-widest"
-									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]/20 text-[var(--err)]' : 'bg-[var(--ok)]/20 text-[var(--ok)]'"
+									class="px-2.5 py-1 rounded-md text-[12px] font-bold tracking-wider"
+									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]/20 text-[var(--err)]' : 'bg-[var(--ok)]/10 text-[var(--ok)]'"
 									x-text="((p.ratio ?? 0) * 100).toFixed(1) + '%'"
 								></span>
 							</div>
-							<div class="w-full bg-[var(--panel)] rounded-full h-2.5 overflow-hidden border border-[var(--border)]">
+							
+							<!-- Custom Progress Bar -->
+							<div class="w-full bg-[var(--panel)] rounded-full h-3 overflow-hidden border border-[var(--border)]">
 								<div
-									class="h-full rounded-full transition-all duration-500 ease-out"
-									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]' : 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]'"
+									class="h-full rounded-full transition-all duration-1000 ease-out"
+									x-bind:class="(p.ratio ?? 0) > 0.8 ? 'bg-[var(--err)]' : 'bg-white'"
 									x-bind:style="'width: ' + Math.min(100, Math.max(0, (p.ratio ?? 0) * 100)) + '%'"
 								></div>
 							</div>
-							<div class="flex justify-between text-xs text-[var(--muted)] font-mono font-medium">
-								<span>Usado: <strong class="text-[var(--text)]" x-text="p.used_tokens ?? 0"></strong></span>
-								<span>Limite: <strong class="text-[var(--text)]" x-text="p.limit_tokens ?? 0"></strong></span>
+							
+							<div class="flex justify-between text-[12px] text-[var(--muted)] font-mono">
+								<span>Usado: <strong class="text-[var(--text)] font-semibold" x-text="p.used_tokens ?? 0"></strong></span>
+								<span>Limite: <strong class="text-[var(--text)] font-semibold" x-text="p.limit_tokens ?? 0"></strong></span>
 							</div>
 						</div>
 					</template>
@@ -380,13 +435,13 @@ templ Models() {
 
 					async discoverModels() {
 						try {
-							this.discoveredModelsNote = 'Buscando modelos dinâmicos da API OpenAI...';
+							this.discoveredModelsNote = 'Buscando modelos na API...';
 							const res = await fetch('/dash/api/provider/models');
 							const data = await res.json();
 							if (data && data.models && Array.isArray(data.models)) {
 								this.discoveredModels = data.models;
-								this.discoveredModelsNote = `${data.models.length} modelos dinâmicos retornados pela API OpenAI`;
-								if (window.notify) window.notify(`${data.models.length} modelos descobertos da API OpenAI!`, 'success');
+								this.discoveredModelsNote = `${data.models.length} modelos dinâmicos retornados pela API`;
+								if (window.notify) window.notify(`${data.models.length} modelos listados!`, 'success');
 							} else {
 								this.discoveredModelsNote = data.note || 'Nenhum modelo retornado no momento.';
 							}
@@ -405,7 +460,7 @@ templ Models() {
 							const s = await res.json();
 							if (!s.initialized) this.vaultState = 'Não inicializado';
 							else if (s.locked) this.vaultState = 'Bloqueado';
-							else this.vaultState = 'Desbloqueado (' + (s.secrets || []).length + ' credenciais)';
+							else this.vaultState = 'Ativo (' + (s.secrets || []).length + ' chaves)';
 						} catch (err) {
 							this.vaultState = 'Indisponível';
 						}
@@ -428,7 +483,7 @@ templ Models() {
 								throw new Error(errMsg);
 							}
 							await this.refreshVaultStatus();
-							if (window.notify) window.notify('Cofre de credenciais desbloqueado!', 'success');
+							if (window.notify) window.notify('Cofre desbloqueado com sucesso!', 'success');
 						} catch (err) {
 							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
 						}
@@ -446,7 +501,6 @@ templ Models() {
 						};
 						this.formMsg = '';
 						this.showProviderForm = true;
-						window.scrollTo({ top: 0, behavior: 'smooth' });
 					},
 
 					openAddBindingModal() {
@@ -460,7 +514,6 @@ templ Models() {
 						};
 						this.formMsg = '';
 						this.showBindingForm = true;
-						window.scrollTo({ top: 0, behavior: 'smooth' });
 					},
 
 					addBindingFromDiscovered(modelId) {
@@ -472,8 +525,8 @@ templ Models() {
 							max_output_tokens: 8192,
 							priority: 10
 						};
+						this.formMsg = '';
 						this.showBindingForm = true;
-						window.scrollTo({ top: 0, behavior: 'smooth' });
 					},
 
 					editProvider(id) {
@@ -490,7 +543,6 @@ templ Models() {
 						};
 						this.formMsg = '';
 						this.showProviderForm = true;
-						window.scrollTo({ top: 0, behavior: 'smooth' });
 					},
 
 					cleanProvider(p) {
@@ -545,7 +597,7 @@ templ Models() {
 
 					async submitProviderForm() {
 						this.formSubmitting = true;
-						this.formMsg = 'Salvando provedor...';
+						this.formMsg = 'Salvando...';
 						this.formIsErr = false;
 						try {
 							const id = this.providerForm.id.trim();
@@ -576,12 +628,11 @@ templ Models() {
 
 							const next = { providers: currentProviders, bindings: [...(this.cfgPayload.bindings || [])] };
 							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar provedor " : "Adicionar provedor ") + id);
-							if (window.notify) window.notify('Provedor ' + id + ' salvo com sucesso!', 'success');
+							if (window.notify) window.notify('Provedor salvo!', 'success');
 							this.showProviderForm = false;
 						} catch (err) {
-							this.formMsg = 'Erro: ' + err.message;
+							this.formMsg = err.message;
 							this.formIsErr = true;
-							if (window.notify) window.notify('Erro ao salvar provedor: ' + err.message, 'error');
 						} finally {
 							this.formSubmitting = false;
 						}
@@ -589,7 +640,7 @@ templ Models() {
 
 					async submitBindingForm() {
 						this.formSubmitting = true;
-						this.formMsg = 'Salvando preferência de modelo...';
+						this.formMsg = 'Salvando...';
 						this.formIsErr = false;
 						try {
 							const pRef = this.bindingForm.provider_ref;
@@ -612,38 +663,37 @@ templ Models() {
 							if (bi >= 0) currentBindings[bi] = newB; else currentBindings.push(newB);
 
 							const next = { providers: [...(this.cfgPayload.providers || [])], bindings: currentBindings };
-							await this.createModelsDraft(next, "Adicionar preferência de modelo " + mId);
-							if (window.notify) window.notify('Preferência de modelo ' + mId + ' salva!', 'success');
+							await this.createModelsDraft(next, "Adicionar preferência " + mId);
+							if (window.notify) window.notify('Preferência salva!', 'success');
 							this.showBindingForm = false;
 						} catch (err) {
-							this.formMsg = 'Erro: ' + err.message;
+							this.formMsg = err.message;
 							this.formIsErr = true;
-							if (window.notify) window.notify('Erro ao salvar binding: ' + err.message, 'error');
 						} finally {
 							this.formSubmitting = false;
 						}
 					},
 
 					async removeProvider(id) {
-						if (!confirm("Remover o provedor " + id + " do catálogo de provedores?")) return;
+						if (!confirm("Remover o provedor " + id + " do catálogo?")) return;
 						try {
 							const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
 							const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
 							await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
-							if (window.notify) window.notify('Provedor ' + id + ' removido.', 'success');
+							if (window.notify) window.notify('Provedor removido.', 'success');
 						} catch (err) {
-							if (window.notify) window.notify('Erro ao remover provedor: ' + err.message, 'error');
+							if (window.notify) window.notify('Erro ao remover: ' + err.message, 'error');
 						}
 					},
 
 					async removeBinding(idOrSlot) {
-						if (!confirm("Remover esta preferência de modelo?")) return;
+						if (!confirm("Remover esta regra de roteamento?")) return;
 						try {
 							const nextB = (this.cfgPayload.bindings || []).filter(x => x.id !== idOrSlot && x.slot !== idOrSlot);
-							await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover preferência de modelo");
-							if (window.notify) window.notify('Preferência de modelo removida.', 'success');
+							await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover regra");
+							if (window.notify) window.notify('Regra removida.', 'success');
 						} catch (err) {
-							if (window.notify) window.notify('Erro ao remover preferência: ' + err.message, 'error');
+							if (window.notify) window.notify('Erro ao remover: ' + err.message, 'error');
 						}
 					},
 
@@ -683,7 +733,7 @@ templ Models() {
 						if (!appRes.ok) {
 							const code = app.error?.code || '';
 							const msg = app.error?.message || 'Erro ao aplicar rascunho';
-							if (code === 'conflict') throw new Error('Conflito: a configuração foi alterada por outra operação. Atualizando...');
+							if (code === 'conflict') throw new Error('Conflito detectado. Recarregando...');
 							throw new Error(msg);
 						}
 

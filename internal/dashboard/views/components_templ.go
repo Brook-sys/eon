@@ -32,27 +32,27 @@ func StatCard(label string, value string, sub string, tone string) templ.Compone
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-all hover:border-[var(--border-focus)]/50 group\"><div class=\"text-xs uppercase tracking-widest text-[var(--muted)] font-bold mb-2 group-hover:text-[var(--text)] transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-7 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-300 hover:border-[var(--border-focus)] group\"><div class=\"flex items-center justify-between mb-4\"><div class=\"text-[13px] font-semibold text-[var(--muted)] group-hover:text-[var(--text)] transition-colors flex items-center gap-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 8, Col: 140}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 10, Col: 11}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div><div class=\"text-3xl lg:text-4xl font-bold font-mono tracking-tight my-2\" style=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></div><div class=\"text-4xl lg:text-5xl font-extrabold font-mono tracking-tighter my-1\" style=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("color:%s", tone))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 9, Col: 113}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 13, Col: 120}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -65,7 +65,7 @@ func StatCard(label string, value string, sub string, tone string) templ.Compone
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 10, Col: 10}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 14, Col: 10}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -76,14 +76,14 @@ func StatCard(label string, value string, sub string, tone string) templ.Compone
 			return templ_7745c5c3_Err
 		}
 		if sub != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"text-xs text-[var(--subtle)] mt-2 font-medium\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"text-[13px] text-[var(--subtle)] mt-4 font-medium flex items-center gap-1.5\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(sub)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 13, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 18, Col: 9}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -124,19 +124,19 @@ func StatusDot(ok bool, label string) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"inline-flex items-center gap-2.5 text-sm font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"inline-flex items-center gap-2.5 text-sm font-medium\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if ok {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<span class=\"relative flex h-3 w-3\"><span class=\"animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--ok)] opacity-75\"></span> <span class=\"relative inline-flex rounded-full h-3 w-3 bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]\"></span></span> <span class=\"text-[var(--text)] font-medium\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<span class=\"relative flex h-2.5 w-2.5\"><span class=\"animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--ok)] opacity-75\"></span> <span class=\"relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]\"></span></span> <span class=\"text-[var(--text)]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 26, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 32, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -147,14 +147,14 @@ func StatusDot(ok bool, label string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<span class=\"w-3 h-3 rounded-full bg-[var(--err)] shadow-[0_0_8px_var(--err)]\"></span> <span class=\"text-[var(--err)] font-medium\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<span class=\"w-2.5 h-2.5 rounded-full bg-[var(--err)] shadow-[0_0_8px_var(--err)]\"></span> <span class=\"text-[var(--err)]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 29, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 35, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -195,11 +195,11 @@ func Badge(label string, kind string) templ.Component {
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var10 = []any{"inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-bold tracking-tight border",
-			templ.KV("bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/30", kind == "success" || kind == "ok"),
-			templ.KV("bg-[var(--warn)]/10 text-[var(--warn)] border-[var(--warn)]/30", kind == "warning" || kind == "warn"),
-			templ.KV("bg-[var(--err)]/10 text-[var(--err)] border-[var(--err)]/30", kind == "error" || kind == "err" || kind == "critical"),
-			templ.KV("bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30", kind == "info" || kind == "accent"),
+		var templ_7745c5c3_Var10 = []any{"inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase border",
+			templ.KV("bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20", kind == "success" || kind == "ok"),
+			templ.KV("bg-[var(--warn)]/10 text-[var(--warn)] border-[var(--warn)]/20", kind == "warning" || kind == "warn"),
+			templ.KV("bg-[var(--err)]/10 text-[var(--err)] border-[var(--err)]/20", kind == "error" || kind == "err" || kind == "critical"),
+			templ.KV("bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/20", kind == "info" || kind == "accent"),
 			templ.KV("bg-[var(--panel-sub)] text-[var(--muted)] border-[var(--border)]", kind == "neutral" || kind == ""),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
@@ -226,7 +226,7 @@ func Badge(label string, kind string) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 44, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 50, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -262,30 +262,30 @@ func Card(title string) templ.Component {
 			templ_7745c5c3_Var13 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<section class=\"bg-[var(--panel)] border border-[var(--border)] rounded-2xl p-6 lg:p-8 mb-6 shadow-sm space-y-5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<section class=\"bg-[var(--panel)] border border-[var(--border)] rounded-[24px] p-8 lg:p-10 shadow-sm space-y-6 relative overflow-hidden\"><!-- Subtle gradient decorative element --><div class=\"absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--border-focus)] to-transparent opacity-20\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if title != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<h3 class=\"text-[var(--text)] text-sm font-bold uppercase tracking-wider pb-4 border-b border-[var(--border)] mb-4 flex items-center gap-2\"><div class=\"w-1.5 h-4 bg-[var(--accent)] rounded-full\"></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<h3 class=\"text-[var(--text)] text-[16px] font-bold pb-5 border-b border-[var(--border)] flex items-center justify-between\"><div class=\"flex items-center gap-3\"><div class=\"w-2 h-2 rounded-full bg-[var(--border-focus)] shadow-[0_0_8px_var(--border-focus)]\"></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 54, Col: 11}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 64, Col: 12}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</h3>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></h3>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div class=\"pt-2\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -323,11 +323,11 @@ func AlertBanner(title string, msg string, kind string) templ.Component {
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var16 = []any{"p-5 rounded-2xl border text-sm flex items-start gap-4 shadow-sm transition-all mb-6",
-			templ.KV("bg-[var(--err)]/10 border-[var(--err)]/30 text-[var(--err)]", kind == "error" || kind == "err"),
-			templ.KV("bg-[var(--warn)]/10 border-[var(--warn)]/30 text-[var(--warn)]", kind == "warning" || kind == "warn"),
-			templ.KV("bg-[var(--ok)]/10 border-[var(--ok)]/30 text-[var(--ok)]", kind == "success" || kind == "ok"),
-			templ.KV("bg-[var(--accent)]/10 border-[var(--accent)]/30 text-[var(--text)]", kind == "info" || kind == "accent"),
+		var templ_7745c5c3_Var16 = []any{"p-6 rounded-[20px] border flex items-start gap-5 shadow-sm transition-all mb-8",
+			templ.KV("bg-[var(--err)]/5 border-[var(--err)]/30 text-[var(--err)]", kind == "error" || kind == "err"),
+			templ.KV("bg-[var(--warn)]/5 border-[var(--warn)]/30 text-[var(--warn)]", kind == "warning" || kind == "warn"),
+			templ.KV("bg-[var(--ok)]/5 border-[var(--ok)]/30 text-[var(--ok)]", kind == "success" || kind == "ok"),
+			templ.KV("bg-[var(--info)]/5 border-[var(--info)]/30 text-[var(--text)]", kind == "info" || kind == "accent"),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var16...)
 		if templ_7745c5c3_Err != nil {
@@ -346,44 +346,44 @@ func AlertBanner(title string, msg string, kind string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\"><div class=\"shrink-0 font-bold text-xl mt-0.5 opacity-90\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\"><div class=\"shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-black/20 border border-black/10 text-lg\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if kind == "error" || kind == "err" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "⚠")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<svg class=\"w-5 h-5 text-[var(--err)]\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else if kind == "warning" || kind == "warn" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "⚡")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<svg class=\"w-5 h-5 text-[var(--warn)]\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else if kind == "success" || kind == "ok" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "✓")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<svg class=\"w-5 h-5 text-[var(--ok)]\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "ℹ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<svg class=\"w-5 h-5 text-[var(--info)]\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</div><div class=\"space-y-1.5 grow\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</div><div class=\"space-y-1.5 grow pt-1.5\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if title != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"font-bold text-sm tracking-tight text-[var(--text)]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"font-bold text-[15px] tracking-tight text-[var(--text)]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 85, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 96, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -394,14 +394,14 @@ func AlertBanner(title string, msg string, kind string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"font-mono text-xs opacity-80 leading-relaxed\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"text-[14px] opacity-80 leading-relaxed text-[var(--muted)]\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 87, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 98, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -437,14 +437,14 @@ func EmptyState(msg string) templ.Component {
 			templ_7745c5c3_Var20 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"p-12 text-center border-2 border-dashed border-[var(--border)] rounded-2xl bg-[var(--bg)]/50 space-y-4\"><div class=\"text-4xl opacity-20\">📭</div><div class=\"text-sm text-[var(--muted)] font-medium max-w-sm mx-auto\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"py-16 px-8 text-center border border-dashed border-[var(--border)] rounded-[20px] bg-[var(--bg)]/30 space-y-5\"><div class=\"w-16 h-16 mx-auto rounded-full bg-[var(--panel-sub)] flex items-center justify-center opacity-60\"><svg class=\"w-8 h-8 text-[var(--muted)]\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4\"></path></svg></div><div class=\"text-[15px] text-[var(--muted)] font-medium max-w-sm mx-auto leading-relaxed\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 96, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 111, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -480,14 +480,14 @@ func Kbd(key string) templ.Component {
 			templ_7745c5c3_Var22 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<kbd class=\"px-2 py-1 rounded-md bg-[var(--bg)] border border-[var(--border)] border-b-2 text-xs font-mono font-bold text-[var(--muted)] shadow-sm\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<kbd class=\"px-2 py-1 rounded-md bg-[var(--panel)] border border-[var(--border)] border-b-[3px] text-[11px] font-mono font-bold text-[var(--muted)] shadow-sm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(key)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 103, Col: 7}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 118, Col: 7}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -528,7 +528,7 @@ func LoadingSkeleton(rows int) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for i := 0; i < rows; i++ {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<div class=\"h-6 bg-[var(--panel-sub)] rounded-lg w-full\"></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<div class=\"h-10 bg-[var(--panel-sub)] rounded-xl w-full opacity-50\"></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -563,20 +563,20 @@ func CopyButton(textToCopy string) templ.Component {
 			templ_7745c5c3_Var25 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<button type=\"button\" class=\"px-3 py-1.5 rounded-lg bg-[var(--bg)] hover:bg-[var(--panel-hover)] border border-[var(--border)] text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-all cursor-pointer inline-flex items-center gap-2 shadow-sm\" x-on:click=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<button type=\"button\" class=\"px-4 py-2 rounded-xl bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] border border-transparent text-[13px] font-semibold text-[var(--text)] transition-all cursor-pointer inline-flex items-center gap-2 shadow-sm focus:ring-2 focus:ring-[var(--border-focus)] focus:outline-none\" x-on:click=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var26 string
-		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("navigator.clipboard.writeText('%s'); if(window.notify) window.notify('Copiado para a área de transferência!', 'info')", textToCopy))
+		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("navigator.clipboard.writeText('%s'); if(window.notify) window.notify('Copiado para a área de transferência!', 'success')", textToCopy))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 121, Col: 161}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 136, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\" title=\"Copiar para área de transferência\">📋 Copiar</button>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\" title=\"Copiar para área de transferência\"><svg class=\"w-4 h-4 opacity-70\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z\"></path></svg> Copiar</button>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -606,14 +606,14 @@ func Pager(prefix string, current int, total int, hasPrev bool, hasNext bool) te
 			templ_7745c5c3_Var27 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"flex items-center justify-between mt-8 text-sm font-medium text-[var(--muted)] pt-6 border-t border-[var(--border)]\"><div>Página <strong class=\"text-[var(--text)]\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t border-[var(--border)] gap-4\"><div class=\"text-[14px] text-[var(--muted)]\">Página <strong class=\"text-[var(--text)] mx-1\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", current))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 132, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 148, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -624,14 +624,14 @@ func Pager(prefix string, current int, total int, hasPrev bool, hasNext bool) te
 			return templ_7745c5c3_Err
 		}
 		if total > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "de <strong class=\"text-[var(--text)]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "de <strong class=\"text-[var(--text)] mx-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", total))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 134, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/components.templ`, Line: 150, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -647,23 +647,23 @@ func Pager(prefix string, current int, total int, hasPrev bool, hasNext bool) te
 			return templ_7745c5c3_Err
 		}
 		if hasPrev {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<button class=\"px-4 py-2 bg-[var(--bg)] hover:bg-[var(--panel-hover)] text-[var(--text)] rounded-xl border border-[var(--border)] transition-all cursor-pointer font-bold text-sm shadow-sm\">&larr; Anterior</button> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<button class=\"px-5 py-2.5 bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] rounded-xl border border-transparent transition-all cursor-pointer font-semibold text-[13px] shadow-sm flex items-center gap-2\"><svg class=\"w-4 h-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 19l-7-7 7-7\"></path></svg> Anterior</button> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<button disabled class=\"px-4 py-2 bg-[var(--bg)] text-[var(--muted)] opacity-50 rounded-xl border border-[var(--border)] cursor-not-allowed font-bold text-sm\">&larr; Anterior</button> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<button disabled class=\"px-5 py-2.5 bg-[var(--bg)] text-[var(--muted)] opacity-40 rounded-xl border border-[var(--border)] cursor-not-allowed font-semibold text-[13px] flex items-center gap-2\"><svg class=\"w-4 h-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 19l-7-7 7-7\"></path></svg> Anterior</button> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if hasNext {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<button class=\"px-4 py-2 bg-[var(--bg)] hover:bg-[var(--panel-hover)] text-[var(--text)] rounded-xl border border-[var(--border)] transition-all cursor-pointer font-bold text-sm shadow-sm\">Próxima &rarr;</button>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<button class=\"px-5 py-2.5 bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] rounded-xl border border-transparent transition-all cursor-pointer font-semibold text-[13px] shadow-sm flex items-center gap-2\">Próxima <svg class=\"w-4 h-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5l7 7-7 7\"></path></svg></button>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<button disabled class=\"px-4 py-2 bg-[var(--bg)] text-[var(--muted)] opacity-50 rounded-xl border border-[var(--border)] cursor-not-allowed font-bold text-sm\">Próxima &rarr;</button>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "<button disabled class=\"px-5 py-2.5 bg-[var(--bg)] text-[var(--muted)] opacity-40 rounded-xl border border-[var(--border)] cursor-not-allowed font-semibold text-[13px] flex items-center gap-2\">Próxima <svg class=\"w-4 h-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5l7 7-7 7\"></path></svg></button>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

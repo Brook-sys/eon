@@ -3,52 +3,62 @@ package views
 templ Knowledge() {
 	@layout("Base de Conhecimento", "/dash/knowledge", StandardNav("/dash/knowledge")) {
 		<div x-data="knowledgeState()" x-init="start()" class="space-y-8">
-			<div class="flex items-center gap-4 text-sm bg-[var(--panel)] border border-[var(--border)] rounded-2xl px-5 py-4 shadow-sm">
-				<span class="inline-flex items-center gap-3 font-bold">
-					<span
-						class="w-3 h-3 rounded-full"
-						x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"
-					></span>
-					<span class="text-[var(--text)]" x-text="connected ? 'Conectado à API' : 'Sem conexão'"></span>
-				</span>
-				<span class="text-[var(--muted)] border-l border-[var(--border)] pl-4 font-medium" x-show="generatedAt">
-					atualizado <span x-text="generatedAgo"></span>
-				</span>
+			<div class="flex items-center justify-between gap-4 bg-[var(--panel)] border border-[var(--border)] rounded-[20px] p-6 shadow-sm">
+				<div class="flex items-center gap-5">
+					<div class="relative flex h-3 w-3 items-center justify-center">
+						<span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" x-bind:class="connected ? 'bg-[var(--ok)]' : 'bg-[var(--err)]'"></span>
+						<span class="relative inline-flex rounded-full h-3 w-3" x-bind:class="connected ? 'bg-[var(--ok)] shadow-[0_0_8px_var(--ok)]' : 'bg-[var(--err)] shadow-[0_0_8px_var(--err)]'"></span>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-[15px] font-bold text-[var(--text)]" x-text="connected ? 'Conectado à API' : 'Sem conexão'"></span>
+						<span class="text-[13px] text-[var(--muted)]" x-show="generatedAt">Último sync há <span x-text="generatedAgo"></span></span>
+					</div>
+				</div>
 				<button
-					class="ml-auto px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-bold text-sm shadow-sm cursor-pointer"
+					class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all font-semibold text-[13px] shadow-sm flex items-center gap-2 cursor-pointer"
 					x-on:click="refresh()"
-				>↻ Atualizar</button>
+				>
+					<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+					Atualizar
+				</button>
 			</div>
 
 			<div class="grid gap-6 grid-cols-1 sm:grid-cols-3">
 				@StatCardAlpine("Documentos Indexados", "fmt(totalDocs)", "na base de conhecimento", "text-[var(--text)]")
-				@StatCardAlpine("Consultas Recentes", "fmt(recentQueries)", "últimas 24 horas", "text-[var(--accent)]")
+				@StatCardAlpine("Consultas (24h)", "fmt(recentQueries)", "últimas consultas", "text-[var(--info)]")
 				@StatCardAlpine("Miss Hits", "fmt(missHits)", "termos não encontrados", "text-[var(--warn)]")
 			</div>
 
-			@card("Busca na Base") {
-				<div class="space-y-4">
-					<div class="flex gap-3">
-						<input type="text" x-model="searchQuery" class="flex-1" placeholder="Pesquisar contexto, regras, arquitetura..." @keyup.enter="search()"/>
-						<button class="px-6 py-2 rounded-xl bg-[var(--accent)] text-[#000] font-bold text-sm hover:opacity-90 shadow-sm cursor-pointer" @click="search()">Buscar</button>
+			@card("Busca Exploratória na Base") {
+				<div class="space-y-6">
+					<div class="flex flex-col md:flex-row gap-4">
+						<div class="relative flex-1">
+							<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+								<svg class="w-5 h-5 text-[var(--subtle)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+							</div>
+							<input type="text" x-model="searchQuery" class="w-full pl-11 pr-4 py-4" placeholder="Pesquise por contexto, regras de negócio ou estrutura técnica..." @keyup.enter="search()"/>
+						</div>
+						<button class="px-8 py-4 rounded-xl bg-white text-black font-semibold text-[14px] hover:bg-[var(--accent-hover)] shadow-sm cursor-pointer transition-all flex items-center justify-center gap-2" @click="search()">
+							Buscar
+						</button>
 					</div>
 					
 					<div class="space-y-4 pt-4 border-t border-[var(--border)]" x-show="searchResults.length > 0">
 						<template x-for="res in searchResults" x-bind:key="res.id ?? Math.random()">
-							<div class="p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] space-y-2 hover:border-[var(--accent)]/40 transition-colors cursor-pointer shadow-sm">
+							<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] space-y-3 hover:border-[var(--border-focus)] transition-colors cursor-pointer shadow-sm group">
 								<div class="flex justify-between items-start gap-4">
-									<div class="font-bold text-[var(--text)]" x-text="res.title"></div>
-									<span class="text-[10px] font-mono px-2 py-1 bg-[var(--panel)] rounded-md text-[var(--muted)]" x-text="res.id"></span>
+									<div class="font-bold text-[16px] text-[var(--text)] group-hover:text-white transition-colors" x-text="res.title"></div>
+									<span class="text-[11px] font-mono px-3 py-1 bg-[var(--panel)] border border-[var(--border)] rounded-lg text-[var(--muted)]" x-text="res.id"></span>
 								</div>
-								<div class="text-xs text-[var(--muted)] line-clamp-2 leading-relaxed" x-text="res.snippet"></div>
-								<div class="flex gap-2 items-center text-[10px] text-[var(--accent)] font-mono font-bold">
+								<div class="text-[14px] text-[var(--muted)] line-clamp-3 leading-relaxed" x-text="res.snippet"></div>
+								<div class="flex gap-2 items-center text-[12px] text-[var(--info)] font-mono font-bold pt-2">
 									<span x-text="'Score: ' + (res.score ? res.score.toFixed(2) : '0.00')"></span>
 								</div>
 							</div>
 						</template>
 					</div>
-					<div class="p-8 text-center text-sm text-[var(--muted)] bg-[var(--bg)]/50 rounded-xl border border-dashed border-[var(--border)]" x-show="searched && searchResults.length === 0">
-						Nenhum resultado encontrado para esta busca.
+					<div x-show="searched && searchResults.length === 0">
+						@EmptyState("Nenhum resultado encontrado para esta busca.")
 					</div>
 				</div>
 			}

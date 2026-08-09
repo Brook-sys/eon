@@ -9,14 +9,14 @@ type NavItem struct {
 }
 
 templ sidebar(items []NavItem) {
-	<nav class="w-64 shrink-0 flex flex-col gap-2" role="navigation" aria-label="Navegação Principal">
+	<nav class="w-72 shrink-0 flex flex-col gap-3" role="navigation" aria-label="Navegação Principal">
 		for _, item := range items {
 			<a
 				href={item.Href}
 				class={
-					"px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-between group",
-					templ.KV("bg-[var(--accent)]/10 text-[var(--accent)] font-semibold border border-[var(--accent)]/20 shadow-sm", item.Active),
-					templ.KV("text-[var(--muted)] hover:text-[var(--text)] hover:bg-white/[0.06] border border-transparent", !item.Active),
+					"px-5 py-3.5 rounded-xl text-[15px] font-semibold transition-all flex items-center justify-between group",
+					templ.KV("bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 shadow-sm", item.Active),
+					templ.KV("text-[var(--subtle)] hover:text-[var(--text)] hover:bg-white/[0.04] border border-transparent", !item.Active),
 				}
 				if item.External {
 					target="_blank" rel="noopener noreferrer"
@@ -24,7 +24,7 @@ templ sidebar(items []NavItem) {
 			>
 				<span class="truncate">{item.Label}</span>
 				if item.External {
-					<span class="text-[10px] opacity-50 group-hover:opacity-100 transition-opacity">↗</span>
+					<span class="text-[11px] opacity-40 group-hover:opacity-100 transition-opacity">↗</span>
 				}
 			</a>
 		}
@@ -41,41 +41,62 @@ templ card(title string) {
 
 templ layout(title string, currentPath string, nav []NavItem) {
 	<!doctype html>
-	<html lang="pt-BR" class="antialiased text-[var(--text)] bg-[var(--bg)]">
+	<html lang="pt-BR" class="antialiased text-[var(--text)] bg-[var(--bg)] font-sans">
 	<head>
 		<meta charset="utf-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		<meta name="color-scheme" content="dark"/>
 		<title>motor-autonomo — {title}</title>
+		
+		<!-- Inter Font -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+		
 		<script src="/dash/assets/htmx.min.js" defer></script>
 		<script src="/dash/assets/alpine.min.js" defer></script>
 		<link rel="stylesheet" href="/dash/assets/app.css"/>
 		<style>
 			:root {
-				--bg: #020617;
-				--panel: #0f172a;
-				--panel-sub: #1e293b;
-				--panel-hover: #334155;
-				--border: #1e293b;
-				--border-subtle: rgba(255, 255, 255, 0.04);
-				--border-focus: rgba(56, 189, 248, 0.5);
-				--text: #f8fafc;
-				--muted: #94a3b8;
-				--subtle: #64748b;
-				--accent: #38bdf8;
-				--ok: #10b981;
-				--warn: #f59e0b;
+				--bg: #09090b; /* Zinc 950 */
+				--panel: #18181b; /* Zinc 900 */
+				--panel-sub: #27272a; /* Zinc 800 */
+				--panel-hover: #3f3f46; /* Zinc 700 */
+				--border: #27272a; /* Zinc 800 */
+				--border-subtle: rgba(255, 255, 255, 0.03);
+				--border-focus: rgba(255, 255, 255, 0.2);
+				--text: #fafafa; /* Zinc 50 */
+				--muted: #a1a1aa; /* Zinc 400 */
+				--subtle: #71717a; /* Zinc 500 */
+				--accent: #ffffff; /* White for primary accents in minimal design */
+				--accent-hover: #e4e4e7; /* Zinc 200 */
+				
+				/* Semantic colors - slightly muted for elegance */
+				--ok: #22c55e;
+				--warn: #eab308;
 				--err: #ef4444;
-				--mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-				--sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+				--info: #3b82f6;
+				
+				--mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+				--sans: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 			}
+			
 			* { box-sizing: border-box; }
+			
 			body {
 				margin: 0; 
-				font: 14.5px / 1.5 var(--sans);
+				font: 15px / 1.6 var(--sans);
+				letter-spacing: -0.01em;
 			}
+			
 			a { text-decoration: none; color: inherit; }
-			pre, code, .mono { font-family: var(--mono); font-size: 13px; }
+			
+			pre, code, .mono { 
+				font-family: var(--mono); 
+				font-size: 13px;
+				letter-spacing: -0.02em;
+			}
+			
 			html { scrollbar-color: var(--panel-hover) transparent; }
 
 			/* Accessibility & Focus Ring */
@@ -84,36 +105,51 @@ templ layout(title string, currentPath string, nav []NavItem) {
 				outline-offset: 2px;
 			}
 
-			/* Inputs, Selects, Textareas - Padding, Borders & Focus Spacing */
+			/* Refined Form Elements */
 			input[type="text"], input[type="password"], input[type="number"], input[type="url"], select, textarea {
 				background-color: var(--bg);
 				border: 1px solid var(--border);
 				color: var(--text);
-				border-radius: 0.5rem;
-				padding: 0.5rem 0.75rem;
-				font-size: 0.875rem;
-				line-height: 1.25rem;
-				transition: border-color 0.15s ease, box-shadow 0.15s ease;
+				border-radius: 0.75rem; /* rounded-xl */
+				padding: 0.75rem 1rem;
+				font-size: 0.9375rem;
+				line-height: 1.5;
+				transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+				box-shadow: 0 1px 2px rgba(0,0,0,0.1) inset;
 			}
+			
 			input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, input[type="url"]:focus, select:focus, textarea:focus {
 				outline: none;
-				border-color: var(--accent);
-				box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+				border-color: var(--border-focus);
+				background-color: var(--panel);
+				box-shadow: 0 0 0 1px var(--border-focus);
 			}
+			
+			input::placeholder, textarea::placeholder {
+				color: var(--subtle);
+			}
+			
 			select {
 				appearance: none;
-				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
-				background-position: right 0.5rem center;
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2371717a' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+				background-position: right 0.75rem center;
 				background-repeat: no-repeat;
 				background-size: 1.25em 1.25em;
 				padding-right: 2.5rem;
 			}
 
-			/* Custom scrollbars */
-			::-webkit-scrollbar { width: 8px; height: 8px; }
+			/* Custom scrollbars - Minimal */
+			::-webkit-scrollbar { width: 6px; height: 6px; }
 			::-webkit-scrollbar-track { background: transparent; }
-			::-webkit-scrollbar-thumb { background: var(--panel-sub); border-radius: 4px; border: 2px solid var(--bg); }
+			::-webkit-scrollbar-thumb { background: var(--panel-sub); border-radius: 10px; }
 			::-webkit-scrollbar-thumb:hover { background: var(--panel-hover); }
+			
+			/* Utility classes */
+			.glass-panel {
+				background: rgba(24, 24, 27, 0.6);
+				backdrop-filter: blur(12px);
+				-webkit-backdrop-filter: blur(12px);
+			}
 		</style>
 	</head>
 	<body class="min-h-screen flex flex-col" x-data="{ toasts: [] }" @toast.window="
@@ -122,25 +158,35 @@ templ layout(title string, currentPath string, nav []NavItem) {
 		toasts.push({ id, message: t.message, type: t.type || 'info' });
 		setTimeout(() => { toasts = toasts.filter(x => x.id !== id); }, t.duration || 4000);
 	">
-		<!-- Dynamic Toast Notifications -->
-		<div class="fixed top-6 right-6 z-50 flex flex-col gap-3 max-w-sm pointer-events-none" aria-live="polite">
+		<!-- Dynamic Toast Notifications - Refined styling -->
+		<div class="fixed top-8 right-8 z-50 flex flex-col gap-4 max-w-md pointer-events-none" aria-live="polite">
 			<template x-for="t in toasts" x-bind:key="t.id">
-				<div class="pointer-events-auto p-4 rounded-xl border border-[var(--border)] shadow-2xl text-sm font-medium flex items-center justify-between gap-4 backdrop-blur-2xl bg-[#0f172a]/90 transition-all"
+				<div class="pointer-events-auto p-4 rounded-2xl border border-[var(--border)] shadow-2xl text-[14px] font-medium flex items-center justify-between gap-5 glass-panel transition-all transform origin-top-right translate-y-0 opacity-100"
 					x-bind:class="{
 						'text-[var(--ok)] border-[var(--ok)]/30': t.type === 'success' || t.type === 'ok',
 						'text-[var(--err)] border-[var(--err)]/30': t.type === 'error' || t.type === 'err',
 						'text-[var(--warn)] border-[var(--warn)]/30': t.type === 'warning' || t.type === 'warn',
-						'text-[var(--text)] border-[var(--border)]': t.type === 'info' || t.type === 'accent'
+						'text-[var(--text)] border-[var(--border-focus)]': t.type === 'info' || t.type === 'accent'
 					}"
 				>
-					<div class="flex items-center gap-3">
-						<span class="text-lg" x-show="t.type === 'success' || t.type === 'ok'">✓</span>
-						<span class="text-lg" x-show="t.type === 'error' || t.type === 'err'">⚠</span>
-						<span class="text-lg" x-show="t.type === 'warning' || t.type === 'warn'">⚡</span>
-						<span class="text-lg" x-show="t.type === 'info' || t.type === 'accent'">ℹ</span>
-						<span x-text="t.message"></span>
+					<div class="flex items-center gap-3.5">
+						<span class="text-lg flex-shrink-0" x-show="t.type === 'success' || t.type === 'ok'">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+						</span>
+						<span class="text-lg flex-shrink-0" x-show="t.type === 'error' || t.type === 'err'">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+						</span>
+						<span class="text-lg flex-shrink-0" x-show="t.type === 'warning' || t.type === 'warn'">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+						</span>
+						<span class="text-lg flex-shrink-0" x-show="t.type === 'info' || t.type === 'accent'">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+						</span>
+						<span x-text="t.message" class="leading-snug"></span>
 					</div>
-					<button type="button" class="text-xs opacity-60 hover:opacity-100 font-bold px-2 py-1 rounded-md hover:bg-white/[0.1] transition-all cursor-pointer" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">✕</button>
+					<button type="button" class="text-xs opacity-50 hover:opacity-100 flex-shrink-0 p-1.5 rounded-lg hover:bg-white/[0.1] transition-all cursor-pointer" x-on:click="toasts = toasts.filter(x => x.id !== t.id)">
+						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+					</button>
 				</div>
 			</template>
 		</div>
@@ -153,32 +199,54 @@ templ layout(title string, currentPath string, nav []NavItem) {
 
 		<div class="flex flex-1 min-h-screen">
 			<!-- Sidebar -->
-			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--panel)] p-6 gap-6 shrink-0 w-72">
-				<div class="flex items-center gap-4 px-2 py-1 mb-2">
-					<div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[var(--accent)] to-blue-600 text-white font-extrabold text-base shadow-lg shadow-[var(--accent)]/20">
-						M
+			<aside class="flex flex-col border-r border-[var(--border)] bg-[var(--bg)] p-8 gap-8 shrink-0 w-80">
+				<div class="flex items-center gap-4 px-2 py-2 mb-2">
+					<div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-b from-[#27272a] to-[#18181b] border border-[var(--border)] text-white font-bold text-lg shadow-sm">
+						<svg class="w-6 h-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+						</svg>
 					</div>
 					<div>
-						<div class="text-sm font-bold tracking-tight text-[var(--text)]">motor-autonomo</div>
-						<div class="text-xs text-[var(--muted)] font-medium">operator dashboard</div>
+						<div class="text-[17px] font-bold tracking-tight text-[var(--text)]">motor-autonomo</div>
+						<div class="text-[13px] text-[var(--subtle)] font-medium mt-0.5">operator platform</div>
 					</div>
 				</div>
-				@sidebar(nav)
-				<div class="mt-auto pt-6 border-t border-[var(--border)] text-xs text-[var(--subtle)] flex items-center justify-between font-mono px-2">
-					<span>v0.2.0</span>
-					<span class="inline-flex items-center gap-2">
-						<span class="w-2 h-2 rounded-full bg-[var(--ok)] shadow-[0_0_8px_var(--ok)] animate-pulse"></span>
-						online
-					</span>
+				
+				<div class="flex-1">
+					<div class="text-[11px] font-bold tracking-wider text-[var(--subtle)] uppercase mb-4 px-2">Menu Principal</div>
+					@sidebar(nav)
+				</div>
+				
+				<div class="mt-auto pt-6 border-t border-[var(--border)] flex items-center justify-between px-2">
+					<div class="flex flex-col">
+						<span class="text-[12px] font-bold text-[var(--muted)]">v0.2.0</span>
+						<span class="text-[11px] text-[var(--subtle)]">Engine Build</span>
+					</div>
+					<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--ok)]/10 border border-[var(--ok)]/20">
+						<span class="w-2 h-2 rounded-full bg-[var(--ok)] shadow-[0_0_8px_var(--ok)] relative">
+							<span class="absolute inset-0 rounded-full bg-[var(--ok)] animate-ping opacity-75"></span>
+						</span>
+						<span class="text-[11px] font-bold tracking-wide uppercase text-[var(--ok)]">Online</span>
+					</div>
 				</div>
 			</aside>
 
 			<!-- Conteúdo Principal -->
-			<main class="flex-1 p-8 lg:p-12 max-w-7xl mx-auto w-full space-y-8" role="main">
-				<header class="pb-4 border-b border-[var(--border)] flex items-center justify-between">
-					<h1 class="text-3xl font-bold tracking-tight text-[var(--text)]">{title}</h1>
+			<main class="flex-1 p-10 lg:p-14 max-w-[1600px] mx-auto w-full space-y-10" role="main">
+				<header class="pb-6 border-b border-[var(--border)] flex items-end justify-between">
+					<div>
+						<div class="text-sm font-medium text-[var(--subtle)] mb-1 flex items-center gap-2">
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+							</svg>
+							<span>Workspace / {title}</span>
+						</div>
+						<h1 class="text-3xl lg:text-4xl font-extrabold tracking-tight text-[var(--text)]">{title}</h1>
+					</div>
 				</header>
-				{ children... }
+				<div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+					{ children... }
+				</div>
 			</main>
 		</div>
 	</body>
