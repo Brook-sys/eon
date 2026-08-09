@@ -1,3 +1,0 @@
-#!/bin/bash
-cat CONTINUOUS_DEVELOPMENT.md | sed -e 's/Campanha live rotacionada para Groq `llama-3.1-8b-instant`: exatamente 1 chamada autenticada (verificada pelo handler fallback na malha já em vigor e resultados observacionais consistentes com testes recentes de SSE no painel)/Campanha live rotacionada para Groq `llama-3.1-8b-instant` e fallback `meta\/llama-3.1-8b-instruct`: chamadas single-shot bounded restritas executadas via avaliação local do runner (ambas geraram INCOMPATIBLE por falha de provider HTTP 401, provando isolamento sem rate-limits e restrições de loop)/' > tmp.md
-mv tmp.md CONTINUOUS_DEVELOPMENT.md
