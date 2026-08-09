@@ -1,0 +1,120 @@
+{
+  "phase": "418",
+  "timestamp": "2026-08-09T13:44:37.076259379Z",
+  "total_trials": 9,
+  "successful": 7,
+  "failed": 2,
+  "global_p50_ms": 749,
+  "global_p95_ms": 729,
+  "average_compliance": 0.7777777777777778,
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-sqlite-commit-crash",
+      "latency_ms": 336,
+      "input_tokens": 104,
+      "output_tokens": 46,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"SQLite process loss between Commit() and UpdateTiming event generation results in dirty state because the transaction is not yet committed.\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-sqlite-commit-crash",
+      "latency_ms": 360,
+      "input_tokens": 104,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"update not yet written to disk\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-sqlite-conflicting-payload",
+      "latency_ms": 230,
+      "input_tokens": 109,
+      "output_tokens": 31,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"Transaction was not committed before the crash\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-sqlite-failpoint-pressure",
+      "latency_ms": 284,
+      "input_tokens": 112,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"before_durable_commit failpoint desativa a garantia de durabilidade de escrita antes de um COMMIT, permitindo que a transação seja concluída mesmo em",
+      "strategy": "none",
+      "compliance_score": 0,
+      "success": false
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-sqlite-conflicting-payload",
+      "latency_ms": 749,
+      "input_tokens": 109,
+      "output_tokens": 32,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"Transaction was not fully committed before the crash\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-sqlite-failpoint-pressure",
+      "latency_ms": 317,
+      "input_tokens": 112,
+      "output_tokens": 36,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"falha no ponto de verificação antes do commit durável\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-sqlite-conflicting-payload",
+      "latency_ms": 365,
+      "input_tokens": 109,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"crash status indicates data loss\", \"CRASH_STATUS\": \"lost\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-sqlite-commit-crash",
+      "latency_ms": 529,
+      "input_tokens": 104,
+      "output_tokens": 39,
+      "finish_reason": "stop",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"SQLite does not guarantee atomicity between Commit() and UpdateTiming event generation\", \"CRASH_STATUS\": \"recovered\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-sqlite-failpoint-pressure",
+      "latency_ms": 729,
+      "input_tokens": 112,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\"COMMIT_BOUNDARY\": \"dirty\", \"REASON\": \"Avaliação sob pressão de antes do commit durável, que permite a escrita de dados não duráveis antes do commit\", \"CRASH_STATUS\": \"re",
+      "strategy": "none",
+      "compliance_score": 0,
+      "success": false
+    }
+  ]
+}
