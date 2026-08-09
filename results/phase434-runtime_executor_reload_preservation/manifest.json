@@ -1,0 +1,120 @@
+{
+  "phase": "434",
+  "timestamp": "2026-08-09T16:26:30.869394766Z",
+  "total_trials": 9,
+  "successful": 0,
+  "failed": 9,
+  "average_compliance_score": 0.027777777777777776,
+  "global_p50_ms": 289,
+  "global_p95_ms": 2702,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-reload-atomic-structural",
+      "success": false,
+      "latency_ms": 552,
+      "input_tokens": 89,
+      "output_tokens": 64,
+      "finish_reason": "length",
+      "raw_content": "RETURNS_PARTIAL, REASON: The reload failure due to a locked vault indicates that the system was unable to complete the reload process, which may result in a partial or incomplete executor. However, to maintain system stability and prevent data loss, the prior active executor is retained. The failed reload does not return a new",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-reload-preservation-structural",
+      "success": false,
+      "latency_ms": 557,
+      "input_tokens": 99,
+      "output_tokens": 59,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR, \nREASON: The system is designed to retain the prior active executor when a hot reload fails during provider assembly. This ensures continuity and prevents loss of the current executor's state. Since the reload fails due to the vault being locked, the prior executor remains active.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.25
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-reload-preservation-ptbr",
+      "success": false,
+      "latency_ms": 205,
+      "input_tokens": 107,
+      "output_tokens": 5,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-reload-preservation-structural",
+      "success": false,
+      "latency_ms": 222,
+      "input_tokens": 99,
+      "output_tokens": 13,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR, REASON: Vault is locked.",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-reload-atomic-structural",
+      "success": false,
+      "latency_ms": 289,
+      "input_tokens": 89,
+      "output_tokens": 62,
+      "finish_reason": "stop",
+      "raw_content": "RETURNS_PARTIAL, LOCKED_VAULT\n\nIn this case, the reload fails because the vault is locked, but the system should retain the prior active executor. The failed reload does not return a partial or broken executor, but rather indicates that the reload operation failed due to the vault being locked.",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-reload-preservation-ptbr",
+      "success": false,
+      "latency_ms": 353,
+      "input_tokens": 107,
+      "output_tokens": 5,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-reload-atomic-structural",
+      "success": false,
+      "latency_ms": 1331,
+      "input_tokens": 89,
+      "output_tokens": 62,
+      "finish_reason": "stop",
+      "raw_content": "RETURNS_PARTIAL, VAULT_LOCKED\n\nIn this case, the reload fails because the vault is locked, but the system should retain the prior active executor, not clear it. This means that the failed reload returns a partial/broken executor, but the system does not clear the prior active executor.",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-reload-preservation-structural",
+      "success": false,
+      "latency_ms": 2110,
+      "input_tokens": 99,
+      "output_tokens": 37,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR, REASON: The system retains the prior active executor because the reload fails due to a vault lock, which is an external condition unrelated to the executor itself.",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-reload-preservation-ptbr",
+      "success": false,
+      "latency_ms": 2702,
+      "input_tokens": 107,
+      "output_tokens": 5,
+      "finish_reason": "stop",
+      "raw_content": "RETAINS_PRIOR",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    }
+  ]
+}
