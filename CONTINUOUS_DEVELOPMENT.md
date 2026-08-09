@@ -7548,3 +7548,17 @@ Implementação:
    - **100% JSON Fallback Strategy**: All 15 trials correctly recognized and parsed the JSON payload via the `json_fallback` strategy without needing heuristic text fallback.
 
 **Deterministic verification.** `go test ./internal/prompt/...` passed 100% cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean. Artifacts in `cmd/phase411_json_fallback_fire_test/` and `results/phase411-json-fallback-parser/`.
+
+## Phase 410 — Truncation resilience & budget starvation live fire campaign (2026-08-09 07:08 -03)
+
+**Objective and implementation.** Addressed key parsing resilience under extreme budget starvation (where models are forced to emit truncated keys like `SOURC` instead of `SOURCE`) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **Truncated Key Prefix Recovery (`ResponseParser`)**:
+   - (Implemented in previous parser sweep) `ParseResponse` includes a fallback that checks if an unmatched prefix is at least 3 characters and matches exactly one known key name as a prefix.
+2. **Live Fire Campaign Phase 410**: Formulated and executed a 15-trial live fire campaign (`cmd/phase410_truncation_resilience_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`tight_budget_truncation`, `truncated_key_prefix`, `multi_format_budget_pressure`), strictly enforcing tight `MaxOutputTokens` limits.
+3. **Live campaign findings**:
+   - **Perfect 100.0% Semantic Success Rate (15/15 trials OK)** across all 5 models and all 3 scenarios.
+   - **Format compliance**: 14/15 trials achieved 1.00; 1 trial (`gpt-oss-120b` under severe pressure) achieved 0.67 but still successfully extracted the needed semantic value despite cutoff.
+   - **P50 Latency: 379 ms**, P95 Latency: 696 ms.
+   - **Truncation semantics**: Models hit `finish_reason=length` accurately when starved (e.g., `qwen3.6-27b` and `gpt-oss-120b`), but the parser recovered the partial payloads gracefully. `gpt-oss-120b` triggered budget auto-scaling to recover.
+
+**Deterministic verification.** `go test ./internal/prompt/...` passed 100% cleanly. `go vet ./internal/prompt/...` and `git diff --check` clean. Artifacts in `cmd/phase410_truncation_resilience_fire_test/` and `results/phase410-truncation-resilience/`.
