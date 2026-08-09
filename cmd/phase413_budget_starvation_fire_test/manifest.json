@@ -1,8 +1,76 @@
 {
-  "test_mode": "budget_starvation_truncation_recovery",
-  "target_model": "llama-3.3-70b-versatile",
-  "provider": "Groq",
-  "budget": 10,
-  "trials": 3,
-  "objective": "Verify the prompt parser gracefully extracts truncated unclosed bracket values when a model is constrained by token limits, preventing silent data loss."
+  "phase": 413,
+  "description": "Budget starvation and truncated bracket extraction control cross-provider live fire test",
+  "scenarios": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "provider": "groq",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "309.33ms",
+      "usage": "77 input, 10 output",
+      "raw_response": "TOOLS: [Wrench, Pliers, Socket",
+      "parsed_response": "Wrench, Pliers, Socket"
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "provider": "groq",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "307.71ms",
+      "usage": "77 input, 10 output",
+      "raw_response": "TOOLS: \n1. Socket wrench\n2.",
+      "parsed_response": "1. Socket wrench"
+    },
+    {
+      "model": "allam-2-7b",
+      "provider": "groq",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "403.63ms",
+      "usage": "56 input, 10 output",
+      "raw_response": "Certainly! Here are 10 tools commonly used",
+      "parsed_response": "Certainly! Here are 10 tools commonly used"
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "provider": "groq",
+      "status": "FAIL",
+      "reason": "length",
+      "elapsed": "272.19ms",
+      "usage": "54 input, 10 output",
+      "raw_response": "<think>\nHere's a thinking process:\n\n1. ",
+      "parsed_response": ""
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "provider": "nvidia nim",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "736.00ms",
+      "usage": "77 input, 10 output",
+      "raw_response": "TOOLS: \n1. Socket wrench\n2.",
+      "parsed_response": "1. Socket wrench"
+    },
+    {
+      "model": "meta/llama-3.1-70b-instruct",
+      "provider": "nvidia nim",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "12.5s",
+      "usage": "77 input, 10 output",
+      "raw_response": "TOOLS: [Socket wrench, Adjustable wrench, R",
+      "parsed_response": "Socket wrench, Adjustable wrench, R"
+    },
+    {
+      "model": "deepseek-ai/deepseek-v4-flash-0731",
+      "provider": "nvidia nim",
+      "status": "PASS",
+      "reason": "length",
+      "elapsed": "1.033s",
+      "usage": "46 input, 10 output",
+      "raw_response": "TOOLS: [Torque Wrench, Rat",
+      "parsed_response": "Torque Wrench, Rat"
+    }
+  ]
 }

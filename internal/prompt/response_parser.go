@@ -465,34 +465,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 						foldedLines[j] = true
 					}
 
-					// Post-process folded value to strip array bounds (brackets, quotes) if truncated
-					fv := strings.TrimSpace(foldedValue)
-					if strings.HasPrefix(fv, "[") {
-						fv = fv[1:]
-						// Only trim closing bracket if it actually exists at the end
-						if strings.HasSuffix(fv, "]") {
-							fv = fv[:len(fv)-1]
-						}
-						fv = strings.TrimSpace(fv)
-						// Only trim trailing comma if it actually exists at the end
-						if strings.HasSuffix(fv, ",") {
-							fv = fv[:len(fv)-1]
-						}
-						fv = strings.ReplaceAll(fv, "\"", "")
-					}
-					// Also clean internal newlines for unclosed bracket cases where folding joins with space
-					fv = strings.ReplaceAll(fv, "\n", " ")
-					// Remove internal quotes that might be left over from unclosed JSON-like arrays
-					fv = strings.ReplaceAll(fv, "\"", "")
-					// Only trim trailing comma if it was left from a JSON-like array parse
-					if strings.HasSuffix(fv, ",") {
-						fv = fv[:len(fv)-1]
-					}
-					// Strip any extra spaces created by replacement
-					for strings.Contains(fv, "  ") {
-						fv = strings.ReplaceAll(fv, "  ", " ")
-					}
-					result.Values[k] = strings.TrimSpace(fv)
+					result.Values[k] = foldedValue
 					result.FoundKeys = append(result.FoundKeys, k)
 				}
 				matched = true
@@ -661,7 +634,56 @@ func ParseResponse(text string, keys []string) ParseResult {
 		}
 	}
 
+	for k, v := range result.Values {
+		result.Values[k] = cleanParsedValue(v)
+	}
+
 	return result
+}
+
+func cleanParsedValue(val string) string {
+	if val == "" {
+		return val
+	}
+	s := strings.TrimSpace(val)
+	for {
+		orig := s
+		if strings.HasPrefix(s, "- ") {
+			s = strings.TrimSpace(s[2:])
+		}
+		if s == orig {
+			break
+		}
+	}
+	if strings.HasPrefix(s, "[") {
+		s = s[1:]
+		if strings.HasSuffix(s, "]") {
+			s = s[:len(s)-1]
+		}
+		s = strings.TrimSpace(s)
+		if strings.HasSuffix(s, ",") {
+			s = s[:len(s)-1]
+		}
+		s = strings.ReplaceAll(s, "\"", "")
+	}
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\"", "")
+	if strings.HasSuffix(s, ",") {
+		s = s[:len(s)-1]
+	}
+	for strings.Contains(s, "  ") {
+		s = strings.ReplaceAll(s, "  ", " ")
+	}
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "[") && !strings.HasSuffix(s, "]") {
+		s = strings.TrimPrefix(s, "[")
+		s = strings.TrimSuffix(s, ",")
+		s = strings.TrimSpace(s)
+	} else if strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]") {
+		s = strings.TrimPrefix(s, "[")
+		s = strings.TrimSuffix(s, "]")
+	}
+	return s
 }
 
 // AllMatch returns true when every key in keys has a value in result that
