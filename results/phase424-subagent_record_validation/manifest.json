@@ -1,0 +1,120 @@
+{
+  "phase": "424",
+  "timestamp": "2026-08-09T13:54:07.168815448Z",
+  "total_trials": 9,
+  "successful": 9,
+  "failed": 0,
+  "global_p50_ms": 503,
+  "global_p95_ms": 523,
+  "average_compliance": 1,
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-record-exhausted-attempt",
+      "latency_ms": 395,
+      "input_tokens": 102,
+      "output_tokens": 27,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Attempt cannot equal MaxAttempts\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-record-deadline-pressure",
+      "latency_ms": 453,
+      "input_tokens": 110,
+      "output_tokens": 25,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Deadline before start\", \"VALIDATION_TARGET\": \"deadline\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-record-deadline-pressure",
+      "latency_ms": 240,
+      "input_tokens": 110,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Deadline não pode ser antes de StartedAt\", \"VALIDATION_TARGET\": \"deadline\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-record-conflicting-payload",
+      "latency_ms": 741,
+      "input_tokens": 104,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"IS_VALID cannot be 'yes' for attempt exhaustion validation\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-record-deadline-pressure",
+      "latency_ms": 503,
+      "input_tokens": 110,
+      "output_tokens": 30,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Deadline não pode ser antes de StartedAt\", \"VALIDATION_TARGET\": \"deadline\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-record-conflicting-payload",
+      "latency_ms": 342,
+      "input_tokens": 104,
+      "output_tokens": 29,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Attempt exhaustion semantics not specified in payload\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-record-conflicting-payload",
+      "latency_ms": 293,
+      "input_tokens": 104,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"incomplete validation data\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-record-exhausted-attempt",
+      "latency_ms": 367,
+      "input_tokens": 102,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"exceeded max attempts\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-record-exhausted-attempt",
+      "latency_ms": 523,
+      "input_tokens": 102,
+      "output_tokens": 25,
+      "finish_reason": "stop",
+      "raw_content": "{\"IS_VALID\": \"no\", \"REASON\": \"Max attempts exceeded\", \"VALIDATION_TARGET\": \"attempt\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
