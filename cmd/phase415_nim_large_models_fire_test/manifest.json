@@ -1,0 +1,6 @@
+{
+  "phase": 415,
+  "name": "nim_large_models_fire_test",
+  "description": "Evaluate format compliance, latencies, and parsing robustness on large NVIDIA NIM models (nemotron-70b, deepseek-v4-pro, mistral-large-2-instruct) against Groq baselines.",
+  "date": "2026-08-09"
+}

@@ -822,6 +822,21 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-07-19 18:00 — HEARTBEAT — Fase 18 implementada (`kernel.SubagentContinuityFamily` testada, acoplada e com enforcement funcional). Testes verificam o despacho de tasks não terminadas pela policy, com o `SessionManager` parando na barreira local configurada. Probe live executado (Groq/llama-3.1-8b-instant, 335ms PROBE_OK). Nenhum busy loop, repouso mantido. Lote despachado para compilação estrita em `/tmp/go-toolchain/go/bin/go`. Fase 18 completada com sucesso.
 
+## Phase 415 — Large NIM model latency baseline fire test (2026-08-09 13:45 -03)
+
+**Objective and implementation.** Establish a baseline for latency and parser robustness across large NVIDIA NIM models (`meta/llama-3.1-70b-instruct`, `meta/llama-3.1-8b-instruct`) and Groq's top model (`llama-3.3-70b-versatile`), evaluating formatting compliance against a basic entity extraction prompt.
+1. **Live Fire Campaign Phase 415**: Scripted a multi-provider test via `internal/provider/openai/` against a basic payload.
+2. **Live campaign findings**:
+   - **Format compliance: 100% (1.00)** and semantic correctness (extraction of Vehicle, Location, Payload) across the successfully connected models.
+   - **`groq/llama-3.3-70b-versatile`**: **~300ms**, delivering standard Groq latency advantages.
+   - **`nim/meta/llama-3.1-8b-instruct`**: **~720ms**.
+   - **`nim/meta/llama-3.1-70b-instruct`**: **~1890ms**.
+   - **NIM `nvidia/nemotron-4-340b-instruct`**: Rejected with HTTP 404, implying a changed endpoint or unavailable model on the current `integrate.api.nvidia.com/v1` tier.
+
+**Interpretation.** The adapter correctly formats the outbound requests via `CompletionRequest`, parsing handles results normally, and Groq `llama-3.3-70b-versatile` remains the fastest large model available. The campaign highlights that `llama-3.1-70b-instruct` on NIM incurs nearly 6x the latency of a comparable class model on Groq.
+
+**Deterministic verification.** `cmd/phase415_nim_large_models_fire_test/` encapsulates the scenario.
+
 
 2026-07-19 18:20 — HEARTBEAT — Adicionada prevenção de duplicatas exatas em localSessionManager.Spawn e default 'isolated' em sessions_spawn tool, corrigindo a API do dispatcher para consistência em testes e chamadas diretas — verificação: `go test`, `go vet`, `gofmt` e `git diff --check` nas áreas afetadas (kernel, subagent tool) — commit imediato.\n\n### Fase 19 — Observabilidade e Recuperação de Subagentes (yield/completion)\n\n- [x] `DONE` Elaborar tool `sessions_yield`: delegator para que o modelo ceda a vez intencionalmente e seja acordado assim que os child agents sinalizarem conclusão, preservando o repouso global configurado do kernel principal.\n- [x] `DONE` Elaborar pipeline de re-ingresso de eventos (`kernel.SubagentCompletionProcessor` ou similar no `SessionManager`): traduzir o encerramento do child session state (`COMPLETE`, `FAILED`) em um `ExternalEvent` ou mutação aplicável no log da missão pai.\n- [x] `DONE` Acoplar o `ExternalEventProcessor` de forma que a recepção de completion de child session avance automaticamente qualquer `Operation` presa em estado de espera (ex: `WAITING_DEPENDENCY`), resolvendo o ciclo de vida ponta-a-ponta.
 
