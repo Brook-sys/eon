@@ -1,0 +1,120 @@
+{
+  "phase": "419",
+  "timestamp": "2026-08-09T13:47:01.855287748Z",
+  "total_trials": 9,
+  "successful": 8,
+  "failed": 1,
+  "global_p50_ms": 879,
+  "global_p95_ms": 2161,
+  "average_compliance": 0.8888888888888888,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-deadline-conflicting-payload",
+      "latency_ms": 426,
+      "input_tokens": 116,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"dropped\", \"REASON\": \"inflight not released\", \"INFLIGHT_RELEASED\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-deadline-persistence",
+      "latency_ms": 427,
+      "input_tokens": 112,
+      "output_tokens": 35,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"dropped\", \"REASON\": \"Retry-After past current time\", \"INFLIGHT_RELEASED\": \"yes\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-deadline-persistence",
+      "latency_ms": 362,
+      "input_tokens": 112,
+      "output_tokens": 51,
+      "finish_reason": "stop",
+      "raw_content": "{\n  \"DEADLINE_PERSISTENCE\": \"kept\",\n  \"REASON\": \"Retry-After is set but past current time, indicating a failed attempt to schedule a retry\",\n  \"INFLIGHT_RELEASED\": \"no\"\n}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-deadline-clamping-pressure",
+      "latency_ms": 382,
+      "input_tokens": 128,
+      "output_tokens": 46,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"kept\", \"REASON\": \"Falha não pode ser liberada pois geraria um cooldown maior que o limite configurado\", \"INFLIGHT_RELEASED\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-deadline-conflicting-payload",
+      "latency_ms": 879,
+      "input_tokens": 116,
+      "output_tokens": 37,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"kept\", \"REASON\": \"No in-flight requests, deadline can be kept\", \"INFLIGHT_RELEASED\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-deadline-conflicting-payload",
+      "latency_ms": 265,
+      "input_tokens": 116,
+      "output_tokens": 37,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"kept\", \"REASON\": \"No in-flight requests, deadline can be kept\", \"INFLIGHT_RELEASED\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-deadline-clamping-pressure",
+      "latency_ms": 699,
+      "input_tokens": 128,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"dropped\", \"REASON\": \"O limite possui maxCooldown de 1 minuto, mas a falha atual geraria 2 minutos, portanto a falha não pode ser persist",
+      "strategy": "none",
+      "compliance_score": 0,
+      "success": false
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-deadline-clamping-pressure",
+      "latency_ms": 639,
+      "input_tokens": 128,
+      "output_tokens": 34,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"dropped\", \"REASON\": \"maxCooldown excedido\", \"INFLIGHT_RELEASED\": \"yes\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-deadline-persistence",
+      "latency_ms": 2161,
+      "input_tokens": 112,
+      "output_tokens": 56,
+      "finish_reason": "stop",
+      "raw_content": "{\"DEADLINE_PERSISTENCE\": \"kept\", \"REASON\": \"ReportFailure behavior does not open the circuit when Retry-After is explicitly set but past current time, as it is still considered a valid deadline\", \"INFLIGHT_RELEASED\": \"no\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
