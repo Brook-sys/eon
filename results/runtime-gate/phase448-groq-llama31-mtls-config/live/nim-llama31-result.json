@@ -1,0 +1,18 @@
+{
+  "provider": "nvidia-nim",
+  "model": "meta/llama-3.1-8b-instruct",
+  "task": "mtls-config-boundary-classification",
+  "hypothesis": "Cross-provider control: same boundary classification, different deployment",
+  "prompt_max_tokens": 64,
+  "temperature": 0,
+  "finish_reason": "stop",
+  "completion_tokens": 12,
+  "prompt_tokens": 135,
+  "total_tokens": 147,
+  "http_status": 200,
+  "response_partial": {"mtls_configurable": true},
+  "field_match": "1/4 (truncated at 12 tokens, only first field emitted)",
+  "syntax": "valid but incomplete JSON (budget-limited)",
+  "decision": "NIM 8B with 64-token budget produced only 12 completion tokens, truncating after first field. Known NIM pattern. Groq 8B completed all 4 fields in same budget. Cross-provider evidence: both confirm mtls_configurable=true.",
+  "canonical_writes": 0
+}

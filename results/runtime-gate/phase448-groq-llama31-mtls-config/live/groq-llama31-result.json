@@ -1,0 +1,19 @@
+{
+  "provider": "groq",
+  "model": "llama-3.1-8b-instant",
+  "task": "mtls-config-boundary-classification",
+  "hypothesis": "P2PManager mTLS path options are configurable from CLI; model has no authority to alter them",
+  "prompt_max_tokens": 64,
+  "temperature": 0,
+  "finish_reason": "stop",
+  "completion_tokens": 37,
+  "prompt_tokens": 152,
+  "total_tokens": 189,
+  "latency_ms": 77,
+  "http_status": 200,
+  "response": {"mtls_configurable": true, "plaintext_fallback": true, "model_authority": false, "canonical_writes": 0},
+  "field_match": "4/4",
+  "syntax": "valid JSON, no markdown fence",
+  "decision": "Model correctly classifies mTLS configurability boundary. Plaintext fallback true because P2PManager.Start opens plain TCP. No model authority. Next: load TLS config and wrap listener.",
+  "canonical_writes": 0
+}
