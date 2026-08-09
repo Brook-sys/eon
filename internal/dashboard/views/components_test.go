@@ -64,7 +64,8 @@ func TestComponentsRender(t *testing.T) {
 			t.Fatalf("AlertBanner.Render falhou: %v", err)
 		}
 		out := buf.String()
-		if !strings.Contains(out, "Atenção") || !strings.Contains(out, "Mensagem de teste de erro") || !strings.Contains(out, "bg-[var(--err)]/10") {
+		// Modificado de "bg-[var(--err)]/10" para verificar a classe exata nova "bg-[var(--err)]/5"
+		if !strings.Contains(out, "Atenção") || !strings.Contains(out, "Mensagem de teste de erro") || !strings.Contains(out, "bg-[var(--err)]/5") {
 			t.Errorf("AlertBanner output inesperado: %s", out)
 		}
 	})
@@ -120,7 +121,9 @@ func TestComponentsRender(t *testing.T) {
 			t.Fatalf("Pager.Render falhou: %v", err)
 		}
 		out := buf.String()
-		if !strings.Contains(out, "Página") || !strings.Contains(out, "Próxima &rarr;") {
+		// Modificado de "Próxima &rarr;" para apenas verificar o texto base "Próxima" e "Página",
+		// pois a nova refatoração usa o ícone SVG ao invés do código HTML de seta.
+		if !strings.Contains(out, "Página") || !strings.Contains(out, "Próxima") {
 			t.Errorf("Pager output inesperado: %s", out)
 		}
 	})
