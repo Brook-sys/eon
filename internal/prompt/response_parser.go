@@ -149,6 +149,8 @@ func extractLinePrefixAndValue(line string) (prefix string, value string, hasKey
 	if trimmed == "" {
 		return "", "", false
 	}
+	trimmed = unescapeHTMLEntities(trimmed)
+
 	var prefStr, valStr string
 	if colon := strings.Index(trimmed, ":"); colon > 0 {
 		prefStr = trimmed[:colon]
@@ -165,6 +167,23 @@ func extractLinePrefixAndValue(line string) (prefix string, value string, hasKey
 	return pref, val, true
 }
 
+// unescapeHTMLEntities replaces common HTML entity encodings in model text
+// before key-value prefix and separator matching.
+func unescapeHTMLEntities(s string) string {
+	r := strings.NewReplacer(
+		"&lt;", "<",
+		"&gt;", ">",
+		"&quot;", "\"",
+		"&#34;", "\"",
+		"&#39;", "'",
+		"&apos;", "'",
+		"&#58;", ":",
+		"&amp;", "&",
+	)
+	return r.Replace(s)
+}
+
+// cleanValue cleans leading value artifacts extracted after separators.
 func cleanValue(valStr string) string {
 	s := strings.TrimSpace(valStr)
 	for {
@@ -262,7 +281,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 		prefix, value, ok := extractLinePrefixAndValue(line)
-		if !ok || value == "" {
+		if !ok {
 			continue
 		}
 		// Match against any expected key (case-insensitive).
@@ -270,6 +289,26 @@ func ParseResponse(text string, keys []string) ParseResult {
 		for _, k := range keys {
 			if strings.EqualFold(prefix, k) {
 				if _, exists := result.Values[k]; !exists {
+					// Next-line value recovery: if value is empty on line i,
+					// look ahead up to 2 lines for a non-empty value line.
+					if value == "" {
+						for lookAhead := i + 1; lookAhead <= i+2 && lookAhead < len(lines); lookAhead++ {
+							nextRaw := lines[lookAhead]
+							next := strings.TrimSpace(nextRaw)
+							if next == "" {
+								continue
+							}
+							if _, isKey := linesForKey(next); !isKey {
+								value = next
+								foldedLines[lookAhead] = true
+								break
+							}
+							break
+						}
+					}
+					if value == "" {
+						continue
+					}
 					// Multi-line value folding: collect continuation lines.
 					// A line is considered a continuation only if it is indented,
 					// or starts with a continuation signal (lowercase letter, comma, semicolon,

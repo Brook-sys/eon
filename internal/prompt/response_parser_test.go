@@ -794,3 +794,54 @@ SEVERITY: HIGH`
 		t.Errorf("Compliance=%v, want 1.0", r.FormatComplianceScore)
 	}
 }
+
+func TestParseResponse_NextLineValue(t *testing.T) {
+	// Models sometimes emit KEY: on one line and the value on the next line or after a blank line.
+	text := `DATE:
+2026-08-09
+SOURCE:
+
+https://example.com
+STATUS: OK`
+
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+	t.Logf("Result: FoundKeys=%v, FoundByFallback=%v, Values=%v, Strategy=%v", r.FoundKeys, r.FoundByFallback, r.Values, r.Strategy)
+
+	if r.Values["DATE"] != "2026-08-09" {
+		t.Errorf("DATE=%q, want '2026-08-09'", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "https://example.com" {
+		t.Errorf("SOURCE=%q, want 'https://example.com'", r.Values["SOURCE"])
+	}
+	if r.Values["STATUS"] != "OK" {
+		t.Errorf("STATUS=%q, want 'OK'", r.Values["STATUS"])
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Errorf("Strategy=%v, want %v", r.Strategy, ParseStrategyPrimary)
+	}
+	if r.FormatComplianceScore != 1.0 {
+		t.Errorf("Compliance=%v, want 1.0", r.FormatComplianceScore)
+	}
+}
+
+func TestParseResponse_HTMLEntityKeysAndSeparators(t *testing.T) {
+	// Models sometimes emit HTML-encoded key prefixes or entity separators.
+	text := `&lt;DATE&gt;: 2026-08-09
+SOURCE&#58; https://example.com
+&quot;STATUS&quot;: OK`
+
+	r := ParseResponse(text, []string{"DATE", "SOURCE", "STATUS"})
+
+	if r.Values["DATE"] != "2026-08-09" {
+		t.Errorf("DATE=%q, want '2026-08-09'", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "https://example.com" {
+		t.Errorf("SOURCE=%q, want 'https://example.com'", r.Values["SOURCE"])
+	}
+	if r.Values["STATUS"] != "OK" {
+		t.Errorf("STATUS=%q, want 'OK'", r.Values["STATUS"])
+	}
+	if r.Strategy != ParseStrategyPrimary {
+		t.Errorf("Strategy=%v, want %v", r.Strategy, ParseStrategyPrimary)
+	}
+}

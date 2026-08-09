@@ -7471,6 +7471,25 @@ Implementação:
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase406_multiline_folding_fire_test/` and `results/phase406-multiline-folding-parser/`.
 
+## Phase 408 — HTML entity unescaping & next-line value recovery live fire campaign (2026-08-09 02:50 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for HTML entity-encoded prefixes (`&lt;KEY&gt;: VALUE`, `SOURCE&#58; VALUE`) and next-line value separation (where keys are emitted on line $i$ and values on line $i+1$ or $i+2$) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **HTML Entity Unescaping & Next-Line Value Recovery (`ResponseParser`)**:
+   - Added `unescapeHTMLEntities` in `internal/prompt/response_parser.go` to unescape HTML entity sequences (`&lt;`, `&gt;`, `&quot;`, `&#34;`, `&#39;`, `&apos;`, `&#58;`, `&amp;`) before prefix extraction.
+   - Added next-line value lookahead in `ParseResponse`: if a key prefix matches on line $i$ but `value == ""`, the parser scans up to 2 subsequent non-blank lines to recover the value if those lines are not key prefixes.
+2. **Unit Test Expansion (`response_parser_test.go`)**: Added `TestParseResponse_NextLineValue` and `TestParseResponse_HTMLEntityKeysAndSeparators` testing next-line value capture and HTML entity decoding.
+3. **Live Fire Campaign Phase 408**: Formulated and executed a 15-trial live fire campaign (`cmd/phase408_htmldecoding_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.1-8b-instruct`) under 3 scenarios (`next_line_value_separation`, `html_entity_encoded_keys`, `html_entity_multiline_mix`).
+4. **Live campaign findings**:
+   - **60.0% Overall Success Rate (9/15 trials OK)** across all 5 models.
+   - **Format compliance: 100% (15/15)** across all models and scenarios.
+   - **P50 Latency: 280 ms**, P95 Latency: 624 ms, average format compliance: 1.00.
+   - **`groq/llama-3.3-70b-versatile`**: **3/3 (100%) success**, P50 latency 247ms.
+   - **`groq/qwen/qwen3.6-27b`**: **2/3 (66.7%) success**, P50 latency 234ms.
+   - **`groq/openai/gpt-oss-120b`**: **2/3 (66.7%) success**, P50 latency 432ms.
+   - **HTML entity decoding validation**: `&lt;SUMMARY&gt;`, `&lt;IMPACT&gt;`, and `&lt;RECOMMENDATION&gt;` were unescaped and parsed via `primary_prefix` strategy across models.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -w`, and `git diff --check` clean. Artifacts in `cmd/phase408_htmldecoding_fire_test/` and `results/phase408-htmldecoding-parser/`.
+
 ## Phase 407 — XML/HTML angle bracket key parsing & multi-provider live fire campaign (2026-08-09 01:45 -03)
 
 **Objective and implementation.** Addressed key parsing resilience for XML/HTML tag formatted key names (`<KEY>: VALUE`, `<KEY>VALUE</KEY>`, `**<KEY>** : VALUE`) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
