@@ -253,6 +253,10 @@ func ParseResponse(text string, keys []string) ParseResult {
 	}
 
 	// Primary parse: scan lines for "KEY: value" pattern with multi-line folding.
+	// foldedLines tracks line indices consumed as continuation lines during
+	// multi-line value folding, so the hybrid fallback can exclude them from
+	// the unmatched-line count.
+	foldedLines := make(map[int]bool)
 	lines := strings.Split(cleanText, "\n")
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
@@ -305,6 +309,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 							break
 						}
 						foldedValue += " " + next
+						foldedLines[j] = true
 					}
 					result.Values[k] = foldedValue
 					result.FoundKeys = append(result.FoundKeys, k)
@@ -387,9 +392,11 @@ func ParseResponse(text string, keys []string) ParseResult {
 			}
 		}
 
-		// Collect non-empty lines not consumed by a prefix match.
+		// Collect non-empty lines not consumed by a prefix match or folding.
+		// Build an index from non-empty line content to the first unconsumed
+		// index, so duplicate-looking lines are handled correctly.
 		consumedLines := make(map[int]bool)
-		for _, line := range strings.Split(cleanText, "\n") {
+		for _, line := range lines {
 			trimmed := strings.TrimSpace(line)
 			prefix, _, ok := extractLinePrefixAndValue(trimmed)
 			if !ok {
@@ -404,6 +411,17 @@ func ParseResponse(text string, keys []string) ParseResult {
 							break
 						}
 					}
+					break
+				}
+			}
+		}
+
+		// Also mark continuation lines consumed by multi-line folding.
+		for lineIdx := range foldedLines {
+			foldedText := strings.TrimSpace(lines[lineIdx])
+			for i, ne := range nonEmptyLines {
+				if ne == foldedText && !consumedLines[i] {
+					consumedLines[i] = true
 					break
 				}
 			}

@@ -1,27 +1,27 @@
 {
-  "timestamp": "2026-08-09T00:11:23Z",
+  "timestamp": "2026-08-09T01:26:01Z",
   "total_trials": 15,
-  "successful": 11,
-  "success_rate": 0.7333333333333333,
-  "p50_latency_ms": 399,
-  "p95_latency_ms": 1082,
-  "avg_compliance": 0.9722222222222222,
+  "successful": 12,
+  "success_rate": 0.8,
+  "p50_latency_ms": 329,
+  "p95_latency_ms": 421,
+  "avg_compliance": 1,
   "model_stats": {
     "llama-3.1-8b-instant": {
       "total_trials": 3,
-      "successful_trials": 2,
-      "success_rate": 0.6666666666666666,
-      "p50_latency_ms": 399,
-      "p95_latency_ms": 704,
-      "avg_compliance": 0.8888888888888888,
-      "format_correct_rate": 0.6666666666666666
+      "successful_trials": 3,
+      "success_rate": 1,
+      "p50_latency_ms": 311,
+      "p95_latency_ms": 421,
+      "avg_compliance": 1,
+      "format_correct_rate": 1
     },
     "llama-3.3-70b-versatile": {
       "total_trials": 3,
       "successful_trials": 3,
       "success_rate": 1,
-      "p50_latency_ms": 323,
-      "p95_latency_ms": 427,
+      "p50_latency_ms": 322,
+      "p95_latency_ms": 373,
       "avg_compliance": 1,
       "format_correct_rate": 1
     },
@@ -38,8 +38,8 @@
       "total_trials": 3,
       "successful_trials": 3,
       "success_rate": 1,
-      "p50_latency_ms": 407,
-      "p95_latency_ms": 592,
+      "p50_latency_ms": 370,
+      "p95_latency_ms": 371,
       "avg_compliance": 1,
       "format_correct_rate": 1
     },
@@ -47,8 +47,8 @@
       "total_trials": 3,
       "successful_trials": 3,
       "success_rate": 1,
-      "p50_latency_ms": 338,
-      "p95_latency_ms": 1082,
+      "p50_latency_ms": 294,
+      "p95_latency_ms": 374,
       "avg_compliance": 1,
       "format_correct_rate": 1
     }

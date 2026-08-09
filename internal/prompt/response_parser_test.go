@@ -1,6 +1,7 @@
 package prompt
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -737,5 +738,39 @@ line5`
 	expected := "line0 line1 line2 line3"
 	if r.Values["DETAIL"] != expected {
 		t.Errorf("DETAIL=%q, want %q", r.Values["DETAIL"], expected)
+	}
+}
+
+func TestParseResponse_HybridFallbackWithFoldedContinuation(t *testing.T) {
+	// A model emits a bare value for TITLE (no prefix), then a properly
+	// prefixed DESCRIPTION whose value wraps across two lines (indented
+	// continuation), then a prefixed SEVERITY. The hybrid fallback must
+	// recognize the folded continuation line as consumed so only the bare
+	// TITLE line remains as an unmatched candidate.
+	text := `Buffer Overflow in Parser
+DESCRIPTION: The parser fails to handle input exceeding the allocated buffer size,
+              resulting in a buffer overflow and potential code execution.
+SEVERITY: HIGH`
+
+	r := ParseResponse(text, []string{"TITLE", "DESCRIPTION", "SEVERITY"})
+
+	// TITLE should be recovered by hybrid fallback.
+	if r.Values["TITLE"] != "Buffer Overflow in Parser" {
+		t.Errorf("TITLE=%q, want 'Buffer Overflow in Parser'", r.Values["TITLE"])
+	}
+	// DESCRIPTION should include the folded continuation.
+	if !strings.Contains(r.Values["DESCRIPTION"], "resulting in a buffer overflow") {
+		t.Errorf("DESCRIPTION=%q, should contain folded continuation", r.Values["DESCRIPTION"])
+	}
+	// SEVERITY should be HIGH.
+	if r.Values["SEVERITY"] != "HIGH" {
+		t.Errorf("SEVERITY=%q, want 'HIGH'", r.Values["SEVERITY"])
+	}
+	// Should use hybrid strategy with full compliance.
+	if r.Strategy != ParseStrategyHybrid {
+		t.Errorf("Strategy=%v, want %v", r.Strategy, ParseStrategyHybrid)
+	}
+	if r.FormatComplianceScore != 1.0 {
+		t.Errorf("Compliance=%v, want 1.0", r.FormatComplianceScore)
 	}
 }
