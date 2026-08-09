@@ -139,34 +139,50 @@ Do NOT output Markdown.`,
 				Name, System, User string
 				MaxToken           int
 				Temp               float64
-			}) { defer wg.Done(); sem <- struct{}{}; defer func() { <-sem }(); req := port.CompletionRequest{
-				Prompt:          s.System + "\n\n" + s.User,
-				Temperature:     s.Temp,
-				MaxOutputTokens: s.MaxToken,
-			}; ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second); defer cancel(); start := time.Now(); resp, err := client.Complete(ctx, req); lat := time.Since(start).Milliseconds(); res := TrialResult{
-				Model:     m.ID,
-				Scenario:  s.Name,
-				LatencyMs: lat,
-			}; if err != nil {
-				res.Error = err.Error()
-			} else {
-				res.InputTokens = resp.InputTokens
-				res.OutputTokens = resp.OutputTokens
-				res.FinishReason = string(resp.FinishReason)
-				res.RawContent = resp.Text
-
-				parsed := prompt.ParseResponse(resp.Text, []string{"GOAL", "TASKS", "BLOCKERS"})
-				res.Strategy = string(parsed.Strategy)
-				res.ComplianceScore = parsed.FormatComplianceScore
-				res.ExtractedGoal = parsed.Values["GOAL"]
-				res.ExtractedTasks = parsed.Values["TASKS"]
-				res.ExtractedBlockers = parsed.Values["BLOCKERS"]
-
-				// Success criteria: extracted at least Goal and Tasks (blockers might truncate)
-				if res.ExtractedGoal != "" && res.ExtractedTasks != "" {
-					res.Success = true
+			}) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				req := port.CompletionRequest{
+					Prompt:          s.System + "\n\n" + s.User,
+					Temperature:     s.Temp,
+					MaxOutputTokens: s.MaxToken,
 				}
-			}; mu.Lock(); results = append(results, res); fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success); mu.Unlock() }(mc, sc)
+				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+				defer cancel()
+				start := time.Now()
+				resp, err := client.Complete(ctx, req)
+				lat := time.Since(start).Milliseconds()
+				res := TrialResult{
+					Model:     m.ID,
+					Scenario:  s.Name,
+					LatencyMs: lat,
+				}
+				if err != nil {
+					res.Error = err.Error()
+				} else {
+					res.InputTokens = resp.InputTokens
+					res.OutputTokens = resp.OutputTokens
+					res.FinishReason = string(resp.FinishReason)
+					res.RawContent = resp.Text
+
+					parsed := prompt.ParseResponse(resp.Text, []string{"GOAL", "TASKS", "BLOCKERS"})
+					res.Strategy = string(parsed.Strategy)
+					res.ComplianceScore = parsed.FormatComplianceScore
+					res.ExtractedGoal = parsed.Values["GOAL"]
+					res.ExtractedTasks = parsed.Values["TASKS"]
+					res.ExtractedBlockers = parsed.Values["BLOCKERS"]
+
+					// Success criteria: extracted at least Goal and Tasks (blockers might truncate)
+					if res.ExtractedGoal != "" && res.ExtractedTasks != "" {
+						res.Success = true
+					}
+				}
+				mu.Lock()
+				results = append(results, res)
+				fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success)
+				mu.Unlock()
+			}(mc, sc)
 		}
 	}
 

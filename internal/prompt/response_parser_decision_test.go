@@ -6,10 +6,10 @@ import (
 
 func TestParseDecision(t *testing.T) {
 	tests := []struct {
-		name       string
-		content    string
-		wantDec    string
-		wantFound  bool
+		name      string
+		content   string
+		wantDec   string
+		wantFound bool
 	}{
 		{"clean", "DECISION: ROUTE_A\nREASON: Matches criteria.", "ROUTE_A", true},
 		{"lowercase", "decision: fallback", "FALLBACK", true},

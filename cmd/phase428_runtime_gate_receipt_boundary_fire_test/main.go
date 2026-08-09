@@ -117,42 +117,58 @@ func main() {
 				Name, System, User string
 				MaxToken           int
 				Temp               float64
-			}) { defer wg.Done(); sem <- struct{}{}; defer func() { <-sem }(); req := port.CompletionRequest{
-				Prompt:          s.System + "\n\n" + s.User,
-				Temperature:     s.Temp,
-				MaxOutputTokens: s.MaxToken,
-			}; ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second); defer cancel(); start := time.Now(); resp, err := client.Complete(ctx, req); lat := time.Since(start).Milliseconds(); res := TrialResult{
-				Model:     m.ID,
-				Scenario:  s.Name,
-				LatencyMs: lat,
-			}; if err != nil {
-				res.Error = err.Error()
-			} else {
-				res.InputTokens = resp.InputTokens
-				res.OutputTokens = resp.OutputTokens
-				res.FinishReason = string(resp.FinishReason)
-				res.RawContent = resp.Text
+			}) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+				req := port.CompletionRequest{
+					Prompt:          s.System + "\n\n" + s.User,
+					Temperature:     s.Temp,
+					MaxOutputTokens: s.MaxToken,
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+				defer cancel()
+				start := time.Now()
+				resp, err := client.Complete(ctx, req)
+				lat := time.Since(start).Milliseconds()
+				res := TrialResult{
+					Model:     m.ID,
+					Scenario:  s.Name,
+					LatencyMs: lat,
+				}
+				if err != nil {
+					res.Error = err.Error()
+				} else {
+					res.InputTokens = resp.InputTokens
+					res.OutputTokens = resp.OutputTokens
+					res.FinishReason = string(resp.FinishReason)
+					res.RawContent = resp.Text
 
-				parsed := prompt.ParseResponse(resp.Text, []string{"RECEIPT_COMMITTED_FIRST", "REASON", "CRASH_SAFE"})
+					parsed := prompt.ParseResponse(resp.Text, []string{"RECEIPT_COMMITTED_FIRST", "REASON", "CRASH_SAFE"})
 
-				res.Strategy = string(parsed.Strategy)
-				res.ComplianceScore = parsed.FormatComplianceScore
+					res.Strategy = string(parsed.Strategy)
+					res.ComplianceScore = parsed.FormatComplianceScore
 
-				val1 := parsed.Values["RECEIPT_COMMITTED_FIRST"]
-				val2 := parsed.Values["CRASH_SAFE"]
+					val1 := parsed.Values["RECEIPT_COMMITTED_FIRST"]
+					val2 := parsed.Values["CRASH_SAFE"]
 
-				if val1 != "" && val2 != "" {
-					if s.Name == "adv-release-before-receipt-structural" {
-						if (val1 == "no" || val1 == "false") && (val2 == "no" || val2 == "false") {
-							res.Success = true
-						}
-					} else {
-						if (val1 == "yes" || val1 == "true") && (val2 == "yes" || val2 == "true") {
-							res.Success = true
+					if val1 != "" && val2 != "" {
+						if s.Name == "adv-release-before-receipt-structural" {
+							if (val1 == "no" || val1 == "false") && (val2 == "no" || val2 == "false") {
+								res.Success = true
+							}
+						} else {
+							if (val1 == "yes" || val1 == "true") && (val2 == "yes" || val2 == "true") {
+								res.Success = true
+							}
 						}
 					}
 				}
-			}; mu.Lock(); results = append(results, res); fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success); mu.Unlock() }(mc, sc)
+				mu.Lock()
+				results = append(results, res)
+				fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success)
+				mu.Unlock()
+			}(mc, sc)
 		}
 	}
 

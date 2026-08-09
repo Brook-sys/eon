@@ -6,10 +6,10 @@ import (
 
 func TestParseScore(t *testing.T) {
 	tests := []struct {
-		name       string
-		content    string
-		wantScore  int
-		wantFound  bool
+		name      string
+		content   string
+		wantScore int
+		wantFound bool
 	}{
 		{"clean", "SCORE: 95\nREASON: All good.", 95, true},
 		{"lowercase", "score: 42", 42, true},

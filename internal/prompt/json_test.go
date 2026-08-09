@@ -16,8 +16,8 @@ func TestExtractJSON(t *testing.T) {
 			expected: `{"a": 1}`,
 		},
 		{
-			name: "json_in_markdown_block",
-			input: "Here is the result:\n```json\n{\n  \"status\": \"SUCCESS\"\n}\n```\nDone.",
+			name:     "json_in_markdown_block",
+			input:    "Here is the result:\n```json\n{\n  \"status\": \"SUCCESS\"\n}\n```\nDone.",
 			expected: "{\n  \"status\": \"SUCCESS\"\n}",
 		},
 		{
