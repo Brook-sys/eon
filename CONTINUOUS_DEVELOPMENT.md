@@ -891,7 +891,7 @@ Probe live bounded Groq executou 1 chamada/44 tokens e retornou HTTP 200 PROBE_O
 2026-07-20 00:40 — HEARTBEAT — Fase 22 iniciada: implementado beacon mDNS bounded com lifecycle Start/Stop, anúncio periódico configurável, escuta UDP com deadlines e preenchimento proativo do PeerRegistry. Discovery exige allowlist de identidade/fingerprint quando configurada e ignora peers não autorizados. Testes cobrem lifecycle, autorização e round-trip UDP isolado; `/tmp/go-toolchain/go/bin/go test ./internal/network/mdns`, vet e `git diff --check` passaram. Probe Groq preparado com 1 chamada/max_tokens=8/timeout=30s/retries=0, mas bloqueado porque `GROQ_API_KEY` não foi exportada pela credencial local; evidência em `results/model-benchmark/continuous-probe-2026-07-20-0040-groq/probe.json`. Commit: `7f3ba2b`. Próximo: substituir o framing baseline NODE por records DNS-SD/TXT estritos e integrar opt-in no bootstrap sem abrir listener público por default.
 
 ### Fase 21 - Conclusoes de Bootstrap
-2026-07-20 00:50 - HEARTBEAT - Fase 21 (Bootstrap/Listener P2P): Criado o subsistema P2PManager integrando as definicoes estritas de dominio ao handler recem-criado. O manager permite acionar/escutar de forma gerenciada (Start/Stop) e por default apenas age com o opt-in (Options.Enabled). Codigo validado via testes integrados TestP2PManagerLifecycle garantindo que idempotencia de lifecycle e descarte em default operem sem quebras. Testes concluidos 100% PASS. 
+2026-07-20 00:50 - HEARTBEAT - Fase 21 (Bootstrap/Listener P2P): Criado o subsistema P2PManager integrando as definicoes estritas de dominio ao handler recem-criado. O manager permite acionar/escutar de forma gerenciada (Start/Stop) e por default apenas age com o opt-in (Options.Enabled). Codigo validado via testes integrados TestP2PManagerLifecycle garantindo que idempotencia de lifecycle e descarte em default operem sem quebras. Testes concluidos 100% PASS.
 Proximo: integrar o listener P2P diretamente ao ciclo principal do runtime via injecao no Kernel para habilitar as comunicacoes seguras ponta-a-ponta na malha dos subagentes.
 
 2026-07-20 01:00 — HEARTBEAT — Fase 22: Framing atualizado para DNS-SD/TXT. O adapter P2P/mDNS agora utiliza a biblioteca miekg/dns emitindo e validando registros PTR (_openclaw._tcp.local.), SRV (resolvendo a porta dinamicamente) e TXT (fingerprint v=openclaw-p2p-1 e id=<node_id>). Substituiu os pacotes custom string NODE: por binario oficial mDNS limitados, mantendo autorizacao estrita. Testes de integracao cross-peers usam loopback raw udp socket injetado nos listener goroutines com DNS unpacking em vez de raw casting. Verificacao: go mod tidy, suite go test ./internal/network/mdns passaram em 606ms com Go 1.26.5. Probe tool bloqueado por falta de export credential para o Groq (visto no ciclo anterior). Proximo passo: wiring P2P completo injetando o start/stop beacon atrelado ao P2PManager e inicializacao (opt-in) atraves do config.
@@ -4229,7 +4229,7 @@ Verificacao: testes focais de domain/store/kernel/restart/replay, `go test ./...
 - [x] `DONE` Acoplar o log das falhas corrigidas automaticamente nos recibos `ModelCompletionReceipt` para manter evidência sem poluir o registro canônico.
 - [x] `DONE` Executar campanha bounded live de stress com JSONs deliberadamente complexos para demonstrar auto-correção via LLM. (Fase 128)
 
--e 
+-e
 2026-07-22 22:30 - HEARTBEAT - Fase 127 avançada. Confirmado que a auto-correção de validação JSON e a prevenção de loops de retry já estavam integradas arquiteturalmente no ModelExecutor (verificável via switch em domain.DecideNextRecovery). Atualizadas as flags no documento.
 
 ### Fase 128 - Campanha Bounded Live de Stress (JSON Malformed Recovery)
@@ -4386,14 +4386,14 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 ### Fase 144 - Exploração de Validações Sub-Agent Status
 - [x] `DONE` Elaborar testes de regressão (`TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState` e `TestSubagentStatusIngressWorkerLimitsConflictsConcurrently`) garantindo que `SubagentStatusIngressWorker` restrinja e lide corretamente com delegações de estado que chegam tarde (late arrivals) preservando o encerramento determinístico e a integridade da máquina de estados na `localSessionManager` sem panic nem rollback desnecessário da WAL.
 
-2026-07-23 08:42 — HEARTBEAT — Fase 144 concluída. Implementados os testes de conflito no `SubagentStatusIngressWorker`. A bateria focada (`TestSubagentStatusIngressWorkerLimitsConflictsConcurrently` e `TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState`) prova que recibos com status incompatíveis (p. ex., RUNNING e COMPLETE divergentes que chegam atrasados na mesma janela de lease) recebem corretamente o código de rejeição (`TERMINAL_CONFLICT` ou `ATTEMPT_MISMATCH`) sem poluir a máquina de estado ou gerar pânico nas instâncias já completadas de `SessionManager`. 
+2026-07-23 08:42 — HEARTBEAT — Fase 144 concluída. Implementados os testes de conflito no `SubagentStatusIngressWorker`. A bateria focada (`TestSubagentStatusIngressWorkerLimitsConflictsConcurrently` e `TestSubagentStatusIngressWorkerLimitsConflictsAndMaintainsIdempotentState`) prova que recibos com status incompatíveis (p. ex., RUNNING e COMPLETE divergentes que chegam atrasados na mesma janela de lease) recebem corretamente o código de rejeição (`TERMINAL_CONFLICT` ou `ATTEMPT_MISMATCH`) sem poluir a máquina de estado ou gerar pânico nas instâncias já completadas de `SessionManager`.
 
 ### Fase 145 - Otimização de Crash matrix
 - [x] `DONE` Implementar análise de "Crash intent classifier" para detectar fallbacks explícitos no SQLite Store (`TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage` em `motor-autonomo/internal/storage/spike`). Garantiu que fallbacks instáveis não causem context leakage e mantenham a WAL limpa.
 
 2026-07-23 08:44 — HEARTBEAT — Fase 145 concluída. Adicionado o teste `TestCrashIntentClassifierDetectsFallbackWithoutContextLeakage` no pacote `spike`, confirmando que quando o isolamento excede o timeout por via de uma simulação de "fallback intent" (limite de conectividade ou boundary durability fake fail), a reversão transacional não propaga o context leakage (ou erro nativo de cancelamento) silencioso, registrando adequadamente o `OutcomeNotApplied` preservando integridade da engine e do `EventLog`.
 
-### Fase 146 - Refatorar persistência de Cursor em Transport Syncs 
+### Fase 146 - Refatorar persistência de Cursor em Transport Syncs
 - [x] `DONE` Elaborar caso de teste (`TestSaveChannelCursorRejectsStaleRevisionAndPreservesNewerValue` no Memory e SQLite) verificando a concorrência otimista ao persistir `ChannelCursor`. Foi comprovado que atualizações stale baseadas em expectedRevisions desatualizadas são confiavelmente bloqueadas com `port.ErrConflict` garantindo a imutabilidade temporal de cursores de integração remota.
 
 2026-07-23 08:48 — HEARTBEAT — Fase 146 concluída. Novos testes focais em `storage/memory` e `storage/sqlite` verificam rigorosamente as atualizações sob concorrência otimista (optimistic concurrency) de `ChannelCursor`. As threads atrasadas falham devidamente com um erro nativo de transação (`ErrConflict`) ao tentar reverter o cursor remoto de comunicação de um transport channel.
@@ -4401,7 +4401,7 @@ Controle live obrigatório rotacionado de NVIDIA NIM para Groq `llama-3.3-70b-ve
 ### Fase 147 - Integridade do Ingestion Snapshotting
 - [x] `DONE` Elaborar teste focando na resiliência do `SourceIngestion` demonstrando que artefatos fracionados de forma imutável rejeitam fragmentos contendo corrupção ou incompatibilidade de digest, falhando atomicamente (fail-closed) para proteger a integridade transacional do `Store`. Implementado `TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic` no Memory e SQLite.
 
-2026-07-23 08:52 — HEARTBEAT — Fase 147 concluída. Validação da integridade transacional focada em ingestão de conteúdo particionado e imutável. `TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic` injetado no Store in-memory e no db real (SQLite) demonstrando a resistência do motor transacional a fracionamentos corrompidos (onde boundaries sintáticas como `EndOffset <= StartOffset` invadem um batch hígido), promovendo o rollback atômico e evitando fragmentos "órfãos" não mapeados e corrupção silenciosa no acervo de observações (`knowledge_artifacts` e dependências). 
+2026-07-23 08:52 — HEARTBEAT — Fase 147 concluída. Validação da integridade transacional focada em ingestão de conteúdo particionado e imutável. `TestAppendSourceFragmentsRejectsCorruptFragmentsAndFailsAtomic` injetado no Store in-memory e no db real (SQLite) demonstrando a resistência do motor transacional a fracionamentos corrompidos (onde boundaries sintáticas como `EndOffset <= StartOffset` invadem um batch hígido), promovendo o rollback atômico e evitando fragmentos "órfãos" não mapeados e corrupção silenciosa no acervo de observações (`knowledge_artifacts` e dependências).
 
 ### Fase 148 - Avaliação do Context Pressure Degradation na Gestão de Sessões Locais
 - [x] `DONE` Provar no `kernel.localSessionManager` que agendamentos recusados pelo limite operacional são backpressure sem efeito colateral, não status terminal sintético.
@@ -7617,17 +7617,17 @@ Implementação:
 2. Included `POST /secrets/batch-search` to handle requests with up to 100 filter definitions.
 3. Expanded unit tests to handle missing files, multiple returned subsets, expired secret flagging, case insensitivity, combined prefix+substring logic, lock refusal, HTTP success parsing, and validation bounds check (`invalid_request`).
 
-**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM `meta/llama-3.1-8b-instruct` on adversarial robustness format pressure (`adv-format-pressure`), language degradation (`adv-language-degradation`), and conflicting data payload formatting (`adv-conflicting-data`): 30 parallel isolated trials, variable token ceilings up to 48, strict JSON structural requirements. 
+**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM `meta/llama-3.1-8b-instruct` on adversarial robustness format pressure (`adv-format-pressure`), language degradation (`adv-language-degradation`), and conflicting data payload formatting (`adv-conflicting-data`): 30 parallel isolated trials, variable token ceilings up to 48, strict JSON structural requirements.
 
 **Observed evidence and decision.** NVIDIA NIM `meta/llama-3.1-8b-instruct` maintained 100% format and semantic success across all 30 tests (both zero-shot and few-shot/example paths). Average latencies ranged from 510ms (language degradation) to 834ms (conflicting data) without dropping JSON brackets. No canonical writes or state promotion. `go vet`, `gofmt`, and all unit tests passed cleanly across the vault package before commit.
 
 ## Phase 417 — cross-provider adversarial Vault policy evaluation live campaign (2026-08-09 15:45 -03)
 
-**Hypothesis and implementation.** Building upon Phase 358's Vault BatchSearch operations and Phase 416's stacked parsing resilience, this campaign explicitly tested cross-provider model adherence to a zero-shot structured JSON schema representing a strict policy decision (`DECISION`, `REASON`, `BATCH_ID`) under stacked adversarial constraints: budget pressure, language degradation (PT-BR user prompt vs EN system prompt), and conflicting data (prompt injection attempting to spoof JSON arrays/responses). 
+**Hypothesis and implementation.** Building upon Phase 358's Vault BatchSearch operations and Phase 416's stacked parsing resilience, this campaign explicitly tested cross-provider model adherence to a zero-shot structured JSON schema representing a strict policy decision (`DECISION`, `REASON`, `BATCH_ID`) under stacked adversarial constraints: budget pressure, language degradation (PT-BR user prompt vs EN system prompt), and conflicting data (prompt injection attempting to spoof JSON arrays/responses).
 
 **Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Variable output budgets (`MaxOutputTokens` down to 48), tight temperature controls (0.1–0.7), and zero canonical writes or state promotion.
 
-**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9 OK) with perfect 1.00 average format compliance across all three models and all scenarios. P50 latency was 715ms (weighed by NIM) and P95 was 295ms. All models flawlessly identified the conflicting payload structure and maintained strict format output without hallucinating markdown or wrapping the JSON structure incorrectly. The `ResponseParser` correctly extracted the JSON keys via the `json_fallback` logic regardless of starvation or PT-BR input requests. 
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9 OK) with perfect 1.00 average format compliance across all three models and all scenarios. P50 latency was 715ms (weighed by NIM) and P95 was 295ms. All models flawlessly identified the conflicting payload structure and maintained strict format output without hallucinating markdown or wrapping the JSON structure incorrectly. The `ResponseParser` correctly extracted the JSON keys via the `json_fallback` logic regardless of starvation or PT-BR input requests.
 
 **Evidence and verification.** Script `cmd/phase417_vault_batch_search_fire_test/` and artifacts in `results/phase417-vault_batch_search/`. `go test ./...` and `git diff --check` remain clean.
 
@@ -7640,7 +7640,7 @@ Implementação:
 **Observed evidence and decision.** The campaign achieved a 77.8% success rate (7/9 OK).
 - **`llama-3.3-70b-versatile`** achieved 100% success (3/3), accurately maintaining strict JSON schema over complex database transaction logic across PT-BR constraint and payload-injection tests.
 - **`llama-3.1-8b-instant` and NIM `llama-3.1-8b-instruct`** successfully completed the conflicting payload and baseline test but failed the PT-BR failpoint starvation constraint (`finish_reason=length`). The 8B models expended too many tokens wrapping the structured response or padding the `REASON` field, proving that smaller deployments need either looser token budgets or stricter character-level instruction prompts for deeply technical schema outputs.
-- Overall format compliance averaged 0.78, heavily skewed by the two truncation failures. 
+- Overall format compliance averaged 0.78, heavily skewed by the two truncation failures.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase418_sqlite_commit_boundary_fire_test/` and `results/phase418-sqlite_commit_boundary/`. `go test ./...` and `git diff --check` remain clean.
 
@@ -7652,20 +7652,20 @@ Implementação:
 
 **Observed evidence and decision.** The campaign achieved an 88.9% success rate (8/9 OK).
 - **`llama-3.3-70b-versatile`** and **`llama-3.1-8b-instant`** achieved 100% success (3/3), cleanly extracting JSON structures under budget starvation.
-- **NIM `meta/llama-3.1-8b-instruct`** successfully completed the conflicting payload and persistence tests but truncated during the PT-BR clamping pressure test, expending too many tokens in formatting. 
+- **NIM `meta/llama-3.1-8b-instruct`** successfully completed the conflicting payload and persistence tests but truncated during the PT-BR clamping pressure test, expending too many tokens in formatting.
 - Format compliance averaged 0.89. The test confirms that 70B models handle structured constraint output perfectly under token starvation, but 8B NIM defaults require relaxed maximums for verbose PT-BR answers.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase419_resource_gate_deadline_campaign/` and `results/phase419-resource_gate_deadline/`. `go test ./...` and `git diff --check` remain clean.
 
 ## Phase 420 — Subagent dispatch transition boundary reasoning live campaign (2026-08-09 10:50 -03)
 
-**Hypothesis and implementation.** To confirm that LLM agents can robustly query and act upon terminal statuses, this phase evaluates whether the models understand that `effect_unknown` dispatches cannot be trivially canceled without reconciliation. 
+**Hypothesis and implementation.** To confirm that LLM agents can robustly query and act upon terminal statuses, this phase evaluates whether the models understand that `effect_unknown` dispatches cannot be trivially canceled without reconciliation.
 
 **Live hypothesis and bounds.** Executed 9 parallel isolated trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Max output tokens were 48 for the clamping test and 64 for others. Expected structured output: `CANCELABLE`, `REASON`, and `STATUS_TRANSITION`.
 
 **Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
-- **`llama-3.3-70b-versatile`**, **`llama-3.1-8b-instant`**, and **NIM `meta/llama-3.1-8b-instruct`** all correctly parsed and adhered to the required structure. 
-- The 8B Groq model hit `finish_reason=length` on the 48-token constraint but managed to flush enough parsable JSON before truncation that the `prompt.ParseResponse` extraction succeeded, resulting in 1.00 compliance across the board. 
+- **`llama-3.3-70b-versatile`**, **`llama-3.1-8b-instant`**, and **NIM `meta/llama-3.1-8b-instruct`** all correctly parsed and adhered to the required structure.
+- The 8B Groq model hit `finish_reason=length` on the 48-token constraint but managed to flush enough parsable JSON before truncation that the `prompt.ParseResponse` extraction succeeded, resulting in 1.00 compliance across the board.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase420_subagent_dispatch_semantics_fire_test/` and `results/phase420-subagent_dispatch_semantics/`. `go test ./...` and `git diff --check` remain clean.
 
@@ -7700,7 +7700,7 @@ Implementação:
 **Live hypothesis and bounds.** Executed 9 trials on Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR context) and 64 (structural tests). The requested JSON schema required `TRAILING_JSON_ALLOWED`, `REASON`, and `DIGEST_SENSITIVE`.
 
 **Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
-- Compliance reached 1.00 globally. 
+- Compliance reached 1.00 globally.
 - Unlike Phase 421 and Phase 422 where 8B models successfully bounded themselves, this test saw `finish_reason=length` on 8B models in both PT-BR pressure (48 tokens) and the primary structural trailing-JSON test (64 tokens). However, because OpenClaw's structured JSON parser (`prompt.ParseResponse`) uses robust brace-stacking heuristics, it successfully extracted the key-value structures from the truncated payload prefixes.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase423_subagent_rpc_reconcile_fire_test/` and `results/phase423-subagent_rpc_reconcile/`. `go test ./...` and `git diff --check` remain clean.
@@ -7736,8 +7736,8 @@ Implementação:
 **Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Kept maximum token constraints adversarial (48 tokens for PT-BR owner validation, 64 tokens for the size and structural tests). The structured schema requested `ISOLATION_VALID`, `REASON`, and `VALIDATION_TARGET`.
 
 **Observed evidence and decision.** The campaign logged an 88.9% success rate (8/9).
-- Compliance averaged 0.89. 
-- The Groq `llama-3.1-8b-instant` model failed the 48-token PT-BR pressure scenario (`finish_reason=length`). Unlike previous near-misses, it truncated before outputting enough structure for `prompt.ParseResponse` to construct the target object (missing validation targets). 
+- Compliance averaged 0.89.
+- The Groq `llama-3.1-8b-instant` model failed the 48-token PT-BR pressure scenario (`finish_reason=length`). Unlike previous near-misses, it truncated before outputting enough structure for `prompt.ParseResponse` to construct the target object (missing validation targets).
 - NIM's 8B model and Groq's 70B model successfully constrained their responses to fit under the 48-token boundary.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase426_subagent_dispatch_retry_fire_test/` and `results/phase426-subagent_dispatch_retry/`. `go test ./...` and `git diff --check` remain clean.
@@ -7750,8 +7750,22 @@ Implementação:
 
 **Observed evidence and decision.** The campaign achieved an 88.9% success rate (8/9 OK).
 - Average compliance was 0.89 globally.
-- Both Groq models (`llama-3.1-8b-instant` and `llama-3.3-70b-versatile`) succeeded perfectly, fitting responses within bounds and achieving 1.00 score. 
+- Both Groq models (`llama-3.1-8b-instant` and `llama-3.3-70b-versatile`) succeeded perfectly, fitting responses within bounds and achieving 1.00 score.
 - The NIM `meta/llama-3.1-8b-instruct` model failed in the 48-token PT-BR scenario by hitting `finish_reason=length` without outputting a sufficiently structured JSON prefix for `prompt.ParseResponse` to construct the target fields. It succeeded in the 64-token structural tests.
-- This reaffirms the pattern that 8B NIM models struggle with aggressive token clamping in PT-BR context compared to their 8B Groq counterparts, though both typically handle simple boolean extraction successfully. 
+- This reaffirms the pattern that 8B NIM models struggle with aggressive token clamping in PT-BR context compared to their 8B Groq counterparts, though both typically handle simple boolean extraction successfully.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase427_subagent_rpc_reconcile_sync_fire_test/` and `results/phase427-subagent_rpc_reconcile_sync/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 428 — Runtime gate receipt boundary reasoning live campaign (2026-08-09 11:45 -03)
+
+**Hypothesis and implementation.** Following Phase 427, we return to the core `runtime-gate` and test the LLM's capability to reason about transaction durability boundaries. Specifically, if a model understands that a `ModelExecutor` receipt must be committed to the SQLite store *before* the in-flight accounting permit is released, to ensure crash safety and avoid leaking completed token observations.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR cancellation constraint) and 64 (structural flow bounds). Required JSON schema: `RECEIPT_COMMITTED_FIRST`, `REASON`, and `CRASH_SAFE`.
+
+**Observed evidence and decision.** The campaign logged a 55.5% success rate (5/9).
+- Compliance averaged 0.93.
+- The 70B model (`llama-3.3-70b-versatile`) succeeded perfectly (3/3), fitting its reasoning cleanly into both the 64-token and the adversarial 48-token constraints, exiting with `finish_reason=stop`.
+- The 8B models on both Groq and NIM struggled heavily with the token constraints. `llama-3.1-8b-instant` and NIM's `meta/llama-3.1-8b-instruct` both hit `finish_reason=length` across the negative structural tests and the 48-token PT-BR constraint. Unlike earlier tests where the robust brace-stacking heuristic could reconstruct the truncated JSON prefix, these responses were cut too short before producing the required target flags (`CRASH_SAFE`, `RECEIPT_COMMITTED_FIRST`).
+- This suggests that reasoning about crash safety protocols and transaction ordering requires a larger generation budget for the smaller models to "think" before emitting structured answers.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase428_runtime_gate_receipt_boundary_fire_test/` and `results/phase428-runtime_gate_receipt_boundary/`. `go test ./...` and `git diff --check` remain clean.
