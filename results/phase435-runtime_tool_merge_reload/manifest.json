@@ -1,0 +1,120 @@
+{
+  "phase": "435",
+  "timestamp": "2026-08-09T16:27:21.676193331Z",
+  "total_trials": 9,
+  "successful": 0,
+  "failed": 9,
+  "average_compliance_score": 0.2777777777777778,
+  "global_p50_ms": 372,
+  "global_p95_ms": 652,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-tool-merge-negative-structural",
+      "success": false,
+      "latency_ms": 354,
+      "input_tokens": 88,
+      "output_tokens": 28,
+      "finish_reason": "stop",
+      "raw_content": "CLEARS_EXECUTOR: NO, \nREASON: The system must abort and retain the prior executor if the tool catalog merge fails.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.5
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-tool-merge-structural",
+      "success": false,
+      "latency_ms": 358,
+      "input_tokens": 94,
+      "output_tokens": 23,
+      "finish_reason": "stop",
+      "raw_content": "APPLIES_PARTIAL: No\nRETAINS_PRIOR: Yes\nREASON: Tool catalog merge failure",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.75
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-tool-merge-structural",
+      "success": false,
+      "latency_ms": 259,
+      "input_tokens": 94,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "APPLIES_PARTIAL, RETAINS_PRIOR, REASON = \"Tool catalog merge failed, but provider assembly succeeded.\"",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-tool-merge-negative-structural",
+      "success": false,
+      "latency_ms": 628,
+      "input_tokens": 88,
+      "output_tokens": 15,
+      "finish_reason": "stop",
+      "raw_content": "CLEARS_EXECUTOR, REASON = \"Tool catalog merge failed\"",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-tool-merge-ptbr",
+      "success": false,
+      "latency_ms": 372,
+      "input_tokens": 116,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "APPLIES_PARTIAL: Não\nRETAINS_PRIOR: Sim\nREASON: A fusão de ferramentas falhou, então o sistema manteve o executor anterior para garantir a estabilidade e a continuidade",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.75
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-tool-merge-negative-structural",
+      "success": false,
+      "latency_ms": 224,
+      "input_tokens": 88,
+      "output_tokens": 15,
+      "finish_reason": "stop",
+      "raw_content": "CLEARS_EXECUTOR, REASON = \"Tool catalog merge failed\"",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-tool-merge-ptbr",
+      "success": false,
+      "latency_ms": 341,
+      "input_tokens": 116,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Nesse caso, o sistema mantém o executor anterior, pois a fusão de ferramentas falhou. Isso significa que o sistema não aplica um catálogo parcial, mas sim mantém o estado anterior.\n\nA",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-tool-merge-structural",
+      "success": false,
+      "latency_ms": 505,
+      "input_tokens": 94,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "APPLIES_PARTIAL, RETAINS_PRIOR, REASON = \"Tool catalog merge failed, but provider assembly succeeded.\"",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-tool-merge-ptbr",
+      "success": false,
+      "latency_ms": 652,
+      "input_tokens": 116,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Nesse caso, a resposta é:\n\n- APPLIES_PARTIAL: Não, pois a fusão de ferramentas falhou e o sistema não aplicou as alterações.\n- RETAINS_PRIOR: Sim, pois o executor",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.5
+    }
+  ]
+}
