@@ -7782,3 +7782,16 @@ Implementação:
 - The 8B models (both Groq and NIM) failed heavily again. They correctly flagged the split-transaction failure (`llama-3.1-8b-instant` got it right before `finish_reason=stop`), but fundamentally misunderstood the affirmative idempotent tests. They both output `IS_IDEMPOTENT=false` or `CRASH_SAFE=false` on the affirmative test, suggesting they struggle to reason about idempotency and replay scenarios under tight token bounds, or simply failed to output valid JSON within the PT-BR 48-token limit (hitting `finish_reason=length`).
 
 **Evidence and verification.** Artifacts captured in `cmd/phase429_runtime_gate_receipt_settlement_fire_test/` and `results/phase429-runtime_gate_receipt_settlement/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 430 — Runtime gate receipt query fail-closed boundaries campaign (2026-08-09 12:05 -03)
+
+**Hypothesis and implementation.** Following Phase 429, we tested if LLMs can classify the operational boundary around metric projections. Specifically, if a storage error occurs while querying unsettled receipts (e.g., an I/O timeout), the projector must explicitly propagate the error (fail-closed) rather than silently returning a zero-count slice that misleadingly implies a healthy system state.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR) and 64 (structural flow bounds). Required JSON schema: `IS_FAIL_CLOSED`, `REASON`, and `MASKS_ERROR`.
+
+**Observed evidence and decision.** The campaign achieved a 44.4% success rate (4/9).
+- Compliance hit 1.00 globally. This means all models successfully generated parseable JSON that correctly conformed to the required boolean fields, unlike Phase 428 where truncations broke the structure entirely.
+- However, the 70B model failed the PT-BR translation of the concept (answering that masking is true). The smaller 8B models passed the affirmative structural test (correctly classifying fail-closed behavior) but failed the negative test (masks structural) and the PT-BR test (hitting `length` limits despite producing a parseable prefix). 
+- This confirms that identifying *silent masking* of errors as a safety violation is conceptually difficult for the LLMs under tight constraints, even when they successfully adhere to the required JSON schema format.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase430_runtime_gate_receipt_query_fire_test/` and `results/phase430-runtime_gate_receipt_query/`. `go test ./...` and `git diff --check` remain clean.
