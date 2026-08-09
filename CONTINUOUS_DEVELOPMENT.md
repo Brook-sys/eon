@@ -7692,3 +7692,15 @@ Implementação:
 - The 48-token starvation bound in PT-BR once again triggered `finish_reason=stop` for all models rather than `length`. This suggests that LLMs handle JSON construction highly efficiently when reasoning about explicit state transitions compared to abstract or verbose string fields, successfully self-truncating the `REASON` field.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase422_subagent_spawn_receipt_fire_test/` and `results/phase422-subagent_spawn_receipt/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 423 — Subagent RPC reconcile boundary reasoning live campaign (2026-08-09 11:05 -03)
+
+**Hypothesis and implementation.** Testing domain behavior in the RPC transport boundaries. We evaluated model reasoning on whether `DecodeSubagentReconcileRequest` correctly rejects trailing JSON, and whether the digest computation in `SubagentSpawnRequestDigest` is sensitive to payload mutations (e.g., changes in the `Task` field).
+
+**Live hypothesis and bounds.** Executed 9 trials on Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token pressures of 48 (PT-BR context) and 64 (structural tests). The requested JSON schema required `TRAILING_JSON_ALLOWED`, `REASON`, and `DIGEST_SENSITIVE`.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
+- Compliance reached 1.00 globally. 
+- Unlike Phase 421 and Phase 422 where 8B models successfully bounded themselves, this test saw `finish_reason=length` on 8B models in both PT-BR pressure (48 tokens) and the primary structural trailing-JSON test (64 tokens). However, because OpenClaw's structured JSON parser (`prompt.ParseResponse`) uses robust brace-stacking heuristics, it successfully extracted the key-value structures from the truncated payload prefixes.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase423_subagent_rpc_reconcile_fire_test/` and `results/phase423-subagent_rpc_reconcile/`. `go test ./...` and `git diff --check` remain clean.
