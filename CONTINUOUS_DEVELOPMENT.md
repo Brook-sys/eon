@@ -7822,3 +7822,16 @@ Implementação:
 - Conclusion: For low-token diagnostic bounds, internal model communication protocols must shift from strict JSON to regex-anchored line prefixes. This guarantees extraction resilience across both Groq and NIM pipelines.
 
 **Evidence and verification.** Artifacts captured in \`cmd/phase438_relaxed_parsing_status_test/\` and \`results/phase438-relaxed_parsing_status_test/\`. \`go test ./...\` and \`git diff --check\` remain clean.
+
+## Phase 439 — Relaxed Parsing Integration and Domain Mapping campaign (2026-08-09 14:35 -03)
+
+**Hypothesis and implementation.** Building on Phase 438's finding that `STATUS: ...` and `REASON: ...` text-anchoring survives token clamping better than structured JSON formats, we fully mapped this strategy to the `prompt` package's `ParseStatus` parser via regex (`(?i)STATUS:\s*(SUCCESS|FAILURE)` and `(?i)REASON:\s*(.+)`). We implemented `ParseStatus` in Go alongside deterministic unit tests validating uppercase translation, trailing space sanitization, and Markdown block unwrapping.
+
+**Live hypothesis and bounds.** Re-ran the parsing campaign through the Go domain using the new parser via `cmd/phase439_relaxed_parsing_integration_fire_test/`. 18 parallel trials ran across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`), matching the exact token clamps (48) from previous failure phases.
+
+**Observed evidence and decision.** The campaign achieved a **100% success rate (18/18)**. 
+- The newly implemented `prompt.ParseStatus` reliably extracted `SUCCESS` and `FAILURE` states from the raw output, ignoring arbitrary natural language prefixing or token-clamped suffixes.
+- We confirmed the Go regexes correctly extract the fields in the live deployment setting regardless of provider, model, or PT-BR language context.
+- We will standardize around `prompt.ParseStatus` and similar regex-anchored `ParseStrategy` for severely token-bounded system tasks.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase439_relaxed_parsing_integration_fire_test/` and `results/phase439-relaxed_parsing_integration/`. Unit tests `go test -v ./internal/prompt -run TestParseStatus` and `git diff --check` remain clean.

@@ -1,0 +1,200 @@
+[
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 407344212,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout no endpoint remoto (408)",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout no endpoint remoto (408)"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 409562716,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout no endpoint remoto (408)",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout no endpoint remoto (408)"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 421342482,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 432698996,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 434521916,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout no endpoint remoto (408)",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout no endpoint remoto (408)"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 435739240,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout (408) ao tentar transição de estado de DISPATCHED para DELIVERED.",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout (408) ao tentar transição de estado de DISPATCHED para DELIVERED."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 437305473,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout no endpoint remoto ao tentar transição de estado de DISPATCHED para DELIVERED.",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout no endpoint remoto ao tentar transição de estado de DISPATCHED para DELIVERED."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 439112438,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 445536466,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) do endpoint remoto.",
+    "raw_content": "STATUS: FAILURE\nREASON: Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) do endpoint remoto."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 445995786,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Verification token validated successfully",
+    "raw_content": "STATUS: SUCCESS\nREASON: Verification token validated successfully"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 446621972,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Verification token validated successfully",
+    "raw_content": "STATUS: SUCCESS\nREASON: Verification token validated successfully"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 449959520,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "Verification token validated successfully",
+    "raw_content": "STATUS: SUCCESS\nREASON: Verification token validated successfully"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 788178364,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 787905385,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Timeout ao tentar transição de estado de DISPATCHED para DELIVERED.",
+    "raw_content": "STATUS: FAILURE\nREASON: Timeout ao tentar transição de estado de DISPATCHED para DELIVERED."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 797046608,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Success Transition",
+    "tokens_used": 0,
+    "latency": 797307306,
+    "success": true,
+    "extracted_status": "SUCCESS",
+    "reasoning": "State transition from RUNNING to VERIFIED completed successfully with valid verification token.",
+    "raw_content": "STATUS: SUCCESS\nREASON: State transition from RUNNING to VERIFIED completed successfully with valid verification token."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 884661453,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) no endpoint remoto.",
+    "raw_content": "STATUS: FAILURE\nREASON: Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) no endpoint remoto."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Failure Transition",
+    "tokens_used": 0,
+    "latency": 894082625,
+    "success": true,
+    "extracted_status": "FAILURE",
+    "reasoning": "Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) no endpoint remoto.",
+    "raw_content": "STATUS: FAILURE\nREASON: Transição de estado de DISPATCHED para DELIVERED falhou devido a timeout (408) no endpoint remoto."
+  }
+]
