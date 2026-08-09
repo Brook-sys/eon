@@ -7680,3 +7680,15 @@ Implementação:
 - Unlike Phases 418 and 419, the 8B models (both Groq and NIM) completed their answers within the 48-token limit for the PT-BR starvation constraint (`finish_reason=stop` rather than `length`). This indicates that while token padding varies by semantic difficulty in PT-BR, LLMs can efficiently summarize domain logic when the classification boundary is binary and clearly delineated.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase421_subagent_ingress_fire_test/` and `results/phase421-subagent_ingress/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 422 — Subagent spawn receipt boundary semantics live campaign (2026-08-09 11:00 -03)
+
+**Hypothesis and implementation.** Testing spawn boundary logic, specifically `RecoverExpiredSubagentSpawnReceipt` limits and `SubagentSpawnReceipt` legacy queue fallback rules. This verified whether models understand how OpenClaw orchestrates lease expiration and empty queue states.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Kept maximum token constraints adversarial (48 tokens for PT-BR and 64 for structural injection tests). The requested schema included `DUE_FOR_WORK`, `REASON`, and `QUEUE_STATE`.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
+- All models achieved a 1.00 compliance score.
+- The 48-token starvation bound in PT-BR once again triggered `finish_reason=stop` for all models rather than `length`. This suggests that LLMs handle JSON construction highly efficiently when reasoning about explicit state transitions compared to abstract or verbose string fields, successfully self-truncating the `REASON` field.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase422_subagent_spawn_receipt_fire_test/` and `results/phase422-subagent_spawn_receipt/`. `go test ./...` and `git diff --check` remain clean.
