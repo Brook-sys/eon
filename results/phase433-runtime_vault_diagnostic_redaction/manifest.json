@@ -1,0 +1,120 @@
+{
+  "phase": "433",
+  "timestamp": "2026-08-09T16:24:56.948541964Z",
+  "total_trials": 9,
+  "successful": 0,
+  "failed": 9,
+  "average_compliance_score": 0.8888888888888888,
+  "global_p50_ms": 358,
+  "global_p95_ms": 976,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-vault-redaction-leak-structural",
+      "success": false,
+      "latency_ms": 492,
+      "input_tokens": 111,
+      "output_tokens": 31,
+      "finish_reason": "stop",
+      "raw_content": "LEAKS_NAME, The public error string explicitly mentions the credential name 'GROQ_KEY', which should be redacted to prevent information leakage.",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-vault-redaction-structural",
+      "success": false,
+      "latency_ms": 505,
+      "input_tokens": 106,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "REASON: The error message \"vault locked\" does not contain the credential name, thus it does not leak sensitive information. \nLEAKS_NAME: No",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 1
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-vault-redaction-leak-structural",
+      "success": false,
+      "latency_ms": 779,
+      "input_tokens": 111,
+      "output_tokens": 33,
+      "finish_reason": "stop",
+      "raw_content": "LEAKS_NAME, REASON\n\nThe public error string \"vault locked for GROQ_KEY\" does leak the credential name 'GROQ_KEY'.",
+      "parsing_strategy": "positional_fallback",
+      "compliance_score": 1
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-vault-redaction-structural",
+      "success": false,
+      "latency_ms": 340,
+      "input_tokens": 106,
+      "output_tokens": 48,
+      "finish_reason": "stop",
+      "raw_content": "LEAKS_NAME, REASON\n\nExplanation: The error message \"provider construction failed: vault locked\" does not leak the credential name. The original credential name 'GROQ_KEY' is not present in the public error string.",
+      "parsing_strategy": "positional_fallback",
+      "compliance_score": 1
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-vault-redaction-ptbr",
+      "success": false,
+      "latency_ms": 358,
+      "input_tokens": 104,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Sim, posso avaliar a ocultação de diagnóstico nesse cenário.\n\n**LEAKS_NAME**: credencial\n**REASON**: O erro público vaza o nome da credencial, pois menciona explicitamente",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 1
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-vault-redaction-leak-structural",
+      "success": false,
+      "latency_ms": 341,
+      "input_tokens": 111,
+      "output_tokens": 35,
+      "finish_reason": "stop",
+      "raw_content": "LEAKS_NAME, REASON\n\nExplanation: The public error string \"vault locked for GROQ_KEY\" does leak the credential name 'GROQ_KEY'.",
+      "parsing_strategy": "positional_fallback",
+      "compliance_score": 1
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-vault-redaction-ptbr",
+      "success": false,
+      "latency_ms": 366,
+      "input_tokens": 104,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "LEAKS_NAME: Não\nREASON: O erro retornado (\"construtor falhou, cofre bloqueado\") não menciona o nome da credencial, apenas indica que houve um problema com o cofre, mant",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 1
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-vault-redaction-ptbr",
+      "success": false,
+      "latency_ms": 629,
+      "input_tokens": 104,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Sim, posso avaliar a ocultação de diagnóstico nesse caso.\n\n**LEAKS_NAME**: credencial\n**REASON**: o erro público vaza o nome da credencial.\n\nNesse caso, o erro",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 1
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-vault-redaction-structural",
+      "success": false,
+      "latency_ms": 976,
+      "input_tokens": 106,
+      "output_tokens": 64,
+      "finish_reason": "stop",
+      "raw_content": "LEAKS_NAME, REASON\n\nExplanation: The error message \"provider construction failed: vault locked\" does not leak the credential name 'GROQ_KEY'. The reason is that the error message does not contain the credential name, it only mentions that the vault is locked, which is a generic error message.",
+      "parsing_strategy": "positional_fallback",
+      "compliance_score": 1
+    }
+  ]
+}

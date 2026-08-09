@@ -1,0 +1,120 @@
+{
+  "phase": "432",
+  "timestamp": "2026-08-09T16:24:06.213110741Z",
+  "total_trials": 9,
+  "successful": 0,
+  "failed": 9,
+  "average_compliance_score": 0.2222222222222222,
+  "global_p50_ms": 1144,
+  "global_p95_ms": 1424,
+  "results": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-resolver-vault-only-structural",
+      "success": false,
+      "latency_ms": 504,
+      "input_tokens": 89,
+      "output_tokens": 52,
+      "finish_reason": "stop",
+      "raw_content": "FAILS_IF_ENV_EMPTY: NO \nREASON: The system prefers environment variables over vault records, but if the environment variable (ENV) is empty, it will use the vault as a fallback. Therefore, it does not fail without checking the vault.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.5
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-resolver-env-precedence-structural",
+      "success": false,
+      "latency_ms": 514,
+      "input_tokens": 101,
+      "output_tokens": 43,
+      "finish_reason": "stop",
+      "raw_content": "PREFERS_ENV, since the environment variable KEY=123 takes precedence over the vault record KEY=456, the returned secret is 123. \nREASON: Environment variables are prioritized over vault records.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.25
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-resolver-env-precedence-structural",
+      "success": false,
+      "latency_ms": 378,
+      "input_tokens": 101,
+      "output_tokens": 64,
+      "finish_reason": "length",
+      "raw_content": "PREFERS_ENV, FALLBACKS_TO_VAULT, REASON: The resolver prefers environment variables over vault records because it is designed to do so. In this case, the environment variable KEY has a value of 123, which is returned as the secret. The vault record KEY has a value of 456",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-resolver-env-precedence-ptbr",
+      "success": false,
+      "latency_ms": 460,
+      "input_tokens": 109,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Sim, o sistema prioriza o ambiente. Isso significa que se uma variável de ambiente estiver definida, o sistema usará essa variável em vez de buscar a chave no cofre.\n\nAqui está a resposta com as",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-resolver-vault-only-structural",
+      "success": false,
+      "latency_ms": 1144,
+      "input_tokens": 89,
+      "output_tokens": 48,
+      "finish_reason": "stop",
+      "raw_content": "FAILS_IF_ENV_EMPTY: True\nREASON: The system is designed to fail if the environment variable is empty, as it does not have a default value to fall back to. It does not check the vault in this case.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.5
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-resolver-env-precedence-ptbr",
+      "success": false,
+      "latency_ms": 363,
+      "input_tokens": 109,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Sim, o sistema prioriza o ambiente. Isso é confirmado pelas seguintes variáveis:\n\n- `PREFERS_ENV`: O sistema prefere variáveis de ambiente.\n- `FALLBACKS_TO_VAULT`:",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.25
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-resolver-vault-only-structural",
+      "success": false,
+      "latency_ms": 323,
+      "input_tokens": 89,
+      "output_tokens": 48,
+      "finish_reason": "stop",
+      "raw_content": "FAILS_IF_ENV_EMPTY: True\nREASON: The system is designed to prefer environment variables over vault records. If ENV is empty, it will fail without checking the vault because it cannot find the required value in the preferred source.",
+      "parsing_strategy": "primary_prefix",
+      "compliance_score": 0.5
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-resolver-env-precedence-ptbr",
+      "success": false,
+      "latency_ms": 956,
+      "input_tokens": 109,
+      "output_tokens": 48,
+      "finish_reason": "length",
+      "raw_content": "Sim, o sistema prioriza o ambiente. Isso é indicado pela variável `PREFERS_ENV`, que é `true`. Isso significa que o sistema irá procurar primeiro pelas chaves no ambiente antes de procur",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-resolver-env-precedence-structural",
+      "success": false,
+      "latency_ms": 1424,
+      "input_tokens": 101,
+      "output_tokens": 64,
+      "finish_reason": "length",
+      "raw_content": "PREFERS_ENV, FALLBACKS_TO_VAULT, REASON: The resolver prefers environment variables over vault records because the system is designed to prioritize environment variables. In this case, the environment variable 'KEY' is set to '123', which is returned as the secret. The vault record 'KEY' is",
+      "parsing_strategy": "none",
+      "compliance_score": 0
+    }
+  ]
+}
