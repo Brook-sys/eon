@@ -7716,3 +7716,15 @@ Implementação:
 - Notably, in the 48-token PT-BR constraint, the models resumed successfully containing the JSON output and exited with `finish_reason=stop` instead of `length`, demonstrating that token bloat is highly dependent on the semantic target. When reasoning about simple temporal or integer comparisons (rather than text-heavy RPC decoders as seen in Phase 423), models can optimize their explanation length effectively.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase424_subagent_record_validation_fire_test/` and `results/phase424-subagent_record_validation/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 425 — Subagent RPC lease authorization and size bounds live campaign (2026-08-09 11:15 -03)
+
+**Hypothesis and implementation.** Tested LLM reasoning against Subagent RPC write boundaries. Specifically, if a model could identify that `CompleteSubagentSpawnReceipt` rejects oversized result payloads (e.g., `> 64 << 10 bytes`) and that it strictly enforces lease ownership matching (rejecting mismatches).
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Kept maximum token constraints adversarial (48 tokens for PT-BR owner validation, 64 tokens for the size and structural tests). The structured schema requested `LEASE_VALID`, `REASON`, and `VALIDATION_TARGET`.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
+- Compliance hit 1.00 globally.
+- Like in Phase 424, models evaluated boolean/dimension bounds highly efficiently, bounding themselves before hitting length truncations (all `finish_reason=stop`) even in the cramped 48-token PT-BR constraint.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase425_subagent_rpc_lease_fire_test/` and `results/phase425-subagent_rpc_lease/`. `go test ./...` and `git diff --check` remain clean.
