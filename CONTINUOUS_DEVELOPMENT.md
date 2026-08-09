@@ -7795,3 +7795,17 @@ Implementação:
 - This confirms that identifying *silent masking* of errors as a safety violation is conceptually difficult for the LLMs under tight constraints, even when they successfully adhere to the required JSON schema format.
 
 **Evidence and verification.** Artifacts captured in `cmd/phase430_runtime_gate_receipt_query_fire_test/` and `results/phase430-runtime_gate_receipt_query/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 431 — Runtime vault inactivity clock live campaign (2026-08-09 12:15 -03)
+
+**Hypothesis and implementation.** Continuing through the `secretvault` subsystem boundaries, we evaluated if models can reason about the deterministic inactivity clock rules (introduced in Phase 336). Specifically, whether a successful credential read extends the 15-minute countdown, and conversely, whether a failed credential read (cache miss) correctly avoids immediately locking the vault.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Applied maximum token constraints of 48 (PT-BR) and 64 (structural tests). Required JSON schema: `EXTENDS_TIMER`, `REASON`, and `LOCKS_ON_MISS`.
+
+**Observed evidence and decision.** The campaign achieved a 55.5% success rate (5/9).
+- Compliance hit 1.00 globally. All models outputted parseable target keys under tight token constraints.
+- However, all three models (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, and NIM `meta/llama-3.1-8b-instruct`) failed the negative structural test (`adv-vault-clock-miss-structural`), concluding that a cache miss *should* or *does* lock the vault (outputting `LOCKS_ON_MISS=true`).
+- Interestingly, the smaller Groq `llama-3.1-8b-instant` succeeded in the PT-BR test (extending the timer on success), whereas the 70B model failed one of the affirmative structural tests for reasons of flawed reasoning (outputting `EXTENDS_TIMER=false`).
+- This campaign confirms that subtle timeout and cache-miss behavioral logic is highly unintuitive for current foundation models without explicit prompting, causing them to hallucinate strict security fail-closed mechanics (e.g. "a cache miss immediately locks the vault for security").
+
+**Evidence and verification.** Artifacts captured in `cmd/phase431_runtime_vault_clock_inactivity_fire_test/` and `results/phase431-runtime_vault_clock_inactivity/`. `go test ./...` and `git diff --check` remain clean.
