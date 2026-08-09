@@ -111,60 +111,42 @@ func main() {
 
 		for _, sc := range scenarios {
 			wg.Add(1)
-			go func(m ModelConfig, s struct{ Name, System, User string; MaxToken int; Temp float64 }) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
+			go func(m ModelConfig, s struct {
+				Name, System, User string
+				MaxToken           int
+				Temp               float64
+			}) { defer wg.Done(); sem <- struct{}{}; defer func() { <-sem }(); req := port.CompletionRequest{
+				Prompt:          s.System + "\n\n" + s.User,
+				Temperature:     s.Temp,
+				MaxOutputTokens: s.MaxToken,
+			}; ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second); defer cancel(); start := time.Now(); resp, err := client.Complete(ctx, req); lat := time.Since(start).Milliseconds(); res := TrialResult{
+				Model:     m.ID,
+				Scenario:  s.Name,
+				LatencyMs: lat,
+			}; if err != nil {
+				res.Error = err.Error()
+			} else {
+				res.InputTokens = resp.InputTokens
+				res.OutputTokens = resp.OutputTokens
+				res.FinishReason = string(resp.FinishReason)
+				res.RawContent = resp.Text
 
-				req := port.CompletionRequest{
-					Prompt:          s.System + "\n\n" + s.User,
-					Temperature:     s.Temp,
-					MaxOutputTokens: s.MaxToken,
-				}
+				parsed := prompt.ParseResponse(resp.Text, []string{"SAFE_AGGREGATION", "REASON"})
+				res.Strategy = string(parsed.Strategy)
+				res.ComplianceScore = parsed.FormatComplianceScore
 
-				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-				defer cancel()
+				valSafe := parsed.Values["SAFE_AGGREGATION"]
 
-				start := time.Now()
-				resp, err := client.Complete(ctx, req)
-				lat := time.Since(start).Milliseconds()
-
-				res := TrialResult{
-					Model:     m.ID,
-					Scenario:  s.Name,
-					LatencyMs: lat,
-				}
-
-				if err != nil {
-					res.Error = err.Error()
+				if s.Name == "adv-observability-metrics-negative-structural" {
+					if valSafe == "no" || valSafe == "false" {
+						res.Success = true
+					}
 				} else {
-					res.InputTokens = resp.InputTokens
-					res.OutputTokens = resp.OutputTokens
-					res.FinishReason = string(resp.FinishReason)
-					res.RawContent = resp.Text
-
-					parsed := prompt.ParseResponse(resp.Text, []string{"SAFE_AGGREGATION", "REASON"})
-					res.Strategy = string(parsed.Strategy)
-					res.ComplianceScore = parsed.FormatComplianceScore
-					
-					valSafe := parsed.Values["SAFE_AGGREGATION"]
-
-					if s.Name == "adv-observability-metrics-negative-structural" {
-						if valSafe == "no" || valSafe == "false" {
-							res.Success = true
-						}
-					} else {
-						if valSafe == "yes" || valSafe == "true" {
-							res.Success = true
-						}
+					if valSafe == "yes" || valSafe == "true" {
+						res.Success = true
 					}
 				}
-
-				mu.Lock()
-				results = append(results, res)
-				fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success)
-				mu.Unlock()
-			}(mc, sc)
+			}; mu.Lock(); results = append(results, res); fmt.Printf("[%s] %s | %s | %dms | %v\n", m.ID, s.Name, res.FinishReason, lat, res.Success); mu.Unlock() }(mc, sc)
 		}
 	}
 
@@ -201,10 +183,10 @@ func main() {
 
 	dir := fmt.Sprintf("results/phase%s-%s", phase, name)
 	os.MkdirAll(dir, 0755)
-	
+
 	b, _ := json.MarshalIndent(manifest, "", "  ")
 	os.WriteFile(filepath.Join(dir, "manifest.json"), b, 0644)
-	
-	fmt.Printf("\nDone. %d/%d success. P50: %dms, P95: %dms. Avg Compliance: %.2f\n", 
+
+	fmt.Printf("\nDone. %d/%d success. P50: %dms, P95: %dms. Avg Compliance: %.2f\n",
 		manifest.Successful, manifest.TotalTrials, manifest.GlobalP50, manifest.GlobalP95, manifest.AverageCompliance)
 }

@@ -1,0 +1,181 @@
+[
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 387830621,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The input directly states that the sky is blue, which is a specific color, indicating a high level of confidence that the"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 387759883,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The input directly states that the sky is blue, which is a specific color, indicating a high level of confidence that the"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 411782114,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente a temperatura em graus Celsius, o que é uma unidade de medida com"
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 410934566,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The input directly states that the sky is blue, which is a specific color, indicating a high level of confidence that the"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 125,
+    "latency": 412162112,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The statement explicitly mentions \"blue\", which is a color, in relation to the sky."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 419688840,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente \"graus Celsius\", o que é uma unidade de medida de temperatura."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 451022455,
+    "success": false,
+    "extracted_score": 80,
+    "raw_content": "SCORE: 80\nREASON: A afirmação menciona \"graus Celsius\", o que é uma unidade de medida de temperatura, aumentando"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 125,
+    "latency": 458351555,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The statement explicitly mentions \"blue\", which is a color, in relation to the sky."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 465302368,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente \"100 graus Celsius\", que é uma unidade de medida de temperatura."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 468405338,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente \"100 graus Celsius\", que é uma unidade de medida de temperatura."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 501367990,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente \"100 graus Celsius\", que é uma unidade de medida de temperatura."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 521568110,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The statement explicitly mentions \"blue\", which is a color, and associates it with the sky, clearly indicating the topic is"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Confidence Score",
+    "tokens_used": 123,
+    "latency": 780748801,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The statement explicitly mentions a color, \"blue\", which is a specific hue."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 809293527,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The input directly states that the sky is blue, which is a specific color, indicating a high level of confidence that the"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Confidence Score",
+    "tokens_used": 130,
+    "latency": 810188691,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: The input explicitly states that the sky is blue, which is a specific color, indicating a high level of confidence that the"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 813434509,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente a temperatura em graus Celsius, o que indica claramente que está se"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 837586423,
+    "success": false,
+    "raw_content": "SCORE: 0\nREASON: A água ferve a 100 graus Celsius é uma afirmação que se refere à temperatura, mas a"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Confidence Score",
+    "tokens_used": 153,
+    "latency": 891312937,
+    "success": true,
+    "extracted_score": 100,
+    "raw_content": "SCORE: 100\nREASON: A afirmação menciona explicitamente a temperatura em graus Celsius, o que é uma unidade de medida com"
+  }
+]

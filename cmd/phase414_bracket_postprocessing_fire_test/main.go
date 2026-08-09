@@ -17,9 +17,9 @@ func main() {
 		fmt.Println("GROQ_API_KEY required")
 		os.Exit(1)
 	}
-	
+
 	model := "llama-3.1-8b-instant"
-	
+
 	client, err := openai.New(openai.Config{
 		BaseURL: "https://api.groq.com/openai/v1",
 		APIKey:  key,
@@ -29,7 +29,7 @@ func main() {
 		fmt.Printf("Failed to init provider: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	systemPrompt := `You are a strict data classifier.
 You must output EXACTLY the following keys in this format:
 ID: <id>
@@ -49,7 +49,7 @@ TOOLS: Screwdriver, Hammer, Drill, Saw, Tape Measure, Wrench`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	resp, err := client.Complete(ctx, req)
 	if err != nil {
 		fmt.Printf("Provider error: %v\n", err)
@@ -61,7 +61,7 @@ TOOLS: Screwdriver, Hammer, Drill, Saw, Tape Measure, Wrench`
 	parsed := prompt.ParseResponse(resp.Text, []string{"ID", "TOOLS"})
 	fmt.Printf("Parsed ID: %q\n", parsed.Values["ID"])
 	fmt.Printf("Parsed TOOLS: %q\n", parsed.Values["TOOLS"])
-	
+
 	if parsed.Values["TOOLS"] == "" || parsed.Values["TOOLS"][0] == '[' {
 		fmt.Printf("FAIL: Failed to strip brackets on truncated value: %q\n", parsed.Values["TOOLS"])
 		os.Exit(1)

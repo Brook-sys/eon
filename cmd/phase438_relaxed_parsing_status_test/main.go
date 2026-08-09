@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	
+
 	"encoding/json"
 	"fmt"
 	"io"
@@ -98,7 +98,7 @@ REASON: [Explicação breve]`,
 						"max_tokens":  maxTokens,
 						"temperature": 0.1,
 					}
-					
+
 					jsonData, _ := json.Marshal(reqBody)
 					req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
 					req.Header.Set("Authorization", "Bearer "+key)
@@ -120,35 +120,35 @@ REASON: [Explicação breve]`,
 					} else {
 						defer resp.Body.Close()
 						body, _ := io.ReadAll(resp.Body)
-						
+
 						if resp.StatusCode != 200 {
 							res.Error = fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(body))
 						} else {
 							var respMap map[string]interface{}
 							json.Unmarshal(body, &respMap)
-							
+
 							if choices, ok := respMap["choices"].([]interface{}); ok && len(choices) > 0 {
 								if msg, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{}); ok {
 									if content, ok := msg["content"].(string); ok {
 										res.RawContent = content
-										
+
 										statusMatch := statusRegex.FindStringSubmatch(content)
 										if len(statusMatch) > 1 {
 											res.Extracted = strings.ToUpper(statusMatch[1])
 										}
-										
+
 										reasonMatch := reasonRegex.FindStringSubmatch(content)
 										if len(reasonMatch) > 1 {
 											res.Reasoning = strings.TrimSpace(reasonMatch[1])
 										}
-										
+
 										res.Success = (res.Extracted == exp)
 									}
 								}
 							}
 						}
 					}
-					
+
 					mu.Lock()
 					results = append(results, res)
 					mu.Unlock()

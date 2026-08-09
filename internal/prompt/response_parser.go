@@ -259,9 +259,9 @@ func ParseResponse(text string, keys []string) ParseResult {
 	if len(keys) == 0 {
 		return result
 	}
-	
+
 	// Phase 411: Try pure JSON unmarshaling first before relying on heuristic text parsing.
-	// Many models (especially Qwen/DeepSeek and heavily fine-tuned ones) may emit raw JSON 
+	// Many models (especially Qwen/DeepSeek and heavily fine-tuned ones) may emit raw JSON
 	// when format pressure is high, even when asked for simple key-value pairs.
 	// Find boundaries of potential JSON object `{...}`.
 	firstBrace := strings.Index(text, "{")
@@ -283,7 +283,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 					matchedKeys++
 				}
 			}
-			
+
 			if matchedKeys > 0 {
 				result.Strategy = ParseStrategyJSONFallback
 				result.FormatComplianceScore = float64(matchedKeys) / float64(len(keys))
@@ -392,7 +392,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 								}
 								value += next
 								foldedLines[lookAhead] = true
-								
+
 								// We only absorb ONE non-blank line as the initial value when it was blank,
 								// the rest will be picked up by the multi-line folding loop below
 								// Exception: if we just absorbed a value and it still looks incomplete, we
@@ -445,7 +445,7 @@ func ParseResponse(text string, keys []string) ParseResult {
 						isQuote := strings.HasPrefix(next, "\"") || strings.HasPrefix(next, "'")
 						firstRune := []rune(next)[0]
 						isLowercase := firstRune >= 'a' && firstRune <= 'z'
-						
+
 						// Check the accumulated foldedValue to see if we're inside an unclosed array
 						// (already computed above)
 						// isInsideArray := strings.HasPrefix(strings.TrimSpace(foldedValue), "[") && !strings.Contains(foldedValue, "]")

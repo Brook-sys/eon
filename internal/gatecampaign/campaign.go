@@ -103,8 +103,8 @@ func (m RuntimeGateCampaignManifest) Validate() error {
 	if m.OutputSchema == "proposed_changeset" && m.MaxOutputTokens < 192 {
 		return errors.New("proposed_changeset campaign requires at least 192 max_output_tokens")
 	}
-	if m.OutputSchema != "" && m.OutputSchema != "exact_text" && m.OutputSchema != "exact_json" && m.OutputSchema != "proposed_changeset" {
-		return errors.New("runtime gate campaign output_schema must be exact_text, exact_json, or proposed_changeset")
+	if m.OutputSchema != "" && m.OutputSchema != "exact_text" && m.OutputSchema != "exact_json" && m.OutputSchema != "proposed_changeset" && m.OutputSchema != "status_transition" {
+		return errors.New("runtime gate campaign output_schema must be exact_text, exact_json, proposed_changeset, or status_transition")
 	}
 	if prompt := strings.TrimSpace(m.ProbePrompt); prompt == "" || len(prompt) > 1024 {
 		return errors.New("runtime gate campaign probe_prompt is required and bounded to 1024 bytes")

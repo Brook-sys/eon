@@ -2234,3 +2234,31 @@ func TestValidateAuthorityFreeCompletionExactJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAuthorityFreeCompletionStatusTransition(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		text    string
+		wantErr string
+	}{
+		{name: "success", text: "STATUS: SUCCESS\nREASON: Transição OK"},
+		{name: "failure", text: "STATUS: FAILURE\nREASON: Timeout"},
+		{name: "missing status", text: "REASON: Something failed", wantErr: "missing valid STATUS field"},
+		{name: "missing reason", text: "STATUS: SUCCESS", wantErr: "missing REASON field"},
+		{name: "invalid status", text: "STATUS: UNKNOWN\nREASON: Bad state", wantErr: "missing valid STATUS field"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateAuthorityFreeCompletion("status_transition", tc.text)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("error = %v, want substring %q", err, tc.wantErr)
+			}
+		})
+	}
+}

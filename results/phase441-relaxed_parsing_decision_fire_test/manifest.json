@@ -1,0 +1,182 @@
+[
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 117,
+    "latency": 329198036,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical support issue."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 124,
+    "latency": 335409210,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical issue that requires assistance from the technical support team."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 344011871,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: Cancelamento de assinatura solicitado pelo usuário."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 117,
+    "latency": 404938966,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical support issue."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 407044904,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: Cancelamento de assinatura solicitado pelo usuário."
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 407406103,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: Cancelamento de assinatura solicitado pelo usuário."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 140,
+    "latency": 439011445,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING\nREASON: O usuário expressou desejo de cancelar assinatura, o que geralmente envolve questões de cob"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 119,
+    "latency": 448319762,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password resets are typically handled by technical support teams."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 119,
+    "latency": 451570471,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password resets are typically handled by technical support teams."
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 140,
+    "latency": 486784424,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING\nREASON: O usuário expressou desejo de cancelar assinatura, o que geralmente envolve questões de cob"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 140,
+    "latency": 502819721,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING\nREASON: Cancelamento de assinatura é uma questão relacionada a pagamentos e gestão de contas, que"
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "scenario": "English Intent Routing",
+    "tokens_used": 123,
+    "latency": 505966745,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password resets are a technical issue, requiring assistance from technical support specialists."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Intent Routing",
+    "tokens_used": 117,
+    "latency": 676604965,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical support issue."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Intent Routing",
+    "tokens_used": 117,
+    "latency": 677151679,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical support issue."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "English Intent Routing",
+    "tokens_used": 117,
+    "latency": 766209147,
+    "success": true,
+    "extracted_decision": "TECH_SUPPORT",
+    "raw_content": "DECISION: TECH_SUPPORT\nREASON: Password reset is a technical support issue."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 767607354,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: Cancelamento de assinatura solicitado pelo usuário."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 786934286,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: Cancelamento de assinatura solicitado pelo usuário."
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "scenario": "Portuguese Intent Routing",
+    "tokens_used": 135,
+    "latency": 856054881,
+    "success": true,
+    "extracted_decision": "BILLING",
+    "raw_content": "DECISION: BILLING, TECH_SUPPORT, SALES\nREASON: O usuário deseja cancelar sua assinatura."
+  }
+]

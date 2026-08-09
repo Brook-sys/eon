@@ -175,9 +175,9 @@ func main() {
 
 			input := prompt.Input{
 				Task:                   c.instruction,
-				AllowedOutputs:          c.expectedKeys,
-				AnswerFormat:            strings.Join(c.expectedKeys, "\n"),
-				FormatExample:           fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
+				AllowedOutputs:         c.expectedKeys,
+				AnswerFormat:           strings.Join(c.expectedKeys, "\n"),
+				FormatExample:          fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
 				FormatAnchoring:        prompt.FormatAnchoringStrict,
 				ThinkingOverheadTokens: thinkingOverhead,
 			}

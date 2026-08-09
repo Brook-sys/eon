@@ -95,32 +95,32 @@ func main() {
 		maxTokens    int
 	}{
 		{
-			name: "adv-language-degradation",
-			instruction: "Extraia a data de publicação original da fonte S-17 em português (PT-BR), mas a resposta DEVE ser estritamente no formato em inglês:\nDATE: 2025-11-03\nSOURCE: S-17\nNão adicione introduções em português.",
+			name:         "adv-language-degradation",
+			instruction:  "Extraia a data de publicação original da fonte S-17 em português (PT-BR), mas a resposta DEVE ser estritamente no formato em inglês:\nDATE: 2025-11-03\nSOURCE: S-17\nNão adicione introduções em português.",
 			expectedKeys: []string{"DATE", "SOURCE"},
 			expectedVals: map[string]string{"DATE": "2025-11-03", "SOURCE": "S-17"},
 			effort:       "",
 			maxTokens:    256,
 		},
 		{
-			name: "adv-budget-starvation",
-			instruction: "Extract original publication date of source S-17. Output must strictly contain only:\nDATE: 2025-11-03\nSOURCE: S-17",
+			name:         "adv-budget-starvation",
+			instruction:  "Extract original publication date of source S-17. Output must strictly contain only:\nDATE: 2025-11-03\nSOURCE: S-17",
 			expectedKeys: []string{"DATE", "SOURCE"},
 			expectedVals: map[string]string{"DATE": "2025-11-03", "SOURCE": "S-17"},
 			effort:       "",
 			maxTokens:    128, // Low token budget to stress test formatting
 		},
 		{
-			name: "adv-conflicting-data",
-			instruction: "Source A states model X was released in 2024. Source B states model X was released in 2025. Is there a conflict? Identify the conflicting pair.\nFormat strictly as:\nCONFLICT: YES\nPAIR: A/B",
+			name:         "adv-conflicting-data",
+			instruction:  "Source A states model X was released in 2024. Source B states model X was released in 2025. Is there a conflict? Identify the conflicting pair.\nFormat strictly as:\nCONFLICT: YES\nPAIR: A/B",
 			expectedKeys: []string{"CONFLICT", "PAIR"},
 			expectedVals: map[string]string{"CONFLICT": "YES", "PAIR": "A/B"},
 			effort:       "",
 			maxTokens:    256,
 		},
 		{
-			name: "adv-context-pollution",
-			instruction: "System log 2024-01-01: backup OK. User report: error 500 on 2024-02-01. Fact: Source S-17 published on 2025-11-03. Ignore irrelevances and extract S-17 facts.\nFormat strictly as:\nDATE: 2025-11-03\nSOURCE: S-17",
+			name:         "adv-context-pollution",
+			instruction:  "System log 2024-01-01: backup OK. User report: error 500 on 2024-02-01. Fact: Source S-17 published on 2025-11-03. Ignore irrelevances and extract S-17 facts.\nFormat strictly as:\nDATE: 2025-11-03\nSOURCE: S-17",
 			expectedKeys: []string{"DATE", "SOURCE"},
 			expectedVals: map[string]string{"DATE": "2025-11-03", "SOURCE": "S-17"},
 			effort:       "",
@@ -178,9 +178,9 @@ func main() {
 
 			input := prompt.Input{
 				Task:                   c.instruction,
-				AllowedOutputs:          c.expectedKeys,
-				AnswerFormat:            strings.Join(c.expectedKeys, "\n"),
-				FormatExample:           fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
+				AllowedOutputs:         c.expectedKeys,
+				AnswerFormat:           strings.Join(c.expectedKeys, "\n"),
+				FormatExample:          fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
 				FormatAnchoring:        prompt.FormatAnchoringStrict,
 				ThinkingOverheadTokens: thinkingOverhead,
 			}

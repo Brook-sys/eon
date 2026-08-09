@@ -1099,7 +1099,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		working := completion
 		// Lineage injection applies only to proposed_changeset; exact_text and
 		// exact_json must not be rewritten before deterministic validation.
-		if spec.OutputSchema != "exact_text" && spec.OutputSchema != "exact_json" {
+		if spec.OutputSchema != "exact_text" && spec.OutputSchema != "exact_json" && spec.OutputSchema != "status_transition" {
 			working.Text, err = ensureProposalLineage(completion.Text, operation, baseCommit, e.IDs, completion.Model)
 			if err != nil {
 				lastErr = fmt.Errorf("prepare proposal lineage: %w", err)
@@ -1175,7 +1175,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 		var commit domain.Commit
 		var processErr error
 		switch spec.OutputSchema {
-		case "exact_text", "exact_json":
+		case "exact_text", "exact_json", "status_transition":
 			processErr = validateAuthorityFreeCompletion(spec.OutputSchema, lastCompletion.Text)
 		default:
 			commit, processErr = e.Changes.Process(ctx, operationID, lastCompletion)
@@ -1425,6 +1425,15 @@ func (e ModelExecutor) buildPromptInput(operation domain.Operation, spec domain.
 			FormatExample:  `{"key":"value"}`,
 		}, nil
 	}
+	if spec.OutputSchema == "status_transition" {
+		return prompt.Input{
+			Task:           task,
+			Constraints:    []string{"Emit the status using exactly this format:\nSTATUS: [SUCCESS or FAILURE]\nREASON: [Brief explanation]"},
+			AllowedOutputs: []string{"STATUS: SUCCESS", "STATUS: FAILURE"},
+			AnswerFormat:   "STATUS: [SUCCESS or FAILURE]\nREASON: [Brief explanation]",
+			FormatExample:  "STATUS: SUCCESS\nREASON: All preconditions met.",
+		}, nil
+	}
 	facts := []prompt.Fact{
 		{ID: "operation_id", Text: string(operation.ID), Required: true, Priority: 100},
 		{ID: "mission_revision_id", Text: string(operation.MissionRevision), Required: true, Priority: 100},
@@ -1591,6 +1600,18 @@ func validateAuthorityFreeCompletion(outputSchema, text string) error {
 		var value map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &value); err != nil || value == nil {
 			return errors.New("exact_json completion must be one JSON object")
+		}
+		return nil
+	case "status_transition":
+		status, reason := prompt.ParseStatus(text)
+		if status == "" {
+			return errors.New("status_transition completion missing valid STATUS field")
+		}
+		if reason == "" {
+			return errors.New("status_transition completion missing REASON field")
+		}
+		if status != "SUCCESS" && status != "FAILURE" {
+			return fmt.Errorf("status_transition completion invalid status: %q", status)
 		}
 		return nil
 	default:

@@ -6,7 +6,7 @@ import (
 
 func TestParseResponse_JSONFallback(t *testing.T) {
 	keys := []string{"NAME", "AGE", "STATUS"}
-	
+
 	fencedJSON := "Here is your response:\n```json\n{\n  \"NAME\": \"Alice\",\n  \"AGE\": \"30\",\n  \"STATUS\": \"Active\"\n}\n```"
 	res := ParseResponse(fencedJSON, keys)
 	if res.Strategy != ParseStrategyJSONFallback {

@@ -17,25 +17,25 @@ import (
 )
 
 type Trial struct {
-	Model                  string               `json:"model"`
-	Provider               string               `json:"provider"`
-	TaskCase               string               `json:"task_case"`
-	RequestedEffort        string               `json:"requested_effort"`
-	ThinkingOverhead       int                  `json:"thinking_overhead"`
-	ReasoningSuppressed    bool                 `json:"reasoning_suppressed"`
-	HTTPStatus             int                  `json:"http_status"`
-	FinishReason           string               `json:"finish_reason"`
-	OutputTokens           int                  `json:"output_tokens"`
-	LatencyMS              int64                `json:"latency_ms"`
-	ParseStrategy          prompt.ParseStrategy `json:"parse_strategy"`
-	ComplianceScore        float64              `json:"compliance_score"`
-	NonEmptyLineCount      int                  `json:"non_empty_line_count"`
-	UsedFallback           bool                 `json:"used_fallback"`
-	ParsedValues           map[string]string    `json:"parsed_values"`
-	FormatCorrect          bool                 `json:"format_correct"`
-	SemanticCorrect        bool                 `json:"semantic_correct"`
-	RawContent             string               `json:"raw_content"`
-	Error                  string               `json:"error,omitempty"`
+	Model               string               `json:"model"`
+	Provider            string               `json:"provider"`
+	TaskCase            string               `json:"task_case"`
+	RequestedEffort     string               `json:"requested_effort"`
+	ThinkingOverhead    int                  `json:"thinking_overhead"`
+	ReasoningSuppressed bool                 `json:"reasoning_suppressed"`
+	HTTPStatus          int                  `json:"http_status"`
+	FinishReason        string               `json:"finish_reason"`
+	OutputTokens        int                  `json:"output_tokens"`
+	LatencyMS           int64                `json:"latency_ms"`
+	ParseStrategy       prompt.ParseStrategy `json:"parse_strategy"`
+	ComplianceScore     float64              `json:"compliance_score"`
+	NonEmptyLineCount   int                  `json:"non_empty_line_count"`
+	UsedFallback        bool                 `json:"used_fallback"`
+	ParsedValues        map[string]string    `json:"parsed_values"`
+	FormatCorrect       bool                 `json:"format_correct"`
+	SemanticCorrect     bool                 `json:"semantic_correct"`
+	RawContent          string               `json:"raw_content"`
+	Error               string               `json:"error,omitempty"`
 }
 
 type CampaignSummary struct {
@@ -163,9 +163,9 @@ func main() {
 
 			input := prompt.Input{
 				Task:                   c.instruction,
-				AllowedOutputs:          c.expectedKeys,
-				AnswerFormat:            strings.Join(c.expectedKeys, "\n"),
-				FormatExample:           fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
+				AllowedOutputs:         c.expectedKeys,
+				AnswerFormat:           strings.Join(c.expectedKeys, "\n"),
+				FormatExample:          fmt.Sprintf("%s: VALUE", c.expectedKeys[0]),
 				FormatAnchoring:        prompt.FormatAnchoringStrict,
 				ThinkingOverheadTokens: thinkingOverhead,
 			}
