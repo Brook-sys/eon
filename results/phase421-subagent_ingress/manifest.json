@@ -1,0 +1,120 @@
+{
+  "phase": "421",
+  "timestamp": "2026-08-09T13:49:28.137041811Z",
+  "total_trials": 9,
+  "successful": 9,
+  "failed": 0,
+  "global_p50_ms": 657,
+  "global_p95_ms": 530,
+  "average_compliance": 1,
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-ingress-conflicting-injection",
+      "latency_ms": 318,
+      "input_tokens": 109,
+      "output_tokens": 28,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"yes\", \"REASON\": \"Payload matches allowed ingress rule\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-ingress-divergent-payload",
+      "latency_ms": 336,
+      "input_tokens": 107,
+      "output_tokens": 34,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"no\", \"REASON\": \"Different Result payloads indicate different outcomes, thus they cannot match.\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-ingress-conflicting-injection",
+      "latency_ms": 362,
+      "input_tokens": 109,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"yes\", \"REASON\": \"payload semantics extracted\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-ingress-conflicting-injection",
+      "latency_ms": 773,
+      "input_tokens": 109,
+      "output_tokens": 27,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"yes\", \"REASON\": \"Payload matches ingress rule\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-ingress-divergent-payload",
+      "latency_ms": 657,
+      "input_tokens": 107,
+      "output_tokens": 34,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"no\", \"REASON\": \"Different Result payloads indicate different outcomes, thus they cannot match.\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-ingress-divergent-payload",
+      "latency_ms": 342,
+      "input_tokens": 107,
+      "output_tokens": 26,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"no\", \"REASON\": \"different Result payloads\", \"TERMINAL_STATE\": \"complete\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "adv-ingress-heartbeat-pressure",
+      "latency_ms": 277,
+      "input_tokens": 111,
+      "output_tokens": 34,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"yes\", \"REASON\": \"ingress status 'RUNNING' is valid without payload\", \"TERMINAL_STATE\": \"running\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "scenario": "adv-ingress-heartbeat-pressure",
+      "latency_ms": 297,
+      "input_tokens": 111,
+      "output_tokens": 47,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"yes\", \"REASON\": \"Payload-free ingress status can be valid in certain contexts, such as when the subagent is still processing or waiting for input.\", \"TERMINAL_STATE\": \"running\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "scenario": "adv-ingress-heartbeat-pressure",
+      "latency_ms": 530,
+      "input_tokens": 111,
+      "output_tokens": 35,
+      "finish_reason": "stop",
+      "raw_content": "{\"MATCH_ALLOWED\": \"no\", \"REASON\": \"Payload é necessário para avaliar a subagente ingress boundary\", \"TERMINAL_STATE\": \"running\"}",
+      "strategy": "json_fallback",
+      "compliance_score": 1,
+      "success": true
+    }
+  ]
+}
