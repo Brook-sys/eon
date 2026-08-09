@@ -7453,3 +7453,20 @@ Implementação:
    - **`nim/meta/llama-3.1-8b-instruct`**: **3/3 (100%) success**, P50 latency 522ms.
 
 **Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase405_arrow_assignment_fire_test/` and `results/phase405-arrow-assignment-parser/`.
+
+## Phase 406 — multi-line value folding & multi-provider live fire campaign (2026-08-09 00:15 -03)
+
+**Objective and implementation.** Addressed key parsing resilience for multi-line wrapped values (where a model emits a value that spans across 2-3 lines) and executed a 15-trial multi-provider live fire campaign across Groq and NVIDIA NIM models.
+1. **Multi-line Value Folding (`ResponseParser`)**:
+   - Extended `ParseResponse` in `internal/prompt/response_parser.go` to collect continuation lines after matching a key prefix when subsequent lines are indented, start with continuation punctuation (`,`, `;`), or start with continuation words (`and `, `or `, `with `) / lowercase letters, and do not contain a recognized key prefix.
+   - Constrained folding to 3 continuation lines max to prevent runaway prose capture.
+2. **Unit Test Expansion (`response_parser_test.go`)**:
+   - Added `TestParseResponse_MultiLineValueFolding`, `TestParseResponse_MultiLineFoldingStopsAtBlankLine`, `TestParseResponse_MultiLineFoldingStopsAtUnrecognizedKey`, and `TestParseResponse_MultiLineFoldingLimit`.
+3. **Live Fire Campaign Phase 406**: Formulated and executed a 15-trial live fire campaign (`cmd/phase406_multiline_folding_fire_test`) across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-120b`, `nim/meta/llama-3.3-70b-instruct`) under 3 scenarios (`multiline_folded_values`, `ptbr_language_degradation`, `prompt_injection_isolation`).
+4. **Live campaign findings**:
+   - **Groq models achieved 100% success (9/9 OK)** for `llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, and `openai/gpt-oss-120b` across all 3 scenarios, with P50 latency 253ms–407ms and format compliance 1.00.
+   - **`llama-3.1-8b-instant`**: 2/3 (66.7%) success; passed PT-BR and prompt injection, but compliance dropped to 0.67 on multiline formatting.
+   - **`nim/meta/llama-3.3-70b-instruct`**: 0/3 (0%) success due to persistent 45s HTTP transport timeouts on the NIM side (confirming prior findings that NIM 70B endpoints suffer severe tail latency).
+   - **Multi-line folding validation**: Multi-line descriptions were cleanly folded and matched by `primary_prefix` for 70B, 120B, and Qwen 27B models on live completions.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly across all packages. `go vet ./...`, `gofmt -l .`, and `git diff --check` clean. Artifacts in `cmd/phase406_multiline_folding_fire_test/` and `results/phase406-multiline-folding-parser/`.

@@ -101,7 +101,7 @@ func TestParseResponse_PartialMatchNoFallbackLineCountMismatch(t *testing.T) {
 	// When partial prefix match occurs but unmatched non-empty lines
 	// do NOT equal the count of missing keys, hybrid fallback should
 	// not fire — keeping the partial primary result.
-	text := "DATE: 2025-11-03\nextra line\nS-17"
+	text := "DATE: 2025-11-03\nExtra line\nS-17"
 	r := ParseResponse(text, []string{"DATE", "SOURCE"})
 	if r.UsedFallback {
 		t.Fatal("hybrid fallback must not fire when unmatched line count != missing key count")
@@ -667,5 +667,75 @@ func TestParseResponse_ArrowAndAssignmentSeparators(t *testing.T) {
 	}
 	if r.Values["VERDICT"] != "PASS" {
 		t.Errorf("VERDICT=%q, want PASS", r.Values["VERDICT"])
+	}
+}
+
+func TestParseResponse_MultiLineValueFolding(t *testing.T) {
+	// A model emits a value that wraps across lines. The parser should fold
+	// continuation lines into the value and still match subsequent keys.
+	text := `DESCRIPTION: This is a long description that
+spans across multiple lines
+for readability
+DATE: 2026-08-08
+SOURCE: Audit Report`
+
+	r := ParseResponse(text, []string{"DESCRIPTION", "DATE", "SOURCE"})
+	if r.Strategy != ParseStrategyPrimary {
+		t.Errorf("strategy=%s, want primary_prefix", r.Strategy)
+	}
+	if r.FormatComplianceScore != 1.0 {
+		t.Errorf("compliance=%.2f, want 1.0", r.FormatComplianceScore)
+	}
+	expectedDesc := "This is a long description that spans across multiple lines for readability"
+	if r.Values["DESCRIPTION"] != expectedDesc {
+		t.Errorf("DESCRIPTION=%q, want %q", r.Values["DESCRIPTION"], expectedDesc)
+	}
+	if r.Values["DATE"] != "2026-08-08" {
+		t.Errorf("DATE=%q, want 2026-08-08", r.Values["DATE"])
+	}
+	if r.Values["SOURCE"] != "Audit Report" {
+		t.Errorf("SOURCE=%q, want Audit Report", r.Values["SOURCE"])
+	}
+}
+
+func TestParseResponse_MultiLineFoldingStopsAtBlankLine(t *testing.T) {
+	// Folding should stop at a blank line and not capture text from the next section.
+	text := "TITLE: Short Title\n\nThis is unrelated prose that should not be folded."
+
+	r := ParseResponse(text, []string{"TITLE"})
+	if r.Values["TITLE"] != "Short Title" {
+		t.Errorf("TITLE=%q, want 'Short Title'", r.Values["TITLE"])
+	}
+	if r.NonEmptyLineCount != 2 {
+		t.Errorf("nonEmptyLines=%d, want 2", r.NonEmptyLineCount)
+	}
+}
+
+func TestParseResponse_MultiLineFoldingStopsAtUnrecognizedKey(t *testing.T) {
+	// If a continuation line has a different key-value pattern with an
+	// unrecognized prefix, stop folding.
+	text := `SUMMARY: The build completed successfully
+NOTES: Additional context here`
+
+	r := ParseResponse(text, []string{"SUMMARY"})
+	if r.Values["SUMMARY"] != "The build completed successfully" {
+		t.Errorf("SUMMARY=%q, want 'The build completed successfully'", r.Values["SUMMARY"])
+	}
+}
+
+func TestParseResponse_MultiLineFoldingLimit(t *testing.T) {
+	// Folding should stop after 3 continuation lines to avoid runaway prose.
+	text := `DETAIL: line0
+line1
+line2
+line3
+line4
+line5`
+
+	r := ParseResponse(text, []string{"DETAIL"})
+	// Should fold at most 3 continuation lines (lines 1-3), stopping at line4.
+	expected := "line0 line1 line2 line3"
+	if r.Values["DETAIL"] != expected {
+		t.Errorf("DETAIL=%q, want %q", r.Values["DETAIL"], expected)
 	}
 }

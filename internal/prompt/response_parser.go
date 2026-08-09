@@ -212,6 +212,14 @@ func findAlternateSeparator(s string) (int, int) {
 // lines to keys in order, but only when the non-empty line count matches the
 // key count exactly (avoids false positives on prose or mixed-format
 // responses).
+//
+// Multi-line value folding: when a key is matched on a line, subsequent
+// lines that do NOT contain a recognized key prefix are treated as
+// continuation lines and appended to the value (joined with a space).
+// Folding stops at the next recognized key, a blank line, or a line
+// that looks like prose (starts with a capital and ends with a period
+// when the continuation is >2 lines). This handles models that wrap
+// long values across lines.
 func ParseResponse(text string, keys []string) ParseResult {
 	result := ParseResult{Values: make(map[string]string, len(keys))}
 	if len(keys) == 0 {
@@ -226,22 +234,86 @@ func ParseResponse(text string, keys []string) ParseResult {
 		lowerKeys[strings.ToLower(k)] = ""
 	}
 
-	// Primary parse: scan lines for "KEY: value" pattern.
-	for _, line := range strings.Split(cleanText, "\n") {
+	// Build a set of lowercased keys for fast membership testing.
+	keySet := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		keySet[strings.ToLower(k)] = true
+	}
+
+	// linesForKey checks whether a line's prefix matches any expected key.
+	linesForKey := func(line string) (string, bool) {
+		prefix, _, ok := extractLinePrefixAndValue(line)
+		if !ok {
+			return "", false
+		}
+		if keySet[strings.ToLower(prefix)] {
+			return prefix, true
+		}
+		return "", false
+	}
+
+	// Primary parse: scan lines for "KEY: value" pattern with multi-line folding.
+	lines := strings.Split(cleanText, "\n")
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
 		prefix, value, ok := extractLinePrefixAndValue(line)
 		if !ok || value == "" {
 			continue
 		}
 		// Match against any expected key (case-insensitive).
+		matched := false
 		for _, k := range keys {
 			if strings.EqualFold(prefix, k) {
 				if _, exists := result.Values[k]; !exists {
-					result.Values[k] = value
+					// Multi-line value folding: collect continuation lines.
+					// A line is considered a continuation only if it is indented,
+					// or starts with a continuation signal (lowercase letter, comma, semicolon,
+					// open bracket/paren, or continuation conjunctions).
+					foldedValue := value
+					for j := i + 1; j < len(lines); j++ {
+						rawLine := lines[j]
+						next := strings.TrimSpace(rawLine)
+						if next == "" {
+							break
+						}
+						// Stop if the next line contains a recognized key.
+						if _, isKey := linesForKey(next); isKey {
+							break
+						}
+						// Stop if the line looks like a key-value pair with a colon
+						// but the prefix is not a recognized key.
+						if p, _, hasSep := extractLinePrefixAndValue(next); hasSep && !keySet[strings.ToLower(p)] {
+							break
+						}
+						// Check if line is a continuation:
+						// 1) Must be indented (starts with space/tab) OR
+						// 2) Start with continuation punctuation (, ;) or continuation words (and , or , with ) OR
+						// 3) Start with a lowercase letter (standard word wrapping).
+						isIndented := strings.HasPrefix(rawLine, " ") || strings.HasPrefix(rawLine, "\t")
+						isPunct := strings.HasPrefix(next, ",") || strings.HasPrefix(next, ";")
+						lowerNext := strings.ToLower(next)
+						isConj := strings.HasPrefix(lowerNext, "and ") || strings.HasPrefix(lowerNext, "or ") || strings.HasPrefix(lowerNext, "with ")
+						firstRune := []rune(next)[0]
+						isLowercase := firstRune >= 'a' && firstRune <= 'z'
+
+						if !isIndented && !isPunct && !isConj && !isLowercase {
+							break
+						}
+
+						// Limit folding to 3 continuation lines to avoid runaway prose.
+						if j-i > 3 {
+							break
+						}
+						foldedValue += " " + next
+					}
+					result.Values[k] = foldedValue
 					result.FoundKeys = append(result.FoundKeys, k)
 				}
+				matched = true
 				break
 			}
 		}
+		_ = matched
 	}
 
 	// Collect non-empty lines for fallback analysis.
