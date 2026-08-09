@@ -7921,3 +7921,4 @@ Implementação:
 - The `openai_compatible` adapter successfully processes the token limits and API shape of NVIDIA NIM's DeepSeek deployment.
 
 **Evidence and verification.** Artifacts captured in `results/phase445-parser-resilience/`. All 3 trials correctly propagated to the `WAITING_TIME` local gate limit barrier after completing successfully.
+2026-08-09 19:40 — Compiler PrefillAssistant integration (Phase 446) — Adicionado suporte a `PrefillAssistant` na struct de entrada do `prompt.Compiler`, resolvendo a pendência documentada no relatório de loops adversários para forçar parse restrito em modelos prolixos. O valor é perfeitamente refletido no `port.CompletionRequest`, testado, integrado, compatível backward e forward com a interface do OpenAI adapter. Verificação: `go test -v ./internal/prompt`, `go vet`, `git diff --check`. Commit: `45631d9` e origin/main sincronizado.
