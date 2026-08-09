@@ -31,6 +31,7 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /import", h.importVault)
 	mux.HandleFunc("GET /stats", h.stats)
 	mux.HandleFunc("GET /secrets", h.listSecrets)
+	mux.HandleFunc("POST /secrets/batch-search", h.batchSearch)
 	mux.HandleFunc("POST /secrets/batch-purge-expired", h.batchPurgeExpired)
 	mux.HandleFunc("POST /secrets/batch-touch", h.batchTouch)
 	mux.HandleFunc("POST /secrets/batch-delete", h.batchDelete)
@@ -847,4 +848,23 @@ func localOnly(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (h HTTP) batchSearch(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Items []BatchSearchItem `json:"items"`
+	}
+	if !decode(w, r, &q) {
+		return
+	}
+	if len(q.Items) == 0 || len(q.Items) > 100 {
+		write(w, http.StatusBadRequest, map[string]any{"error": map[string]string{"code": "invalid_request", "message": "items must contain 1 to 100 queries"}})
+		return
+	}
+	results, err := h.Vault.BatchSearch(q.Items)
+	if err != nil {
+		writeErr(w, err)
+		return
+	}
+	write(w, http.StatusOK, results)
 }
