@@ -7668,3 +7668,15 @@ Implementação:
 - The 8B Groq model hit `finish_reason=length` on the 48-token constraint but managed to flush enough parsable JSON before truncation that the `prompt.ParseResponse` extraction succeeded, resulting in 1.00 compliance across the board. 
 
 **Evidence and verification.** Artifacts captured in `cmd/phase420_subagent_dispatch_semantics_fire_test/` and `results/phase420-subagent_dispatch_semantics/`. `go test ./...` and `git diff --check` remain clean.
+
+## Phase 421 — Subagent ingress boundary reasoning live campaign (2026-08-09 10:55 -03)
+
+**Hypothesis and implementation.** Testing continued down the `domain` components by targeting `SubagentStatusIngressReceipt`. Models were tasked to reason whether two ingress receipts match if they share an identity but possess divergent payloads, and whether a `RUNNING` heartbeat is valid without a payload.
+
+**Live hypothesis and bounds.** Executed 9 parallel trials across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). Constraints were 48 tokens for PT-BR and 64 for standard structural injection prompts. The target schema extracted `MATCH_ALLOWED`, `REASON`, and `TERMINAL_STATE`.
+
+**Observed evidence and decision.** The campaign achieved a 100% success rate (9/9).
+- All models maintained a 1.00 compliance score.
+- Unlike Phases 418 and 419, the 8B models (both Groq and NIM) completed their answers within the 48-token limit for the PT-BR starvation constraint (`finish_reason=stop` rather than `length`). This indicates that while token padding varies by semantic difficulty in PT-BR, LLMs can efficiently summarize domain logic when the classification boundary is binary and clearly delineated.
+
+**Evidence and verification.** Artifacts captured in `cmd/phase421_subagent_ingress_fire_test/` and `results/phase421-subagent_ingress/`. `go test ./...` and `git diff --check` remain clean.
