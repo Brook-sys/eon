@@ -10,6 +10,16 @@ import (
 )
 
 func TestP2PManager_AttachSyncService(t *testing.T) {
+	// Rejeita manager nulo
+	t.Run("nil manager", func(t *testing.T) {
+		var nilMgr *network.P2PManager
+		store := memory.New()
+		_, _, err := nilMgr.AttachSyncService(store)
+		if err == nil {
+			t.Fatalf("expected error on nil manager, got nil")
+		}
+	})
+
 	opts := network.Options{
 		Enabled:  true,
 		BindAddr: "127.0.0.1:0",

@@ -10,6 +10,9 @@ import (
 
 // AttachSyncService instancia e acopla o serviço de sincronização P2P (event.sync.v1) ao Router do P2PManager.
 func (m *P2PManager) AttachSyncService(store port.Store) (*peersync.Service, *peersync.Ticker, error) {
+	if m == nil {
+		return nil, nil, fmt.Errorf("p2p manager cannot be nil")
+	}
 	if store == nil {
 		return nil, nil, fmt.Errorf("store cannot be nil")
 	}
