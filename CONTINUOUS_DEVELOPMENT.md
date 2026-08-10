@@ -7951,3 +7951,23 @@ Executado runner `cmd/phase449_mtls_listener_live_fire_test` com rotação delib
 Artefatos salvos em `results/phase449-mtls_listener_live_fire/summary.json`.
 
 **Próximo passo:** Integrar handshake mTLS end-to-end entre dois nós P2P simulados no harness ou avançar para validação de heartbeat/sync autenticado P2P.
+
+## Phase 450 — P2PManager mTLS End-to-End Handshake e Invocação RPC (2026-08-10 03:45 -03)
+
+**Objetivo:** Validar a integração end-to-end de autenticação mTLS no `P2PManager`, permitindo que um cliente mTLS (`peerhttp.Transport`) efetue um handshake mútuo e invoque com sucesso um procedimento RPC remoto (`subagent.spawn.v1`) em um listener `P2PManager` ativo.
+
+**Implementação e validação:**
+1. Adicionado método `SetLocalID(localID string) error` em `internal/network/router.go` para permitir estabelecer o identificador do nó local no roteador sem depender do `AttachSync`.
+2. Atualizado `NewP2PManager` em `internal/network/bootstrap.go` para propagar automaticamente `opts.NodeID` para o `Router` via `router.SetLocalID(opts.NodeID)`, resolvendo a falha onde requisições RPC autenticadas via mTLS eram rejeitadas com erro 500 (`ErrInvalidRPCRequest`) por ausência de `localID`.
+3. Executada a suíte completa de testes offline (`go test -v ./...`, `go vet ./...`, `git diff --check`), obtendo 100% de aprovação.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase450_mtls_p2pmanager_e2e_fire_test` com validação de RPC mTLS real (Node A -> Node B para `subagent.spawn.v1` retornando `200 OK`) combinado com rotação de modelos cognitivos:
+- Handshake mTLS e Invocação RPC: `PASS` (HTTP status code `200`).
+- **Groq / `llama-3.3-70b-versatile`**: 358.8 ms, 21 completion tokens, `finish_reason=stop`.
+- **Groq / `llama-3.1-8b-instant`**: 209.2 ms, 21 completion tokens, `finish_reason=stop`.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 3.17 s, 25 completion tokens, `finish_reason=stop`.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 473.3 ms, 24 completion tokens, `finish_reason=stop`.
+Artefatos salvos em `results/phase450-mtls_e2e_p2p/summary.json`.
+
+**Próximo passo:** Integrar discovery mDNS automático com discagem mTLS autenticada no P2PManager.

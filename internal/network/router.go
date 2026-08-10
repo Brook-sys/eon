@@ -96,6 +96,15 @@ func (r *Router) Handle(ctx context.Context, request domain.PeerRPCRequest) (dom
 	return domain.PeerRPCResponse{RequestID: request.RequestID, PeerID: request.PeerID, Payload: payload}, nil
 }
 
+// SetLocalID estabelece a identidade local do no no roteador.
+func (r *Router) SetLocalID(localID string) error {
+	if !validRPCField(localID) {
+		return ErrInvalidRPCRequest
+	}
+	r.localID = localID
+	return nil
+}
+
 func (r *Router) AttachSubagentReconciliation(service subagentreconcile.Handler) error {
 	if service == nil {
 		return ErrInvalidRPCRequest

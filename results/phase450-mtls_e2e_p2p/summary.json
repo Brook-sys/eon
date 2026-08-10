@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-08-10T06:41:45Z",
+  "handshake_result": "PASS",
+  "direct_rpc_status_code": 200,
+  "trials": [
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 358,
+      "output_tokens": 21,
+      "finish_reason": "stop",
+      "output_text": " READY\nHANDSHAKE: MUTUAL_VERIFIED\nP2P_SCHEME: HTTPS_MTLS",
+      "passed_parsing": false
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "latency_ms": 209,
+      "output_tokens": 21,
+      "finish_reason": "stop",
+      "output_text": " READY\nHANDSHAKE: MUTUAL_VERIFIED\nP2P_SCHEME: HTTPS_MTLS",
+      "passed_parsing": false
+    },
+    {
+      "provider": "nim",
+      "model": "deepseek-ai/deepseek-v4-flash-0731",
+      "latency_ms": 3168,
+      "output_tokens": 25,
+      "finish_reason": "stop",
+      "output_text": "\nHANDSHAKE: MUTUAL_VERIFIED\nP2P_SCHEME: HTTPS_MTLS",
+      "passed_parsing": false
+    },
+    {
+      "provider": "nim",
+      "model": "meta/llama-3.1-8b-instruct",
+      "latency_ms": 473,
+      "output_tokens": 24,
+      "finish_reason": "stop",
+      "output_text": "READY\n\nHANDSHAKE: \nMUTUAL_VERIFIED\n\nP2P_SCHEME: \nHTTPS_MTLS",
+      "passed_parsing": false
+    }
+  ]
+}

@@ -56,6 +56,9 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 	if opts.BindAddr == "" {
 		opts.BindAddr = "127.0.0.1:8443"
 	}
+	if opts.NodeID == "" {
+		opts.NodeID = "node-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
 
 	registry, err := NewStaticRegistry(domain.PeerRegistryPolicy{
 		MaxPeers:        100,
@@ -70,6 +73,10 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 	router, err := NewRouter(registry, dummyTransport)
 	if err != nil {
 		return nil, fmt.Errorf("create router: %w", err)
+	}
+
+	if err := router.SetLocalID(opts.NodeID); err != nil {
+		return nil, fmt.Errorf("set router local id: %w", err)
 	}
 
 	// peerhttp.ServerHandler assume PeerCaller, Router implementa PeerCaller
