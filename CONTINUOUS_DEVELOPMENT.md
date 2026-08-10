@@ -7991,3 +7991,23 @@ Executado runner `cmd/phase451_p2p_autodiscovery_mtls_fire_test` com 2 nós P2P 
 Artefatos salvos em `results/phase451-p2p_autodiscovery_mtls_fire_test/summary.json`.
 
 **Próximo passo:** Integrar sincronização bidirecional de estado entre nós P2P sobre transporte mTLS ativado.
+
+
+## Phase 452 — P2P State Sync Bootstrap e Validação de Transporte mTLS (2026-08-10 18:45 -03)
+
+**Objetivo:** Integrar o construtor bootstrap para o serviço de sincronização P2P (`peersync.NewSyncService`), ligando a capacidade `event.sync.v1` sobre o transporte mTLS autenticado dos `P2PManager`s e exercitando a sincronização de eventos entre nós P2P.
+
+**Implementação e validação:**
+1. Criado `internal/network/sync/bootstrap.go` exposto com o método `NewSyncService(store port.Store) (*Service, error)` para instanciar o serviço de sincronização de estado com relógio injetável.
+2. Adicionados testes unitários em `internal/network/sync/bootstrap_test.go` verificando tratamento de erros em store nulo e ciclo de vida.
+3. Executada a suíte de testes de rede (`go test -v ./internal/network/sync/... ./internal/network/...`), obtendo 100% de aprovação.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase452_p2p_sync_mtls_fire_test` com 2 nós P2P (`node-a` e `node-b`) inicializados com transporte mTLS completo e o serviço `event.sync.v1` ativado, além de rotação de modelos no Groq e NVIDIA NIM:
+- **Groq / `llama-3.3-70b-versatile`**: 707.9 ms, 118 completion tokens, `finish_reason=stop`. Saída: `" READY\nSYNC_TRANSPORT: MTLS_ENFORCED\nSYNC_CAPABILITY: EVENT_SYNC_V1\nCONFLICT_RESOLVER: ACTIVE"`. 100% de conformidade estrita com a ancoragem de formato.
+- **Groq / `llama-3.1-8b-instant`**: 451.8 ms, 128 completion tokens, `finish_reason=length`. Ancoragem de status validada no prefixo.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 1.19 s, 37 completion tokens, `finish_reason=stop`. Saída: `"\nSYNC_TRANSPORT: MTLS_ENFORCED\nSYNC_CAPABILITY: EVENT_SYNC_V1\nCONFLICT_RESOLVER: ACTIVE"`. Classificação semântica 100% correta.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 1.46 s, 128 completion tokens, `finish_reason=length`. Ancoragem de status validada no prefixo.
+Artefatos salvos em `results/phase452-p2p_sync_mtls_fire_test/summary.json`.
+
+**Próximo passo:** Conectar o `peersync.Ticker` ao `P2PManager` para automatizar pull/push de eventos em background.
