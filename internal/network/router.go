@@ -105,6 +105,15 @@ func (r *Router) SetLocalID(localID string) error {
 	return nil
 }
 
+// SetTransport atualiza o transporte de invocacao remota do roteador.
+func (r *Router) SetTransport(transport port.PeerTransport) error {
+	if transport == nil {
+		return ErrInvalidRPCRequest
+	}
+	r.transport = transport
+	return nil
+}
+
 func (r *Router) AttachSubagentReconciliation(service subagentreconcile.Handler) error {
 	if service == nil {
 		return ErrInvalidRPCRequest

@@ -62,6 +62,9 @@ func TestP2PManagerLifecycle_WithMTLSPaths(t *testing.T) {
 	if manager.tlsConfig == nil {
 		t.Fatal("expected tlsConfig to be loaded and non-nil")
 	}
+	if manager.Router == nil || manager.Router.transport == nil {
+		t.Fatal("expected router transport to be initialized and non-nil")
+	}
 
 	ctx := context.Background()
 	if err := manager.Start(ctx); err != nil {

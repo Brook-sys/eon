@@ -136,6 +136,14 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 			return nil, fmt.Errorf("load mtls config: %w", err)
 		}
 		tlsConfig = tc
+
+		transport, err := peerhttp.NewTransport(tlsConfig, 30*time.Second)
+		if err != nil {
+			return nil, fmt.Errorf("create peer transport: %w", err)
+		}
+		if err := router.SetTransport(transport); err != nil {
+			return nil, fmt.Errorf("set router transport: %w", err)
+		}
 	}
 
 	return &P2PManager{

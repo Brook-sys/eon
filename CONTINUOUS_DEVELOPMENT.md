@@ -7971,3 +7971,23 @@ Executado runner `cmd/phase450_mtls_p2pmanager_e2e_fire_test` com validação de
 Artefatos salvos em `results/phase450-mtls_e2e_p2p/summary.json`.
 
 **Próximo passo:** Integrar discovery mDNS automático com discagem mTLS autenticada no P2PManager.
+
+## Phase 451 — Discar mTLS Autenticado e SetTransport no P2PManager (2026-08-10 14:25 -03)
+
+**Objetivo:** Conectar a discagem mTLS de saída no `P2PManager` através do método `router.SetTransport(transport)`, garantindo que chamadas RPC entre nós P2P descobertos via mDNS / StaticRegistry utilizem o `peerhttp.Transport` mTLS autenticado em vez do `dummyTransport` mock.
+
+**Implementação e validação:**
+1. Adicionado método `SetTransport(transport port.PeerTransport) error` em `internal/network/router.go`.
+2. Atualizado `NewP2PManager` em `internal/network/bootstrap.go` para criar o `peerhttp.Transport` configurado com `tlsConfig` mTLS e registrá-lo no roteador via `router.SetTransport(transport)`.
+3. Adicionada verificação unitária em `internal/network/bootstrap_test.go` (`TestP2PManagerLifecycle_WithMTLSPaths`) confirmando a inicialização de `router.transport`.
+4. Executada a suíte completa de testes offline (`go test -v ./...`, `go vet ./...`, `git diff --check`), obtendo 100% de aprovação.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase451_p2p_autodiscovery_mtls_fire_test` com 2 nós P2P (`node-a` e `node-b`) inicializados com transporte mTLS completo e rotação de modelos no Groq e NVIDIA NIM:
+- **Groq / `llama-3.3-70b-versatile`**: 714.5 ms, 98 completion tokens, `finish_reason=stop`. Saída: `" READY\nAUTODISCOVERY_DIAL: ACTIVE\nOUTBOUND_MTLS: ENFORCED\nRPC_ROUTER: CONNECTED"`. 100% de conformidade com o formato ancorado.
+- **Groq / `llama-3.1-8b-instant`**: 455.5 ms, 128 completion tokens, `finish_reason=length`. Ancoragem de status validada no prefixo.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 837.7 ms, retornado `INVALID_RESPONSE: empty_content` tratado defensivamente pelo adapter OpenAI.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 3.41 s, 128 completion tokens, `finish_reason=length`. Ancoragem e análise semântica confirmando mTLS ativo.
+Artefatos salvos em `results/phase451-p2p_autodiscovery_mtls_fire_test/summary.json`.
+
+**Próximo passo:** Integrar sincronização bidirecional de estado entre nós P2P sobre transporte mTLS ativado.

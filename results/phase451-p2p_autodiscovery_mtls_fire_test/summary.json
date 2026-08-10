@@ -1,0 +1,55 @@
+[
+  {
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile",
+    "latency": 714562070,
+    "response": {
+      "Text": " READY\nAUTODISCOVERY_DIAL: ACTIVE\nOUTBOUND_MTLS: ENFORCED\nRPC_ROUTER: CONNECTED \n\nThe P2P network architecture component has been successfully initialized with strict TLS 1.3 mTLS configuration. The Router has been set up with the authenticated mTLS transport for outbound RPC calls, and peer nodes are required to authenticate via Mutual TLS before invoking RPC methods. This indicates that the outbound RPC transport is now active and protected by mTLS.",
+      "ToolCalls": null,
+      "InputTokens": 145,
+      "OutputTokens": 98,
+      "Model": "llama-3.3-70b-versatile",
+      "FinishReason": "stop"
+    }
+  },
+  {
+    "provider": "groq",
+    "model": "llama-3.1-8b-instant",
+    "latency": 455529457,
+    "response": {
+      "Text": " READY\n\nBased on the provided P2P network architecture component, it appears that the outbound RPC transport is now active and protected by mTLS. Here's a breakdown of the key points:\n\n1. **P2PManager initializes Router and peerhttp.Transport with strict TLS 1.3 mTLS config.**: This indicates that the P2PManager is setting up the transport with strict TLS 1.3 mutual TLS (mTLS) configuration, which ensures secure communication between peers.\n\n2. **Router.SetTransport registers the authenticated mTLS transport for outbound RPC calls.**: This line confirms that the authenticated mTLS transport is being registered",
+      "ToolCalls": null,
+      "InputTokens": 145,
+      "OutputTokens": 128,
+      "Model": "llama-3.1-8b-instant",
+      "FinishReason": "length"
+    }
+  },
+  {
+    "provider": "nim",
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 837738039,
+    "response": {
+      "Text": "",
+      "ToolCalls": null,
+      "InputTokens": 0,
+      "OutputTokens": 0,
+      "Model": "",
+      "FinishReason": ""
+    },
+    "error": "openai-compatible provider: INVALID_RESPONSE: empty_content"
+  },
+  {
+    "provider": "nim",
+    "model": "meta/llama-3.1-8b-instruct",
+    "latency": 3414228621,
+    "response": {
+      "Text": "Based on the provided P2P network architecture component, the outbound RPC transport is now active and protected by mTLS.\n\nHere's a breakdown of the key points that confirm this:\n\n1. `P2PManager` initializes `Router` and `peerhttp.Transport` with strict TLS 1.3 mTLS config, which sets up the secure transport layer.\n2. `Router.SetTransport` registers the authenticated mTLS transport for outbound RPC calls, ensuring that all outbound RPC calls are made over a secure, mTLS-protected connection.\n3. Peer nodes authenticate via Mutual TLS before RPC method invocation, which further reinforces the security of",
+      "ToolCalls": null,
+      "InputTokens": 150,
+      "OutputTokens": 128,
+      "Model": "meta/llama-3.1-8b-instruct",
+      "FinishReason": "length"
+    }
+  }
+]
