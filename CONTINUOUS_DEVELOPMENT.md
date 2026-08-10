@@ -7930,3 +7930,24 @@ Implementação:
 **Implementação e validação:** O P2PManager foi extendido para aceitar caminhos PEM no objeto de Options. Um novo teste (`TestP2PManagerLifecycle_WithMTLSPaths`) valida a passagem correta da estrutura pela API, preparando para carregar o mTLS config. Build executado sem erros (`go test -v ./...`, `go vet ./...`, `git diff --check`).
 
 2026-08-09 20:30 — Phase 448 — Integração dos caminhos mTLS no P2PManager e CLI flags. Adicionados `TLSCertFile` e `TLSKeyFile` em `bootstrap.NetworkOptions`, propagados para `network.Options` via `NewP2PManager`. Flags CLI `-p2p-tls-cert` e `-p2p-tls-key` expostas no `cmd/runtime`. Novo teste `TestP2PManagerLifecycle_WithMTLSPaths` valida a passagem. Próximo passo: carregar efetivamente o `tls.Config` via `LoadMTLSConfig` e envolver o listener TCP com TLS. Live evidence: Groq `llama-3.1-8b-instant` 4/4 fields match, 189 tokens, 77ms; NIM `meta/llama-3.1-8b-instruct` 1/4 (truncated, 12 tokens), cross-provider confirma `mtls_configurable=true`. Artifacts: `results/runtime-gate/phase448-groq-llama31-mtls-config/`.
+
+## Phase 449 — Carregamento do tls.Config mTLS no Listener do P2PManager (2026-08-10 00:25 -03)
+
+**Objetivo:** Concluir a integração mTLS do P2PManager carregando o `tls.Config` via `network.LoadMTLSConfig` quando os caminhos de certificado forem configurados, e aplicando `tls.NewListener` ao socket TCP. Expor a flag `-p2p-tls-ca` e estender as estruturas de opções (`NetworkOptions`, `network.Options`) para suportar CA personalizada.
+
+**Implementação e validação:**
+1. Atualizado `internal/network/bootstrap.go` (`Options`, `P2PManager` struct and `NewP2PManager`) para carregar o `tls.Config` via `LoadMTLSConfig` e envolver o `net.Listen` TCP com `tls.NewListener` em `P2PManager.Start`.
+2. Adicionado `TLSCACertFile` em `bootstrap.NetworkOptions` e propagado em `internal/runtime/bootstrap/runtime.go`.
+3. Adicionada a flag CLI `-p2p-tls-ca` em `cmd/runtime/main.go`.
+4. Atualizados os testes unitários em `internal/network/bootstrap_test.go` (`TestP2PManagerLifecycle_WithMTLSPaths` usando PKI gerado dinamicamente e `TestP2PManagerLifecycle_InvalidMTLSPaths` para falha fechada com caminhos inválidos).
+5. Executada suíte completa de testes offline (`go test -v ./...`, `go vet ./...`, `git diff --check`), obtendo 100% de aprovação.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase449_mtls_listener_live_fire_test` com rotação deliberada de modelos no Groq e NVIDIA NIM:
+- **Groq / `llama-3.3-70b-versatile`**: 377.8 ms, 19 completion tokens, `finish_reason=stop`. Saída: `" READY\nENFORCED: YES\nCLIENT_AUTH: REQUIRED\nTLS_MIN: TLS13"`. 100% de conformidade estrita com o formato ancorado.
+- **Groq / `llama-3.1-8b-instant`**: 402.2 ms, 128 completion tokens, `finish_reason=length`. Ancoragens capturadas perfeitamente no prefixo antes da explicação adicional.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 8.67 s, 22 completion tokens, `finish_reason=stop`. Saída: `"\nENFORCED: YES\nCLIENT_AUTH: REQUIRED\nTLS_MIN: TLS13"`. Classificação semântica 100% correta.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 1.03 s, 128 completion tokens, `finish_reason=length`. Ancoragem de status validada no prefixo.
+Artefatos salvos em `results/phase449-mtls_listener_live_fire/summary.json`.
+
+**Próximo passo:** Integrar handshake mTLS end-to-end entre dois nós P2P simulados no harness ou avançar para validação de heartbeat/sync autenticado P2P.
