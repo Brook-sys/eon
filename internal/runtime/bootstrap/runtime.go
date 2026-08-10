@@ -96,6 +96,8 @@ type Runtime struct {
 	Telemetry      *observability.Runtime
 	cycleTelemetry *observability.CycleInstruments
 
+	P2PManager *network.P2PManager
+
 	logger     *log.Logger
 	mu         sync.Mutex
 	server     *http.Server
@@ -449,6 +451,12 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	}
 
 	if p2pManager != nil {
+		if _, _, err := p2pManager.AttachSyncService(store); err != nil {
+			if closer != nil {
+				_ = closer.Close()
+			}
+			return nil, fmt.Errorf("attach sync service to p2p manager: %w", err)
+		}
 		_ = p2pManager.Start(ctx)
 	}
 
@@ -498,6 +506,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		TelegramIngress:             telegramBits.Ingress,
 		Telemetry:                   telemetry,
 		cycleTelemetry:              observability.NewCycleInstruments(telemetry),
+		P2PManager:                  p2pManager,
 		logger:                      log.Default(),
 	}, nil
 }

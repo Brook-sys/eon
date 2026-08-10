@@ -1578,3 +1578,25 @@ func TestOpenFileRequiresRoots(t *testing.T) {
 		t.Fatal("expected validation error when file has no roots")
 	}
 }
+
+func TestOpenWithP2PNetworkAttachesSyncService(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	rt, err := bootstrap.Open(ctx, bootstrap.Options{
+		ListenAddr:   "127.0.0.1:0",
+		StoreBackend: bootstrap.StorageMemory,
+		Network: &bootstrap.NetworkOptions{
+			Enabled:  true,
+			BindAddr: "127.0.0.1:0",
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error initializing runtime with p2p network: %v", err)
+	}
+	if rt.P2PManager == nil {
+		t.Fatal("expected P2PManager to be initialized")
+	}
+	if rt.P2PManager.Router == nil {
+		t.Fatal("expected P2PManager Router to be non-nil")
+	}
+}

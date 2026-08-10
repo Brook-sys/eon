@@ -45,5 +45,6 @@ func (m *P2PManager) AttachSyncService(store port.Store) (*peersync.Service, *pe
 	}
 	ticker.AttachCanonicalizer(canonicalizer)
 
+	m.Ticker = ticker
 	return syncService, ticker, nil
 }

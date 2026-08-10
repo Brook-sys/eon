@@ -14,6 +14,7 @@ import (
 	"motor-autonomo/internal/domain"
 	peerhttp "motor-autonomo/internal/network/http"
 	"motor-autonomo/internal/network/mdns"
+	peersync "motor-autonomo/internal/network/sync"
 )
 
 // Options define as flags e politicas para o subsistema de rede P2P.
@@ -35,11 +36,13 @@ type Options struct {
 type P2PManager struct {
 	Router     *Router
 	Registry   *StaticRegistry
+	Ticker     *peersync.Ticker
 	httpServer *http.Server
 	beacon     *mdns.Beacon
 	listenAddr string
 	tlsConfig  *tls.Config
 	logger     *slog.Logger
+	cancelTick context.CancelFunc
 	mu         sync.Mutex
 	running    bool
 }
@@ -186,6 +189,13 @@ func (m *P2PManager) Start(ctx context.Context) error {
 	}
 
 	m.running = true
+	if m.Ticker != nil {
+		tickCtx, cancel := context.WithCancel(context.Background())
+		m.cancelTick = cancel
+		go func() {
+			_ = m.Ticker.Run(tickCtx)
+		}()
+	}
 	go func() {
 		if err := m.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
 			m.logger.Error("P2P server failed", slog.String("error", err.Error()))
@@ -200,6 +210,10 @@ func (m *P2PManager) Stop(ctx context.Context) error {
 	defer m.mu.Unlock()
 	if !m.running {
 		return nil
+	}
+
+	if m.cancelTick != nil {
+		m.cancelTick()
 	}
 
 	if m.beacon != nil {
