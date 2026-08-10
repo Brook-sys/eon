@@ -46,14 +46,21 @@ func TestP2PManagerLifecycle(t *testing.T) {
 }
 
 func TestP2PManagerLifecycle_WithMTLSPaths(t *testing.T) {
+	dir := t.TempDir()
+	pki := generateTestPKI(t, dir)
+
 	manager, err := NewP2PManager(Options{
-		Enabled:     true,
-		BindAddr:    "127.0.0.1:0",
-		TLSCertFile: "testdata/cert.pem",
-		TLSKeyFile:  "testdata/key.pem",
+		Enabled:       true,
+		BindAddr:      "127.0.0.1:0",
+		TLSCertFile:   pki.NodeCert,
+		TLSKeyFile:    pki.NodeKey,
+		TLSCACertFile: pki.CACert,
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("NewP2PManager failed: %v", err)
+	}
+	if manager.tlsConfig == nil {
+		t.Fatal("expected tlsConfig to be loaded and non-nil")
 	}
 
 	ctx := context.Background()
@@ -63,6 +70,18 @@ func TestP2PManagerLifecycle_WithMTLSPaths(t *testing.T) {
 
 	if err := manager.Stop(ctx); err != nil {
 		t.Fatalf("Stop failed: %v", err)
+	}
+}
+
+func TestP2PManagerLifecycle_InvalidMTLSPaths(t *testing.T) {
+	_, err := NewP2PManager(Options{
+		Enabled:     true,
+		BindAddr:    "127.0.0.1:0",
+		TLSCertFile: "/invalid/cert.pem",
+		TLSKeyFile:  "/invalid/key.pem",
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err == nil {
+		t.Fatal("expected error for invalid mTLS certificate paths, got nil")
 	}
 }
 

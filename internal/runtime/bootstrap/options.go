@@ -549,9 +549,10 @@ func DefaultSchedulerCadence() domain.SchedulerCadenceConfig {
 }
 
 type NetworkOptions struct {
-	Enabled     bool
-	BindAddr    string
-	MDNSEnabled bool
-	TLSCertFile string
-	TLSKeyFile  string
+	Enabled       bool
+	BindAddr      string
+	MDNSEnabled   bool
+	TLSCertFile   string
+	TLSKeyFile    string
+	TLSCACertFile string
 }

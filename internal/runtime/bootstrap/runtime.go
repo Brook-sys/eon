@@ -107,11 +107,12 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 	var p2pManager *network.P2PManager
 	if opts.Network != nil && opts.Network.Enabled {
 		pm, err := network.NewP2PManager(network.Options{
-			Enabled:     opts.Network.Enabled,
-			BindAddr:    opts.Network.BindAddr,
-			MDNSEnabled: opts.Network.MDNSEnabled,
-			TLSCertFile: opts.Network.TLSCertFile,
-			TLSKeyFile:  opts.Network.TLSKeyFile,
+			Enabled:       opts.Network.Enabled,
+			BindAddr:      opts.Network.BindAddr,
+			MDNSEnabled:   opts.Network.MDNSEnabled,
+			TLSCertFile:   opts.Network.TLSCertFile,
+			TLSKeyFile:    opts.Network.TLSKeyFile,
+			TLSCACertFile: opts.Network.TLSCACertFile,
 		}, slog.Default())
 		if err != nil {
 			return nil, fmt.Errorf("create p2p manager: %w", err)

@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -22,8 +23,9 @@ type Options struct {
 	// BindAddr e o endereco TCP para ouvir conexoes P2P, por exemplo ":8443".
 	BindAddr string
 	// Certificados obrigatorios para mTLS.
-	TLSCertFile string
-	TLSKeyFile  string
+	TLSCertFile   string
+	TLSKeyFile    string
+	TLSCACertFile string
 	// MDNSEnabled habilita o beacon mDNS.
 	MDNSEnabled bool
 	NodeID      string
@@ -36,6 +38,7 @@ type P2PManager struct {
 	httpServer *http.Server
 	beacon     *mdns.Beacon
 	listenAddr string
+	tlsConfig  *tls.Config
 	logger     *slog.Logger
 	mu         sync.Mutex
 	running    bool
@@ -110,12 +113,31 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 		}
 	}
 
+	var tlsConfig *tls.Config
+	if opts.TLSCertFile != "" && opts.TLSKeyFile != "" {
+		caCert := opts.TLSCACertFile
+		if caCert == "" {
+			caCert = opts.TLSCertFile
+		}
+		cfg := PeerConfig{
+			NodeCert: opts.TLSCertFile,
+			NodeKey:  opts.TLSKeyFile,
+			CACert:   caCert,
+		}
+		tc, err := LoadMTLSConfig(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("load mtls config: %w", err)
+		}
+		tlsConfig = tc
+	}
+
 	return &P2PManager{
 		Router:     router,
 		Registry:   registry,
 		httpServer: srv,
 		beacon:     beacon,
 		listenAddr: opts.BindAddr,
+		tlsConfig:  tlsConfig,
 		logger:     logger,
 	}, nil
 }
@@ -132,6 +154,10 @@ func (m *P2PManager) Start(ctx context.Context) error {
 	ln, err := net.Listen("tcp", m.listenAddr)
 	if err != nil {
 		return fmt.Errorf("listen P2P address: %w", err)
+	}
+
+	if m.tlsConfig != nil {
+		ln = tls.NewListener(ln, m.tlsConfig)
 	}
 
 	m.logger.InfoContext(ctx, "starting P2P server", slog.String("addr", ln.Addr().String()))

@@ -76,6 +76,7 @@ func main() {
 		p2pMDNS          = flag.Bool("p2p-mdns", false, "enable mDNS beacon on P2P network")
 		p2pTLSCert       = flag.String("p2p-tls-cert", "", "PEM certificate file for mTLS")
 		p2pTLSKey        = flag.String("p2p-tls-key", "", "PEM key file for mTLS")
+		p2pTLSCA         = flag.String("p2p-tls-ca", "", "PEM CA certificate file for mTLS (optional, defaults to cert)")
 		// Optional OpenAI-compatible provider for non-local PROPOSE_ONLY ops.
 		// Secrets never appear as flags: pass -model-api-key-env=NAME only.
 		modelEnabled   = flag.Bool("model", false, "enable OpenAI-compatible PROPOSE_ONLY model path")
@@ -154,11 +155,12 @@ func main() {
 		}
 	}
 	opts.Network = &bootstrap.NetworkOptions{
-		Enabled:     *p2pEnabled,
-		BindAddr:    *p2pBind,
-		MDNSEnabled: *p2pMDNS,
-		TLSCertFile: *p2pTLSCert,
-		TLSKeyFile:  *p2pTLSKey,
+		Enabled:       *p2pEnabled,
+		BindAddr:      *p2pBind,
+		MDNSEnabled:   *p2pMDNS,
+		TLSCertFile:   *p2pTLSCert,
+		TLSKeyFile:    *p2pTLSKey,
+		TLSCACertFile: *p2pTLSCA,
 	}
 
 	opts.Subagent = &bootstrap.SubagentOptions{
