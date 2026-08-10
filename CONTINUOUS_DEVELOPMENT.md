@@ -742,6 +742,8 @@ Não transformar este arquivo em log detalhado; Git contém o histórico complet
 
 2026-08-11 00:05 — Phase 454 — P2PManager Sync Ticker Background Lifecycle & Bootstrap Wiring — Acoplada a chamada automática de `AttachSyncService` no bootstrap do runtime (`internal/runtime/bootstrap/runtime.go`) e a execução do `Ticker.Run` em background durante o ciclo de vida de `P2PManager.Start` e `Stop`. Adicionada struct de cancelamento `cancelTick context.CancelFunc` ao `P2PManager` e teste unitário `TestOpenWithP2PNetworkAttachesSyncService`. Re-executada a campanha live fire Phase 453 com sucesso (Groq Llama 3.3 70B, Llama 3.1 8B, NIM DeepSeek V4 Flash, NIM Llama 3.1 8B). Verificação: `go test -v ./internal/network/... ./internal/runtime/bootstrap/...`, `go vet ./...`, `git diff --check`; commit `0335fdd` e `origin/main` sincronizado.
 
+2026-08-11 00:22 — Phase 455 — P2PManager ReconcilePeerEventsNow API & Live Fire Campaign — Adicionado método `ReconcilePeerEventsNow(ctx, peerID, streamID)` ao `P2PManager` e `ReconcilePeerNow` ao `Ticker` (`internal/network/sync_reconcile.go`, `internal/network/sync/ticker.go`), permitindo disparar reconciliação síncrona sob demanda contra um nó P2P específico. Executados testes unitários e a campanha live fire Phase 455 (`cmd/phase455_p2p_sync_reconciliation_fire_test/`) com 4 modelos (Groq Llama 3.3 70B, Llama 3.1 8B, NIM DeepSeek V4 Flash, NIM Llama 3.1 8B). Verificação: `go test ./...`, `go vet ./...`, `git diff --check`.
+
 2026-07-19 07:45 — HEARTBEAT — Otimização de eventos duráveis do ResourceGate concluída e confirmada. As verificações que não exigiam binários externos foram comitadas. Retornando ao repouso.
 2026-07-19 08:00 — Fase 7/verificação de limites em lote — correção em reportModelCompleteBatch permitindo vazamento local de testes curado; contract/domain intactos. DONE
 2026-07-19 08:15 — HEARTBEAT — Um lote de 4 itens (Fase 9) focado em Gestão de Memória e Agendamento Long-term foi iniciado, após a resolução e validação robusta da recuperação/fallback de modelos.
@@ -8015,3 +8017,47 @@ Executado runner `cmd/phase452_p2p_sync_mtls_fire_test` com 2 nós P2P (`node-a`
 Artefatos salvos em `results/phase452-p2p_sync_mtls_fire_test/summary.json`.
 
 **Próximo passo:** Conectar o `peersync.Ticker` ao `P2PManager` para automatizar pull/push de eventos em background.
+
+
+## Phase 453 — P2PManager AttachSyncService Helper (2026-08-10 23:03 -03)
+
+**Objetivo:** Adicionar o método auxiliar `AttachSyncService(store port.Store)` ao `P2PManager` para encapsular a instanciação de `peersync.Service`, `peersync.Ticker` e acoplamento do reconciliador de inbox canônico.
+
+**Implementação e validação:**
+1. Criado `internal/network/sync_attach.go` com `AttachSyncService`.
+2. Adicionada validação de `m == nil` para evitar retornos inconsistentes ou panic.
+3. Executada a suíte de testes e o runner live fire Phase 453 (`cmd/phase453_p2p_attach_sync_fire_test`).
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executada rotação em 4 modelos (Groq Llama 3.3 70B, Groq Llama 3.1 8B, NVIDIA NIM DeepSeek V4 Flash, NVIDIA NIM Llama 3.1 8B), validando atracamento do serviço mTLS e resposta estrita dos modelos. Artefatos em `results/phase453-p2p_attach_sync_fire_test/summary.json`.
+
+
+## Phase 454 — P2PManager Background Ticker Lifecycle (2026-08-11 00:05 -03)
+
+**Objetivo:** Automatizar o acoplamento do `AttachSyncService` no bootstrap do runtime e gerenciar o ciclo de vida do `peersync.Ticker` em background durante `Start` e `Stop` do `P2PManager`.
+
+**Implementação e validação:**
+1. Atualizado `internal/runtime/bootstrap/runtime.go` para executar `p2pManager.AttachSyncService(store)` automaticamente durante `bootstrap.Open`.
+2. Atualizado `internal/network/bootstrap.go` para iniciar o `Ticker.Run` em goroutine de background no `Start` e cancelá-lo com `cancelTick` no `Stop`.
+3. Adicionado teste `TestOpenWithP2PNetworkAttachesSyncService` em `internal/runtime/bootstrap/runtime_test.go`.
+
+
+## Phase 455 — P2PManager ReconcilePeerEventsNow API e Live Fire Campaign (2026-08-11 00:22 -03)
+
+**Objetivo:** Expor suporte a reconciliação síncrona on-demand contra um peer específico através do método `P2PManager.ReconcilePeerEventsNow(ctx, peerID, streamID)` e `Ticker.ReconcilePeerNow`.
+
+**Implementação e validação:**
+1. Adicionado método `ReconcilePeerNow` em `internal/network/sync/ticker.go` para disparar um pull focalizado sem aguardar a próxima rodada do ticker de background.
+2. Criado `internal/network/sync_reconcile.go` adicionando `ReconcilePeerEventsNow` ao `P2PManager` com validação defensiva de parâmetros (manager nulo, ticker nulo, router nulo, peerID vazio).
+3. Adicionados testes unitários em `internal/network/sync_reconcile_test.go` cobrindo cenários com sucesso e rejeições defensivas.
+4. Executada a suíte completa de testes offline (`go test ./...`, `go vet ./...`, `git diff --check`), obtendo 100% de aprovação.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase455_p2p_sync_reconciliation_fire_test` com 2 nós P2P (`node-a` e `node-b`) inicializados com transporte mTLS completo e a API de reconciliação de estado, além de rotação de modelos no Groq e NVIDIA NIM:
+- **Groq / `llama-3.3-70b-versatile`**: 794.0 ms, 128 output tokens, `finish_reason=length`. Análise de status confirmando sincronização sob demanda ativa.
+- **Groq / `llama-3.1-8b-instant`**: 385.6 ms, 128 output tokens, `finish_reason=length`. Análise de status validada.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 4.47 s, 128 output tokens, `finish_reason=length`. Relatório detalhado confirmando disponibilidade operacional.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 1.37 s, 128 output tokens, `finish_reason=length`. Relatório de componentes e reconciliação canônica validado.
+Artefatos salvos em `results/phase455-p2p_sync_reconciliation_fire_test/summary.json`.
+
+**Próximo passo:** Implementar retenção e expiração de logs de eventos canônicos no reconciliador P2P.

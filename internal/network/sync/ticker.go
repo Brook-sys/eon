@@ -26,6 +26,21 @@ type Ticker struct {
 	interval      time.Duration
 }
 
+// ReconcilePeerNow triggers an on-demand sync pull against a specific peer outside the background ticker cycle.
+func (t *Ticker) ReconcilePeerNow(ctx context.Context, peerID, localID, streamID string) (PullResult, error) {
+	if t.service == nil {
+		return PullResult{}, ErrInvalidTicker
+	}
+	res, err := t.service.PullOnce(ctx, t.network, peerID, localID, streamID, nil)
+	if err != nil {
+		return PullResult{}, err
+	}
+	if t.canonicalizer != nil {
+		_, _ = t.canonicalizer.Reconcile(ctx, peerID)
+	}
+	return res, nil
+}
+
 // AttachCanonicalizer registers the inbox-to-canonical reconciler which runs immediately after PullOnce.
 func (t *Ticker) AttachCanonicalizer(c InboxCanonicalizer) {
 	t.canonicalizer = c
