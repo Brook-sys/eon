@@ -1,0 +1,54 @@
+[
+  {
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile",
+    "latency": 395912208,
+    "response": {
+      "Text": " READY\nSYNC_ATTACH: ATTACHED\nSYNC_CAPABILITY: EVENT_SYNC_V1\nTICKER_PASS: PASS",
+      "ToolCalls": null,
+      "InputTokens": 152,
+      "OutputTokens": 24,
+      "Model": "llama-3.3-70b-versatile",
+      "FinishReason": "stop"
+    }
+  },
+  {
+    "provider": "groq",
+    "model": "llama-3.1-8b-instant",
+    "latency": 312264118,
+    "response": {
+      "Text": " READY\n\nSYNC_ATTACH: ATTACHED\n\nSYNC_CAPABILITY: EVENT_SYNC_V1\n\nTICKER_PASS: PASS",
+      "ToolCalls": null,
+      "InputTokens": 152,
+      "OutputTokens": 24,
+      "Model": "llama-3.1-8b-instant",
+      "FinishReason": "stop"
+    }
+  },
+  {
+    "provider": "nim",
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 7991892222,
+    "response": {
+      "Text": "\nSYNC_ATTACH: ATTACHED\nSYNC_CAPABILITY: EVENT_SYNC_V1\nTICKER_PASS: PASS",
+      "ToolCalls": null,
+      "InputTokens": 138,
+      "OutputTokens": 32,
+      "Model": "deepseek-ai/deepseek-v4-flash-0731",
+      "FinishReason": "stop"
+    }
+  },
+  {
+    "provider": "nim",
+    "model": "meta/llama-3.1-8b-instruct",
+    "latency": 556048703,
+    "response": {
+      "Text": "READY\n\nSYNC_ATTACH: \nATTACHED\n\nSYNC_CAPABILITY: \nEVENT_SYNC_V1\n\nTICKER_PASS: \nPASS",
+      "ToolCalls": null,
+      "InputTokens": 157,
+      "OutputTokens": 27,
+      "Model": "meta/llama-3.1-8b-instruct",
+      "FinishReason": "stop"
+    }
+  }
+]
