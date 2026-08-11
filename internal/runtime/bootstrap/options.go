@@ -54,6 +54,8 @@ type Options struct {
 	// after the per-transaction retry budget is exhausted. It prevents a durable
 	// PENDING receipt from turning contention into a tight process-level loop.
 	SubagentIngressRecoveryDelay time.Duration
+	// InsecureVaultAccess disables the loopback-only requirement for the credential vault API.
+	InsecureVaultAccess bool
 	// MaxInboxBatch caps commands/events drained per cycle (fairness).
 	MaxInboxBatch int
 	// MemoryCompactionBatch caps expired semantic memories removed per cycle.

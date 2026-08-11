@@ -87,6 +87,7 @@ func main() {
 		modelContext   = flag.Int("model-context-tokens", 8000, "provider context window for prompt budget")
 		modelPolicy    = flag.String("model-policy-version", "policy@runtime", "changeset policy version stamp")
 		modelLeaseTTL  = flag.Duration("model-lease-ttl", 15*time.Minute, "lease TTL for model-backed operations")
+		insecureVault  = flag.Bool("insecure-vault-access", false, "disable loopback-only requirement for the credential vault API")
 		// Optional FR-MODEL-004 step-7 alternate provider (one Complete only).
 		modelFallbackEnabled   = flag.Bool("model-fallback", false, "enable alternate OpenAI-compatible fallback provider")
 		modelFallbackBaseURL   = flag.String("model-fallback-base-url", "", "fallback OpenAI-compatible base URL")
@@ -112,6 +113,7 @@ func main() {
 		AllowExec:              *allowExec,
 		IdleMin:                *idleMin,
 		IdleMax:                *idleMax,
+		InsecureVaultAccess:    *insecureVault,
 		MaxInboxBatch:          *maxInboxBatch,
 		MemoryCompactionBatch:  *memoryCompactBatch,
 		DeliveryBatch:          *deliveryBatch,

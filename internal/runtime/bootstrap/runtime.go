@@ -321,7 +321,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			}
 			return nil, fmt.Errorf("credential vault: %w", vaultErr)
 		}
-		dashV2.Vault = secretvault.HTTP{Vault: vault}.Handler()
+		dashV2.Vault = secretvault.HTTP{Vault: vault, Insecure: opts.InsecureVaultAccess}.Handler()
 
 		// The v2 Templ dashboard handles / and /api/* directly now.
 		handler = dashV2.Handler()

@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-type HTTP struct{ Vault *Vault }
+type HTTP struct {
+	Vault    *Vault
+	Insecure bool
+}
 
 func (h HTTP) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -61,6 +64,9 @@ func (h HTTP) Handler() http.Handler {
 	mux.HandleFunc("POST /resolve", h.resolveBatch)
 	mux.HandleFunc("GET /health", h.health)
 	mux.HandleFunc("GET /secrets/{name}/history", h.secretHistory)
+	if h.Insecure {
+		return mux
+	}
 	return localOnly(mux)
 }
 
