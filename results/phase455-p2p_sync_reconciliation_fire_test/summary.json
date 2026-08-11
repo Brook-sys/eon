@@ -2,9 +2,9 @@
   {
     "provider": "groq",
     "model": "llama-3.3-70b-versatile",
-    "latency": 793988468,
+    "latency": 751379695,
     "response": {
-      "Text": "**System Status Analysis Report**\n\nThe provided system status indicates that the system is currently in a stable and operational state. Here's a breakdown of each component:\n\n1. **STATUS: READY**: The system is ready to perform its intended functions, indicating that all necessary components are initialized and available.\n2. **ON_DEMAND_SYNC: ENABLED**: On-demand synchronization is enabled, which means that the system can synchronize data or perform other tasks as needed, without requiring a scheduled or manual trigger.\n3. **RECONCILE_API: ACTIVE**: The Reconcile API is active, suggesting that the system is capable of reconciling data,",
+      "Text": "**System Status Analysis Report**\n\nThe provided system status indicates that the system is currently in a stable and operational state. Here's a breakdown of each component:\n\n1. **STATUS: READY**: The system is ready to perform its intended functions, indicating that all necessary components are initialized and functioning correctly.\n2. **ON_DEMAND_SYNC: ENABLED**: On-demand synchronization is enabled, which means that the system can synchronize data or perform other tasks as needed, without requiring a scheduled or manual trigger.\n3. **RECONCILE_API: ACTIVE**: The Reconcile API is active, which suggests that the system is capable of reconciling",
       "ToolCalls": null,
       "InputTokens": 74,
       "OutputTokens": 128,
@@ -15,9 +15,9 @@
   {
     "provider": "groq",
     "model": "llama-3.1-8b-instant",
-    "latency": 385555572,
+    "latency": 446406464,
     "response": {
-      "Text": "**System Status Analysis**\n\nBased on the provided system status, the following analysis is conducted:\n\n1. **Overall Status**: The system is currently in a **READY** state, indicating that it is operational and available for use.\n\n2. **On-Demand Sync**: The **ON_DEMAND_SYNC** feature is **ENABLED**, which means that the system will automatically synchronize data as needed. This can help ensure data consistency and accuracy.\n\n3. **API Reconciliation**: The **RECONCILE_API** is **ACTIVE**, indicating that the API is functioning correctly and is actively reconciling data. This suggests that the system is able to",
+      "Text": "**System Status Analysis**\n\nBased on the provided system status, the following analysis is conducted:\n\n1. **Overall Status**: The system is currently in a **READY** state, indicating that it is operational and prepared for use.\n\n2. **On-Demand Sync**: The **ON_DEMAND_SYNC** feature is **ENABLED**, which means that the system will automatically synchronize data as needed. This can help maintain data consistency and ensure that the system remains up-to-date.\n\n3. **API Reconciliation**: The **RECONCILE_API** is **ACTIVE**, indicating that the API is currently reconciling data. This process helps to ensure",
       "ToolCalls": null,
       "InputTokens": 74,
       "OutputTokens": 128,
@@ -28,9 +28,9 @@
   {
     "provider": "nvidia_nim",
     "model": "deepseek-ai/deepseek-v4-flash-0731",
-    "latency": 4465018295,
+    "latency": 3533016135,
     "response": {
-      "Text": "**System Status Analysis Report**  \n\n---\n\n### 1. **Overall System State**  \n**STATUS: READY**  \n- The system is fully operational and prepared to accept and process requests.  \n- No blocking conditions, maintenance windows, or resource constraints are currently active.  \n\n---\n\n### 2. **On-Demand Synchronization**  \n**ON_DEMAND_SYNC: ENABLED**  \n- The system supports real-time or user-triggered synchronization of data between components or external systems.  \n- This feature is active, meaning:  \n  - Manual sync requests will be processed immediately.  \n ",
+      "Text": "**System Status Analysis Report**\n\n---\n\n### 1. Executive Summary\nThe system is in a **healthy, fully operational state**. All core subsystems are functioning as expected, with no errors, warnings, or pending actions. The system is ready to accept and process workloads.\n\n---\n\n### 2. Detailed Component Breakdown\n\n| Component | State | Interpretation |\n| :--- | :--- | :--- |\n| **STATUS** | `READY` | The system has completed initialization and is idle or available for new tasks. No locks, failures, or maintenance mode is active. |\n| **ON_DEMAND_SYNC** |",
       "ToolCalls": null,
       "InputTokens": 52,
       "OutputTokens": 128,
@@ -41,9 +41,9 @@
   {
     "provider": "nvidia_nim",
     "model": "meta/llama-3.1-8b-instruct",
-    "latency": 1365692557,
+    "latency": 1247261010,
     "response": {
-      "Text": "**System Status Analysis Report**\n\n**Overall Status:** The system is currently in a stable and operational state.\n\n**Key Components Status:**\n\n1. **ON_DEMAND_SYNC:** This feature is enabled, which means that the system is set to synchronize data on demand. This can be beneficial for maintaining data consistency and reducing unnecessary data transfers.\n\n2. **RECONCILE_API:** The Reconcile API is active, indicating that the system is capable of reconciling data and performing necessary updates. This is a critical component for ensuring data accuracy and integrity.\n\n3. **CANONICAL_LOG:** The Canonical Log has been reconciled, which",
+      "Text": "**System Status Analysis**\n\nBased on the provided system status, the following analysis and report state can be determined:\n\n**Overall System Status:** READY\n\nThe system is currently in a ready state, indicating that it is operational and available for use.\n\n**On-Demand Sync:** ENABLED\n\nOn-demand sync is enabled, which means that the system can synchronize data as needed. This feature is likely used to ensure data consistency and accuracy.\n\n**Reconcile API:** ACTIVE\n\nThe reconcile API is active, which suggests that the system is currently reconciling data or is ready to perform reconciliation tasks. This feature is likely used to resolve any discrepancies or",
       "ToolCalls": null,
       "InputTokens": 74,
       "OutputTokens": 128,

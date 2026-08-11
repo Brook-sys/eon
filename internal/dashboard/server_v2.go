@@ -57,12 +57,12 @@ func (s *V2Server) Handler() http.Handler {
 
 	// / -> layout shell + pages.
 	mux.Handle("GET /{$}", http.RedirectHandler("/dash/", http.StatusMovedPermanently))
-	mux.Handle("GET /dash/{$}", http.HandlerFunc(s.handleOverview)) 
-	
+	mux.Handle("GET /dash/{$}", http.HandlerFunc(s.handleOverview))
+
 	mux.Handle("GET /assets/", http.StripPrefix("/assets", assetsHandler{}))
 
 	// Base API mappings remain
-	
+
 	// Add explicit mapping for views
 	mux.Handle("GET /events", http.HandlerFunc(s.handleEvents))
 	mux.Handle("GET /events/", http.HandlerFunc(s.handleEventDetail))
@@ -72,7 +72,7 @@ func (s *V2Server) Handler() http.Handler {
 	mux.Handle("GET /alerts", http.HandlerFunc(s.handleAlerts))
 	mux.Handle("GET /knowledge", http.HandlerFunc(s.handleKnowledge))
 	mux.Handle("GET /partials/overview", http.HandlerFunc(s.handlePartialOverview))
-	
+
 	// Keep backwards compatibility for a moment, or redirect. Let's just point them to same handlers.
 	mux.Handle("GET /dash/assets/", http.StripPrefix("/dash/assets", assetsHandler{}))
 	// Proxy inspect, control and vault endpoints under /dash/api/ so browser calls work seamlessly

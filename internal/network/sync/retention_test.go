@@ -2,8 +2,8 @@ package peersync
 
 import (
 	"context"
-	"testing"
 	"motor-autonomo/internal/domain"
+	"testing"
 )
 
 type mockDeleter struct {
@@ -18,7 +18,7 @@ func (m *mockDeleter) DeleteEvent(ctx context.Context, id []byte) error {
 func TestDeleteStaleEventsUnauthorized(t *testing.T) {
 	policy := domain.DefaultStoreRetentionPolicy() // MVP default has AllowEventLogPrune = false
 	deleter := &mockDeleter{}
-	
+
 	err := DeleteStaleEvents(context.Background(), policy, deleter)
 	if err != domain.ErrUnauthorizedRetention {
 		t.Fatalf("expected ErrUnauthorizedRetention, got %v", err)
@@ -32,7 +32,7 @@ func TestDeleteStaleEventsAuthorized(t *testing.T) {
 	policy := domain.DefaultStoreRetentionPolicy()
 	policy.AllowEventLogPrune = true
 	deleter := &mockDeleter{}
-	
+
 	err := DeleteStaleEvents(context.Background(), policy, deleter)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

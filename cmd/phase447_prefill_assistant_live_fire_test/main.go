@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
-	"encoding/json"
 
-	"motor-autonomo/internal/provider/openai"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/provider/openai"
 )
 
 func main() {
@@ -35,9 +35,9 @@ func main() {
 	})
 
 	req := port.CompletionRequest{
-		Prompt:          "Generate a JSON object containing the fields 'status': 'READY' and 'id': 42. Do not write anything else. Just the JSON object.",
-		MaxOutputTokens: 64,
-		Temperature:     0.0,
+		Prompt:           "Generate a JSON object containing the fields 'status': 'READY' and 'id': 42. Do not write anything else. Just the JSON object.",
+		MaxOutputTokens:  64,
+		Temperature:      0.0,
 		PrefillAssistant: "{",
 	}
 
