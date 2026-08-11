@@ -128,6 +128,31 @@ func TestComponentsRender(t *testing.T) {
 		}
 	})
 
+	t.Run("Resources_retention_panel", func(t *testing.T) {
+		var buf bytes.Buffer
+		err := Resources().Render(ctx, &buf)
+		if err != nil {
+			t.Fatalf("Resources.Render failed: %v", err)
+		}
+		out := buf.String()
+		// Verify the retention panel section is present
+		if !strings.Contains(out, "Pressão de Retenção") {
+			t.Error("Resources page should contain retention pressure card")
+		}
+		// Verify key Alpine.js data properties exist
+		if !strings.Contains(out, "retentionLoaded") {
+			t.Error("Resources page should contain retentionLoaded data property")
+		}
+		// Verify the retention API fetch is wired
+		if !strings.Contains(out, "/dash/api/store/retention") {
+			t.Error("Resources page should fetch from /dash/api/store/retention")
+		}
+		// Verify original quotas card still exists
+		if !strings.Contains(out, "Monitoramento Global de Quotas") {
+			t.Error("Resources page should still contain the quotas card")
+		}
+	})
+
 	t.Run("SeverityTone", func(t *testing.T) {
 		if tone := SeverityTone("critical"); tone != "var(--err)" {
 			t.Errorf("esperava var(--err), obteve %s", tone)

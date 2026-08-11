@@ -48,7 +48,7 @@ func EventDetail(id string) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/event_detail.templ`, Line: 10, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/event_detail.templ`, Line: 10, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -77,7 +77,7 @@ func EventDetail(id string) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue("fetch('/dash/api/events?limit=100').then(r => r.json()).then(d => { const evs = d.events ?? []; eventData = evs.find(e => String(e.sequence) === '" + id + "' || String(e.event_id) === '" + id + "') ?? null; loading = false; }).catch(e => { error = e.message; loading = false; })")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/event_detail.templ`, Line: 14, Col: 383}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/event_detail.templ`, Line: 14, Col: 383}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 				if templ_7745c5c3_Err != nil {
@@ -90,7 +90,7 @@ func EventDetail(id string) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/event_detail.templ`, Line: 16, Col: 90}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/event_detail.templ`, Line: 16, Col: 90}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -103,7 +103,7 @@ func EventDetail(id string) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/event_detail.templ`, Line: 25, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/dashboard/views/event_detail.templ`, Line: 25, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
