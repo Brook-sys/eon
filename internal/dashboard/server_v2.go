@@ -10,8 +10,8 @@ import (
 	"motor-autonomo/internal/dashboard/views"
 )
 
-// V2Server serves the Templ-based dashboard pages under /dash.
-// It composes with the existing Server for legacy /api routes.
+// V2Server serves the Templ-based dashboard pages under /.
+// It handles UI routes and acts as a router for /api/* requests.
 type V2Server struct {
 	// Inspect/Control are the same handlers used by the existing dashboard.
 	Inspect http.Handler
@@ -20,6 +20,8 @@ type V2Server struct {
 	Vault http.Handler
 	// APIBase is the browser-visible prefix for fetch/EventSource calls.
 	APIBase string
+	// DefaultMissionID sets the initial mission ID loaded by the UI.
+	DefaultMissionID string
 	// Logger receives dashboard lifecycle messages.
 	Logger *log.Logger
 }
@@ -53,8 +55,25 @@ func (s *V2Server) Handler() http.Handler {
 		mux.Handle(base+"/vault/", http.StripPrefix(base+"/vault", s.Vault))
 	}
 
-	// /dash → layout shell + pages.
-	mux.Handle("GET /dash", http.RedirectHandler("/dash/", http.StatusMovedPermanently))
+	// / -> layout shell + pages.
+	mux.Handle("GET /{$}", http.RedirectHandler("/dash/", http.StatusMovedPermanently))
+	mux.Handle("GET /dash/{$}", http.HandlerFunc(s.handleOverview)) 
+	
+	mux.Handle("GET /assets/", http.StripPrefix("/assets", assetsHandler{}))
+
+	// Base API mappings remain
+	
+	// Add explicit mapping for views
+	mux.Handle("GET /events", http.HandlerFunc(s.handleEvents))
+	mux.Handle("GET /events/", http.HandlerFunc(s.handleEventDetail))
+	mux.Handle("GET /models", http.HandlerFunc(s.handleModels))
+	mux.Handle("GET /resources", http.HandlerFunc(s.handleResources))
+	mux.Handle("GET /frontier", http.HandlerFunc(s.handleFrontier))
+	mux.Handle("GET /alerts", http.HandlerFunc(s.handleAlerts))
+	mux.Handle("GET /knowledge", http.HandlerFunc(s.handleKnowledge))
+	mux.Handle("GET /partials/overview", http.HandlerFunc(s.handlePartialOverview))
+	
+	// Keep backwards compatibility for a moment, or redirect. Let's just point them to same handlers.
 	mux.Handle("GET /dash/assets/", http.StripPrefix("/dash/assets", assetsHandler{}))
 	// Proxy inspect, control and vault endpoints under /dash/api/ so browser calls work seamlessly
 	mux.Handle("/dash/api/control/", http.StripPrefix("/dash/api/control", s.Control))
@@ -62,7 +81,6 @@ func (s *V2Server) Handler() http.Handler {
 		mux.Handle("/dash/api/vault/", http.StripPrefix("/dash/api/vault", s.Vault))
 	}
 	mux.Handle("/dash/api/", http.StripPrefix("/dash/api", s.Inspect))
-	mux.Handle("GET /dash/{$}", http.HandlerFunc(s.handleOverview))
 	mux.Handle("GET /dash/events", http.HandlerFunc(s.handleEvents))
 	mux.Handle("GET /dash/events/", http.HandlerFunc(s.handleEventDetail))
 	mux.Handle("GET /dash/models", http.HandlerFunc(s.handleModels))
