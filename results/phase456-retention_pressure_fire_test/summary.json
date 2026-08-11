@@ -1,0 +1,78 @@
+[
+  {
+    "provider": "groq",
+    "model": "llama-3.3-70b-versatile",
+    "latency": 580843685,
+    "response": {
+      "Text": "The retention pressure system snapshot confirms the following state: EVENT_LOG is set to APPEND_ONLY, PRUNE_AUTHORIZED is false, PRESSURE_MONITOR is ACTIVE, and RETENTION_INVARIANT is PRESERVED.",
+      "ToolCalls": null,
+      "InputTokens": 87,
+      "OutputTokens": 42,
+      "Model": "llama-3.3-70b-versatile",
+      "FinishReason": "stop"
+    },
+    "prune_authorized": false,
+    "head_pressure": ""
+  },
+  {
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "latency": 439806197,
+    "response": {
+      "Text": "",
+      "ToolCalls": null,
+      "InputTokens": 0,
+      "OutputTokens": 0,
+      "Model": "",
+      "FinishReason": ""
+    },
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+    "prune_authorized": false,
+    "head_pressure": ""
+  },
+  {
+    "provider": "groq",
+    "model": "qwen/qwen3.6-27b",
+    "latency": 443309362,
+    "response": {
+      "Text": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - The user provides a \"retention pressure system snapshot\" with four fields:\n     - `EVENT_LOG: APPEND_ONLY`\n     - `PRUNE_AUTHORIZED: false`\n     - `PRESSURE_MONITOR: ACTIVE`\n     - `RETENTION_INVARIANT: PRESERVED`\n   - The user asks to \"confirm its state\" and specifically requests: \"Reply with a single line confirming each field's value.\"\n\n2.  **Identify Key Constraints:**\n   - Must be a single line.\n   -",
+      "ToolCalls": null,
+      "InputTokens": 63,
+      "OutputTokens": 128,
+      "Model": "qwen/qwen3.6-27b",
+      "FinishReason": "length"
+    },
+    "prune_authorized": false,
+    "head_pressure": ""
+  },
+  {
+    "provider": "nvidia_nim",
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 6729667753,
+    "response": {
+      "Text": "EVENT_LOG: APPEND_ONLY, PRUNE_AUTHORIZED: false, PRESSURE_MONITOR: ACTIVE, RETENTION_INVARIANT: PRESERVED",
+      "ToolCalls": null,
+      "InputTokens": 68,
+      "OutputTokens": 39,
+      "Model": "deepseek-ai/deepseek-v4-flash-0731",
+      "FinishReason": "stop"
+    },
+    "prune_authorized": false,
+    "head_pressure": ""
+  },
+  {
+    "provider": "nvidia_nim",
+    "model": "meta/llama-3.1-8b-instruct",
+    "latency": 2766879761,
+    "response": {
+      "Text": "Based on the given snapshot, the following confirmations can be made:\n\n- The log is in APPEND_ONLY mode: **Confirmed**\n- Prune is not authorized: **Confirmed**\n- The pressure monitor is active: **Confirmed**\n- Retention invariant is preserved: **Confirmed**",
+      "ToolCalls": null,
+      "InputTokens": 87,
+      "OutputTokens": 58,
+      "Model": "meta/llama-3.1-8b-instruct",
+      "FinishReason": "stop"
+    },
+    "prune_authorized": false,
+    "head_pressure": ""
+  }
+]

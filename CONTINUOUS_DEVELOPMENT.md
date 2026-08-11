@@ -8071,3 +8071,26 @@ Artefatos salvos em `results/phase455-p2p_sync_reconciliation_fire_test/summary.
 **Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation in 467.4 ms (199 input + 39 output tokens). The semantic response strictly mapped to exactly match invariants: `{prevents_execution_if_unauthorized: true, returns_unauthorized_error: true, model_authority: false, canonical_writes: 0}`. The architecture properly gates prune paths by the retention policy prior to operation.
 
 **Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
+
+## Phase 456 — Retention Pressure Reporter Integration and Post-Sync Observer (2026-08-11 08:00 -03)
+
+**Objetivo:** Integrar o `RetentionReporter` read-only ao `peersync.Ticker` e ao `P2PManager` como observador pós-sync de pressão do event log, sem autorizar ou disparar mutação canônica. Completar o trabalho iniciado em Phase 356 com testes focais e campanha live fire.
+
+**Implementação e validação:**
+1. Criado `internal/network/sync/retention_report.go` com `RetentionPressureReport`, `RetentionReporter` e `NewRetentionReporter`. O reporter é read-only: usa `store.View` + `reader.LatestEventSequence()` e classifica pressão via `StoreRetentionPolicy.EventHeadPressure`. `PruneAuthorized` é sempre false em MVP.
+2. `Ticker` ganhou `AttachRetentionReporter` e `LatestRetentionReport`. O método `Tick` invoca `retention.Report(ctx)` como post-sync observer (erro é descartado, sem mutação).
+3. `P2PManager.AttachSyncService` (`sync_attach.go`) agora instancia o `RetentionReporter` com `DefaultStoreRetentionPolicy` e o acopla ao ticker.
+4. `P2PManager.RetentionPressureReport` exposto em `sync_reconcile.go` como accessor read-only.
+5. Criados 6 testes focais em `internal/network/sync/retention_report_test.go`: nil store, empty store, String(), MVP prune sempre false, attach ao ticker, e invocação post-tick sem panic/erro.
+6. `go vet ./...` clean, `git diff --check` clean.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase456_retention_pressure_fire_test` com rotação de 5 modelos (3 Groq + 2 NIM):
+- **Groq / `llama-3.3-70b-versatile`**: 580.8 ms, 42 tokens, `finish_reason=stop`. Confirmação do estado de retenção.
+- **Groq / `openai/gpt-oss-20b`**: `reasoning_budget_exhausted` — falha conhecida do modelo em budget 128 sem `reasoning_effort=low` (documentada em phases anteriores); sem provider error, classificado como limitação não estrutural.
+- **Groq / `qwen/qwen3.6-27b`**: 443.3 ms, 128 tokens, `finish_reason=length`. Análise do snapshot de retenção validada.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: 6.73 s, 39 tokens, `finish_reason=stop`. Confirmação semântica do invariant append-only.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: 2.77 s, 58 tokens, `finish_reason=stop`. Confirmação do estado `PRUNE_AUTHORIZED: false`.
+Retention reporter verificado: `event_head_sequence=0`, `pressure=""`, `prune_authorized=false` em todo o ciclo. Artefatos em `results/phase456-retention_pressure_fire_test/summary.json`.
+
+**Próximo passo:** Expor métricas de pressão do event log no dashboard V2 como um painel de observabilidade read-only.

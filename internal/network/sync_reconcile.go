@@ -40,3 +40,12 @@ func (m *P2PManager) ReconcilePeerEventsNow(ctx context.Context, peerID, streamI
 
 	return res, nil
 }
+
+// RetentionPressureReport returns the latest post-sync retention pressure snapshot,
+// if a retention reporter is attached to the ticker.
+func (m *P2PManager) RetentionPressureReport(ctx context.Context) (peersync.RetentionPressureReport, error) {
+	if m == nil || m.Ticker == nil {
+		return peersync.RetentionPressureReport{}, fmt.Errorf("p2p manager or ticker not initialized")
+	}
+	return m.Ticker.LatestRetentionReport(ctx)
+}

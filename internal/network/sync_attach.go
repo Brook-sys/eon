@@ -5,6 +5,7 @@ import (
 	"time"
 
 	peersync "motor-autonomo/internal/network/sync"
+	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 )
 
@@ -44,6 +45,13 @@ func (m *P2PManager) AttachSyncService(store port.Store) (*peersync.Service, *pe
 		return nil, nil, fmt.Errorf("create inbox canonicalizer: %w", err)
 	}
 	ticker.AttachCanonicalizer(canonicalizer)
+
+	// Attach retention pressure reporter (read-only observer, MVP-safe).
+	retentionReporter, err := peersync.NewRetentionReporter(domain.DefaultStoreRetentionPolicy(), store)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create retention reporter: %w", err)
+	}
+	ticker.AttachRetentionReporter(retentionReporter)
 
 	m.Ticker = ticker
 	return syncService, ticker, nil

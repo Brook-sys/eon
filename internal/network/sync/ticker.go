@@ -19,7 +19,8 @@ type puller interface {
 // across ticks and process restarts.
 type Ticker struct {
 	service       puller
-	canonicalizer InboxCanonicalizer // Optional processor for inbox events
+	canonicalizer InboxCanonicalizer   // Optional processor for inbox events
+	retention     *RetentionReporter   // Optional post-sync pressure observer
 	network       port.Network
 	localID       string
 	streamID      string
@@ -44,6 +45,19 @@ func (t *Ticker) ReconcilePeerNow(ctx context.Context, peerID, localID, streamID
 // AttachCanonicalizer registers the inbox-to-canonical reconciler which runs immediately after PullOnce.
 func (t *Ticker) AttachCanonicalizer(c InboxCanonicalizer) {
 	t.canonicalizer = c
+}
+
+// AttachRetentionReporter registers a post-sync retention pressure observer.
+func (t *Ticker) AttachRetentionReporter(r *RetentionReporter) {
+	t.retention = r
+}
+
+// LatestRetentionReport returns the current pressure snapshot, if a reporter is attached.
+func (t *Ticker) LatestRetentionReport(ctx context.Context) (RetentionPressureReport, error) {
+	if t.retention == nil {
+		return RetentionPressureReport{}, nil
+	}
+	return t.retention.Report(ctx)
 }
 
 func NewTicker(service puller, network port.Network, localID, streamID string, interval time.Duration) (*Ticker, error) {
@@ -72,6 +86,10 @@ func (t *Ticker) Tick(ctx context.Context) error {
 		if t.canonicalizer != nil {
 			_, _ = t.canonicalizer.Reconcile(ctx, peer.Identity.ID)
 		}
+	}
+	// Post-sync: observe retention pressure (read-only, never mutates).
+	if t.retention != nil {
+		_, _ = t.retention.Report(ctx)
 	}
 	return firstErr
 }
