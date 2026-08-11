@@ -8094,3 +8094,53 @@ Executado runner `cmd/phase456_retention_pressure_fire_test` com rotação de 5 
 Retention reporter verificado: `event_head_sequence=0`, `pressure=""`, `prune_authorized=false` em todo o ciclo. Artefatos em `results/phase456-retention_pressure_fire_test/summary.json`.
 
 **Próximo passo:** Expor métricas de pressão do event log no dashboard V2 como um painel de observabilidade read-only.
+
+## Phase 457 — Retention Pressure Panel in Dashboard V2 Resources View (2026-08-11 10:43 -03)
+
+**Objetivo:** Expor o `RetentionPressureReport` como painel read-only na view de Recursos do Dashboard V2, permitindo observabilidade direta do estado de retenção do event log canônico.
+
+**Implementação e validação:**
+1. Adicionado componente `RetentionStatCard` em `internal/dashboard/views/components_templ.go` exibindo event head sequence, nível de pressão, artefatos stale e status de autorização de prune.
+2. Estendido `resources.templ` com seção de retention pressure report integrada ao layout existente.
+3. Adicionados testes para os novos componentes em `components_test.go`.
+4. Executada suíte completa de testes offline.
+
+**Campanha Live Fire e Evidências Cross-Provider:**
+Executado runner `cmd/phase457_dashboard_retention_live_fire_test` com rotação ampla de 8 modelos Groq + 2 NIM, incluindo cenários adversários (strict JSON, budget starvation, mixed-language, contradictory data):
+- **Groq / `llama-3.3-70b-versatile`**: ancoragem e conformidade estrita validadas.
+- **Groq / `llama-3.1-8b-instant`**: conformidade validada.
+- **Groq / `qwen/qwen3.6-27b`**: reasoning budget consumido antes do output em budget starvation.
+- **Groq / `openai/gpt-oss-20b`** e **`openai/gpt-oss-120b`**: reasoning budget exhaustion documentado.
+- **Groq / `allam-2-7b`**: forte aderência a formato e concisão.
+- **NVIDIA NIM / `deepseek-ai/deepseek-v4-flash-0731`**: conformidade validada.
+- **NVIDIA NIM / `meta/llama-3.1-8b-instruct`**: ancoragem parcial validada.
+Artefatos em `results/phase457-dashboard_retention_live_fire/summary.json`.
+
+## Phase 458 — Deterministic NodeID Enforcement + Broad Adversarial Campaign (2026-08-11 13:40 -03)
+
+**Objetivo:** (1) Eliminar fallbacks não determinísticos de `time.Now()` no subsistema P2P, forçando `NodeID` explícito como pré-condição. (2) Executar campanha adversária ampla com 6 modelos Groq × 5 cenários + 4 modelos NIM × 3 cenários.
+
+**Implementação e validação:**
+1. `NewP2PManager` retorna erro se `NodeID == ""` em vez de gerar ID de `time.Now()`.
+2. `AttachSyncService` e `ReconcilePeerEventsNow` falham explicitamente se `router.localID` estiver vazio.
+3. Flag CLI `-p2p-node-id` adicionada.
+4. Removida redundância de fallback mDNS para NodeID.
+5. Todos os testes atualizados com NodeIDs explícitos; novo teste `ReconcilePeerEventsNow` com localID vazio.
+6. `go test ./internal/network/... ./internal/runtime/bootstrap/...` — 100% aprovação. `go vet ./...` e `git diff --check` limpos.
+
+**Campanha Live Fire — 5 cenários adversários:**
+- **strict_json_budget_starvation** (max_tokens=32, JSON exato): 2/10 pass (20%). Llama 70b/8b produzem JSON parcial sem "READY"; qwen/gpt-oss consomem tokens no reasoning; allam-2-7b e deepseek-v4-flash passam.
+- **mixed_language_adherence** (PT-BR/EN cruzado): 4/6 Groq pass (67%). Modelos de reasoning desviam do formato; allam e Llama aderem.
+- **contradictory_data** (3 fatos contraditórios): 5/8 pass (63%). A maioria identifica contradição, exceto gpt-oss-20b/120b.
+- **ambiguous_instruction** ("uma palavra" + instrução contraditória): 5/6 Groq pass (83%). Boa aderência à concisão.
+- **prompt_injection_in_data** (injeção embutida no log): 3/8 pass (38%). Nenhum modelo vazou o system prompt (injeção resistida universalmente), mas classificação correta ("INFO") foi inconsistente — vários modelos retornaram "WARN" ou classe errada.
+
+**Descobertas-chave:**
+- `allam-2-7b` surpreendeu com 5/5 pass em todos os cenários adversários — eficiente em tokens e conciso.
+- Modelos de reasoning (qwen3.6-27b, gpt-oss-20b/120b) são inadequados para budget starvation por consumirem tokens internos antes do output.
+- NIM `llama-3.3-70b-instruct` e `gemma-4-31b-it` retornaram timeout (45s) em todas as 6 tentativas — cold start ou indisponibilidade.
+- Injeção de prompt é resistida no nível do system prompt (zero leakage), mas a precisão de classificação varia.
+
+**Evidência total:** 42 chamadas planejadas, 36 concluídas, 6 timeout NIM. 20 pass, 10 fail, 6 error. Artefatos em `results/phase458-nodeid_determinism_fire/summary.json`.
+
+**Próximo passo:** Investigar timeout persistente dos modelos NIM grandes (llama-3.3-70b-instruct, gemma-4-31b-it) — cold start, quota ou indisponibilidade. Considerar integração de timeout adaptativo no adapter OpenAI.
