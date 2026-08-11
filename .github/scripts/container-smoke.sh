@@ -36,7 +36,7 @@ wait_healthy
 port=$(docker port "$container" 8080/tcp | sed 's/.*://')
 health=$(curl -fsS "http://127.0.0.1:$port/api/inspect/health")
 version=$(curl -fsS "http://127.0.0.1:$port/api/inspect/version")
-dashboard=$(curl -fsS "http://127.0.0.1:$port/dashboard")
+dashboard=$(curl -fsSL "http://127.0.0.1:$port/")
 printf '%s' "$health" | grep -q '"status":"ok"'
 printf '%s' "$version" | grep -Fq "$expected_revision"
 test -n "$dashboard"
