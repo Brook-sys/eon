@@ -573,3 +573,67 @@ func TestProviderRetriesWithoutReasoningEffortOnHTTP400(t *testing.T) {
 		t.Fatalf("fake server failures: %v", failures)
 	}
 }
+
+func TestPerRequestTimeoutCancelsSlowResponse(t *testing.T) {
+	// Simulate a NIM cold-start model that takes too long to respond.
+	server := fakeserver.New(fakeserver.Exchange{
+		ResponseText:  "READY",
+		ResponseModel: "slow-model",
+		InputTokens:   10,
+		OutputTokens:  1,
+		ResponseDelay: 5 * time.Second,
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "test", Model: "slow-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Per-request timeout of 100ms should trigger well before the 5s delay.
+	_, err = provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "Reply with exactly: READY",
+		MaxOutputTokens: 16,
+		Temperature:     0,
+		Timeout:         100 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	var providerErr *openai.Error
+	if !errors.As(err, &providerErr) {
+		t.Fatalf("expected openai.Error, got %T: %v", err, err)
+	}
+	if providerErr.Kind != openai.ErrorTransport {
+		t.Fatalf("expected TRANSPORT error kind, got %s", providerErr.Kind)
+	}
+	if !providerErr.Retryable {
+		t.Fatal("expected retryable error")
+	}
+}
+
+func TestPerRequestTimeoutAllowsSlowResponseWhenLongEnough(t *testing.T) {
+	// Simulate a model with 100ms delay, but the per-request timeout is 5s.
+	server := fakeserver.New(fakeserver.Exchange{
+		ResponseText:  "READY",
+		ResponseModel: "warm-model",
+		InputTokens:   10,
+		OutputTokens:  1,
+		ResponseDelay: 100 * time.Millisecond,
+	})
+	defer server.Close()
+	provider, err := openai.New(openai.Config{BaseURL: server.URL(), APIKey: "test", Model: "warm-model", Client: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := provider.Complete(context.Background(), port.CompletionRequest{
+		Prompt:          "Reply with exactly: READY",
+		MaxOutputTokens: 16,
+		Temperature:     0,
+		Timeout:         5 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if result.Text != "READY" {
+		t.Fatalf("expected 'READY', got %q", result.Text)
+	}
+}

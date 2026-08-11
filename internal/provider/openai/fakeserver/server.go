@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"time"
 )
 
 const maxRequestBytes int64 = 1 << 20
@@ -42,6 +43,10 @@ type Exchange struct {
 		Name      string
 		Arguments string
 	}
+	// ResponseDelay is an optional artificial delay before responding. It
+	// allows callers to test per-request timeout enforcement and cold-start
+	// simulation without real network latency.
+	ResponseDelay time.Duration
 }
 
 type Request struct {
@@ -187,6 +192,20 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	exchange := s.script[0]
 	s.script = s.script[1:]
+	// Simulate cold-start or slow-provider latency. The mutex is released
+	// during the sleep so concurrent requests are not serialized by the delay.
+	if exchange.ResponseDelay > 0 {
+		delay := exchange.ResponseDelay
+		s.mu.Unlock()
+		select {
+		case <-r.Context().Done():
+			// Client cancelled before delay expired — do not write a response.
+			s.mu.Lock()
+			return
+		case <-time.After(delay):
+		}
+		s.mu.Lock()
+	}
 	if exchange.ExpectedPrompt != "" && exchange.ExpectedPrompt != req.Prompt {
 		s.failures = append(s.failures, fmt.Sprintf("prompt mismatch: got %q", req.Prompt))
 	}

@@ -346,6 +346,15 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	if strings.TrimSpace(request.Prompt) == "" || request.MaxOutputTokens < 0 || request.Temperature < 0 || request.Temperature > 2 {
 		return port.CompletionResult{}, &Error{Kind: ErrorInvalidRequest}
 	}
+	// Per-request timeout: derive a tighter child context when the kernel or
+	// fire-test harness specifies a request-level deadline. This allows NIM
+	// cold-start models to use longer timeouts and latency-sensitive probes
+	// shorter ones without reconfiguring the adapter client.
+	if request.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, request.Timeout)
+		defer cancel()
+	}
 	messages := []chatMessage{{Role: "user", Content: request.Prompt}}
 	if prefill := strings.TrimSpace(request.PrefillAssistant); prefill != "" {
 		messages = append(messages, chatMessage{Role: "assistant", Content: prefill})

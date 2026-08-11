@@ -44,6 +44,13 @@ type CompletionRequest struct {
 	// Stop is an optional list of stop sequences. When non-empty, adapters that
 	// support stop sequences send them to terminate completion generation.
 	Stop []string
+	// Timeout is an optional per-request deadline. When positive, adapters
+	// derive a child context with this timeout, capping the HTTP round-trip
+	// independently of the global client timeout. This allows the kernel or
+	// fire-test harness to apply shorter timeouts for latency-sensitive probes
+	// or longer timeouts for NIM cold-start models without reconfiguring the
+	// adapter. Zero means use the adapter/client default.
+	Timeout time.Duration
 }
 
 type CompletionResult struct {
