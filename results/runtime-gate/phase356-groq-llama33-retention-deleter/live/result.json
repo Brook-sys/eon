@@ -1,0 +1,21 @@
+{
+  "phase": 356,
+  "model": "llama-3.3-70b-versatile",
+  "provider": "groq",
+  "hypothesis": "Authority-free exact structural evaluation of the new CanonicalEventDeleter and DeleteStaleEvents components.",
+  "tokens": {
+    "prompt": 199,
+    "completion": 39,
+    "total": 238
+  },
+  "latency_ms": 467.47,
+  "finish_reason": "stop",
+  "response": {
+    "prevents_execution_if_unauthorized": true,
+    "returns_unauthorized_error": true,
+    "model_authority": false,
+    "canonical_writes": 0
+  },
+  "verdict": "success",
+  "decision": "Structure prevents execution accurately when retention policy disallows it. Tests pass. Code is valid."
+}
