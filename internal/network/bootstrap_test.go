@@ -22,6 +22,7 @@ func TestP2PManagerLifecycle(t *testing.T) {
 	manager, err := NewP2PManager(Options{
 		Enabled:  true,
 		BindAddr: "127.0.0.1:0",
+		NodeID:   "test-node-lifecycle",
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("NewP2PManager failed: %v", err)
@@ -52,6 +53,7 @@ func TestP2PManagerLifecycle_WithMTLSPaths(t *testing.T) {
 	manager, err := NewP2PManager(Options{
 		Enabled:       true,
 		BindAddr:      "127.0.0.1:0",
+		NodeID:        "test-node-mtls",
 		TLSCertFile:   pki.NodeCert,
 		TLSKeyFile:    pki.NodeKey,
 		TLSCACertFile: pki.CACert,
@@ -80,6 +82,7 @@ func TestP2PManagerLifecycle_InvalidMTLSPaths(t *testing.T) {
 	_, err := NewP2PManager(Options{
 		Enabled:     true,
 		BindAddr:    "127.0.0.1:0",
+		NodeID:      "test-node-invalid-mtls",
 		TLSCertFile: "/invalid/cert.pem",
 		TLSKeyFile:  "/invalid/key.pem",
 	}, slog.New(slog.NewTextHandler(io.Discard, nil)))

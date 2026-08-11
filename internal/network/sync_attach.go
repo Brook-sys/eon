@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	peersync "motor-autonomo/internal/network/sync"
 )
 
 // AttachSyncService instancia e acopla o serviço de sincronização P2P (event.sync.v1) ao Router do P2PManager.
@@ -28,7 +28,7 @@ func (m *P2PManager) AttachSyncService(store port.Store) (*peersync.Service, *pe
 
 	nodeID := m.Router.localID
 	if nodeID == "" {
-		nodeID = "node-" + fmt.Sprintf("%d", time.Now().UnixNano())
+		return nil, nil, fmt.Errorf("router localID is empty; NewP2PManager must set it before attaching sync")
 	}
 
 	if err := m.Router.AttachSync(nodeID, syncService); err != nil {

@@ -553,6 +553,7 @@ func DefaultSchedulerCadence() domain.SchedulerCadenceConfig {
 type NetworkOptions struct {
 	Enabled       bool
 	BindAddr      string
+	NodeID        string
 	MDNSEnabled   bool
 	TLSCertFile   string
 	TLSKeyFile    string

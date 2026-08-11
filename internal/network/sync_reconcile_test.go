@@ -12,10 +12,13 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"motor-autonomo/internal/domain"
+	peerhttp "motor-autonomo/internal/network/http"
+	peersync "motor-autonomo/internal/network/sync"
 	"motor-autonomo/internal/port"
 	"motor-autonomo/internal/storage/memory"
 )
@@ -138,5 +141,23 @@ func TestP2PManager_ReconcilePeerEventsNow_Errors(t *testing.T) {
 	_, err = mgr2.ReconcilePeerEventsNow(ctx, "peer-b", "events")
 	if err == nil {
 		t.Errorf("expected error when ticker is nil")
+	}
+
+	// Router present but localID empty must fail deterministically (no time.Now fallback).
+	registry, rerr := NewStaticRegistry(domain.PeerRegistryPolicy{MaxPeers: 10, EvictionTimeout: 5 * time.Minute})
+	if rerr != nil {
+		t.Fatalf("create registry: %v", rerr)
+	}
+	router, rerr := NewRouter(registry, &peerhttp.Transport{})
+	if rerr != nil {
+		t.Fatalf("create router: %v", rerr)
+	}
+	mgr3 := &P2PManager{Router: router, Ticker: &peersync.Ticker{}}
+	_, err = mgr3.ReconcilePeerEventsNow(ctx, "peer-b", "events")
+	if err == nil {
+		t.Fatalf("expected error when router localID is empty")
+	}
+	if !strings.Contains(err.Error(), "localID is empty") {
+		t.Fatalf("expected localID error, got: %v", err)
 	}
 }

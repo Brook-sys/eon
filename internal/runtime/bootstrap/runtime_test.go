@@ -1588,6 +1588,7 @@ func TestOpenWithP2PNetworkAttachesSyncService(t *testing.T) {
 		Network: &bootstrap.NetworkOptions{
 			Enabled:  true,
 			BindAddr: "127.0.0.1:0",
+			NodeID:   "test-node-bootstrap",
 		},
 	})
 	if err != nil {

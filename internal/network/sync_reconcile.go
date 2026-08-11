@@ -3,7 +3,6 @@ package network
 import (
 	"context"
 	"fmt"
-	"time"
 
 	peersync "motor-autonomo/internal/network/sync"
 )
@@ -26,7 +25,7 @@ func (m *P2PManager) ReconcilePeerEventsNow(ctx context.Context, peerID, streamI
 
 	nodeID := m.Router.localID
 	if nodeID == "" {
-		nodeID = "node-" + fmt.Sprintf("%d", time.Now().UnixNano())
+		return peersync.PullResult{}, fmt.Errorf("router localID is empty; NewP2PManager must set it before reconcile")
 	}
 	if streamID == "" {
 		streamID = "events"

@@ -60,7 +60,7 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 		opts.BindAddr = "127.0.0.1:8443"
 	}
 	if opts.NodeID == "" {
-		opts.NodeID = "node-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+		return nil, fmt.Errorf("network: NodeID is required; deterministic callers must set it explicitly")
 	}
 
 	registry, err := NewStaticRegistry(domain.PeerRegistryPolicy{
@@ -99,9 +99,6 @@ func NewP2PManager(opts Options, logger *slog.Logger) (*P2PManager, error) {
 
 	var beacon *mdns.Beacon
 	if opts.MDNSEnabled {
-		if opts.NodeID == "" {
-			opts.NodeID = "node-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-		}
 		// Extract port from BindAddr if possible
 		portNum := 8443
 		_, pStr, err := net.SplitHostPort(opts.BindAddr)

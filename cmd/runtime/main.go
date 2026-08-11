@@ -72,6 +72,7 @@ func main() {
 		subagentPeer     = flag.String("subagent-peer-id", "", "authorized mTLS peer for admitted subagent sessions (optional)")
 		subagentLeaseTTL = flag.Duration("subagent-lease-ttl", 5*time.Minute, "active subagent generation lease TTL (0 disables lease fencing)")
 		p2pEnabled       = flag.Bool("p2p", false, "enable experimental peer-to-peer subsystem")
+		p2pNodeID        = flag.String("p2p-node-id", "", "stable local node identity for P2P sync frames (required when -p2p is set)")
 		p2pBind          = flag.String("p2p-bind", "127.0.0.1:8443", "local bind address for P2P network")
 		p2pMDNS          = flag.Bool("p2p-mdns", false, "enable mDNS beacon on P2P network")
 		p2pTLSCert       = flag.String("p2p-tls-cert", "", "PEM certificate file for mTLS")
@@ -159,6 +160,7 @@ func main() {
 	opts.Network = &bootstrap.NetworkOptions{
 		Enabled:       *p2pEnabled,
 		BindAddr:      *p2pBind,
+		NodeID:        *p2pNodeID,
 		MDNSEnabled:   *p2pMDNS,
 		TLSCertFile:   *p2pTLSCert,
 		TLSKeyFile:    *p2pTLSKey,

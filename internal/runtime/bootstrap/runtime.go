@@ -111,6 +111,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		pm, err := network.NewP2PManager(network.Options{
 			Enabled:       opts.Network.Enabled,
 			BindAddr:      opts.Network.BindAddr,
+			NodeID:        opts.Network.NodeID,
 			MDNSEnabled:   opts.Network.MDNSEnabled,
 			TLSCertFile:   opts.Network.TLSCertFile,
 			TLSKeyFile:    opts.Network.TLSKeyFile,
