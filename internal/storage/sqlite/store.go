@@ -314,3 +314,9 @@ func (s *Store) Close() error {
 	s.db = nil
 	return err
 }
+
+func (s *Store) DeleteEvent(ctx context.Context, id []byte) error {
+	// Stub for CanonicalEventDeleter compliance.
+	// In MVP, policy.AllowEventLogPrune is always false so this is never invoked.
+	return nil
+}
