@@ -79,7 +79,7 @@ func TestOpenAssemblesHTTPSurfaces(t *testing.T) {
 		t.Fatalf("version continuity_catalog_version = %#v", version["continuity_catalog_version"])
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req = httptest.NewRequest(http.MethodGet, "/dash/", nil)
 	rec = httptest.NewRecorder()
 	rt.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

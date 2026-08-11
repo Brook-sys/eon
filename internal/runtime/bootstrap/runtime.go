@@ -290,7 +290,6 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 		return nil, fmt.Errorf("telegram channel: %w", err)
 	}
 
-	var dash *dashboard.Server
 	var dashV2 *dashboard.V2Server
 	var vault *secretvault.Vault
 	var handler http.Handler
@@ -306,16 +305,7 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			}
 			return nil, fmt.Errorf("dashboard v2: %w", err)
 		}
-
-		dash, err = dashboard.New(inspectAPI.Handler(), controlAPI.Handler())
-		if err != nil {
-			_ = telemetry.Shutdown(ctx)
-			if closer != nil {
-				_ = closer.Close()
-			}
-			return nil, err
-		}
-		dash.DefaultMissionID = string(opts.MissionID)
+		dashV2.DefaultMissionID = string(opts.MissionID)
 
 		// Vault setup (unchanged semantics).
 		vaultPath := opts.SQLitePath + ".credentials.vault"
@@ -331,16 +321,10 @@ func Open(ctx context.Context, opts Options) (*Runtime, error) {
 			}
 			return nil, fmt.Errorf("credential vault: %w", vaultErr)
 		}
-		dash.Vault = secretvault.HTTP{Vault: vault}.Handler()
-		dashV2.Vault = dash.Vault
+		dashV2.Vault = secretvault.HTTP{Vault: vault}.Handler()
 
-		// Compose the two dashboards. Legacy handles /, /api/*, /healthz;
-		// the v2 Templ dashboard handles /dash/*.
-		mux := http.NewServeMux()
-		mux.Handle("/", dash.Handler())
-		mux.Handle("/api/", dash.Handler())
-		mux.Handle("/dash/", dashV2.Handler())
-		handler = mux
+		// The v2 Templ dashboard handles / and /api/* directly now.
+		handler = dashV2.Handler()
 	} else {
 		mux := http.NewServeMux()
 		mux.Handle("/api/inspect/", http.StripPrefix("/api/inspect", inspectAPI.Handler()))
