@@ -34,11 +34,11 @@ type Message struct {
 }
 
 type Request struct {
-	Model            string    `json:"model"`
-	Messages         []Message `json:"messages"`
-	MaxTokens        int       `json:"max_tokens"`
-	Temperature      float64   `json:"temperature"`
-	ReasoningEffort  string    `json:"reasoning_effort,omitempty"`
+	Model           string    `json:"model"`
+	Messages        []Message `json:"messages"`
+	MaxTokens       int       `json:"max_tokens"`
+	Temperature     float64   `json:"temperature"`
+	ReasoningEffort string    `json:"reasoning_effort,omitempty"`
 }
 
 type Choice struct {
@@ -56,17 +56,17 @@ type Response struct {
 }
 
 type TrialResult struct {
-	Provider     string  `json:"provider"`
-	Model        string  `json:"model"`
-	Scenario     string  `json:"scenario"`
-	LatencyMs    float64 `json:"latency_ms"`
-	Status       string  `json:"status"` // ok, format_error, provider_error, timeout
-	FinishReason string  `json:"finish_reason"`
-	PromptTokens int     `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-	Output       string  `json:"output"`
-	JSONValid    bool    `json:"json_valid"`
-	Error        string  `json:"error,omitempty"`
+	Provider         string  `json:"provider"`
+	Model            string  `json:"model"`
+	Scenario         string  `json:"scenario"`
+	LatencyMs        float64 `json:"latency_ms"`
+	Status           string  `json:"status"` // ok, format_error, provider_error, timeout
+	FinishReason     string  `json:"finish_reason"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	Output           string  `json:"output"`
+	JSONValid        bool    `json:"json_valid"`
+	Error            string  `json:"error,omitempty"`
 }
 
 func callModel(ctx context.Context, baseURL, apiKey, model string, msgs []Message, maxTokens int, reasoning string) (*Response, time.Duration, error) {

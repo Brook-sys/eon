@@ -17,13 +17,13 @@ import (
 
 // TrialResult records the outcome of a single model trial.
 type TrialResult struct {
-	Provider       string                `json:"provider"`
-	Model          string                `json:"model"`
-	Latency        time.Duration         `json:"latency"`
-	Response       port.CompletionResult `json:"response"`
-	Error          string                `json:"error,omitempty"`
-	PruneAuthorized bool                 `json:"prune_authorized"`
-	HeadPressure   string               `json:"head_pressure"`
+	Provider        string                `json:"provider"`
+	Model           string                `json:"model"`
+	Latency         time.Duration         `json:"latency"`
+	Response        port.CompletionResult `json:"response"`
+	Error           string                `json:"error,omitempty"`
+	PruneAuthorized bool                  `json:"prune_authorized"`
+	HeadPressure    string                `json:"head_pressure"`
 }
 
 func main() {
@@ -132,11 +132,11 @@ Reply with a single line confirming each field's value.`
 		latency := time.Since(start)
 
 		tr := TrialResult{
-			Provider:       tgt.provider,
-			Model:          tgt.model,
-			Latency:        latency,
+			Provider:        tgt.provider,
+			Model:           tgt.model,
+			Latency:         latency,
 			PruneAuthorized: false,
-			HeadPressure:   report.EventHeadPressure,
+			HeadPressure:    report.EventHeadPressure,
 		}
 
 		if err != nil {

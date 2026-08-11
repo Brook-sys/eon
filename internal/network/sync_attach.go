@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"motor-autonomo/internal/domain"
-	"motor-autonomo/internal/port"
 	peersync "motor-autonomo/internal/network/sync"
+	"motor-autonomo/internal/port"
 )
 
 // AttachSyncService instancia e acopla o serviço de sincronização P2P (event.sync.v1) ao Router do P2PManager.

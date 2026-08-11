@@ -19,8 +19,8 @@ type puller interface {
 // across ticks and process restarts.
 type Ticker struct {
 	service       puller
-	canonicalizer InboxCanonicalizer   // Optional processor for inbox events
-	retention     *RetentionReporter   // Optional post-sync pressure observer
+	canonicalizer InboxCanonicalizer // Optional processor for inbox events
+	retention     *RetentionReporter // Optional post-sync pressure observer
 	network       port.Network
 	localID       string
 	streamID      string
