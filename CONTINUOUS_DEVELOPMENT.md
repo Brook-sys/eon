@@ -8144,3 +8144,31 @@ Artefatos em `results/phase457-dashboard_retention_live_fire/summary.json`.
 **Evidência total:** 42 chamadas planejadas, 36 concluídas, 6 timeout NIM. 20 pass, 10 fail, 6 error. Artefatos em `results/phase458-nodeid_determinism_fire/summary.json`.
 
 **Próximo passo:** Investigar timeout persistente dos modelos NIM grandes (llama-3.3-70b-instruct, gemma-4-31b-it) — cold start, quota ou indisponibilidade. Considerar integração de timeout adaptativo no adapter OpenAI.
+
+## Phase 459 — Per-binding Timeout Override + NIM Large-Model Availability Investigation (2026-08-11 17:40 -03)
+
+**Objetivo:** (1) Resolver a lacuna estrutural identificada na Fase 458 — timeouts persistentes dos modelos NIM grandes (`llama-3.3-70b-instruct`, `gemma-4-31b-it`, `llama-3.1-70b-instruct`) que excedem o timeout herdado do provider (45s). (2) Adicionar override per-binding em `ModelBindingConfig` para configurar deadlines mais longos sem afetar modelos rápidos. (3) Investigar se os timeouts anteriores eram artefatos de cold-start ou indisponibilidade real.
+
+**Implementação e validação:**
+1. Adicionado campo `Timeout time.Duration` em `ModelBindingConfig` (`internal/domain/model_binding.go`) com validação `0 ≤ Timeout ≤ 10 min`. Zero significa "herdar timeout do provider".
+2. Adicionado método `resolveBindingTimeout(bindingID string)` em `ModelExecutor` (`internal/kernel/model_executor.go`) que consulta `ModelsConfig.Bindings`.
+3. `request.Timeout` agora é preenchido em todos os caminhos do `ModelExecutor`: Execute inicial, retry, recovery (`SHORT_CORRECTION`, `SIMPLER_FORMAT`, `FALLBACK_MODEL`) e `CONTEXT_PRESSURE_REDUCTION`.
+4. `modelOptionsFromCatalog` (`internal/runtime/bootstrap/model.go`) passa `binding.Timeout` quando positivo, mantendo `provider.Timeout` como fallback.
+5. Teste focal `TestModelOptionsFromCatalogBindingTimeoutOverridesProvider` em `model_catalog_test.go`: binding com `Timeout=90s` mantém override, binding sem `Timeout` herda 30s do provider.
+6. `go test ./internal/runtime/bootstrap/... ./internal/kernel/... ./internal/domain/...` — 100% aprovação. `go vet ./...` e `git diff --check` limpos.
+
+**Campanha Live Fire — NIM Large-Model Availability:**
+Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamadas planejadas (6 modelos × 2 rounds), max_tokens=32, temp=0.0, warmup=10-15s, main=30-60s:
+- **Groq / `llama-3.3-70b-versatile`**: 2/2 OK, 0.38-0.44s. Baseline rápido mantido.
+- **Groq / `llama-3.1-8b-instant`**: 2/2 OK, 0.23s. Latência sub-300ms.
+- **Groq / `allam-2-7b`**: 2/2 OK, 0.34s. Consistente com descoberta da Fase 458 (5/5 adversariais).
+- **NIM / `meta/llama-3.3-70b-instruct`**: 1/2 — TRANSPORT error no warmup (15.01s). Confirmada indisponibilidade ou cold-start > 15s.
+- **NIM / `google/gemma-4-31b-it`**: 2/2 OK mas extremamente lento (warmup 6.98s, main 15.48s). Disponível, mas latência 30-40× maior que Groq.
+- **NIM / `meta/llama-3.1-70b-instruct`**: 1/2 — TRANSPORT error no warmup (15.01s). Mesmo padrão do llama-3.3-70b.
+- Campanha interrompida precocemente após 2 NIM 70B-models falharem em sequência (parada em warmup, sem testar `main` round).
+
+**Evidência total:** 8/12 chamadas concluídas. 6 OK (3 Groq × 2 + 1 NIM), 2 FAIL (NIM 70B-class). Latência P50: 0.34s Groq, 6.98s+ NIM. Artefatos em `results/phase459-nim_large_model_availability/summary.json`.
+
+**Decisão:** A feature `Timeout` per-binding é o mecanismo correto. Groq modelos (≤0.5s) toleram 30s confortavelmente; NIM 70B exige 90s+ warmup tolerância; gemma-4-31b é aceitável com main ≥30s. Nenhuma chamada adicional sem novo conhecimento descoberto.
+
+**Próximo passo:** (a) Configurar exemplo de catálogo MODELS com `Timeout=90s` para bindings NIM 70B e validar o wiring via campanha menor (3-4 modelos); (b) investigar se a falha TRANSPORT nos NIM 70B é permanente (modelo indisponível) ou cold-start > 15s (resolveria com timeout maior, hipótese a testar); (c) considerar adicionar campo `FirstTokenTimeout` separado do timeout total para detectar cold-start mais cedo sem gastar budget de modelo.
