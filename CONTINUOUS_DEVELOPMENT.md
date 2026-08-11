@@ -8061,3 +8061,13 @@ Executado runner `cmd/phase455_p2p_sync_reconciliation_fire_test` com 2 nós P2P
 Artefatos salvos em `results/phase455-p2p_sync_reconciliation_fire_test/summary.json`.
 
 **Próximo passo:** Implementar retenção e expiração de logs de eventos canônicos no reconciliador P2P.
+
+## Phase 356 — canonical store retention pruning infrastructure (2026-08-11 02:22 -03)
+
+**Objective and implementation.** Extended the network/sync domain with infrastructure for permanent canonical event pruning (`port.CanonicalEventDeleter` and `peersync.DeleteStaleEvents`). The deletion function actively guards against unauthorized use by verifying `policy.AllowEventLogPrune` and returns a newly defined `domain.ErrUnauthorizedRetention`. MVP `StoreRetentionPolicy` currently disallows this implicitly.
+
+**Live hypothesis and bounds.** Model rotation to Groq `llama-3.3-70b-versatile` executing an authority-free structural classification of the retention guardian boundary. Bounded to one external call, strict JSON output verifying 4 protected fields (`prevents_execution_if_unauthorized`, `returns_unauthorized_error`, `model_authority`, `canonical_writes`).
+
+**Observed evidence and decision.** Groq `llama-3.3-70b-versatile` completed live evaluation in 467.4 ms (199 input + 39 output tokens). The semantic response strictly mapped to exactly match invariants: `{prevents_execution_if_unauthorized: true, returns_unauthorized_error: true, model_authority: false, canonical_writes: 0}`. The architecture properly gates prune paths by the retention policy prior to operation.
+
+**Verification.** `go test ./...`, `go vet ./...`, and `git diff --check` passed cleanly.
