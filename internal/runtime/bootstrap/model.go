@@ -62,7 +62,15 @@ func BuildModelExecutor(
 			if binding.MaxOutputDialect == domain.MaxOutputDialectCompletion {
 				field = ModelMaxOutputTokensCompletion
 			}
-			instance, openErr := openModelProvider(provider.BaseURL, binding.ModelID, provider.APIKeyEnv, opts.ModelSecretResolver, field, binding.ContextTokens, provider.MaxResponseBytes, provider.Timeout, string(provider.Kind)+":"+binding.ID, telemetry)
+			// Per-binding timeout: when a binding declares a longer (or shorter)
+			// timeout than the provider default, the HTTP client must use the
+			// binding-level timeout so that request.Timeout (set by resolveBindingTimeout
+			// in ModelExecutor) is not silently capped by the http.Client.Timeout.
+			httpTimeout := provider.Timeout
+			if binding.Timeout > 0 {
+				httpTimeout = binding.Timeout
+			}
+			instance, openErr := openModelProvider(provider.BaseURL, binding.ModelID, provider.APIKeyEnv, opts.ModelSecretResolver, field, binding.ContextTokens, provider.MaxResponseBytes, httpTimeout, string(provider.Kind)+":"+binding.ID, telemetry)
 			if openErr != nil {
 				return nil, fmt.Errorf("model binding %s provider: %w", binding.ID, openErr)
 			}
