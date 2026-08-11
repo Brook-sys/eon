@@ -116,6 +116,21 @@ func (e ModelExecutor) leaseTTL() time.Duration {
 	return e.LeaseTTL
 }
 
+// resolveBindingTimeout returns the per-binding timeout override from
+// ModelsConfig, or zero to inherit the provider-level default. Zero means
+// the adapter will use the provider's configured timeout (or its default).
+func (e ModelExecutor) resolveBindingTimeout(bindingID string) time.Duration {
+	if e.ModelsConfig == nil || strings.TrimSpace(bindingID) == "" {
+		return 0
+	}
+	for _, binding := range e.ModelsConfig.Bindings {
+		if binding.ID == bindingID {
+			return binding.Timeout
+		}
+	}
+	return 0
+}
+
 // releaseResourcePermit reports ResourceGate success/failure when an authorizer
 // reserved a slot. Best-effort: never overrides the primary Execute error path.
 func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time) {
@@ -574,6 +589,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if plan.ReasoningEffort != "" {
 		request.ReasoningEffort = plan.ReasoningEffort
 	}
+	// Apply per-binding timeout override when configured. The adapter uses
+	// this to derive a child context deadline tighter than the lease, which
+	// is critical for NIM large models with multi-minute cold-start latency
+	// (Phase 458/459 observed 400+ s on llama-3.3-70b-instruct).
+	request.Timeout = e.resolveBindingTimeout(activeBindingID)
 	usingFallback := false
 	var lastCompletion port.CompletionResult
 	var lastErr error
@@ -675,6 +695,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			if plan.ReasoningEffort != "" {
 				request.ReasoningEffort = plan.ReasoningEffort
 			}
+			request.Timeout = e.resolveBindingTimeout(activeBindingID)
 			plan.Reason = "context_pressure_reduction"
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
@@ -1278,6 +1299,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
 				ResponseFormat:  plan.ResponseFormat,
+				Timeout:         e.resolveBindingTimeout(activeBindingID),
 			}
 			budget.ShortCorrectionUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
@@ -1291,6 +1313,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
 				ResponseFormat:  domain.ResponseFormatNone,
+				Timeout:         e.resolveBindingTimeout(activeBindingID),
 			}
 			budget.SimplerFormatUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
@@ -1351,6 +1374,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				request.Prompt = modeltext.AppendDelimitedChangeSetInstruction(request.Prompt)
 			}
 			request.ResponseFormat = domain.ResponseFormatNone
+			request.Timeout = e.resolveBindingTimeout(activeBindingID)
 			budget.FallbackModelUsed = true
 			_ = e.appendRecoveryEvent(ctx, operation, leaseRef, decision, budget.ModelCallsUsed)
 			continue

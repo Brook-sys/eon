@@ -67,6 +67,10 @@ type ModelBindingConfig struct {
 	MaxOutputTokens  int              `json:"max_output_tokens"`
 	MaxOutputDialect MaxOutputDialect `json:"max_output_dialect"`
 	Limit            ResourceLimit    `json:"limit"`
+	// Timeout overrides the provider-level timeout for this specific binding.
+	// Zero means inherit the provider's timeout. Positive values allow per-model
+	// deadlines (e.g., longer for NIM cold-start models, shorter for Groq fast models).
+	Timeout time.Duration `json:"timeout"`
 }
 
 func (c ModelBindingConfig) Validate() error {
@@ -89,6 +93,9 @@ func (c ModelBindingConfig) Validate() error {
 	case MaxOutputDialectLegacy, MaxOutputDialectCompletion:
 	default:
 		return fmt.Errorf("unsupported max output dialect %q", c.MaxOutputDialect)
+	}
+	if c.Timeout < 0 || c.Timeout > 10*time.Minute {
+		return errors.New("binding timeout must be between zero and ten minutes")
 	}
 	return c.Limit.Validate()
 }

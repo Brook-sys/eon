@@ -204,6 +204,10 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 		if binding.MaxOutputDialect == domain.MaxOutputDialectCompletion {
 			field = ModelMaxOutputTokensCompletion
 		}
+		timeout := binding.Timeout
+		if timeout <= 0 {
+			timeout = provider.Timeout
+		}
 		selected = append(selected, &ModelOptions{
 			Enabled:          true,
 			ProviderID:       provider.ID,
@@ -218,7 +222,7 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 			PolicyVersion:    config.Version,
 			LeaseTTL:         15 * time.Minute,
 			MaxResponseBytes: provider.MaxResponseBytes,
-			Timeout:          provider.Timeout,
+			Timeout:          timeout,
 		})
 		if len(selected) == 2 {
 			break

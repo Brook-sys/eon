@@ -146,6 +146,43 @@ func TestModelOptionsFromCatalogSelectsPriorityAndFallback(t *testing.T) {
 	}
 }
 
+func TestModelOptionsFromCatalogBindingTimeoutOverridesProvider(t *testing.T) {
+	config := domain.ModelsConfig{
+		Version: "models@timeout",
+		Providers: []domain.ModelProviderConfig{
+			{ID: "nim", Kind: domain.ProviderKindNVIDIANIM, BaseURL: "https://integrate.api.nvidia.com/v1", APIKeyEnv: "NVIDIA_API_KEY", Timeout: 30 * time.Second, MaxResponseBytes: 2 << 20, GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("nim")}},
+		},
+		Bindings: []domain.ModelBindingConfig{
+			// Binding with explicit timeout override (e.g., NIM cold-start needs longer).
+			{ID: "cold-start", ProviderRef: "nim", ModelID: "meta/llama-3.3-70b-instruct", Enabled: true, Priority: 10, ContextTokens: 32768, MaxOutputTokens: 1024, MaxOutputDialect: domain.MaxOutputDialectCompletion, Timeout: 90 * time.Second, Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("cold-start")}},
+			// Binding without timeout — should inherit provider's 30s.
+			{ID: "fast", ProviderRef: "nim", ModelID: "meta/llama-3.1-8b-instruct", Enabled: true, Priority: 20, ContextTokens: 8192, MaxOutputTokens: 512, MaxOutputDialect: domain.MaxOutputDialectLegacy, Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("fast")}},
+		},
+	}
+	if err := config.Validate(); err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
+
+	got, err := modelOptionsFromCatalog(config, &ModelOptions{LeaseTTL: time.Minute})
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if got == nil {
+		t.Fatal("expected non-nil options")
+	}
+	// Primary (priority 10) has explicit 90s override.
+	if got.Timeout != 90*time.Second {
+		t.Fatalf("primary timeout = %v, want 90s (binding override)", got.Timeout)
+	}
+	// Fallback (priority 20) inherits provider's 30s.
+	if got.Fallback == nil {
+		t.Fatal("expected fallback")
+	}
+	if got.Fallback.Timeout != 30*time.Second {
+		t.Fatalf("fallback timeout = %v, want 30s (provider inherit)", got.Fallback.Timeout)
+	}
+}
+
 func TestModelOptionsFromCatalogWithNoEnabledBindingsDisablesModel(t *testing.T) {
 	got, err := modelOptionsFromCatalog(domain.ModelsConfig{Version: "models@empty"}, nil)
 	if err != nil {
