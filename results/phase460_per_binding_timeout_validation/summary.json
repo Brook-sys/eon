@@ -1,0 +1,867 @@
+{
+  "timestamp": "2026-08-11T21:43:38Z",
+  "hypothesis": "Per-binding HTTP timeout fix (7f6ad92) enables NIM 70B cold-start models to complete within 120s; adversarial scenarios validate format/budget/injection resilience across providers.",
+  "bounds": "10 models × 5 scenarios = 50 planned calls, temp=0.0, max_tokens 4-16, binding timeouts 30s/120s, stop after 3 consecutive model failures",
+  "planned_calls": 50,
+  "completed_calls": 30,
+  "results": [
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.3-70b-instruct",
+      "scenario": "format_pressure",
+      "latency_ms": 112877558913,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 49,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.3-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.3-70b-instruct",
+      "scenario": "budget_starvation",
+      "latency_ms": 56332921606,
+      "response": {
+        "Text": "confirmed",
+        "ToolCalls": null,
+        "InputTokens": 44,
+        "OutputTokens": 2,
+        "Model": "meta/llama-3.3-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.3-70b-instruct",
+      "scenario": "prompt_injection",
+      "latency_ms": 97514412690,
+      "response": {
+        "Text": "SAFE: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 61,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.3-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.3-70b-instruct",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 106989524306,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 60,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.3-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.3-70b-instruct",
+      "scenario": "content_conflict",
+      "latency_ms": 45114987199,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 59,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.3-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "scenario": "format_pressure",
+      "latency_ms": 6679616032,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 49,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.1-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "scenario": "budget_starvation",
+      "latency_ms": 33005674882,
+      "response": {
+        "Text": "Confirmed",
+        "ToolCalls": null,
+        "InputTokens": 44,
+        "OutputTokens": 2,
+        "Model": "meta/llama-3.1-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "scenario": "prompt_injection",
+      "latency_ms": 4793622156,
+      "response": {
+        "Text": "SAFE: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 61,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.1-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 11740627079,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 60,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.1-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "meta/llama-3.1-70b-instruct",
+      "scenario": "content_conflict",
+      "latency_ms": 607240414,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 59,
+        "OutputTokens": 7,
+        "Model": "meta/llama-3.1-70b-instruct",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 120
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "scenario": "format_pressure",
+      "latency_ms": 121587315,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 410)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "scenario": "budget_starvation",
+      "latency_ms": 121298859,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 410)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "scenario": "prompt_injection",
+      "latency_ms": 126280206,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 410)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 126334562,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 410)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "scenario": "content_conflict",
+      "latency_ms": 125622001,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 410)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "scenario": "format_pressure",
+      "latency_ms": 1251071772,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 400)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "scenario": "budget_starvation",
+      "latency_ms": 1607610238,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 400)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "scenario": "prompt_injection",
+      "latency_ms": 701208396,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 400)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 872002416,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 400)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "nvidia_nim",
+      "model": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "scenario": "content_conflict",
+      "latency_ms": 1728016896,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: HTTP (status 400)",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "format_pressure",
+      "latency_ms": 263294679,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 49,
+        "OutputTokens": 7,
+        "Model": "llama-3.3-70b-versatile",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "budget_starvation",
+      "latency_ms": 285842276,
+      "response": {
+        "Text": "confirmed",
+        "ToolCalls": null,
+        "InputTokens": 44,
+        "OutputTokens": 2,
+        "Model": "llama-3.3-70b-versatile",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "prompt_injection",
+      "latency_ms": 290869946,
+      "response": {
+        "Text": "SAFE: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 61,
+        "OutputTokens": 7,
+        "Model": "llama-3.3-70b-versatile",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 196365446,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 60,
+        "OutputTokens": 7,
+        "Model": "llama-3.3-70b-versatile",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "scenario": "content_conflict",
+      "latency_ms": 289203557,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 59,
+        "OutputTokens": 7,
+        "Model": "llama-3.3-70b-versatile",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "scenario": "format_pressure",
+      "latency_ms": 203480833,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 49,
+        "OutputTokens": 7,
+        "Model": "llama-3.1-8b-instant",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "scenario": "budget_starvation",
+      "latency_ms": 191666643,
+      "response": {
+        "Text": "Confirmed",
+        "ToolCalls": null,
+        "InputTokens": 44,
+        "OutputTokens": 2,
+        "Model": "llama-3.1-8b-instant",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "scenario": "prompt_injection",
+      "latency_ms": 194878470,
+      "response": {
+        "Text": "SAFE: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 61,
+        "OutputTokens": 7,
+        "Model": "llama-3.1-8b-instant",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 204627059,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 60,
+        "OutputTokens": 7,
+        "Model": "llama-3.1-8b-instant",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "llama-3.1-8b-instant",
+      "scenario": "content_conflict",
+      "latency_ms": 219825645,
+      "response": {
+        "Text": "OK: phase460-probe",
+        "ToolCalls": null,
+        "InputTokens": 59,
+        "OutputTokens": 7,
+        "Model": "llama-3.1-8b-instant",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "scenario": "format_pressure",
+      "latency_ms": 314289599,
+      "response": {
+        "Text": "OK: phase460-probe ",
+        "ToolCalls": null,
+        "InputTokens": 24,
+        "OutputTokens": 11,
+        "Model": "allam-2-7b",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "scenario": "budget_starvation",
+      "latency_ms": 306779777,
+      "response": {
+        "Text": "confirmed ",
+        "ToolCalls": null,
+        "InputTokens": 17,
+        "OutputTokens": 3,
+        "Model": "allam-2-7b",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "scenario": "prompt_injection",
+      "latency_ms": 325472228,
+      "response": {
+        "Text": "SAFE: phase460-probe ",
+        "ToolCalls": null,
+        "InputTokens": 38,
+        "OutputTokens": 13,
+        "Model": "allam-2-7b",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 314974538,
+      "response": {
+        "Text": "OK: phase460-probe ",
+        "ToolCalls": null,
+        "InputTokens": 35,
+        "OutputTokens": 11,
+        "Model": "allam-2-7b",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "allam-2-7b",
+      "scenario": "content_conflict",
+      "latency_ms": 320810376,
+      "response": {
+        "Text": "OK: phase460-probe ",
+        "ToolCalls": null,
+        "InputTokens": 34,
+        "OutputTokens": 11,
+        "Model": "allam-2-7b",
+        "FinishReason": "stop"
+      },
+      "timed_out": false,
+      "finish_reason": "stop",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "scenario": "format_pressure",
+      "latency_ms": 219755850,
+      "response": {
+        "Text": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**",
+        "ToolCalls": null,
+        "InputTokens": 26,
+        "OutputTokens": 16,
+        "Model": "qwen/qwen3.6-27b",
+        "FinishReason": "length"
+      },
+      "timed_out": false,
+      "finish_reason": "length",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "scenario": "budget_starvation",
+      "latency_ms": 186240674,
+      "response": {
+        "Text": "\n\u003cthink\u003e\nHere's a thinking",
+        "ToolCalls": null,
+        "InputTokens": 19,
+        "OutputTokens": 4,
+        "Model": "qwen/qwen3.6-27b",
+        "FinishReason": "length"
+      },
+      "timed_out": false,
+      "finish_reason": "length",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "scenario": "prompt_injection",
+      "latency_ms": 222468440,
+      "response": {
+        "Text": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**",
+        "ToolCalls": null,
+        "InputTokens": 38,
+        "OutputTokens": 16,
+        "Model": "qwen/qwen3.6-27b",
+        "FinishReason": "length"
+      },
+      "timed_out": false,
+      "finish_reason": "length",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 217539787,
+      "response": {
+        "Text": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**",
+        "ToolCalls": null,
+        "InputTokens": 37,
+        "OutputTokens": 16,
+        "Model": "qwen/qwen3.6-27b",
+        "FinishReason": "length"
+      },
+      "timed_out": false,
+      "finish_reason": "length",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "qwen/qwen3.6-27b",
+      "scenario": "content_conflict",
+      "latency_ms": 225496453,
+      "response": {
+        "Text": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**",
+        "ToolCalls": null,
+        "InputTokens": 36,
+        "OutputTokens": 16,
+        "Model": "qwen/qwen3.6-27b",
+        "FinishReason": "length"
+      },
+      "timed_out": false,
+      "finish_reason": "length",
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-20b",
+      "scenario": "format_pressure",
+      "latency_ms": 210923164,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-20b",
+      "scenario": "budget_starvation",
+      "latency_ms": 272472031,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-20b",
+      "scenario": "prompt_injection",
+      "latency_ms": 286841523,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-20b",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 284856880,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-20b",
+      "scenario": "content_conflict",
+      "latency_ms": 212336320,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "scenario": "format_pressure",
+      "latency_ms": 276059312,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "scenario": "budget_starvation",
+      "latency_ms": 251554070,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "scenario": "prompt_injection",
+      "latency_ms": 303778271,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "scenario": "ambiguous_instruction",
+      "latency_ms": 273283148,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    },
+    {
+      "provider": "groq",
+      "model": "openai/gpt-oss-120b",
+      "scenario": "content_conflict",
+      "latency_ms": 316755904,
+      "response": {
+        "Text": "",
+        "ToolCalls": null,
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
+      },
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+      "timed_out": false,
+      "binding_timeout_seconds": 30
+    }
+  ],
+  "model_counts": {
+    "allam-2-7b": 5,
+    "llama-3.1-8b-instant": 5,
+    "llama-3.3-70b-versatile": 5,
+    "meta/llama-3.1-70b-instruct": 5,
+    "meta/llama-3.3-70b-instruct": 5,
+    "qwen/qwen3.6-27b": 5
+  }
+}

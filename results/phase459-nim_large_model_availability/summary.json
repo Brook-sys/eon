@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-08-11T19:29:48Z",
+  "timestamp": "2026-08-11T21:12:27Z",
   "hypothesis": "Phase 458 NIM timeouts (llama-3.3-70b-instruct, gemma-4-31b-it) were cold-start artifacts; graduated timeouts should recover or classify faster.",
   "bounds": "12 planned calls, 32 max_tokens each, temp=0.0, warmup=10-15s, main=30-60s, stop after 3 consecutive model failures",
   "planned_calls": 12,
-  "completed_calls": 8,
+  "completed_calls": 6,
   "results": [
     {
       "provider": "groq",
       "model": "llama-3.3-70b-versatile",
       "round": "warmup",
-      "latency_ms": 436794963,
+      "latency_ms": 350467084,
       "response": {
         "Text": "NODE_ID: confirmed as phase459-probe\nMTLS: confirmed as ENFORCED\nSYNC_CAPABILITY: confirmed as event_sync_v1\nRETENTION",
         "ToolCalls": null,
@@ -25,7 +25,7 @@
       "provider": "groq",
       "model": "llama-3.3-70b-versatile",
       "round": "main",
-      "latency_ms": 382363926,
+      "latency_ms": 639344925,
       "response": {
         "Text": "NODE_ID: confirmed as phase459-probe\nMTLS: confirmed as ENFORCED\nSYNC_CAPABILITY: confirmed as event_sync_v1\nRETENTION",
         "ToolCalls": null,
@@ -41,7 +41,7 @@
       "provider": "groq",
       "model": "llama-3.1-8b-instant",
       "round": "warmup",
-      "latency_ms": 233940517,
+      "latency_ms": 337268773,
       "response": {
         "Text": "NODE_ID: phase459-probe is valid.\nMTLS: ENFORCED is enabled.\nSYNC_CAPABILITY: event_sync_v1 is supported.\nRETENTION",
         "ToolCalls": null,
@@ -57,7 +57,7 @@
       "provider": "groq",
       "model": "llama-3.1-8b-instant",
       "round": "main",
-      "latency_ms": 234184740,
+      "latency_ms": 666296942,
       "response": {
         "Text": "NODE_ID: phase459-probe is valid.\nMTLS: ENFORCED is enabled.\nSYNC_CAPABILITY: event_sync_v1 is supported.\nRETENTION",
         "ToolCalls": null,
@@ -73,7 +73,7 @@
       "provider": "groq",
       "model": "allam-2-7b",
       "round": "warmup",
-      "latency_ms": 344586564,
+      "latency_ms": 345448467,
       "response": {
         "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v",
         "ToolCalls": null,
@@ -89,7 +89,7 @@
       "provider": "groq",
       "model": "allam-2-7b",
       "round": "main",
-      "latency_ms": 336041096,
+      "latency_ms": 335895051,
       "response": {
         "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v",
         "ToolCalls": null,
@@ -105,7 +105,7 @@
       "provider": "nvidia_nim",
       "model": "meta/llama-3.3-70b-instruct",
       "round": "warmup",
-      "latency_ms": 15006721323,
+      "latency_ms": 15007357727,
       "response": {
         "Text": "",
         "ToolCalls": null,
@@ -121,39 +121,23 @@
       "provider": "nvidia_nim",
       "model": "google/gemma-4-31b-it",
       "round": "warmup",
-      "latency_ms": 6981769347,
+      "latency_ms": 15014145885,
       "response": {
-        "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v1\nRETENTION",
+        "Text": "",
         "ToolCalls": null,
-        "InputTokens": 89,
-        "OutputTokens": 32,
-        "Model": "google/gemma-4-31b-it",
-        "FinishReason": "length"
+        "InputTokens": 0,
+        "OutputTokens": 0,
+        "Model": "",
+        "FinishReason": ""
       },
-      "timed_out": false,
-      "finish_reason": "length"
-    },
-    {
-      "provider": "nvidia_nim",
-      "model": "google/gemma-4-31b-it",
-      "round": "main",
-      "latency_ms": 15475063950,
-      "response": {
-        "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v1\nRETENTION",
-        "ToolCalls": null,
-        "InputTokens": 89,
-        "OutputTokens": 32,
-        "Model": "google/gemma-4-31b-it",
-        "FinishReason": "length"
-      },
-      "timed_out": false,
-      "finish_reason": "length"
+      "error": "openai-compatible provider: TRANSPORT",
+      "timed_out": false
     },
     {
       "provider": "nvidia_nim",
       "model": "meta/llama-3.1-70b-instruct",
       "round": "warmup",
-      "latency_ms": 15014140971,
+      "latency_ms": 15002041798,
       "response": {
         "Text": "",
         "ToolCalls": null,
