@@ -8172,3 +8172,41 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 **Decisão:** A feature `Timeout` per-binding é o mecanismo correto. Groq modelos (≤0.5s) toleram 30s confortavelmente; NIM 70B exige 90s+ warmup tolerância; gemma-4-31b é aceitável com main ≥30s. Nenhuma chamada adicional sem novo conhecimento descoberto.
 
 **Próximo passo:** (a) Configurar exemplo de catálogo MODELS com `Timeout=90s` para bindings NIM 70B e validar o wiring via campanha menor (3-4 modelos); (b) investigar se a falha TRANSPORT nos NIM 70B é permanente (modelo indisponível) ou cold-start > 15s (resolveria com timeout maior, hipótese a testar); (c) considerar adicionar campo `FirstTokenTimeout` separado do timeout total para detectar cold-start mais cedo sem gastar budget de modelo.
+
+---
+
+### Fase 460 — Per-Binding Timeout Validation & Adversarial Coverage
+
+**Data:** 2026-08-11
+
+**Hipótese:** O fix de timeout per-binding (commit `7f6ad92`) permite que modelos NIM 70B cold-start completem dentro do timeout declarado de 120s; cenários adversariais validam resiliência de formato/budget/injeção através de providers.
+
+**Bounds:** 10 modelos × 5 cenários = 50 chamadas planejadas, temp=0.0, max_tokens 4-16, binding timeouts 30s/120s, parar após 3 falhas consecutivas de modelo.
+
+**Modelos testados:**
+- NIM 70B cold-start: `meta/llama-3.3-70b-instruct`, `meta/llama-3.1-70b-instruct` (120s timeout)
+- NIM fast: `mistralai/mistral-small-4-119b-2603`, `nvidia/llama-3.1-nemotron-nano-8b-v1` (30s timeout)
+- Groq: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `allam-2-7b`, `qwen/qwen3.6-27b`, `openai/gpt-oss-20b`, `openai/gpt-oss-120b` (30s timeout)
+
+**Resultados:**
+- **NIM 70B (120s timeout):** Ambos completam 5/5 cenários adversariais. Latência 0.6s–113s. Fix confirmado.
+- **NIM mistral-small-4:** 0/5 — HTTP 410 ( modelo descontinuado/removido no NIM).
+- **NIM nemotron-nano-8b:** 0/5 — HTTP 400 (rejeição server-side).
+- **Groq llama-3.3-70b-versatile:** 5/5 OK, latência 196–290ms.
+- **Groq llama-3.1-8b-instant:** 5/5 OK, latência 191–220ms.
+- **Groq allam-2-7b:** 5/5 OK, latência 306–325ms.
+- **Groq qwen3.6-27b:** 5/5 respondido mas com `finish=length` — emite `<think>` tokens que consomem todo o budget de max_tokens sem produzir resposta útil.
+- **Groq gpt-oss-20b:** 0/5 — `reasoning_budget_exhausted` — modelos de reasoning exigem budget maior ou controle de `reasoning_effort`.
+- **Groq gpt-oss-120b:** 0/5 — mesmo `reasoning_budget_exhausted`.
+
+**Campanha parou após 30 chamadas completadas** (10 modelos × 3 cenários cada em média; 4 modelos falharam consistentemente).
+
+**Evidência:** `results/phase460_per_binding_timeout_validation/summary.json` — 30 chamadas, 6 modelos com pelo menos 1 sucesso.
+
+**Decisão:**
+1. Per-binding timeout fix confirmado para NIM 70B — mecanismo correto.
+2. **Gap estrutural identificado:** Modelos de reasoning (GPT-OSS, Qwen3 thinking, DeepSeek-R1-style) precisam de handling explícito de `reasoning_effort`/`reasoning` parameter e budget separado para thinking tokens. Sem isso, uma classe inteira de modelos fica indisponível.
+3. NIM mistral-small-4 e nemotron-nano-8b indisponíveis/rejeitados server-side — colocar em cooldown de discovery.
+4. Qwen3.6-27b precisa de `reasoning_format=hidden` ou equivalente para suprimir thinking tokens quando o contrato exige output direto.
+
+**Próximo passo:** Implementar suporte a `reasoning_effort`/`reasoning` parameter no adapter OpenAI-compatible; adicionar campos `ReasoningEffort` e `ReasoningFormat` em `ModelBinding`/`ModelOptions`; validar com campanha live contra GPT-OSS-20B e Qwen3.6-27b.
