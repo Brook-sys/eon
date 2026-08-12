@@ -1,0 +1,80 @@
+[
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "ptbr_format_anchor",
+    "AdvType": "ptbr_format_anchor",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.293819261,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 219,
+    "OutTokens": 16,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "ptbr_format_anchor_conflicting",
+    "AdvType": "ptbr_format_anchor_conflicting",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.800510497,
+    "FinishRsn": "stop",
+    "Content": "CONFLICT: YES\nPAIR: O-1/O-2",
+    "InTokens": 340,
+    "OutTokens": 14,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "ptbr_format_anchor",
+    "AdvType": "ptbr_format_anchor",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.237697175,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 219,
+    "OutTokens": 16,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "ptbr_format_anchor_conflicting",
+    "AdvType": "ptbr_format_anchor_conflicting",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.311861798,
+    "FinishRsn": "stop",
+    "Content": "CONFLICT: YES\nPAIR: O-1/O-2",
+    "InTokens": 340,
+    "OutTokens": 14,
+    "Error": ""
+  },
+  {
+    "Model": "meta/llama-3.1-8b-instruct",
+    "Case": "ptbr_format_anchor",
+    "AdvType": "ptbr_format_anchor",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.676401255,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 219,
+    "OutTokens": 16,
+    "Error": ""
+  },
+  {
+    "Model": "meta/llama-3.1-8b-instruct",
+    "Case": "ptbr_format_anchor_conflicting",
+    "AdvType": "ptbr_format_anchor_conflicting",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.394351643,
+    "FinishRsn": "stop",
+    "Content": "CONFLICT: YES\nPAIR: O-1/O-2",
+    "InTokens": 340,
+    "OutTokens": 14,
+    "Error": ""
+  }
+]
