@@ -236,6 +236,18 @@ templ Models() {
 
 			<!-- Gestão de Provedores LLM Configurados -->
 			@card("Provedores LLM Configurados") {
+				<div class="px-3 py-2 bg-slate-900 rounded-md shadow-inner text-xs border border-slate-700 w-full font-mono text-slate-300 break-words mb-4" style="max-height: 200px; overflow-y: auto;">
+					<div class="flex items-center gap-2 mb-2 text-indigo-400">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+						<span class="font-bold">Info do Sistema de Configuração:</span>
+					</div>
+					<div class="space-y-1">
+						<div><span class="text-slate-500">Revisão Ativa (Base): </span><span class="font-bold text-emerald-400" x-text="cfgActiveRevision"></span></div>
+						<div><span class="text-slate-500">Qtd Provedores: </span><span x-text="(cfgPayload.providers || []).length"></span></div>
+						<div><span class="text-slate-500">Qtd Bindings: </span><span x-text="(cfgPayload.bindings || []).length"></span></div>
+					</div>
+				</div>
+
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
 					@EmptyState("Nenhum provedor configurado no catálogo ativo.")
 				</template>
@@ -888,7 +900,11 @@ templ Models() {
 						if (!appRes.ok) {
 							const code = app.error?.code || '';
 							const msg = app.error?.message || 'Erro ao aplicar rascunho';
-							if (code === 'conflict' || code === 'STALE_BASE' || msg.includes('stale config base revision')) throw new Error('Conflito de revisão detectado. A página será recarregada automaticamente com a última versão. Tente novamente.');
+							if (code === 'conflict' || code === 'STALE_BASE' || msg.includes('stale config base revision')) {
+								alert(`Conflito de revisão! BaseUI=${this.cfgActiveRevision} vs Erro=${msg}. Atualizando a página...`);
+								window.location.reload();
+								throw new Error('Conflito de revisão (STALE_BASE). Tente novamente.');
+							}
 							throw new Error(msg);
 						}
 
