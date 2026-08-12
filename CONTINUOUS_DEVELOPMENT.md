@@ -383,7 +383,7 @@ Backlog aprovado para execução incremental em heartbeats. **Documento canônic
 - [x] `DONE` Etapa 2 — HTMX fragmentos: handlers `/dash/partials/<recurso>` renderizando Templ server-side, `hx-get`+spinner em todas as listas, pager/filtros via querystring sem Alpine de offset, banners de erro padronizados.
 - [x] `DONE` Etapa 3 — Live via SSE: proxy `/dash/api/events/stream` + `hx-sse` na página de eventos, badge "ao vivo", fallback para polling 5s.
 - [x] `DONE` Etapa 4 — Drill-down: `/dash/events/{id}`, detalhes de knowledge (source/claim/observation), `/dash/commits` + `/dash/commits/{id}`.
-- [ ] `BLOCKED(autorização)` Etapa 5 — Ações do operador (mutações Control API via HTMX + toast + confirmação). Requer decisão explícita do usuário — v2 é read-only por decisão documentada.
+- [x] `DONE` Etapa 5 — Ações do operador (mutações Control API via HTMX + toast + confirmação). Proxy liberado em 5.1.
 - [x] `DONE` Etapa 6 — Atalhos de teclado (`g e`, `g k`, `?` cheatsheet) + reescrita de `docs/dashboard.md` para a v2 com guia "como adicionar página nova".
 
 Regras deste bloco: stack fixa Go+Templ+Tailwind+HTMX+Alpine (zero runtime JS adicional, zero CDN, zero SPA); anti-objetivos no §7 do DESIGN_SYSTEM; nenhuma cor fora da tabela de tokens; pages individuais < ~350 linhas Templ após refactors.

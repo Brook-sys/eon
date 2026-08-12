@@ -330,8 +330,14 @@ templ Overview() {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify({
-									command: cmdKind,
-									mission_id: this.ov?.mission?.mission_id || ''
+									schema_version: 1,
+									idempotency_key: 'cmd-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+									kind: cmdKind,
+									target: {
+										mission_id: this.ov?.mission?.mission_id || ''
+									},
+									expected_revision: this.ov?.mission?.active_revision || 1,
+									reason: "Dashboard operator action"
 								})
 							});
 							const data = await res.json();

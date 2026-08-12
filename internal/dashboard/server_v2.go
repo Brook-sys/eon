@@ -76,6 +76,8 @@ func (s *V2Server) Handler() http.Handler {
 	// Keep backwards compatibility for a moment, or redirect. Let's just point them to same handlers.
 	mux.Handle("GET /dash/assets/", http.StripPrefix("/dash/assets", assetsHandler{}))
 	// Proxy inspect, control and vault endpoints under /dash/api/ so browser calls work seamlessly
+	// Note: /dash/api/control/ enables HTMX POST/PUT mutations from the UI to the Control API.
+	// For example, this permits operator actions like pausing missions or answering questions.
 	mux.Handle("/dash/api/control/", http.StripPrefix("/dash/api/control", s.Control))
 	if s.Vault != nil {
 		mux.Handle("/dash/api/vault/", http.StripPrefix("/dash/api/vault", s.Vault))
