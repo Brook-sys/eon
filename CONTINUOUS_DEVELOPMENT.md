@@ -8362,3 +8362,13 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 
 **Próximo passo.** We will implement integration tests for runtime metrics around throttling events with NIM, or continue refining adapter capabilities depending on immediate user directions.
 2026-08-12 17:48 — Phase 389 — strip_unclosed_thinking_tag recovery ladder — test suite e build live executado com sucesso — 7d0eefd/NEXT
+
+## Phase 469 — Credential Blocked (2026-08-12 18:25 -03)
+
+**Objective.** Consolidation of adversarial prompt loops and Qwen reasoning budget live testing.
+
+**Observation.** Attempted to run live evaluations using both Groq `qwen/qwen3.6-27b` and `llama-3.1-8b-instant`. All calls failed with HTTP 401 Unauthorized `invalid_api_key` due to an expired or rotated `GROQ_API_KEY` in `.provider-secrets.env`.
+
+**Decision.** The heartbeat cycle is suspended. No new modifications will be committed until credentials are rotated. The kernel Qwen fix (Phase 467) is structurally sound, passes the isolated test suite, and is pushed to `main`, but lacks live evidence due to this blocker.
+
+**Próximo passo.** The operator must provision a valid `GROQ_API_KEY` (and verify `NVIDIA_NIM_API_KEY`) in `.provider-secrets.env`. Once unblocked, we will run the `adv_baseline` sweep and the Qwen budget test.
