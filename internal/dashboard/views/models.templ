@@ -486,7 +486,7 @@ templ Models() {
 							const [b, p, activeRev] = await Promise.all([
 								fetch('/dash/api/model-bindings').then(r => r.json()),
 								fetch('/dash/api/model-context-pressures').then(r => r.json()),
-								fetch('/dash/api/control/config/revisions/active?scope=MODELS').then(r => r.json()).catch(() => ({}))
+								fetch('/dash/api/control/config/revisions/active?scope=MODELS', { cache: 'no-store' }).then(r => r.json()).catch(() => ({}))
 							]);
 							this.bindings = b?.bindings ?? [];
 							this.note = b?.note ?? '';
