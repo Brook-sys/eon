@@ -8430,3 +8430,23 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 
 **Verification.** Live benchmark output matches structural expectations. Artifacts retained in `results/phase470_benchmark_llama33`.
 
+
+## Phase 472 — Baseline Adversarial Sweeps for Base Tasks (2026-08-12 22:30 -03)
+
+**Objective and implementation.** We expanded the `adv_baseline` runner to systematically evaluate models against the core constraints and context challenges designated by the operator: `ambiguous`, `polluted_context`, `budget_starvation`, and `cot_poison`. 
+
+**Live hypothesis and bounds.** Cross-provider validation executed initially across Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`), focusing on basic extract/conflict adversarial behaviors without the `ModelExecutor` recovery wrapper. 
+
+**Observed evidence and decision.** The baseline runner (`cmd/adv_baseline`) executed successfully and identified the unshielded failure modes. `budget_starvation` accurately forces a `length` truncation across all models as expected. 
+
+**Verification.** Output serialized to `results/adv_baseline/results.json`.
+
+## Phase 473 — Baseline Adversarial Sweeps for Restated Negated Lists (2026-08-12 22:35 -03)
+
+**Objective and implementation.** We augmented the `adv_baseline` runner to evaluate the `restated_negated_list` constraints (where models must output ONLY the ids of failed checklist items and actively omit passing ones). This evaluated the constraints against `clean`, `polluted_context`, and `cot_poison` injection parameters.
+
+**Live hypothesis and bounds.** Validation executed against Groq models (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`).
+
+**Observed evidence and decision.** Both `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` demonstrated perfect resilience (6/6 successes) to context pollution and CoT poisoning on the restated constraints format, properly isolating the single failed constraint (`F-2`) out of the set without generating extraneous tokens or falling for the poisoning prompt. 
+
+**Verification.** Output serialized to `results/adv_restated/results.json`.
