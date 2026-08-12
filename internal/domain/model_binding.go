@@ -71,6 +71,18 @@ type ModelBindingConfig struct {
 	// Zero means inherit the provider's timeout. Positive values allow per-model
 	// deadlines (e.g., longer for NIM cold-start models, shorter for Groq fast models).
 	Timeout time.Duration `json:"timeout"`
+	// ReasoningEffort controls internal reasoning token consumption on hybrid
+	// reasoning models. Valid values are provider-specific (e.g., Groq Qwen:
+	// "none"|"default"; GPT-OSS: "low"|"medium"|"high"). Empty means
+	// provider default. Only sent when non-empty so baseline servers are never
+	// surprised.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// ReasoningFormat controls how reasoning tokens are presented on providers
+	// that support it (e.g., Groq). Valid values: "parsed" (dedicated
+	// message.reasoning field), "raw" (in <think> tags), "hidden" (final answer
+	// only). Empty means provider default. Mutually exclusive with
+	// include_reasoning parameter (not exposed here).
+	ReasoningFormat string `json:"reasoning_format,omitempty"`
 }
 
 func (c ModelBindingConfig) Validate() error {
@@ -96,6 +108,23 @@ func (c ModelBindingConfig) Validate() error {
 	}
 	if c.Timeout < 0 || c.Timeout > 10*time.Minute {
 		return errors.New("binding timeout must be between zero and ten minutes")
+	}
+	if c.ReasoningEffort != "" {
+		valid := map[string]struct{}{
+			"none": {}, "default": {},
+			"low": {}, "medium": {}, "high": {},
+		}
+		if _, ok := valid[c.ReasoningEffort]; !ok {
+			return fmt.Errorf("binding reasoning_effort %q is not a supported value", c.ReasoningEffort)
+		}
+	}
+	if c.ReasoningFormat != "" {
+		valid := map[string]struct{}{
+			"parsed": {}, "raw": {}, "hidden": {},
+		}
+		if _, ok := valid[c.ReasoningFormat]; !ok {
+			return fmt.Errorf("binding reasoning_format %q is not a supported value", c.ReasoningFormat)
+		}
 	}
 	return c.Limit.Validate()
 }

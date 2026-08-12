@@ -6,6 +6,84 @@ import (
 	"time"
 )
 
+func TestModelBindingConfigValidateReasoningEffort(t *testing.T) {
+	base := ModelBindingConfig{
+		ID: "groq-qwen36", ProviderRef: "groq", ModelID: "qwen/qwen3.6-27b",
+		Enabled: true, Priority: 10, ContextTokens: 32768, MaxOutputTokens: 1024,
+		MaxOutputDialect: MaxOutputDialectCompletion,
+		Limit:           ResourceLimit{Resource: ModelBindingResource("groq-qwen36")},
+	}
+	cases := []struct {
+		name   string
+		effort string
+		ok     bool
+	}{
+		{"empty_-inherit", "", true},
+		{"none", "none", true},
+		{"default", "default", true},
+		{"low", "low", true},
+		{"medium", "medium", true},
+		{"high", "high", true},
+		{"invalid", "ultra", false},
+		{"invalid_case", "Low", false},
+		{"invalid_empty_space", " ", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := base
+			b.ReasoningEffort = strings.TrimSpace(tc.effort)
+			if tc.effort == " " {
+				b.ReasoningEffort = " "
+			}
+			err := b.Validate()
+			if tc.ok && err != nil {
+				t.Fatalf("expected OK, got %v", err)
+			}
+			if !tc.ok && err == nil {
+				t.Fatalf("expected error for effort %q, got nil", tc.effort)
+			}
+		})
+	}
+}
+
+func TestModelBindingConfigValidateReasoningFormat(t *testing.T) {
+	base := ModelBindingConfig{
+		ID: "groq-gptoss", ProviderRef: "groq", ModelID: "openai/gpt-oss-20b",
+		Enabled: true, Priority: 10, ContextTokens: 131072, MaxOutputTokens: 2048,
+		MaxOutputDialect: MaxOutputDialectCompletion,
+		Limit:           ResourceLimit{Resource: ModelBindingResource("groq-gptoss")},
+	}
+	cases := []struct {
+		name   string
+		format string
+		ok     bool
+	}{
+		{"empty_inherit", "", true},
+		{"parsed", "parsed", true},
+		{"raw", "raw", true},
+		{"hidden", "hidden", true},
+		{"invalid", "verbose", false},
+		{"invalid_case", "Parsed", false},
+		{"invalid_empty_space", " ", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := base
+			b.ReasoningFormat = strings.TrimSpace(tc.format)
+			if tc.format == " " {
+				b.ReasoningFormat = " "
+			}
+			err := b.Validate()
+			if tc.ok && err != nil {
+				t.Fatalf("expected OK, got %v", err)
+			}
+			if !tc.ok && err == nil {
+				t.Fatalf("expected error for format %q, got nil", tc.format)
+			}
+		})
+	}
+}
+
 func TestModelProviderAndBindingConfigValidateWithoutSecretValues(t *testing.T) {
 	limit1 := ResourceLimit{Resource: "model-provider:nvidia", MaxConcurrent: 1, MaxPerMinute: 20, FailureThreshold: 2, CooldownBase: time.Second, CooldownMax: time.Minute}
 	limit2 := ResourceLimit{Resource: "model-binding:nvidia-glm-5-2", MaxConcurrent: 1, MaxPerMinute: 10, FailureThreshold: 2, CooldownBase: time.Second, CooldownMax: time.Minute}

@@ -131,6 +131,24 @@ func (e ModelExecutor) resolveBindingTimeout(bindingID string) time.Duration {
 	return 0
 }
 
+// resolveBindingReasoning returns the per-binding reasoning_effort and
+// reasoning_format overrides from ModelsConfig. Empty strings mean
+// "inherit provider/kernel default". When a binding configures these
+// fields, they are applied to every request dispatched through that binding
+// unless the kernel's recovery/adaptation policy overrides reasoning_effort
+// explicitly (e.g., effort=none for probe or budget starvation recovery).
+func (e ModelExecutor) resolveBindingReasoning(bindingID string) (effort string, format string) {
+	if e.ModelsConfig == nil || strings.TrimSpace(bindingID) == "" {
+		return "", ""
+	}
+	for _, binding := range e.ModelsConfig.Bindings {
+		if binding.ID == bindingID {
+			return binding.ReasoningEffort, binding.ReasoningFormat
+		}
+	}
+	return "", ""
+}
+
 // releaseResourcePermit reports ResourceGate success/failure when an authorizer
 // reserved a slot. Best-effort: never overrides the primary Execute error path.
 func (e ModelExecutor) releaseResourcePermits(ctx context.Context, operation domain.Operation, permits []*domain.ResourcePermit, success bool, retryAfter *time.Time) {
@@ -588,6 +606,16 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	request.PrefillAssistant = plan.PrefillAssistant
 	if plan.ReasoningEffort != "" {
 		request.ReasoningEffort = plan.ReasoningEffort
+	}
+	// Apply per-binding reasoning config when configured. Kernel recovery
+	// policy (plan.ReasoningEffort) takes precedence; binding config is
+	// fallback for the initial request and any non-overridden retries.
+	bindingEffort, bindingFormat := e.resolveBindingReasoning(activeBindingID)
+	if bindingFormat != "" {
+		request.ReasoningFormat = bindingFormat
+	}
+	if bindingEffort != "" && request.ReasoningEffort == "" {
+		request.ReasoningEffort = bindingEffort
 	}
 	// Apply per-binding timeout override when configured. The adapter uses
 	// this to derive a child context deadline tighter than the lease, which

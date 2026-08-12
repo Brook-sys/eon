@@ -264,6 +264,11 @@ type chatRequest struct {
 	// reasoning token consumption. Only sent when non-empty so baseline
 	// servers that do not recognize the field are never surprised.
 	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	// ReasoningFormat is an optional provider extension (Groq) to control
+	// how reasoning tokens are presented. Only sent when non-empty so baseline
+	// servers that do not recognize the field are never surprised. Valid
+	// values: "parsed", "raw", "hidden".
+	ReasoningFormat string `json:"reasoning_format,omitempty"`
 	// Seed is an optional integer hint for deterministic sampling.
 	// Only sent when non-nil so baseline servers are never surprised.
 	Seed *int64 `json:"seed,omitempty"`
@@ -287,9 +292,11 @@ type responseFormat struct {
 }
 
 type chatMessage struct {
-	Role      string         `json:"role"`
-	Content   string         `json:"content"`
-	ToolCalls []chatToolCall `json:"tool_calls,omitempty"`
+	Role           string         `json:"role"`
+	Content        string         `json:"content"`
+	ToolCalls      []chatToolCall `json:"tool_calls,omitempty"`
+	Reasoning      string         `json:"reasoning,omitempty"`
+	ReasoningContent string       `json:"reasoning_content,omitempty"`
 }
 
 type chatToolCall struct {
@@ -370,6 +377,12 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	// permissive about unknown fields on most servers.
 	if effort := strings.TrimSpace(request.ReasoningEffort); effort != "" {
 		chatReq.ReasoningEffort = effort
+	}
+	// Pass reasoning_format when the kernel requests it. Adapters/providers
+	// that do not support the field will ignore it; the OpenAI-compatible
+	// wire format is permissive about unknown fields on most servers.
+	if format := strings.TrimSpace(request.ReasoningFormat); format != "" {
+		chatReq.ReasoningFormat = format
 	}
 	// Pass seed for deterministic sampling when requested.
 	if request.Seed != nil {

@@ -38,6 +38,13 @@ type CompletionRequest struct {
 	// effort=none the same model achieves 100% across all 8 adversarial
 	// scenarios. gpt-oss-20b/120b benefits from effort=low for bounded tasks.
 	ReasoningEffort string
+	// ReasoningFormat is an optional provider-hint to control how reasoning
+	// tokens are presented on hybrid reasoning models. Supported values:
+	// "parsed" (dedicated message.reasoning field), "raw" (in <think> tags),
+	// "hidden" (final answer only). Empty means provider default. The
+	// OpenAI-compatible wire is permissive about unknown fields; adapters that
+	// do not support reasoning_format MUST silently ignore it.
+	ReasoningFormat string
 	// Seed is an optional integer hint for deterministic sampling (when supported).
 	// When non-nil, adapters supporting seed pass it through; others ignore.
 	Seed *int64
