@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "fixture_name": "cognitive-v2",
-  "model": "offline-compile",
+  "model": "qwen-2.5-32b",
   "runs": [
     {
       "case_id": "extract-date",
@@ -10,8 +10,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 170,
+      "duration_millis": 119,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -20,8 +23,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 170,
+      "duration_millis": 46,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -30,8 +36,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 170,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -40,8 +49,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 166,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -50,8 +62,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 166,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -60,8 +75,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 166,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -70,8 +88,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 168,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -80,8 +101,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 168,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-date",
@@ -90,8 +114,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 168,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -100,8 +127,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 46,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -110,8 +140,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -120,8 +153,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -130,8 +166,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 221,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -140,8 +179,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 221,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -150,8 +192,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 221,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -160,8 +205,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 224,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -170,8 +218,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 224,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "extract-qualified-date",
@@ -180,8 +231,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 224,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -190,8 +244,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 176,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -200,8 +257,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 176,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -210,8 +270,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 176,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -220,8 +283,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 172,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -230,8 +296,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 172,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -240,8 +309,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 172,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -250,8 +322,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 177,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -260,8 +335,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 177,
+      "duration_millis": 46,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-support",
@@ -270,8 +348,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 177,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -280,8 +361,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 46,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -290,8 +374,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -300,8 +387,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -310,8 +400,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 236,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -320,8 +413,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 236,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -330,8 +426,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 236,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -340,8 +439,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 35,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -350,8 +452,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 35,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "synthesize-counterexample",
@@ -360,8 +465,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 241,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -370,8 +478,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 189,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -380,8 +491,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 189,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -390,8 +504,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 189,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -400,8 +517,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 185,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -410,8 +530,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 185,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -420,8 +543,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 185,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -430,8 +556,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 188,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -440,8 +569,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 188,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "detect-conflict",
@@ -450,8 +582,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 188,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -460,8 +595,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 214,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -470,8 +608,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 214,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -480,8 +621,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 214,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -490,8 +634,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 209,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -500,8 +647,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 209,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -510,8 +660,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 209,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -520,8 +673,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 212,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -530,8 +686,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 212,
+      "duration_millis": 41,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "distinguish-temporal-change",
@@ -540,8 +699,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 212,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -550,8 +712,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 184,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -560,8 +725,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 184,
+      "duration_millis": 40,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -570,8 +738,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 184,
+      "duration_millis": 39,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -580,8 +751,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 187,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -590,8 +764,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 187,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-anchor",
@@ -600,8 +777,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 187,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -610,8 +790,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -620,8 +803,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 36,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -630,8 +816,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 226,
+      "duration_millis": 35,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -640,8 +829,11 @@
       "context_tokens": 2048,
       "compiled": true,
       "estimated_input_tokens": 229,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -650,8 +842,11 @@
       "context_tokens": 4096,
       "compiled": true,
       "estimated_input_tokens": 229,
+      "duration_millis": 38,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     },
     {
       "case_id": "repair-unrecoverable",
@@ -660,8 +855,11 @@
       "context_tokens": 8192,
       "compiled": true,
       "estimated_input_tokens": 229,
+      "duration_millis": 37,
       "syntax_valid": false,
-      "semantically_correct": false
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 400
     }
   ],
   "summary": {
@@ -669,11 +867,11 @@
     "compiled": 66,
     "syntax_valid": 0,
     "semantically_correct": 0,
-    "input_tokens": 13323,
+    "input_tokens": 0,
     "output_tokens": 0,
     "omitted_facts": 0,
     "compile_errors": 0,
-    "provider_errors": 0,
+    "provider_errors": 66,
     "validation_errors": 0,
     "rate_limited": 0,
     "timeouts": 0
@@ -687,7 +885,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 18
       },
       {
         "label": "EXTRACT",
@@ -696,7 +894,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 18
       },
       {
         "label": "REPAIR",
@@ -705,7 +903,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 12
       },
       {
         "label": "SYNTHESIZE",
@@ -714,7 +912,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 18
       }
     ],
     "by_format": [
@@ -725,7 +923,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 18
       },
       {
         "label": "DELIMITED",
@@ -734,7 +932,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 24
       },
       {
         "label": "JSON",
@@ -743,7 +941,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 24
       }
     ],
     "by_context": [
@@ -754,7 +952,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 22
       },
       {
         "label": "4096",
@@ -763,7 +961,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 22
       },
       {
         "label": "8192",
@@ -772,7 +970,7 @@
         "syntax_valid": 0,
         "semantically_correct": 0,
         "omitted_facts": 0,
-        "errors": 0
+        "errors": 22
       }
     ]
   }

@@ -506,7 +506,7 @@ templ Models() {
 							const rev = (activeRev && activeRev.revision) ? activeRev.revision : null;
 							if (rev && rev.revision !== undefined) {
 								this.cfgActiveRevision = Number(rev.revision || 0);
-								this.cfgPayload = rev.payload || { providers: [], bindings: [] };
+								this.cfgPayload = rev.models || rev.payload || { providers: [], bindings: [] };
 							} else {
 								this.cfgActiveRevision = 0;
 								this.cfgPayload = { providers: [], bindings: [] };
