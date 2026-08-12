@@ -1,0 +1,2682 @@
+{
+  "schema_version": 1,
+  "name": "phase461-reasoning-config-fire",
+  "fixture_name": "cognitive-v2",
+  "planned_calls": 132,
+  "max_calls": 150,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "groq-llama-3.1-8b-instant-baseline",
+      "model": "llama-3.1-8b-instant",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "llama-3.1-8b-instant",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "actual_input_tokens": 175,
+            "output_tokens": 46,
+            "duration_millis": 334,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "Based on the provided facts, the publication date is 2025-11-03 and the source identifier is S-17. \n\nHere's the output:\n\ndate=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "actual_input_tokens": 173,
+            "output_tokens": 14,
+            "duration_millis": 217,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "actual_input_tokens": 172,
+            "output_tokens": 301,
+            "duration_millis": 627,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "```python\nimport json\n\ndef extract_publication_info():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys containing the extracted information.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"date\"]\n    source_identifier = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted information\n    result = {\n        \"date\": publication_date,\n        \"source\": source_identifier\n    }\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_publication_info())\n```\n\nThis code defines a function `extract_publication_info` that extracts the publication date and source identifier from the given facts. It then creates a JSON object with the extracted information and returns it. The `json.dumps` function is used to convert the Python dictionary into a JSON string.\n\nWhen you run this code, it will print the following output:\n```json\n{\"date\": \"2025-11-03\", \"source\": \"S-17\"}\n```"
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "actual_input_tokens": 220,
+            "output_tokens": 26,
+            "duration_millis": 243,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "Based on the provided facts, the allowed output would be:\n\ndate=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "actual_input_tokens": 218,
+            "output_tokens": 14,
+            "duration_millis": 216,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "actual_input_tokens": 217,
+            "output_tokens": 292,
+            "duration_millis": 502,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "```python\nimport json\n\ndef extract_measurement_date_and_source():\n    \"\"\"\n    Extract the measurement date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-21\", \"publication_date\": \"2026-01-09\", \"measurement_date\": \"2025-12-17\"},\n        \"F2\": {\"source\": \"S-22\", \"publication_date\": \"2025-12-18\"}\n    }\n    \n    # Extract the measurement date and source identifier\n    measurement_date = facts[\"F1\"][\"measurement_date\"]\n    source = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted data\n    result = {\"date\": measurement_date, \"source\": source}\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_measurement_date_and_source())\n```\n\nThis code defines a function `extract_measurement_date_and_source` that extracts the measurement date and source identifier from the given facts. It then creates a JSON object with the extracted data and returns it. The result is printed to the console.\n\nWhen you run this code, it will output:\n```json\n{\"date\": \"2025-12-17\", \"source\": \"S-21\"}\n```"
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "actual_input_tokens": 161,
+            "output_tokens": 9,
+            "duration_millis": 298,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-9\nsupport=YES",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "duration_millis": 29,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 5,
+          "semantically_correct": 5,
+          "input_tokens": 1336,
+          "output_tokens": 702,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 15,
+          "validation_errors": 2,
+          "rate_limited": 15,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 4,
+              "semantically_correct": 4,
+              "omitted_facts": 0,
+              "errors": 2
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 4
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 5
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 3,
+              "semantically_correct": 3,
+              "omitted_facts": 0,
+              "errors": 3
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 2,
+              "semantically_correct": 2,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 5,
+              "semantically_correct": 5,
+              "omitted_facts": 0,
+              "errors": 17
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "provider failures or timeouts affected at least half of runs"
+      }
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-20b-effort-low-parsed",
+      "model": "openai/gpt-oss-20b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "openai/gpt-oss-20b",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "actual_input_tokens": 211,
+            "output_tokens": 138,
+            "duration_millis": 518,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "actual_input_tokens": 209,
+            "output_tokens": 137,
+            "duration_millis": 356,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "actual_input_tokens": 208,
+            "output_tokens": 93,
+            "duration_millis": 474,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"date\":\"2025-11-03\",\"source\":\"S-17\"}",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "actual_input_tokens": 256,
+            "output_tokens": 111,
+            "duration_millis": 417,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "actual_input_tokens": 254,
+            "output_tokens": 90,
+            "duration_millis": 344,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "actual_input_tokens": 253,
+            "output_tokens": 174,
+            "duration_millis": 555,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"date\":\"2025-12-17\",\"source\":\"S-21\"}",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "actual_input_tokens": 198,
+            "output_tokens": 77,
+            "duration_millis": 363,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-9\nsupport=YES",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "actual_input_tokens": 196,
+            "output_tokens": 84,
+            "duration_millis": 466,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-9\nsupport=YES",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "actual_input_tokens": 195,
+            "output_tokens": 86,
+            "duration_millis": 322,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"observation\":\"O-9\",\"support\":\"YES\"}",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "actual_input_tokens": 238,
+            "output_tokens": 91,
+            "duration_millis": 438,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-12\nsupport=NO",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "actual_input_tokens": 236,
+            "output_tokens": 86,
+            "duration_millis": 333,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-12\nsupport=NO",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "actual_input_tokens": 235,
+            "output_tokens": 113,
+            "duration_millis": 411,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"observation\":\"O-12\",\"support\":\"NO\"}",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "actual_input_tokens": 225,
+            "output_tokens": 150,
+            "duration_millis": 406,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "conflict=YES\npair=O-1/O-2",
+            "values": {
+              "conflict": "YES",
+              "pair": "O-1/O-2"
+            }
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "actual_input_tokens": 223,
+            "output_tokens": 77,
+            "duration_millis": 347,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "conflict=YES\npair=O-1/O-2",
+            "values": {
+              "conflict": "YES",
+              "pair": "O-1/O-2"
+            }
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "actual_input_tokens": 222,
+            "output_tokens": 122,
+            "duration_millis": 372,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"conflict\":\"YES\",\"pair\":\"O-1/O-2\"}",
+            "values": {
+              "conflict": "YES",
+              "pair": "O-1/O-2"
+            }
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "actual_input_tokens": 235,
+            "output_tokens": 128,
+            "duration_millis": 343,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "conflict=NO\npair=O-3/O-4",
+            "values": {
+              "conflict": "NO",
+              "pair": "O-3/O-4"
+            }
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "actual_input_tokens": 233,
+            "output_tokens": 126,
+            "duration_millis": 382,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "conflict=NO\npair=O-3/O-4",
+            "values": {
+              "conflict": "NO",
+              "pair": "O-3/O-4"
+            }
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "actual_input_tokens": 232,
+            "output_tokens": 127,
+            "duration_millis": 359,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"conflict\":\"NO\",\"pair\":\"O-3/O-4\"}",
+            "values": {
+              "conflict": "NO",
+              "pair": "O-3/O-4"
+            }
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "actual_input_tokens": 205,
+            "output_tokens": 79,
+            "duration_millis": 405,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "quote=The kernel rejected the stale base revision.\nstatus=REPAIRED",
+            "values": {
+              "quote": "The kernel rejected the stale base revision.",
+              "status": "REPAIRED"
+            }
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "actual_input_tokens": 204,
+            "output_tokens": 73,
+            "duration_millis": 408,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\"quote\":\"The kernel rejected the stale base revision.\",\"status\":\"REPAIRED\"}",
+            "values": {
+              "quote": "The kernel rejected the stale base revision.",
+              "status": "REPAIRED"
+            }
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "actual_input_tokens": 227,
+            "output_tokens": 286,
+            "duration_millis": 723,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "STATUS=UNRECOVERABLE\nQUOTE=NONE"
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 918,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER"
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 20,
+          "semantically_correct": 20,
+          "input_tokens": 4695,
+          "output_tokens": 2448,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 1,
+          "validation_errors": 1,
+          "rate_limited": 0,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 2,
+              "semantically_correct": 2,
+              "omitted_facts": 0,
+              "errors": 2
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 7,
+              "semantically_correct": 7,
+              "omitted_facts": 0,
+              "errors": 1
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 7,
+              "semantically_correct": 7,
+              "omitted_facts": 0,
+              "errors": 1
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 20,
+              "semantically_correct": 20,
+              "omitted_facts": 0,
+              "errors": 2
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "DEGRADED",
+        "reason": "compatible enough to observe, but below qualification threshold"
+      }
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-20b-effort-medium-parsed",
+      "model": "openai/gpt-oss-20b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "openai/gpt-oss-20b",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 6000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 36,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 22,
+          "validation_errors": 0,
+          "rate_limited": 22,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 4
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 22
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "provider failures or timeouts affected at least half of runs"
+      }
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-qwen3.6-27b-effort-none-parsed",
+      "model": "qwen/qwen3.6-27b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "qwen/qwen3.6-27b",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "actual_input_tokens": 170,
+            "output_tokens": 512,
+            "duration_millis": 1170,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the publication date and source identifier.\n   - **Facts:**\n     - F1 [fragment-1]: Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n     - F2 [noise-1]: A separate source S-18 was published on 2025-11-04.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - Return the original publication date.\n   - **Allowed Outputs:**\n     - A: date=2025-11-03\n     - B: source=S-17\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\n2.  **Identify Key Requirements:**\n   - Extract publication date -\u003e `date=2025-11-03` (from F1, matches allowed output A)\n   - Extract source identifier -\u003e `source=S-17` (from F1, matches allowed output B)\n   - Format: Exactly one line per key as KEY=VALUE.\n   - Use only allowed values.\n\n3.  **Construct Output:**\n   - date=2025-11-03\n   - source=S-17\n\n   Check constraints:\n   - Uses only supplied facts? Yes.\n   - Returns original publication date? Yes (2025-11-03).\n   - Format matches exactly one line per key as KEY=VALUE? Yes.\n   - Uses only allowed values? Yes.\n\n4.  **Final Output Generation:**\n   date=2025-11-03\n   source=S-17\n   (Self-Correction/Verification during thought: The prompt says \"Return exactly one line per key as KEY=VALUE. Use only the allowed values.\" The allowed outputs are explicitly listed as A and B. I will output exactly those two lines.)\n   All constraints met. Proceed. \n   Output matches exactly.✅\n   Note: I will ensure no extra text is added, as per strict formatting instructions.\n   Output:\n   date=2"
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "actual_input_tokens": 168,
+            "output_tokens": 512,
+            "duration_millis": 4349,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the publication date and source identifier.\n   - **Facts:**\n     - F1 [fragment-1]: Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n     - F2 [noise-1]: A separate source S-18 was published on 2025-11-04.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - Return the original publication date.\n   - **Allowed Outputs:**\n     - A: date=2025-11-03\n     - B: source=S-17\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE, with no prose.\n\n2.  **Identify Key Requirements:**\n   - Extract publication date -\u003e `date=2025-11-03` (from F1, matches constraint \"original publication date\")\n   - Extract source identifier -\u003e `source=S-17` (from F1)\n   - Format: Exactly one line per key as KEY=VALUE, no prose.\n   - Allowed outputs explicitly list `date=2025-11-03` and `source=S-17`.\n\n3.  **Construct Output:**\n   - date=2025-11-03\n   - source=S-17\n\n   Check constraints:\n   - Only supplied facts? Yes.\n   - Original publication date? Yes, 2025-11-03.\n   - Format matches allowed outputs? Yes.\n   - Exactly one line per key, no prose? Yes.\n\n4.  **Final Output Generation:**\n   date=2025-11-03\n   source=S-17\n   (Self-Correction/Verification during thought: The prompt says \"Return exactly one line per key as KEY=VALUE, with no prose.\" and lists allowed outputs A and B. I will output exactly those two lines.)\n   All constraints met. Proceed. \n   Output matches exactly.✅\n   Note: I'll make sure the order matches the allowed outputs or just list them"
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "actual_input_tokens": 166,
+            "output_tokens": 512,
+            "duration_millis": 1261,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the publication date and source identifier.\n   - **Facts:**\n     - F1 [fragment-1]: Source S-17 was published on 2025-11-03. The later review did not change the original publication date.\n     - F2 [noise-1]: A separate source S-18 was published on 2025-11-04.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - Return the original publication date.\n   - **Allowed Outputs:**\n     - A: date=2025-11-03\n     - B: source=S-17\n   - **Answer Format:** Return one JSON object with exactly these string keys: date, source\n\n2.  **Identify Key Information from Facts:**\n   - F1 explicitly states: \"Source S-17 was published on 2025-11-03.\"\n   - F1 also clarifies: \"The later review did not change the original publication date.\" (Reinforces 2025-11-03)\n   - F2 is noise about S-18, irrelevant to the task.\n   - Task asks for publication date and source identifier.\n   - Constraints say to return the original publication date.\n   - Allowed outputs explicitly give the expected values: date=2025-11-03, source=S-17.\n\n3.  **Format Output:**\n   - Must be a JSON object.\n   - Keys: \"date\", \"source\"\n   - Values: \"2025-11-03\", \"S-17\"\n   - Structure: `{\"date\": \"2025-11-03\", \"source\": \"S-17\"}`\n\n4.  **Verify against Constraints:**\n   - Uses only supplied facts? Yes.\n   - Returns original publication date? Yes.\n   - Matches allowed outputs? Yes.\n   - JSON format with exact keys? Yes.\n\n   All constraints met. Ready to output.✅\n\u003c/think\u003e\n\n```json\n{\n  \"date\": \"2025-1"
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "actual_input_tokens": 228,
+            "output_tokens": 512,
+            "duration_millis": 1186,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the measurement date and source identifier, not the correction or publication date.\n   - **Facts:**\n     - F1 [fragment-2]: Source S-21 was published on 2026-01-09 and reports measurements collected on 2025-12-17. A correction issued on 2026-01-12 changed a unit label but states that the measurement date remains 2025-12-17.\n     - F2 [noise-2]: Source S-22 was measured and published on 2025-12-18.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - DATE must be the measurement date explicitly attributed to S-21.\n   - **Allowed Outputs:**\n     - A: date=2025-12-17\n     - B: source=S-21\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\n2.  **Identify Key Requirements:**\n   - Extract measurement date for S-21.\n   - Extract source identifier.\n   - Ignore correction/publication dates.\n   - Output format: `KEY=VALUE` per line.\n   - Allowed values are explicitly given: `date=2025-12-17` and `source=S-21`.\n\n3.  **Map Facts to Requirements:**\n   - F1 explicitly states: \"Source S-21 ... reports measurements collected on 2025-12-17.\" and \"measurement date remains 2025-12-17.\"\n   - Constraint says: \"DATE must be the measurement date explicitly attributed to S-21.\" -\u003e `2025-12-17`\n   - Source identifier is `S-21`.\n   - Allowed outputs match exactly: `date=2025-12-17` and `source=S-21`.\n\n4.  **Format Output:**\n   - Must be exactly one line per key.\n   - `date=2025-12"
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "actual_input_tokens": 226,
+            "output_tokens": 512,
+            "duration_millis": 1249,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the measurement date and source identifier, not the correction or publication date.\n   - **Facts:**\n     - F1 [fragment-2]: Source S-21 was published on 2026-01-09 and reports measurements collected on 2025-12-17. A correction issued on 2026-01-12 changed a unit label but states that the measurement date remains 2025-12-17.\n     - F2 [noise-2]: Source S-22 was measured and published on 2025-12-18.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - DATE must be the measurement date explicitly attributed to S-21.\n   - **Allowed Outputs:**\n     - A: date=2025-12-17\n     - B: source=S-21\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE, with no prose.\n\n2.  **Identify Key Requirements:**\n   - Extract measurement date for S-21.\n   - Extract source identifier (S-21).\n   - Ignore publication/correction dates.\n   - Output format: `date=...` and `source=...` on separate lines.\n   - No extra text.\n\n3.  **Process Facts against Constraints:**\n   - F1 explicitly states: \"Source S-21 ... reports measurements collected on 2025-12-17.\" and \"measurement date remains 2025-12-17.\"\n   - Constraint says: DATE must be the measurement date explicitly attributed to S-21. -\u003e `2025-12-17`\n   - Source identifier is `S-21`.\n   - F2 is noise/irrelevant per constraints.\n\n4.  **Format Output:**\n   - `date=2025-12-17`\n   - `source=S-21`\n   - Check against allowed outputs: Matches exactly.\n   - Check format: Exactly one line per key as KEY=VALUE, no"
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "actual_input_tokens": 224,
+            "output_tokens": 512,
+            "duration_millis": 1177,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Extract the measurement date and source identifier, not the correction or publication date.\n   - **Facts:**\n     - F1 [fragment-2]: Source S-21 was published on 2026-01-09 and reports measurements collected on 2025-12-17. A correction issued on 2026-01-12 changed a unit label but states that the measurement date remains 2025-12-17.\n     - F2 [noise-2]: Source S-22 was measured and published on 2025-12-18.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - DATE must be the measurement date explicitly attributed to S-21.\n   - **Allowed Outputs:**\n     - A: date=2025-12-17\n     - B: source=S-21\n   - **Answer Format:** Return one JSON object with exactly these string keys: date, source\n\n2.  **Identify Key Information:**\n   - Target Source: S-21 (from constraints and allowed outputs)\n   - Target Date: Measurement date for S-21. F1 says \"reports measurements collected on 2025-12-17\" and \"measurement date remains 2025-12-17\".\n   - Constraint check: \"DATE must be the measurement date explicitly attributed to S-21.\" -\u003e 2025-12-17\n   - Constraint check: \"not the correction or publication date.\" -\u003e Ignore 2026-01-09 and 2026-01-12.\n   - F2 is noise, ignore.\n\n3.  **Construct Output:**\n   - JSON object with keys \"date\" and \"source\".\n   - Values: \"2025-12-17\" and \"S-21\".\n   - Format: `{\"date\": \"2025-12-17\", \"source\": \"S-21\"}`\n\n4.  **Verify against Constraints:**\n   - Uses only supplied"
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "actual_input_tokens": 143,
+            "output_tokens": 512,
+            "duration_millis": 1633,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether the evidence supports the claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\n     - F2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - SUPPORT is either YES or NO.\n   - **Allowed Outputs:**\n     - A: observation=O-9\n     - B: support=YES\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\n2.  **Evaluate Claim vs. Observation:**\n   - Claim C-4: \"all measured retries completed without duplicate effects.\"\n   - Observation O-9: \"30 of 30 measured retries completed with exactly one effect.\"\n   - \"Exactly one effect\" means no duplicate effects (since duplicates would imply more than one effect per retry, or at least repeated effects). So, 30/30 having exactly one effect directly supports the claim that all measured retries completed without duplicate effects.\n   - Therefore, SUPPORT = YES.\n   - The decisive observation is O-9.\n\n3.  **Check Constraints \u0026 Allowed Outputs:**\n   - Allowed outputs explicitly state:\n     - A: observation=O-9\n     - B: support=YES\n   - I need to output exactly these two lines in KEY=VALUE format.\n   - Format: `observation=O-9` and `support=YES` (or `A=observation=O-9`? Wait, the prompt says \"A: observation=O-9\" and \"B: support=YES\" under ALLOWED OUTPUTS. It likely means the keys are `observation` and `support`, and the values are `O-9` and `YES`. Or it might mean the output should literally be `observation=O-9` and `support=YES`. I will follow the standard KEY=VALUE format requested: `observation=O-9` and `support=YES`.)\n   - Let's re-read carefully: \"ALLOWED OUTPUTS\\nA: observation=O-9\\nB: support=YES\\nANS"
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "actual_input_tokens": 141,
+            "output_tokens": 512,
+            "duration_millis": 1226,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether the evidence supports the claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\n     - F2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n   - **Constraints:** Use only supplied facts; do not invent missing evidence. SUPPORT is either YES or NO.\n   - **Allowed Outputs:** A: observation=O-9, B: support=YES\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE, with no prose.\n\n2.  **Evaluate Claim vs. Observation:**\n   - Claim C-4: \"all measured retries completed without duplicate effects.\"\n   - Observation O-9: \"30 of 30 measured retries completed with exactly one effect.\"\n   - \"Exactly one effect\" means no duplicate effects (since duplicates would imply more than one effect per retry, or at least repeated effects). So, 30/30 having exactly one effect directly supports the claim that all measured retries completed without duplicate effects.\n   - Therefore, SUPPORT = YES.\n   - The decisive observation is O-9.\n\n3.  **Check Constraints \u0026 Format:**\n   - Must use only supplied facts. (Checked)\n   - SUPPORT is YES or NO. (Checked)\n   - Allowed outputs specify keys: `observation` and `support`.\n   - Format: `KEY=VALUE` per line, no prose.\n   - Expected output:\n     observation=O-9\n     support=YES\n\n4.  **Final Output Generation:**\n   - Match exactly the requested format.\n   - `observation=O-9`\n   - `support=YES`\n   - No extra text. All constraints met.✅\n   - Self-Correction/Verification during thought: The prompt says \"ALLOWED OUTPUTS A: observation=O-9 B: support=YES\". This implies the keys are `observation` and `support`. I will output exactly those two lines.\n   - Check logic: \"without duplicate effects\" = \"exactly one effect\". 30/30 = all. So YES. Observation is O-9. Matches perfectly.\n  "
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "actual_input_tokens": 139,
+            "output_tokens": 512,
+            "duration_millis": 1244,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether the evidence supports the claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\n     - F2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - SUPPORT is either YES or NO.\n   - **Allowed Outputs:**\n     - A: observation=O-9\n     - B: support=YES\n   - **Answer Format:** Return one JSON object with exactly these string keys: observation, support\n\n2.  **Evaluate Claim vs. Observation:**\n   - Claim C-4: \"all measured retries completed without duplicate effects.\"\n   - Observation O-9: \"30 of 30 measured retries completed with exactly one effect.\"\n   - \"Exactly one effect\" means no duplicate effects (since duplicates would imply more than one effect per retry, or at least repeated effects). So, 30/30 having exactly one effect directly supports the claim that all measured retries completed without duplicate effects.\n   - Therefore, SUPPORT = YES.\n   - The decisive observation is O-9.\n\n3.  **Check Constraints \u0026 Allowed Outputs:**\n   - Must use only supplied facts. (Checked)\n   - SUPPORT is YES or NO. (YES)\n   - Allowed outputs specify: observation=O-9, support=YES.\n   - Output format: JSON object with keys \"observation\" and \"support\".\n\n4.  **Construct JSON:**\n   ```json\n   {\n     \"observation\": \"O-9\",\n     \"support\": \"YES\"\n   }\n   ```\n\n5.  **Final Verification:**\n   - Matches task? Yes.\n   - Uses only facts? Yes.\n   - SUPPORT is YES/NO? Yes.\n   - Matches allowed outputs? Yes.\n   - JSON format correct? Yes.\n   - Keys exactly as requested? Yes.\n\n   All good. Output matches exactly.✅\n   Proceed. \n   Output generation. \n   `{ \"observation\": \"O-9\", \"support\": \"YES\" }` (formatted as requested"
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "actual_input_tokens": 187,
+            "output_tokens": 512,
+            "duration_millis": 1262,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether all observations support the universal claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim-2]: Claim C-8: every measured restart resumed without duplicating an external effect.\n     - F2 [observation-2]: Observation O-11: 29 measured restarts resumed with exactly one external effect.\n     - F3 [observation-3]: Observation O-12: one measured restart produced two external effects after recovery.\n   - **Constraints:**\n     - Use only supplied facts.\n     - A single counterexample defeats the universal claim.\n     - SUPPORT is either YES or NO.\n   - **Allowed Outputs:**\n     - A: observation=O-12\n     - B: support=NO\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\n2.  **Evaluate Facts against Task:**\n   - Claim C-8: \"every measured restart resumed without duplicating an external effect.\" (Universal claim: All restarts have exactly one/no duplicated external effect)\n   - Observation O-11: 29 restarts resumed with exactly one external effect. (Supports the claim)\n   - Observation O-12: one measured restart produced two external effects after recovery. (This is a counterexample: it duplicated an external effect, violating \"without duplicating\")\n   - Constraint: \"A single counterexample defeats the universal claim.\" -\u003e So SUPPORT = NO.\n   - Decisive observation: O-12 (the counterexample).\n\n3.  **Map to Allowed Outputs:**\n   - The prompt says \"ALLOWED OUTPUTS: A: observation=O-12, B: support=NO\"\n   - It asks to \"Return exactly one line per key as KEY=VALUE. Use only the allowed values.\"\n   - Keys seem to be `observation` and `support`.\n   - Values: `O-12` and `NO`.\n   - Format: `observation=O-12\\nsupport=NO` (or vice versa, but typically order doesn't matter as long as it's one line per key).\n\n4.  **Check Constraints \u0026 Format:**\n   - \"Return exactly one line"
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "actual_input_tokens": 185,
+            "output_tokens": 512,
+            "duration_millis": 1192,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether all observations support the universal claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim-2]: Claim C-8: every measured restart resumed without duplicating an external effect.\n     - F2 [observation-2]: Observation O-11: 29 measured restarts resumed with exactly one external effect.\n     - F3 [observation-3]: Observation O-12: one measured restart produced two external effects after recovery.\n   - **Constraints:**\n     - Use only supplied facts.\n     - A single counterexample defeats the universal claim.\n     - SUPPORT is either YES or NO.\n   - **Allowed Outputs:**\n     - A: observation=O-12\n     - B: support=NO\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE, with no prose.\n\n2.  **Evaluate Facts against Task:**\n   - Claim C-8: \"every measured restart resumed without duplicating an external effect.\" (Universal claim: All restarts have exactly one/no duplicated external effect)\n   - Observation O-11: 29 restarts resumed with exactly one external effect. (Supports the claim)\n   - Observation O-12: one restart produced two external effects after recovery. (Contradicts the claim - \"duplicating an external effect\" means more than one, or specifically two here. This is a counterexample.)\n   - Constraint: \"A single counterexample defeats the universal claim.\" -\u003e So SUPPORT = NO.\n   - Decisive observation: O-12 is the counterexample that defeats the claim.\n\n3.  **Map to Allowed Outputs:**\n   - The prompt gives allowed outputs as:\n     A: observation=O-12\n     B: support=NO\n   - I need to output exactly these key-value pairs, one per line, with no prose.\n   - Keys should probably be `observation` and `support` based on the allowed outputs format.\n   - Let's check the exact format requested: \"Return exactly one line per key as KEY=VALUE, with no prose.\"\n   - I will output:\n     observation=O-12\n     support=NO\n\n4.  **Final Verification"
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "duration_millis": 37,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 37,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 36,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 1977,
+          "output_tokens": 5632,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 11,
+          "validation_errors": 11,
+          "rate_limited": 11,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 4
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 22
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "provider failures or timeouts affected at least half of runs"
+      }
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-qwen3.6-27b-effort-default-parsed",
+      "model": "qwen/qwen3.6-27b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "qwen/qwen3.6-27b",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "duration_millis": 46,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "duration_millis": 39,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "duration_millis": 39,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 39,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "duration_millis": 40,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "duration_millis": 31,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "actual_input_tokens": 143,
+            "output_tokens": 512,
+            "duration_millis": 1368,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "VALIDATION",
+            "output": "\n\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Template:** v1\n   - **Task:** Determine whether the evidence supports the claim and identify the decisive observation.\n   - **Facts:**\n     - F1 [claim]: Claim C-4: all measured retries completed without duplicate effects.\n     - F2 [observation]: Observation O-9: 30 of 30 measured retries completed with exactly one effect.\n   - **Constraints:**\n     - Use only supplied facts; do not invent missing evidence.\n     - SUPPORT is either YES or NO.\n   - **Allowed Outputs:**\n     - A: observation=O-9\n     - B: support=YES\n   - **Answer Format:** Return exactly one line per key as KEY=VALUE. Use only the allowed values.\n\n2.  **Evaluate Claim vs. Observation:**\n   - Claim C-4: \"all measured retries completed without duplicate effects.\"\n   - Observation O-9: \"30 of 30 measured retries completed with exactly one effect.\"\n   - \"Exactly one effect\" means no duplicate effects (since duplicates would imply more than one effect per retry, or at least repeated effects). So, 30/30 having exactly one effect directly supports the claim that all measured retries completed without duplicate effects.\n   - Therefore, SUPPORT = YES.\n   - The decisive observation is O-9.\n\n3.  **Check Constraints \u0026 Allowed Outputs:**\n   - Allowed outputs explicitly state:\n     - A: observation=O-9\n     - B: support=YES\n   - The prompt says \"Return exactly one line per key as KEY=VALUE. Use only the allowed values.\"\n   - So the output should be:\n     observation=O-9\n     support=YES\n\n4.  **Format Output:**\n   - Ensure exact match with requested format.\n   - Two lines: `observation=O-9` and `support=YES`.\n   - Check against constraints: Uses only supplied facts, support is YES, matches allowed outputs exactly.\n\n   All good. Proceed. \n   Output matches exactly.✅\n   Note: The prompt says \"A: observation=O-9\" and \"B: support=YES\" under ALLOWED OUTPUTS, which implies the keys are `observation` and `support`. I will output exactly those two lines.\n   Final check of the prompt: \""
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "duration_millis": 37,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "duration_millis": 39,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "duration_millis": 41,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "duration_millis": 35,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "duration_millis": 32,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 34,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 33,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 4000
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 0,
+          "semantically_correct": 0,
+          "input_tokens": 143,
+          "output_tokens": 512,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 21,
+          "validation_errors": 1,
+          "rate_limited": 21,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 4
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 6
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 8
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 22
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "INCOMPATIBLE",
+        "reason": "provider failures or timeouts affected at least half of runs"
+      }
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-120b-effort-low-parsed",
+      "model": "openai/gpt-oss-120b",
+      "report": {
+        "schema_version": 1,
+        "fixture_name": "cognitive-v2",
+        "model": "openai/gpt-oss-120b",
+        "runs": [
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 170,
+            "actual_input_tokens": 211,
+            "output_tokens": 110,
+            "duration_millis": 479,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 166,
+            "actual_input_tokens": 209,
+            "output_tokens": 154,
+            "duration_millis": 591,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-11-03\nsource=S-17",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 168,
+            "actual_input_tokens": 208,
+            "output_tokens": 89,
+            "duration_millis": 388,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\n  \"date\": \"2025-11-03\",\n  \"source\": \"S-17\"\n}",
+            "values": {
+              "date": "2025-11-03",
+              "source": "S-17"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "actual_input_tokens": 256,
+            "output_tokens": 291,
+            "duration_millis": 855,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 221,
+            "actual_input_tokens": 254,
+            "output_tokens": 201,
+            "duration_millis": 635,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "date=2025-12-17\nsource=S-21",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "extract-qualified-date",
+            "operation": "EXTRACT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 224,
+            "actual_input_tokens": 253,
+            "output_tokens": 182,
+            "duration_millis": 632,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\n  \"date\": \"2025-12-17\",\n  \"source\": \"S-21\"\n}",
+            "values": {
+              "date": "2025-12-17",
+              "source": "S-21"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 176,
+            "actual_input_tokens": 198,
+            "output_tokens": 193,
+            "duration_millis": 661,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-9\nsupport=YES",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 172,
+            "actual_input_tokens": 196,
+            "output_tokens": 111,
+            "duration_millis": 533,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-9\nsupport=YES",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-support",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 177,
+            "actual_input_tokens": 195,
+            "output_tokens": 99,
+            "duration_millis": 452,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\n  \"observation\": \"O-9\",\n  \"support\": \"YES\"\n}",
+            "values": {
+              "observation": "O-9",
+              "support": "YES"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "actual_input_tokens": 238,
+            "output_tokens": 320,
+            "duration_millis": 931,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-12\nsupport=NO",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 236,
+            "actual_input_tokens": 236,
+            "output_tokens": 313,
+            "duration_millis": 911,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "observation=O-12\nsupport=NO",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "synthesize-counterexample",
+            "operation": "SYNTHESIZE",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 241,
+            "actual_input_tokens": 235,
+            "output_tokens": 297,
+            "duration_millis": 815,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "{\n  \"observation\": \"O-12\",\n  \"support\": \"NO\"\n}",
+            "values": {
+              "observation": "O-12",
+              "support": "NO"
+            }
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 189,
+            "duration_millis": 38,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 1000
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 185,
+            "actual_input_tokens": 223,
+            "output_tokens": 146,
+            "duration_millis": 593,
+            "syntax_valid": true,
+            "semantically_correct": true,
+            "output": "conflict=YES\npair=O-1/O-2",
+            "values": {
+              "conflict": "YES",
+              "pair": "O-1/O-2"
+            }
+          },
+          {
+            "case_id": "detect-conflict",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 188,
+            "duration_millis": 42,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "CHOICE",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 214,
+            "duration_millis": 42,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 209,
+            "duration_millis": 54,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "distinguish-temporal-change",
+            "operation": "CONFLICT",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 212,
+            "duration_millis": 52,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 3000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 184,
+            "duration_millis": 52,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-anchor",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 187,
+            "duration_millis": 46,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "DELIMITED",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 226,
+            "duration_millis": 44,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          },
+          {
+            "case_id": "repair-unrecoverable",
+            "operation": "REPAIR",
+            "format": "JSON",
+            "context_tokens": 2048,
+            "compiled": true,
+            "estimated_input_tokens": 229,
+            "duration_millis": 37,
+            "syntax_valid": false,
+            "semantically_correct": false,
+            "error_kind": "PROVIDER",
+            "provider_status": 429,
+            "retry_after_millis": 2000
+          }
+        ],
+        "summary": {
+          "total": 22,
+          "compiled": 22,
+          "syntax_valid": 13,
+          "semantically_correct": 13,
+          "input_tokens": 2912,
+          "output_tokens": 2506,
+          "omitted_facts": 0,
+          "compile_errors": 0,
+          "provider_errors": 9,
+          "validation_errors": 0,
+          "rate_limited": 9,
+          "timeouts": 0
+        },
+        "breakdown": {
+          "by_operation": [
+            {
+              "label": "CONFLICT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 1,
+              "semantically_correct": 1,
+              "omitted_facts": 0,
+              "errors": 5
+            },
+            {
+              "label": "EXTRACT",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            },
+            {
+              "label": "REPAIR",
+              "total": 4,
+              "compiled": 4,
+              "syntax_valid": 0,
+              "semantically_correct": 0,
+              "omitted_facts": 0,
+              "errors": 4
+            },
+            {
+              "label": "SYNTHESIZE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 6,
+              "semantically_correct": 6,
+              "omitted_facts": 0,
+              "errors": 0
+            }
+          ],
+          "by_format": [
+            {
+              "label": "CHOICE",
+              "total": 6,
+              "compiled": 6,
+              "syntax_valid": 4,
+              "semantically_correct": 4,
+              "omitted_facts": 0,
+              "errors": 2
+            },
+            {
+              "label": "DELIMITED",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 5,
+              "semantically_correct": 5,
+              "omitted_facts": 0,
+              "errors": 3
+            },
+            {
+              "label": "JSON",
+              "total": 8,
+              "compiled": 8,
+              "syntax_valid": 4,
+              "semantically_correct": 4,
+              "omitted_facts": 0,
+              "errors": 4
+            }
+          ],
+          "by_context": [
+            {
+              "label": "2048",
+              "total": 22,
+              "compiled": 22,
+              "syntax_valid": 13,
+              "semantically_correct": 13,
+              "omitted_facts": 0,
+              "errors": 9
+            }
+          ]
+        }
+      },
+      "qualification": {
+        "verdict": "DEGRADED",
+        "reason": "compatible enough to observe, but below qualification threshold"
+      }
+    }
+  ]
+}

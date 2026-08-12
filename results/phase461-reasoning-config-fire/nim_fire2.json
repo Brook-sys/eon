@@ -1,0 +1,26 @@
+{
+  "campaign": "phase461-reasoning-config-nim-fire2",
+  "timestamp": "2026-08-12T06:44:45",
+  "results": [
+    {
+      "status": "ok",
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "content": "CONFLICT: YES \u2013 the two observations report different latency values (120\u202fms vs. 410\u202fms) for the same test, indicating an inconsistency.",
+      "reasoning": null,
+      "finish_reason": "stop",
+      "input_tokens": 87,
+      "output_tokens": 117,
+      "elapsed_s": 1.953
+    },
+    {
+      "status": "ok",
+      "model": "meta/llama-3.3-70b-instruct",
+      "content": "CONFLICT: YES. The two observations report significantly different latency values, 120ms and 410ms, which cannot both be accurate for the same test and time window, indicating a conflict.",
+      "reasoning": null,
+      "finish_reason": "stop",
+      "input_tokens": 98,
+      "output_tokens": 40,
+      "elapsed_s": 126.016
+    }
+  ]
+}

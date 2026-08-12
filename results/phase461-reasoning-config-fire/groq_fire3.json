@@ -1,0 +1,53 @@
+{
+  "campaign": "phase461-reasoning-config-groq-fire3",
+  "timestamp": "2026-08-12T06:42:11",
+  "results": [
+    {
+      "status": "ok",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "raw",
+      "content": "\n<think>\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - Observation A: \"the latency is 120ms\"\n   - Observation B: \"the latency is 410ms\"\n   - Context: Same test, same time window\n   - Question: Is there a conflict?\n   - Required Output Format: \"CONFLICT: YES\" or \"CONFLICT: NO\" followed by one sentence explanation.\n\n2.  **Identify Key Elements:**\n   - Both observations refer to the exact same metric (latency)\n   - Both refer to the exact same conditions (same test, same time window)",
+      "reasoning": null,
+      "finish_reason": "length",
+      "input_tokens": 77,
+      "output_tokens": 400,
+      "reasoning_tokens": null,
+      "elapsed_s": 1.112
+    },
+    {
+      "status": "ok",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "hidden",
+      "content": "",
+      "reasoning": null,
+      "finish_reason": "length",
+      "input_tokens": 77,
+      "output_tokens": 400,
+      "reasoning_tokens": 400,
+      "elapsed_s": 1.153
+    },
+    {
+      "status": "error",
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "raw",
+      "http_status": 400,
+      "elapsed_s": 0.126
+    },
+    {
+      "status": "ok",
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "hidden",
+      "content": "CONFLICT: YES  \nThe two observations give different latency measurements (120\u202fms vs. 410\u202fms) for the same test and time window, which is inconsistent.",
+      "reasoning": null,
+      "finish_reason": "stop",
+      "input_tokens": 134,
+      "output_tokens": 88,
+      "reasoning_tokens": 44,
+      "elapsed_s": 0.42
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "campaign": "phase461-reasoning-config-groq-baseline",
+  "timestamp": "2026-08-12T06:39:37",
+  "results": [
+    {
+      "status": "error",
+      "model": "llama-3.3-70b-versatile",
+      "effort": "",
+      "format": "",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.113
+    },
+    {
+      "status": "error",
+      "model": "llama-3.1-8b-instant",
+      "effort": "",
+      "format": "",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.101
+    }
+  ]
+}

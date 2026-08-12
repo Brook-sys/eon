@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "name": "phase461-reasoning-config-fire",
+  "fixture_path": "/home/node/.openclaw/workspace/motor-autonomo/internal/evaluation/testdata/cognitive-v2.json",
+  "context_tokens": [
+    2048
+  ],
+  "max_calls": 150,
+  "max_output_tokens": 512,
+  "max_total_output_tokens": 76800,
+  "timeout_seconds": 180,
+  "models": [
+    {
+      "provider": "openai",
+      "binding_id": "groq-llama-3.1-8b-instant-baseline",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-20b-effort-low-parsed",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-20b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-20b-effort-medium-parsed",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-20b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-qwen3.6-27b-effort-none-parsed",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-qwen3.6-27b-effort-default-parsed",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "qwen/qwen3.6-27b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    },
+    {
+      "provider": "openai",
+      "binding_id": "groq-gpt-oss-120b-effort-low-parsed",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "openai/gpt-oss-120b",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens"
+    }
+  ]
+}

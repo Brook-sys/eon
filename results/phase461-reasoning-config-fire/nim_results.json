@@ -1,0 +1,29 @@
+{
+  "campaign": "phase461-reasoning-config-nim",
+  "timestamp": "2026-08-12T06:38:28",
+  "results": [
+    {
+      "status": "ok",
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "content": "CONFLICT: YES \u2013 the two observations report different latency values (120\u202fms vs. 410\u202fms) for the same test, indicating an inconsistency.",
+      "finish_reason": "stop",
+      "input_tokens": 87,
+      "output_tokens": 115,
+      "elapsed_s": 2.13
+    },
+    {
+      "status": "exception",
+      "model": "meta/llama-3.3-70b-instruct",
+      "error": "The read operation timed out",
+      "elapsed_s": 120.382
+    },
+    {
+      "status": "error",
+      "model": "mistralai/mistral-large-2-instruct",
+      "http_status": 404,
+      "error": "Not Found",
+      "body": "{\"status\":404,\"title\":\"Not Found\",\"detail\":\"Function '7fadd4de-e22a-48e4-90e9-f02ef14a74b9': Not found for account 'PWW9G4Pc4UNIFkzcm8_xg30GqBA-TRCmNlvZczx5fxE'\"}",
+      "elapsed_s": 0.439
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "campaign": "phase461-reasoning-config-live-verification",
+  "timestamp": "2026-08-12T04:37:00Z",
+  "provider": "groq",
+  "hypothesis": "Per-binding reasoning_effort and reasoning_format fields are correctly serialized to the OpenAI-compatible wire and produce expected behavior on hybrid reasoning models (gpt-oss-20b, qwen3.6-27b) while non-reasoning models (llama-3.1-8b-instant) remain unaffected.",
+  "scenario": "Conflict detection cognitive task with reasoning config variations",
+  "bounds": {
+    "max_calls": 5,
+    "max_tokens": [128, 512],
+    "temperature": 0.0,
+    "timeout_per_call": "30s"
+  },
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "effort": "",
+      "format": "",
+      "status": "ok",
+      "content": "OK",
+      "input_tokens": 40,
+      "output_tokens": 2,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop",
+      "elapsed_s": 0.284,
+      "notes": "Baseline non-reasoning model — no reasoning fields sent, clean response."
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES  \nThe two latency measurements (120 ms vs. 410 ms) cannot both be correct for the same test and time window, indicating a discrepancy in the data or measurement process.",
+      "reasoning": "We need to answer: CONFLICT: YES or NO. Since two observations differ, conflict. Provide brief explanation.",
+      "input_tokens": 120,
+      "output_tokens": 75,
+      "reasoning_tokens": 24,
+      "finish_reason": "stop",
+      "elapsed_s": 0.390,
+      "notes": "effort=low+format=parsed: reasoning in dedicated field, content correct, finish=stop. Token budget well balanced."
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES. Reporting two distinct point values (120ms vs 410ms) for the exact same test and time window is contradictory...",
+      "reasoning": "[Full reasoning chain published in reasoning field]",
+      "input_tokens": 63,
+      "output_tokens": 512,
+      "reasoning_tokens": 466,
+      "finish_reason": "length",
+      "elapsed_s": 1.268,
+      "notes": "effort=default: reasoning consumed 466/512 tokens, content truncated at 46 output tokens. Higher max_tokens needed for default effort on this model."
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "none",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES\n\nThe two observations report significantly different latency values (120ms vs. 410ms) for the exact same test and time window. Since a single measurement instance cannot simultaneously have two distinct values, these statements are mutually exclusive and contradictory.",
+      "reasoning": null,
+      "input_tokens": 65,
+      "output_tokens": 56,
+      "reasoning_tokens": 0,
+      "finish_reason": "stop",
+      "elapsed_s": 0.361,
+      "notes": "effort=none: zero reasoning tokens, clean stop, minimal latency. effort=none is critical for bounded tasks on this model."
+    }
+  ],
+  "analysis": {
+    "gpt-oss-20b": "effort=low produces clean parsed reasoning with 24 reasoning tokens and complete content. Well-suited for bounded cognitive tasks.",
+    "qwen3.6-27b_default": "effort=default is expensive — reasoning consumed 91% of the token budget (466/512) and content was truncated. For bounded tasks, effort=none or effort=low is strongly recommended.",
+    "qwen3.6-27b_none": "effort=none eliminates reasoning entirely, produces clean correct output in 0.36s with 56 tokens. This is the correct config for deterministic bounded tasks.",
+    "llama_baseline": "Non-reasoning models are unaffected by the new fields (empty strings are not serialized). No regression."
+  },
+  "decisions": [
+    "reasoning_effort and reasoning_format fields are correctly wired and safe to merge",
+    "Default binding configs should use reasoning_effort=none for bounded deterministic tasks on hybrid reasoning models to avoid token budget exhaustion",
+    "gpt-oss-20b at effort=low is well-balanced for cognitive operations",
+    "qwen3.6-27b at effort=default requires max_tokens >= 1024 for complete output on complex tasks"
+  ],
+  "next_experiments": [
+    "Test gpt-oss-120b with effort=medium on multi-step reasoning tasks",
+    "Test reasoning_format=raw vs parsed impact on content quality",
+    "Measure latency/token delta between effort levels on the same cognitive fixture",
+    "Test NIM nemotron reasoning_content field parsing in the adapter"
+  ]
+}

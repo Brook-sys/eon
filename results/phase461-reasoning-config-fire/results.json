@@ -1,0 +1,60 @@
+{
+  "campaign": "phase461-reasoning-config",
+  "timestamp": "2026-08-12T06:34:57",
+  "results": [
+    {
+      "status": "error",
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "parsed",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.149
+    },
+    {
+      "status": "error",
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "hidden",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.114
+    },
+    {
+      "status": "error",
+      "model": "openai/gpt-oss-20b",
+      "effort": "none",
+      "format": "hidden",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.107
+    },
+    {
+      "status": "error",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "raw",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.114
+    },
+    {
+      "status": "error",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "none",
+      "format": "raw",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.107
+    },
+    {
+      "status": "error",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "parsed",
+      "http_status": 403,
+      "error": "Forbidden",
+      "elapsed_s": 0.101
+    }
+  ]
+}

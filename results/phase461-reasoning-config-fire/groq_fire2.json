@@ -1,0 +1,58 @@
+{
+  "campaign": "phase461-reasoning-config-groq-fire2",
+  "timestamp": "2026-08-12T06:40:46",
+  "results": [
+    {
+      "status": "ok",
+      "model": "llama-3.3-70b-versatile",
+      "effort": "",
+      "format": "",
+      "content": "CONFLICT: YES. The two observations report significantly different latency values, 120ms and 410ms, which cannot both be accurate for the same test and time window.",
+      "reasoning": null,
+      "finish_reason": "stop",
+      "input_tokens": 98,
+      "output_tokens": 36,
+      "reasoning_tokens": null,
+      "elapsed_s": 0.476
+    },
+    {
+      "status": "ok",
+      "model": "llama-3.1-8b-instant",
+      "effort": "",
+      "format": "",
+      "content": "CONFLICT: YES. Observation A and Observation B report significantly different latency values, indicating a discrepancy that requires further investigation.",
+      "reasoning": null,
+      "finish_reason": "stop",
+      "input_tokens": 98,
+      "output_tokens": 25,
+      "reasoning_tokens": null,
+      "elapsed_s": 0.405
+    },
+    {
+      "status": "ok",
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "parsed",
+      "content": "CONFLICT: YES  \nThe two observations give different latency measurements (120\u202fms vs. 410\u202fms) for the same test and time window, which is inconsistent.",
+      "reasoning": "We need to check if conflict. Two observations same test same time window but different latency values. That is conflict. So answer: CONFLICT: YES. Explanation: They report different latency values fo",
+      "finish_reason": "stop",
+      "input_tokens": 134,
+      "output_tokens": 88,
+      "reasoning_tokens": 44,
+      "elapsed_s": 0.826
+    },
+    {
+      "status": "ok",
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "parsed",
+      "content": "",
+      "reasoning": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Observation A: \"the latency is 120ms\"\n   - Observation B: \"the latency is 410ms\"\n   - Context: Same test, same time window\n   - Question: I",
+      "finish_reason": "length",
+      "input_tokens": 77,
+      "output_tokens": 200,
+      "reasoning_tokens": 200,
+      "elapsed_s": 0.665
+    }
+  ]
+}

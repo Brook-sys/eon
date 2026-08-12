@@ -1,0 +1,135 @@
+{
+  "campaign": "phase461-reasoning-config-fire-test2",
+  "timestamp": "2026-08-12T06:43:07Z",
+  "provider": "groq",
+  "hypothesis": "Per-binding reasoning_effort and reasoning_format are correctly serialized to the OpenAI-compatible wire. effort=none eliminates shadow thinking, effort=low/medium scales reasoning budget, and non-reasoning models are unaffected.",
+  "scenario": "Conflict detection — two observations with contradictory latency values",
+  "bounds": {
+    "max_calls": 9,
+    "max_tokens": 256,
+    "temperature": 0,
+    "timeout": "60s"
+  },
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "effort": "",
+      "format": "",
+      "status": "ok",
+      "content": "CONFLICT: YES\n\nThe two observations report significantly different latency values (120ms and 410ms) for the same test and time window, indicating a discrepancy between the measurements. This suggests that there is a conflict between the two observations.",
+      "input_tokens": 88,
+      "output_tokens": 49,
+      "finish_reason": "stop",
+      "elapsed_s": 0.413760431
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "effort": "none",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES\nThe two latency values differ by 290 ms, which is a significant discrepancy for the same test and time window, indicating a conflict.",
+      "input_tokens": 124,
+      "output_tokens": 248,
+      "finish_reason": "stop",
+      "elapsed_s": 0.539155356
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "effort": "low",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES  \nThe two observations report markedly different latency figures (120 ms vs. 410 ms) for the same test and time window, indicating a discrepancy that cannot be reconciled without further investigation.",
+      "input_tokens": 124,
+      "output_tokens": 78,
+      "finish_reason": "stop",
+      "elapsed_s": 0.385037795
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "effort": "medium",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES\nThe two latency values differ by 290 ms, which is a significant discrepancy for the same test and time window, indicating a conflict.",
+      "input_tokens": 124,
+      "output_tokens": 248,
+      "finish_reason": "stop",
+      "elapsed_s": 0.521697349
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "effort": "low",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES  \nThe two observations report substantially different latency measurements (120 ms vs. 410 ms) for the identical test and time period, indicating an inconsistency.",
+      "input_tokens": 124,
+      "output_tokens": 66,
+      "finish_reason": "stop",
+      "elapsed_s": 0.330167076
+    },
+    {
+      "model": "openai/gpt-oss-120b",
+      "effort": "medium",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES  \nThe two observations give substantially different latency measurements (120 ms vs. 410 ms) for the identical test and time window, indicating an inconsistency.",
+      "input_tokens": 124,
+      "output_tokens": 99,
+      "finish_reason": "stop",
+      "elapsed_s": 0.448442745
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "none",
+      "format": "parsed",
+      "status": "ok",
+      "content": "CONFLICT: YES\nThe two observations report significantly different latency values (120ms vs 410ms) for the same test and time window, indicating a discrepancy in the data.",
+      "input_tokens": 69,
+      "output_tokens": 41,
+      "finish_reason": "stop",
+      "elapsed_s": 0.565771288
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "parsed",
+      "status": "error",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "finish_reason": "",
+      "elapsed_s": 0.728392926,
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "low",
+      "format": "parsed",
+      "status": "error",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "finish_reason": "",
+      "elapsed_s": 0.719167965,
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+    }
+  ],
+  "analysis": {
+    "llama-3.1-8b-instant_baseline": "status=ok, has_format=true, latency=0.414s, tokens=88/49, finish=stop",
+    "openai/gpt-oss-120b_effort_low": "status=ok, has_format=true, latency=0.330s, tokens=124/66, finish=stop",
+    "openai/gpt-oss-120b_effort_medium": "status=ok, has_format=true, latency=0.448s, tokens=124/99, finish=stop",
+    "openai/gpt-oss-20b_effort_low": "status=ok, has_format=true, latency=0.385s, tokens=124/78, finish=stop",
+    "openai/gpt-oss-20b_effort_medium": "status=ok, has_format=true, latency=0.522s, tokens=124/248, finish=stop",
+    "openai/gpt-oss-20b_effort_none": "status=ok, has_format=true, latency=0.539s, tokens=124/248, finish=stop",
+    "qwen/qwen3.6-27b_effort_default": "status=error, error=openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+    "qwen/qwen3.6-27b_effort_low": "status=error, error=openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+    "qwen/qwen3.6-27b_effort_none": "status=ok, has_format=true, latency=0.566s, tokens=69/41, finish=stop"
+  },
+  "decisions": [
+    "openai/gpt-oss-20b with effort=none produces clean formatted output in 0.539s — recommended for bounded deterministic tasks",
+    "openai/gpt-oss-20b with effort=low produces correct output in 0.385s with 78 output tokens",
+    "openai/gpt-oss-20b with effort=medium produces correct output in 0.522s with 248 output tokens",
+    "openai/gpt-oss-120b with effort=low produces correct output in 0.330s with 66 output tokens",
+    "openai/gpt-oss-120b with effort=medium produces correct output in 0.448s with 99 output tokens",
+    "qwen/qwen3.6-27b with effort=none produces clean formatted output in 0.566s — recommended for bounded deterministic tasks",
+    "qwen/qwen3.6-27b with effort=default failed: openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+    "qwen/qwen3.6-27b with effort=low failed: openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  ]
+}

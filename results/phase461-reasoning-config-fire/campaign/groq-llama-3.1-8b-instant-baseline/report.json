@@ -1,0 +1,431 @@
+{
+  "schema_version": 1,
+  "fixture_name": "cognitive-v2",
+  "model": "llama-3.1-8b-instant",
+  "runs": [
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 170,
+      "actual_input_tokens": 175,
+      "output_tokens": 46,
+      "duration_millis": 334,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "Based on the provided facts, the publication date is 2025-11-03 and the source identifier is S-17. \n\nHere's the output:\n\ndate=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 166,
+      "actual_input_tokens": 173,
+      "output_tokens": 14,
+      "duration_millis": 217,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-11-03\nsource=S-17",
+      "values": {
+        "date": "2025-11-03",
+        "source": "S-17"
+      }
+    },
+    {
+      "case_id": "extract-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 168,
+      "actual_input_tokens": 172,
+      "output_tokens": 301,
+      "duration_millis": 627,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_publication_info():\n    \"\"\"\n    Extract the publication date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys containing the extracted information.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-17\", \"date\": \"2025-11-03\"},\n        \"F2\": {\"source\": \"S-18\", \"date\": \"2025-11-04\"}\n    }\n    \n    # Extract the publication date and source identifier from the facts\n    publication_date = facts[\"F1\"][\"date\"]\n    source_identifier = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted information\n    result = {\n        \"date\": publication_date,\n        \"source\": source_identifier\n    }\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_publication_info())\n```\n\nThis code defines a function `extract_publication_info` that extracts the publication date and source identifier from the given facts. It then creates a JSON object with the extracted information and returns it. The `json.dumps` function is used to convert the Python dictionary into a JSON string.\n\nWhen you run this code, it will print the following output:\n```json\n{\"date\": \"2025-11-03\", \"source\": \"S-17\"}\n```"
+    },
+    {
+      "case_id": "extract-qualified-date",
+      "operation": "EXTRACT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 226,
+      "actual_input_tokens": 220,
+      "output_tokens": 26,
+      "duration_millis": 243,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "Based on the provided facts, the allowed output would be:\n\ndate=2025-12-17\nsource=S-21",
+      "values": {
+        "date": "2025-12-17",
+        "source": "S-21"
+      }
+    },
+    {
+      "case_id": "extract-qualified-date",
+      "operation": "EXTRACT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 221,
+      "actual_input_tokens": 218,
+      "output_tokens": 14,
+      "duration_millis": 216,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "date=2025-12-17\nsource=S-21",
+      "values": {
+        "date": "2025-12-17",
+        "source": "S-21"
+      }
+    },
+    {
+      "case_id": "extract-qualified-date",
+      "operation": "EXTRACT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 224,
+      "actual_input_tokens": 217,
+      "output_tokens": 292,
+      "duration_millis": 502,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "VALIDATION",
+      "output": "```python\nimport json\n\ndef extract_measurement_date_and_source():\n    \"\"\"\n    Extract the measurement date and source identifier from the given facts.\n    \n    Returns:\n    A JSON object with 'date' and 'source' keys.\n    \"\"\"\n    \n    # Define the facts\n    facts = {\n        \"F1\": {\"source\": \"S-21\", \"publication_date\": \"2026-01-09\", \"measurement_date\": \"2025-12-17\"},\n        \"F2\": {\"source\": \"S-22\", \"publication_date\": \"2025-12-18\"}\n    }\n    \n    # Extract the measurement date and source identifier\n    measurement_date = facts[\"F1\"][\"measurement_date\"]\n    source = facts[\"F1\"][\"source\"]\n    \n    # Create a JSON object with the extracted data\n    result = {\"date\": measurement_date, \"source\": source}\n    \n    # Return the JSON object\n    return json.dumps(result)\n\n# Print the result\nprint(extract_measurement_date_and_source())\n```\n\nThis code defines a function `extract_measurement_date_and_source` that extracts the measurement date and source identifier from the given facts. It then creates a JSON object with the extracted data and returns it. The result is printed to the console.\n\nWhen you run this code, it will output:\n```json\n{\"date\": \"2025-12-17\", \"source\": \"S-21\"}\n```"
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 176,
+      "actual_input_tokens": 161,
+      "output_tokens": 9,
+      "duration_millis": 298,
+      "syntax_valid": true,
+      "semantically_correct": true,
+      "output": "observation=O-9\nsupport=YES",
+      "values": {
+        "observation": "O-9",
+        "support": "YES"
+      }
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 172,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "synthesize-support",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 177,
+      "duration_millis": 31,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "synthesize-counterexample",
+      "operation": "SYNTHESIZE",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 241,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "synthesize-counterexample",
+      "operation": "SYNTHESIZE",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 236,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "synthesize-counterexample",
+      "operation": "SYNTHESIZE",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 241,
+      "duration_millis": 31,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 189,
+      "duration_millis": 34,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 185,
+      "duration_millis": 34,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "detect-conflict",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 188,
+      "duration_millis": 31,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "distinguish-temporal-change",
+      "operation": "CONFLICT",
+      "format": "CHOICE",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 214,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "distinguish-temporal-change",
+      "operation": "CONFLICT",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 209,
+      "duration_millis": 29,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "distinguish-temporal-change",
+      "operation": "CONFLICT",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 212,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 184,
+      "duration_millis": 31,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "repair-anchor",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 187,
+      "duration_millis": 34,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "repair-unrecoverable",
+      "operation": "REPAIR",
+      "format": "DELIMITED",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 226,
+      "duration_millis": 34,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    },
+    {
+      "case_id": "repair-unrecoverable",
+      "operation": "REPAIR",
+      "format": "JSON",
+      "context_tokens": 2048,
+      "compiled": true,
+      "estimated_input_tokens": 229,
+      "duration_millis": 32,
+      "syntax_valid": false,
+      "semantically_correct": false,
+      "error_kind": "PROVIDER",
+      "provider_status": 429,
+      "retry_after_millis": 1000
+    }
+  ],
+  "summary": {
+    "total": 22,
+    "compiled": 22,
+    "syntax_valid": 5,
+    "semantically_correct": 5,
+    "input_tokens": 1336,
+    "output_tokens": 702,
+    "omitted_facts": 0,
+    "compile_errors": 0,
+    "provider_errors": 15,
+    "validation_errors": 2,
+    "rate_limited": 15,
+    "timeouts": 0
+  },
+  "breakdown": {
+    "by_operation": [
+      {
+        "label": "CONFLICT",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "EXTRACT",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 4,
+        "semantically_correct": 4,
+        "omitted_facts": 0,
+        "errors": 2
+      },
+      {
+        "label": "REPAIR",
+        "total": 4,
+        "compiled": 4,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 4
+      },
+      {
+        "label": "SYNTHESIZE",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 1,
+        "semantically_correct": 1,
+        "omitted_facts": 0,
+        "errors": 5
+      }
+    ],
+    "by_format": [
+      {
+        "label": "CHOICE",
+        "total": 6,
+        "compiled": 6,
+        "syntax_valid": 3,
+        "semantically_correct": 3,
+        "omitted_facts": 0,
+        "errors": 3
+      },
+      {
+        "label": "DELIMITED",
+        "total": 8,
+        "compiled": 8,
+        "syntax_valid": 2,
+        "semantically_correct": 2,
+        "omitted_facts": 0,
+        "errors": 6
+      },
+      {
+        "label": "JSON",
+        "total": 8,
+        "compiled": 8,
+        "syntax_valid": 0,
+        "semantically_correct": 0,
+        "omitted_facts": 0,
+        "errors": 8
+      }
+    ],
+    "by_context": [
+      {
+        "label": "2048",
+        "total": 22,
+        "compiled": 22,
+        "syntax_valid": 5,
+        "semantically_correct": 5,
+        "omitted_facts": 0,
+        "errors": 17
+      }
+    ]
+  }
+}
