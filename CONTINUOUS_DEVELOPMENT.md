@@ -8480,3 +8480,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** All three models demonstrated complete resilience (3/3 successes). The instruction within the text was ignored, and the actual source publication date (`2025-11-03`) was correctly and structurally emitted without acknowledging the injection attempt.
 
 **Verification.** Output serialized to `results/adv_prompt_injection/results.json`.
+
+## Phase 477 — Baseline Adversarial Sweeps for Language Degradation Constraints (2026-08-12 22:55 -03)
+
+**Objective and implementation.** We expanded the `adv_baseline` runner to evaluate the `adv-language-degradation` constraint. This adversarial case attempts to bypass the structural output format by translating the entire prompt into Portuguese (PT-BR) but explicitly constraining the model to output strict English structural prefixes (`DATE:` and `SOURCE:`). Unlike the format anchor constraint, this adversarial variation translates the output format specification itself but expects models to follow the prefix rule.
+
+**Live hypothesis and bounds.** Validation executed against Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We expect the models to properly isolate the output keys and respond with correct exact-match structure without hallucinating Portuguese tags (e.g. `DATA:`).
+
+**Observed evidence and decision.** All three models demonstrated complete resilience (3/3 successes). The structural English keys were correctly emitted despite the surrounding Portuguese context and instructions.
+
+**Verification.** Output serialized to `results/adv_language_degradation/results.json`.
