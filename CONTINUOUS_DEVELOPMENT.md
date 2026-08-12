@@ -8323,3 +8323,15 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 
 **Observed evidence and decision.** The adapter will now protect short-response tasks from silent budget exhaustion when Qwen is dynamically elected as the reasoning backend.
 
+-e 
+## Phase 468 — Reasoning Fallback Protection Tests (2026-08-12 17:35 -03)
+
+**Objective and implementation.** Ensured Qwen-specific budget safety constraints introduced in Phase 467 are fully tested through deterministic test beds in `ModelExecutor`.
+1. Ran and validated existing test coverage ensuring Qwen safety behaviors accurately assert the output threshold limits.
+2. Validated runtime adapter intercepts correctly across mocked reasoning contexts.
+
+**Live hypothesis and bounds.** Purely unit validation; no live calls.
+
+**Observed evidence and decision.** The existing deterministic baseline coverage (`TestModelExecutorAutoScalesMaxOutputTokensOnReasoningBudgetExhausted`) covers the safety behaviors. All tests in `motor-autonomo/internal/kernel` passed correctly.
+
+**Próximo passo.** We will implement integration tests for runtime metrics around throttling events with NIM, or continue refining adapter capabilities depending on immediate user directions.

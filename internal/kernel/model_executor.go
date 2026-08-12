@@ -617,6 +617,12 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 	if bindingEffort != "" && request.ReasoningEffort == "" {
 		request.ReasoningEffort = bindingEffort
 	}
+	// Phase 467: Safety check for Qwen reasoning hidden token exhaustion
+	if strings.Contains(strings.ToLower(activeBindingID), "qwen") && request.ReasoningEffort != "" && request.ReasoningEffort != "none" {
+		if request.MaxOutputTokens > 0 && request.MaxOutputTokens < 1024 {
+			request.MaxOutputTokens = 1024
+		}
+	}
 	// Apply per-binding timeout override when configured. The adapter uses
 	// this to derive a child context deadline tighter than the lease, which
 	// is critical for NIM large models with multi-minute cold-start latency
