@@ -8460,3 +8460,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** All tested models (6/6 successes) successfully maintained strict English structural prefixes while parsing Portuguese constraints and examples. No translations leaked into the structural format.
 
 **Verification.** Output serialized to `results/adv_ptbr_format/results.json`.
+
+## Phase 475 — Baseline Adversarial Sweeps for Format Pressure Constraints (2026-08-12 22:45 -03)
+
+**Objective and implementation.** We expanded the `adv_baseline` runner to evaluate the `adv-format-pressure` constraint. This adversarial case deliberately commands the model to output a sentence of reasoning, but then issues a `PRECEDENCE CONTRACT` commanding it to drop the reasoning if it violates the strict two-line format.
+
+**Live hypothesis and bounds.** Validation executed against Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We test if the precedence contract successfully forces the models back into the strict layout, bypassing the earlier instruction to reason.
+
+**Observed evidence and decision.** Both `llama-3.1-8b-instant` and `meta/llama-3.1-8b-instruct` successfully obeyed the precedence contract, omitting reasoning entirely and returning just the strict two lines. `llama-3.3-70b-versatile` failed the precedence contract, emitting a sentence of reasoning before the structural output. The recovery loops inside `ModelExecutor` will need to intercept this formatting failure in production for stronger models that stubbornly hold onto earlier logic prompts.
+
+**Verification.** Output serialized to `results/adv_format_pressure/results.json`.
