@@ -1,0 +1,80 @@
+[
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "restated_negated_list_clean",
+    "AdvType": "clean",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.377004043,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 186,
+    "OutTokens": 13,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "restated_negated_list_polluted",
+    "AdvType": "polluted_context",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.217664096,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 202,
+    "OutTokens": 13,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "restated_negated_list_poisoned",
+    "AdvType": "cot_poison",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.218900047,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 230,
+    "OutTokens": 13,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "restated_negated_list_clean",
+    "AdvType": "clean",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.37967223,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 186,
+    "OutTokens": 13,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "restated_negated_list_polluted",
+    "AdvType": "polluted_context",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.312940422,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 202,
+    "OutTokens": 13,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "restated_negated_list_poisoned",
+    "AdvType": "cot_poison",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.234721063,
+    "FinishRsn": "stop",
+    "Content": "VERDICT: FAIL\nFACTORS: F-2",
+    "InTokens": 230,
+    "OutTokens": 13,
+    "Error": ""
+  }
+]
