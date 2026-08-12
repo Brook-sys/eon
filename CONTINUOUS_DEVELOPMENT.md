@@ -8210,3 +8210,42 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 4. Qwen3.6-27b precisa de `reasoning_format=hidden` ou equivalente para suprimir thinking tokens quando o contrato exige output direto.
 
 **Próximo passo:** Implementar suporte a `reasoning_effort`/`reasoning` parameter no adapter OpenAI-compatible; adicionar campos `ReasoningEffort` e `ReasoningFormat` em `ModelBinding`/`ModelOptions`; validar com campanha live contra GPT-OSS-20B e Qwen3.6-27b.
+
+---
+
+### Fase 461 — Reasoning Effort & Format Serialization Live Campaign
+
+**Data:** 2026-08-12
+
+**Hipótese:** O adapter OpenAI-compatible serializa corretamente `reasoning_effort` e `reasoning_format` no wire para Groq. `effort=none` elimina shadow thinking, `effort=low/medium` escala budget de reasoning, e modelos não-reasoning não são afetados.
+
+**Bounds:** 9 combinações modelo×esforço, temp=0.0, max_tokens=256, timeout=60s. Prompt de conflito de observações (duas latências contraditórias).
+
+**Modelos testados:**
+- Groq `llama-3.1-8b-instant` (baseline, não-reasoning)
+- Groq `openai/gpt-oss-20b`: effort=none, low, medium (format=parsed)
+- Groq `openai/gpt-oss-120b`: effort=low, medium (format=parsed)
+- Groq `qwen/qwen3.6-27b`: effort=none, default, low (format=parsed)
+
+**Resultados:**
+- **llama-3.1-8b-instant (baseline):** 1/1 OK, 0.35s, 49 tokens output, finish=stop. Output limpo "CONFLICT: YES" + explicação.
+- **gpt-oss-20b:** 3/3 OK. effort=none (0.55s, 248 tokens), effort=low (0.26s, 78 tokens), effort=medium (0.47s, 248 tokens). Todos produzem output correto.
+- **gpt-oss-120b:** 2/2 OK. effort=low (0.38s, 66 tokens), effort=medium (0.53s, 140 tokens). Output correto.
+- **qwen3.6-27b:** 1/3 OK. effort=none (1.05s, 41 tokens) — OK. effort=default e effort=low falham com `reasoning_budget_exhausted`.
+
+**Análise:**
+- **Effort=none funciona** para GPT-OSS-20B e Qwen3.6-27b, eliminando thinking tokens e permitindo output direto estruturado.
+- **Effort=low/medium** escalam reasoning budget corretamente para GPT-OSS (20B e 120B).
+- **Qwen3.6-27b** não aceita `effort=default` ou `effort=low` com `format=parsed` — o provider retorna `reasoning_budget_exhausted`. Isso sugere que Qwen3 no Groq requer configuração específica de budget de thinking tokens ou que `format=parsed` consome budget extra.
+- **Conformidade de formato:** Todos os resultados OK incluem "CONFLICT: YES" na primeira linha conforme solicitado.
+
+**Evidência:** `cmd/phase461_reasoning_fire_test/main.go`, `internal/evaluation/testdata/campaign-reasoning-phase461.json`, `results/phase461-reasoning-config-fire/` (campanha + live_verification_2026-08-12.json + live_verification_test2_2026-08-12.json). Testes: `go test ./...` pass.
+
+**Decisões:**
+1. `reasoning_effort=none` + `reasoning_format=parsed` é a configuração recomendada para tarefas determinísticas bounded com GPT-OSS e Qwen3 (quando funciona).
+2. Qwen3.6-27b precisa de investigação adicional: testar sem `format=parsed`, ou com `reasoning_format=hidden`, ou budget explícito.
+3. GPT-OSS-20B com `effort=low` oferece melhor tradeoff latência/tokens (0.26s, 78 tokens) para tarefas de raciocínio estruturado.
+4. Suporte a `ReasoningEffort` e `ReasoningFormat` no adapter está funcional para Groq — validado live.
+
+**Próximo passo:** (a) Investigar Qwen3.6-27b com `reasoning_format=hidden` ou sem format; (b) Implementar campos `ReasoningEffort` e `ReasoningFormat` no `ModelBinding`/`ModelOptions` do catálogo de modelos para uso em produção; (c) Validar NIM com reasoning models quando disponíveis.
+
