@@ -133,9 +133,9 @@ func main() {
 		Scenario:   "Conflict detection — two observations with contradictory latency values",
 		Bounds: map[string]interface{}{
 			"max_calls":   len(cases),
-			"max_tokens":   256,
+			"max_tokens":  256,
 			"temperature": 0.0,
-			"timeout":      "60s",
+			"timeout":     "60s",
 		},
 		Results: results,
 	}

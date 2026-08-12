@@ -11,7 +11,7 @@ func TestModelBindingConfigValidateReasoningEffort(t *testing.T) {
 		ID: "groq-qwen36", ProviderRef: "groq", ModelID: "qwen/qwen3.6-27b",
 		Enabled: true, Priority: 10, ContextTokens: 32768, MaxOutputTokens: 1024,
 		MaxOutputDialect: MaxOutputDialectCompletion,
-		Limit:           ResourceLimit{Resource: ModelBindingResource("groq-qwen36")},
+		Limit:            ResourceLimit{Resource: ModelBindingResource("groq-qwen36")},
 	}
 	cases := []struct {
 		name   string
@@ -51,7 +51,7 @@ func TestModelBindingConfigValidateReasoningFormat(t *testing.T) {
 		ID: "groq-gptoss", ProviderRef: "groq", ModelID: "openai/gpt-oss-20b",
 		Enabled: true, Priority: 10, ContextTokens: 131072, MaxOutputTokens: 2048,
 		MaxOutputDialect: MaxOutputDialectCompletion,
-		Limit:           ResourceLimit{Resource: ModelBindingResource("groq-gptoss")},
+		Limit:            ResourceLimit{Resource: ModelBindingResource("groq-gptoss")},
 	}
 	cases := []struct {
 		name   string

@@ -193,6 +193,14 @@ type ModelOptions struct {
 	MaxResponseBytes int64
 	// Timeout bounds one provider HTTP call (0 = adapter default).
 	Timeout time.Duration
+	// ReasoningEffort controls internal reasoning token consumption on hybrid
+	// reasoning models (e.g., Groq GPT-OSS, Qwen3). Valid values: "none", "low",
+	// "medium", "high", "default". Empty means provider default.
+	ReasoningEffort string
+	// ReasoningFormat controls how reasoning tokens are presented on providers
+	// that support it (e.g., Groq). Valid values: "parsed", "raw", "hidden".
+	// Empty means provider default.
+	ReasoningFormat string
 	// Fallback is the optional FR-MODEL-004 step-7 alternate provider. When
 	// Enabled with BaseURL+Model, bootstrap wires ModelExecutor.FallbackProvider.
 	// Empty/nil leaves FallbackAvailable=false (policy never invents a provider).
@@ -221,6 +229,10 @@ type ModelFallbackOptions struct {
 	MaxResponseBytes int64
 	// Timeout bounds one alternate provider HTTP call (0 = adapter default).
 	Timeout time.Duration
+	// ReasoningEffort for the fallback model (provider-specific).
+	ReasoningEffort string
+	// ReasoningFormat for the fallback model (provider-specific).
+	ReasoningFormat string
 }
 
 // TelegramIngressMode is the process-local inbound update collection mode.

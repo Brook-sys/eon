@@ -231,6 +231,8 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 			LeaseTTL:         15 * time.Minute,
 			MaxResponseBytes: provider.MaxResponseBytes,
 			Timeout:          timeout,
+			ReasoningEffort:  binding.ReasoningEffort,
+			ReasoningFormat:  binding.ReasoningFormat,
 		})
 		if len(selected) == 2 {
 			break
@@ -256,6 +258,8 @@ func modelOptionsFromCatalog(config domain.ModelsConfig, fallback *ModelOptions)
 			ContextTokens:    selected[1].ContextTokens,
 			MaxResponseBytes: selected[1].MaxResponseBytes,
 			Timeout:          selected[1].Timeout,
+			ReasoningEffort:  selected[1].ReasoningEffort,
+			ReasoningFormat:  selected[1].ReasoningFormat,
 		}
 	}
 	return selected[0], nil

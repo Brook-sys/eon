@@ -292,11 +292,11 @@ type responseFormat struct {
 }
 
 type chatMessage struct {
-	Role           string         `json:"role"`
-	Content        string         `json:"content"`
-	ToolCalls      []chatToolCall `json:"tool_calls,omitempty"`
-	Reasoning      string         `json:"reasoning,omitempty"`
-	ReasoningContent string       `json:"reasoning_content,omitempty"`
+	Role             string         `json:"role"`
+	Content          string         `json:"content"`
+	ToolCalls        []chatToolCall `json:"tool_calls,omitempty"`
+	Reasoning        string         `json:"reasoning,omitempty"`
+	ReasoningContent string         `json:"reasoning_content,omitempty"`
 }
 
 type chatToolCall struct {

@@ -400,3 +400,39 @@ func TestBuildModelExecutorBindingTimeoutOverride(t *testing.T) {
 		t.Fatalf("authorizer not wired")
 	}
 }
+
+func TestModelOptionsFromCatalogReasoningConfig(t *testing.T) {
+	config := domain.ModelsConfig{
+		Version: "models@reasoning-test",
+		Providers: []domain.ModelProviderConfig{
+			{ID: "groq", Kind: domain.ProviderKindGroq, BaseURL: "https://api.groq.com/openai/v1", APIKeyEnv: "GROQ_API_KEY", Timeout: 30 * time.Second, MaxResponseBytes: 2 << 20, GlobalLimit: domain.ResourceLimit{Resource: domain.ModelProviderResource("groq")}},
+		},
+		Bindings: []domain.ModelBindingConfig{
+			{ID: "primary", ProviderRef: "groq", ModelID: "openai/gpt-oss-20b", Enabled: true, Priority: 10, ContextTokens: 32768, MaxOutputTokens: 1024, MaxOutputDialect: domain.MaxOutputDialectCompletion, ReasoningEffort: "low", ReasoningFormat: "parsed", Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("primary")}},
+			{ID: "fallback", ProviderRef: "groq", ModelID: "qwen/qwen3.6-27b", Enabled: true, Priority: 20, ContextTokens: 32768, MaxOutputTokens: 1024, MaxOutputDialect: domain.MaxOutputDialectCompletion, ReasoningEffort: "none", ReasoningFormat: "parsed", Limit: domain.ResourceLimit{Resource: domain.ModelBindingResource("fallback")}},
+		},
+	}
+	if err := config.Validate(); err != nil {
+		t.Fatalf("fixture config invalid: %v", err)
+	}
+
+	got, err := modelOptionsFromCatalog(config, &ModelOptions{LeaseTTL: time.Minute})
+	if err != nil {
+		t.Fatalf("modelOptionsFromCatalog error: %v", err)
+	}
+	if got.ReasoningEffort != "low" {
+		t.Errorf("expected primary ReasoningEffort 'low', got %q", got.ReasoningEffort)
+	}
+	if got.ReasoningFormat != "parsed" {
+		t.Errorf("expected primary ReasoningFormat 'parsed', got %q", got.ReasoningFormat)
+	}
+	if got.Fallback == nil {
+		t.Fatalf("expected fallback options, got nil")
+	}
+	if got.Fallback.ReasoningEffort != "none" {
+		t.Errorf("expected fallback ReasoningEffort 'none', got %q", got.Fallback.ReasoningEffort)
+	}
+	if got.Fallback.ReasoningFormat != "parsed" {
+		t.Errorf("expected fallback ReasoningFormat 'parsed', got %q", got.Fallback.ReasoningFormat)
+	}
+}
