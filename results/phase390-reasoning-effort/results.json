@@ -3,9 +3,9 @@
     "model": "llama-3.3-70b-versatile",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 321,
+    "latency_ms": 367,
     "input_tokens": 71,
-    "output_tokens": 25,
+    "output_tokens": 24,
     "stripped_thought": false,
     "parsed_values": {
       "DATE": "2026-08-08",
@@ -17,7 +17,7 @@
     "model": "qwen/qwen3.6-27b",
     "reasoning_effort": "none",
     "probe_confirmed": true,
-    "latency_ms": 226,
+    "latency_ms": 610,
     "input_tokens": 57,
     "output_tokens": 20,
     "stripped_thought": false,
@@ -31,13 +31,13 @@
     "model": "llama-3.1-8b-instant",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 223,
+    "latency_ms": 442,
     "input_tokens": 71,
-    "output_tokens": 16,
+    "output_tokens": 235,
     "stripped_thought": false,
     "parsed_values": {
-      "DATE": "2026-08-08",
-      "WEEKEND": "NO"
+      "DATE": "datetime.strptime(date_str, %Y-%m-%d)",
+      "WEEKEND": "YES"
     },
     "used_fallback": false
   },
@@ -45,7 +45,7 @@
     "model": "llama-3.3-70b-versatile",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 343,
+    "latency_ms": 355,
     "input_tokens": 79,
     "output_tokens": 26,
     "stripped_thought": false,
@@ -59,7 +59,7 @@
     "model": "llama-3.1-8b-instant",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 287,
+    "latency_ms": 368,
     "input_tokens": 79,
     "output_tokens": 33,
     "stripped_thought": false,
@@ -87,7 +87,7 @@
     "model": "qwen/qwen3.6-27b",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 690,
+    "latency_ms": 950,
     "input_tokens": 59,
     "output_tokens": 256,
     "stripped_thought": true,
@@ -98,13 +98,13 @@
     "model": "meta/llama-3.1-8b-instruct",
     "reasoning_effort": "",
     "probe_confirmed": true,
-    "latency_ms": 2134,
+    "latency_ms": 1450,
     "input_tokens": 71,
-    "output_tokens": 16,
+    "output_tokens": 240,
     "stripped_thought": false,
     "parsed_values": {
-      "DATE": "2026-08-08",
-      "WEEKEND": "NO"
+      "DATE": "datetime.strptime(date_str, %Y-%m-%d)",
+      "WEEKEND": "YES"
     },
     "used_fallback": false
   }
