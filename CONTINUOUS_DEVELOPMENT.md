@@ -8410,3 +8410,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** The campaign executed successfully (15 calls). Budget starvation properly yielded finish_reason: length. Our retry harness successfully recovered by increasing the budget and applying a stricter constraint prompt on the second pass (CONFLICT: YES properly emitted). llama-3.3-70b-versatile proved most resilient to CoT poisoning. NIM meta/llama-3.1-8b-instruct suffered from hallucinated extensions on CoT. All models completed within quotas. Future integration of this pattern will wrap kernel operations for automated retry/recovery without compromising max_tokens bounds on initial reads.
 
 **Verification.** The standalone campaign binary executed cleanly and correctly serialized results without exposing API keys.
+## Phase 470 — Simpler Format Recovery Live Campaign (2026-08-12 19:50 -03)
+
+**Objective and implementation.** Addressed the integration of the `simpler_format` recovery ladder inside `ModelExecutor`. Ran the deterministic runtime gate campaign (`cmd/simpler-format-recovery-campaign`) to test live cross-provider fallback handling of structural formatting errors (`SHORT_CORRECTION` and `SIMPLER_FORMAT` stages).
+
+**Live hypothesis and bounds.** The `simpler_format_exhaustion` campaign dictates 3 calls with 2 injected failures, simulating structural drift forcing the executor through its recovery cascade, culminating in a successful live external call. Bounded to Groq `llama-3.1-8b-instant` and fallback NVIDIA NIM `meta/llama-3.1-8b-instruct`, 256 tokens.
+
+**Observed evidence and decision.** The campaign successfully executed with 1 external call to Groq `llama-3.1-8b-instant` (after 2 injected internal faults mapping to `SHORT_CORRECTION` and `SIMPLER_FORMAT`). Latency: 550ms. The `simpler-format-recovery-campaign` binary correctly serialized the report (`simpler-format-recovery.json`), confirming atomic closure at `commit_0000000000000006`, and durable reopen.
+
+**Verification.** `git status` shows the artifacts cleanly persisted without secrets.
+
