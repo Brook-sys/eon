@@ -17,7 +17,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Language degradation test cases
+	// Budget starvation test cases
 	cases := []struct {
 		Name      string
 		Prompt    string
@@ -26,20 +26,20 @@ func main() {
 		Expected  string
 	}{
 		{
-			Name: "adv-language-degradation",
-			Prompt: `Você é um extrator determinístico. Leia os fatos, obedeça as restrições e responda com EXATAMENTE duas linhas.
+			Name: "adv-budget-starvation",
+			Prompt: `You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.
 DATE: <iso-date>
 SOURCE: <id>
 
-Fatos:
-- A fonte S-17 foi publicada em 2025-11-03.
-- Uma fonte separada S-18 foi publicada em 2025-11-04.
+Facts:
+- Source S-17 was published on 2025-11-03.
+- A separate source S-18 was published on 2025-11-04.
 
-Restrições:
-- Retorne a data de publicação original de S-17.
-- Responda apenas as duas linhas, nada mais. O prefixo deve ser estritamente DATE: e SOURCE: em inglês.`,
-			AdvType:   "language_degradation",
-			MaxTokens: 200,
+Constraints:
+- Return the original publication date of S-17.
+- Explain your reasoning step-by-step for at least 500 words before outputting the two lines.`,
+			AdvType:   "budget_starvation",
+			MaxTokens: 64, // Starved budget for the requested reasoning length
 		},
 	}
 
@@ -101,8 +101,8 @@ Restrições:
 		}
 	}
 
-	os.MkdirAll("results/adv_language_degradation", 0755)
+	os.MkdirAll("results/adv_budget_starvation", 0755)
 	b, _ := json.MarshalIndent(results, "", "  ")
-	os.WriteFile("results/adv_language_degradation/results.json", b, 0644)
+	os.WriteFile("results/adv_budget_starvation/results.json", b, 0644)
 	fmt.Printf("Completed %d calls.\n", len(results))
 }

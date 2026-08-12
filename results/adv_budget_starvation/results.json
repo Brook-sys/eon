@@ -1,0 +1,41 @@
+[
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "adv-budget-starvation",
+    "AdvType": "budget_starvation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.511251016,
+    "FinishRsn": "length",
+    "Content": "**Step 1: Understanding the Problem Statement**\nThe problem statement requires us to extract the original publication date of source S-17, given that it was published on 2025-11-03. We also have a separate source S-18 published on 2025-11-04, but this information is",
+    "InTokens": 138,
+    "OutTokens": 64,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "adv-budget-starvation",
+    "AdvType": "budget_starvation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.402309102,
+    "FinishRsn": "length",
+    "Content": "To determine the original publication date of source S-17, we must carefully examine the provided facts and constraints. The facts state that source S-17 was published on 2025-11-03, and source S-18 was published on 2025-11-04. The constraints require us to return the",
+    "InTokens": 138,
+    "OutTokens": 64,
+    "Error": ""
+  },
+  {
+    "Model": "meta/llama-3.1-8b-instruct",
+    "Case": "adv-budget-starvation",
+    "AdvType": "budget_starvation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.927108182,
+    "FinishRsn": "length",
+    "Content": "To determine the original publication date of S-17, I will follow a step-by-step process.\n\nStep 1:  Analyze the given facts. The facts provided are:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 202",
+    "InTokens": 138,
+    "OutTokens": 64,
+    "Error": ""
+  }
+]
