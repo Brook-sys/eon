@@ -1,0 +1,74 @@
+[
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 256,
+    "effort": "low",
+    "format": "parsed",
+    "status": "error",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "finish_reason": "",
+    "elapsed_s": 0.923970498,
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 256,
+    "effort": "medium",
+    "format": "parsed",
+    "status": "error",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "finish_reason": "",
+    "elapsed_s": 0.74805365,
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 1024,
+    "effort": "low",
+    "format": "parsed",
+    "status": "ok",
+    "content": "CONFLICT: YES",
+    "input_tokens": 61,
+    "output_tokens": 588,
+    "finish_reason": "stop",
+    "elapsed_s": 1.475059894
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 1024,
+    "effort": "medium",
+    "format": "parsed",
+    "status": "ok",
+    "content": "CONFLICT: YES",
+    "input_tokens": 61,
+    "output_tokens": 588,
+    "finish_reason": "stop",
+    "elapsed_s": 1.482246192
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 2048,
+    "effort": "low",
+    "format": "parsed",
+    "status": "ok",
+    "content": "CONFLICT: YES",
+    "input_tokens": 61,
+    "output_tokens": 588,
+    "finish_reason": "stop",
+    "elapsed_s": 1.4263647769999999
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "max_tokens": 2048,
+    "effort": "medium",
+    "format": "parsed",
+    "status": "ok",
+    "content": "CONFLICT: YES",
+    "input_tokens": 61,
+    "output_tokens": 588,
+    "finish_reason": "stop",
+    "elapsed_s": 1.453562067
+  }
+]

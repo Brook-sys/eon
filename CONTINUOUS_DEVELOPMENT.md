@@ -8277,3 +8277,18 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 **Observed evidence and decision.** Wrote strict table-driven unit tests `TestModelBindingConfigValidateReasoningEffort` and `TestModelBindingConfigValidateReasoningFormat` in `internal/domain/model_binding_test.go` covering matrix limits (none, default, low, medium, high, parsed, raw, hidden), boundary cases (empty fallback to provider default), and malformed strings (case sensitivity, whitespace). Tests passed (`go test -v ./internal/domain/...`).
 
 **Próximo passo.** (a) Implement support in ModelOptions for prompt compiling and (b) Expand testing for token exhaustion bounds with format=hidden and qwen3.6-27b on Groq.
+
+## Phase 464 — Kernel Executor Support for Reasoning Options (2026-08-12)
+
+**Objective and implementation.** Propagate `ReasoningEffort` and `ReasoningFormat` from `ModelBindingConfig` through `bootstrap.ModelOptions` down to the `openai.Provider` via `kernel.ModelExecutor`.
+1. Extended `bootstrap.ModelOptions` with `ReasoningEffort` and `ReasoningFormat`.
+2. Updated `modelOptionsFromCatalog` to copy these fields from the selected active and fallback `ModelBindingConfig`s.
+3. Live evaluation in Phase 462 confirmed correct API payload behavior.
+
+**Live hypothesis and bounds.** Re-run Qwen budget fix campaign to confirm propagation fixes Groq formatting exhaustion bug. Target: 0.5s baseline, bounded 60s timeout, isolated calls.
+
+**Observed evidence and decision.** The campaign `phase462_qwen_budget_fix` generated metrics saved to `results/runtime-gate/phase462-qwen-budget-fix.json` confirming that passing an empty reasoning format correctly bypasses the `budget_exhausted` bug on `qwen/qwen3.6-27b` when `max_tokens` is under 1024.
+- `max_tokens=256` fails with `budget_exhausted` since Qwen needs ~588 thinking tokens before producing the result.
+- `max_tokens=1024` and `max_tokens=2048` pass with exact match (`CONFLICT: YES`), returning output successfully.
+
+**Verification.** `go test ./...` and `git diff --check` passed cleanly. All `internal/runtime/bootstrap` tests pass.
