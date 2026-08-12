@@ -105,6 +105,7 @@ type Metadata struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	Expired   bool      `json:"expired,omitempty"`
+	Hint      string    `json:"hint,omitempty"`
 }
 
 type AuditEvent struct {
@@ -129,6 +130,7 @@ type SecretEntry struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	Expired   bool      `json:"expired,omitempty"`
+	Hint      string    `json:"hint,omitempty"`
 }
 
 type Status struct {
@@ -186,6 +188,13 @@ func (v *Vault) AuditLog() []AuditEvent {
 	return res
 }
 
+func makeHint(val string) string {
+	if len(val) <= 8 {
+		return "***"
+	}
+	return val[:4] + "..." + val[len(val)-4:]
+}
+
 func (v *Vault) Status() Status {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -195,7 +204,7 @@ func (v *Vault) Status() Status {
 	if len(v.key) != 0 {
 		now := v.now()
 		for name, r := range v.data.Secrets {
-			m := Metadata{Name: name, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, ExpiresAt: r.ExpiresAt}
+			m := Metadata{Name: name, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, ExpiresAt: r.ExpiresAt, Hint: makeHint(r.Value)}
 			if !r.ExpiresAt.IsZero() && !now.Before(r.ExpiresAt) {
 				m.Expired = true
 			}

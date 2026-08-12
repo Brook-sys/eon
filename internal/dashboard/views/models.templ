@@ -64,19 +64,65 @@ templ Models() {
 				</div>
 				<!-- Lista de Chaves -->
 				<div x-show="vaultSecrets && vaultSecrets.length > 0" class="pt-4 border-t border-[var(--border)]">
-					<div class="text-[12px] font-semibold text-[var(--subtle)] uppercase tracking-wider mb-3">Segredos no Cofre</div>
-					<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+					<div class="text-[12px] font-semibold text-[var(--subtle)] uppercase tracking-wider mb-3 flex items-center justify-between">
+						<span>Segredos no Cofre</span>
+						<button type="button" class="px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] font-semibold text-[11px] transition-all cursor-pointer shadow-sm border border-[var(--border)]" x-on:click="openAddSecretModal()">+ Adicionar Credencial</button>
+					</div>
+					<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
 						<template x-for="sec in vaultSecrets" x-bind:key="sec.name || sec">
-							<div class="flex items-center justify-between p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)]">
-								<div class="flex items-center gap-3 overflow-hidden">
-									<svg class="w-4 h-4 text-[var(--ok)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-									<span class="font-mono text-[13px] text-[var(--text)] truncate" x-text="sec.name || sec"></span>
+							<div class="flex flex-col p-4 rounded-xl bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)] transition-all">
+								<div class="flex items-center justify-between mb-2">
+									<div class="flex items-center gap-2 overflow-hidden">
+										<svg class="w-4 h-4 text-[var(--ok)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+										<span class="font-bold text-[13px] text-[var(--text)] truncate" x-text="sec.name || sec"></span>
+									</div>
+									<div class="flex items-center gap-1">
+										<button type="button" class="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer flex-shrink-0" x-on:click="editSecret(sec)" title="Editar Segredo">
+											<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+										</button>
+										<button type="button" class="p-1.5 rounded-lg text-[var(--err)] hover:bg-[var(--err)]/10 transition-all cursor-pointer flex-shrink-0" x-on:click="removeSecret(sec.name || sec)" title="Remover Segredo">
+											<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+										</button>
+									</div>
 								</div>
-								<button type="button" class="p-1.5 rounded-lg text-[var(--err)] hover:bg-[var(--err)]/10 transition-all cursor-pointer flex-shrink-0" x-on:click="removeSecret(sec.name || sec)" title="Remover Segredo">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-								</button>
+								<div class="text-[12px] font-mono text-[var(--subtle)] bg-[var(--panel)] p-2 rounded-lg truncate border border-[var(--border)]/50" x-text="sec.hint ? sec.hint : '••••••••'"></div>
 							</div>
 						</template>
+					</div>
+				</div>
+			</div>
+
+			<!-- Form / Modal para Adicionar ou Editar Segredo do Cofre -->
+			<div x-show="showSecretForm" x-transition.opacity.duration.300ms class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style="display:none;">
+				<div class="w-full max-w-lg bg-[var(--bg)] border border-[var(--border-focus)]/50 rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+					<div class="flex justify-between items-center p-6 border-b border-[var(--border)] bg-[var(--panel)]">
+						<h3 class="font-bold text-lg text-[var(--text)] flex items-center gap-3">
+							<div class="w-2 h-2 rounded-full bg-[var(--info)] shadow-[0_0_8px_var(--info)]"></div>
+							<span x-text="secretFormIsEdit ? 'Editar Credencial: ' + secretForm.name : 'Nova Credencial'"></span>
+						</h3>
+						<button type="button" class="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--panel-sub)] transition-all cursor-pointer" x-on:click="showSecretForm = false">
+							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+						</button>
+					</div>
+					<div class="p-6 overflow-y-auto">
+						<form id="secretForm" x-on:submit.prevent="submitSecretForm()" class="grid gap-6 grid-cols-1 text-[14px]">
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Nome da Variável / Chave</label>
+								<input type="text" x-model="secretForm.name" x-bind:readonly="secretFormIsEdit" required class="w-full font-mono text-[13px]" placeholder="ex: GROQ_API_KEY" x-bind:class="secretFormIsEdit ? 'opacity-50 cursor-not-allowed' : ''"/>
+							</div>
+							<div class="space-y-1.5">
+								<label class="block text-[var(--subtle)] font-semibold text-[12px] uppercase tracking-wider">Valor do Segredo</label>
+								<input type="password" x-model="secretForm.value" required class="w-full font-mono text-[13px]" placeholder="••••••••••••••••"/>
+							</div>
+						</form>
+						<div x-show="formMsg" class="mt-4 p-4 rounded-xl font-mono text-[13px] border" x-bind:class="formIsErr ? 'bg-[var(--err)]/10 text-[var(--err)] border-[var(--err)]/20' : 'bg-[var(--ok)]/10 text-[var(--ok)] border-[var(--ok)]/20'" x-text="formMsg"></div>
+					</div>
+					<div class="p-6 border-t border-[var(--border)] bg-[var(--panel)] flex justify-end gap-3">
+						<button type="button" class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] font-semibold text-[14px] transition-all cursor-pointer" x-on:click="showSecretForm = false">Cancelar</button>
+						<button type="submit" form="secretForm" class="px-6 py-2.5 rounded-xl bg-[var(--info)] text-white font-semibold text-[14px] hover:bg-blue-600 transition-all cursor-pointer flex items-center gap-2" x-bind:disabled="formSubmitting">
+							<span x-show="formSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+							<span x-text="secretFormIsEdit ? 'Atualizar Segredo' : 'Salvar no Cofre'"></span>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -395,6 +441,14 @@ templ Models() {
 					discoveredModels: [],
 					discoveredModelsNote: '',
 
+					// Form de Credencial Isolada
+					showSecretForm: false,
+					secretFormIsEdit: false,
+					secretForm: {
+						name: '',
+						value: ''
+					},
+
 					// Form de Provedor (sem modelo fixo)
 					showProviderForm: false,
 					providerFormIsEdit: false,
@@ -516,7 +570,14 @@ templ Models() {
 					},
 
 					async removeSecret(sec) {
-						if (!confirm("Remover o segredo " + sec + " do cofre?")) return;
+						// Verificar se está em uso por algum provider antes de deletar
+						const inUseBy = (this.cfgPayload.providers || []).find(p => p.api_key_env === sec);
+						if (inUseBy) {
+							if (!confirm(`Aviso: O segredo ${sec} está sendo referenciado pelo provedor '${inUseBy.id}'. Tem certeza que deseja removê-lo do cofre? Isso pode quebrar a integração.`)) return;
+						} else {
+							if (!confirm("Remover o segredo " + sec + " do cofre?")) return;
+						}
+
 						try {
 							const res = await fetch('/dash/api/vault/secrets/' + encodeURIComponent(sec), {
 								method: 'DELETE'
@@ -530,6 +591,42 @@ templ Models() {
 							if (window.notify) window.notify('Segredo removido.', 'success');
 						} catch (err) {
 							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
+						}
+					},
+
+					openAddSecretModal() {
+						this.secretFormIsEdit = false;
+						this.secretForm = { name: '', value: '' };
+						this.formMsg = '';
+						this.showSecretForm = true;
+					},
+
+					editSecret(secObj) {
+						this.secretFormIsEdit = true;
+						this.secretForm = { name: secObj.name || secObj, value: '' };
+						this.formMsg = '';
+						this.showSecretForm = true;
+					},
+
+					async submitSecretForm() {
+						this.formSubmitting = true;
+						this.formMsg = 'Salvando...';
+						this.formIsErr = false;
+						try {
+							const name = this.secretForm.name.trim();
+							if (!name) throw new Error("Nome da chave é obrigatório.");
+							if (!this.secretForm.value) throw new Error("Valor do segredo não pode ser vazio.");
+
+							await this.saveSecretIfProvided(name, this.secretForm.value);
+							await this.refreshVaultStatus();
+
+							if (window.notify) window.notify('Credencial salva no cofre!', 'success');
+							this.showSecretForm = false;
+						} catch (err) {
+							this.formMsg = err.message;
+							this.formIsErr = true;
+						} finally {
+							this.formSubmitting = false;
 						}
 					},
 
