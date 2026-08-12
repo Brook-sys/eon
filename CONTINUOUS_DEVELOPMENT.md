@@ -8420,3 +8420,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 
 **Verification.** `git status` shows the artifacts cleanly persisted without secrets.
 
+## Phase 471 — Llama 3.3 70B Baseline Benchmark (2026-08-12 19:55 -03)
+
+**Objective and implementation.** Executed a rapid cognitive baseline pass using `cmd/model-benchmark-runner` for Groq `llama-3.3-70b-versatile` under context threshold `2048`. This validates functional status of the model on formatting, capability, and constraint execution metrics.
+
+**Live hypothesis and bounds.** Offline oracle constraints against JSON schema `cognitive-v2.json`. Bounded to a single model.
+
+**Observed evidence and decision.** The benchmark completed with `PARTIAL` status: 22 calls, 20 correctly satisfying cognitive bounds, 20 syntactically valid JSON responses. No provider errors were thrown, returning to normal operation parameters. `llama-3.3-70b-versatile` remains highly viable for general operations and control tests.
+
+**Verification.** Live benchmark output matches structural expectations. Artifacts retained in `results/phase470_benchmark_llama33`.
+
