@@ -1,0 +1,41 @@
+[
+  {
+    "Model": "llama-3.1-8b-instant",
+    "Case": "adv-language-degradation",
+    "AdvType": "language_degradation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.380320777,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 171,
+    "OutTokens": 16,
+    "Error": ""
+  },
+  {
+    "Model": "llama-3.3-70b-versatile",
+    "Case": "adv-language-degradation",
+    "AdvType": "language_degradation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.220295929,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 171,
+    "OutTokens": 16,
+    "Error": ""
+  },
+  {
+    "Model": "meta/llama-3.1-8b-instruct",
+    "Case": "adv-language-degradation",
+    "AdvType": "language_degradation",
+    "Recovery": false,
+    "Success": true,
+    "ElapsedS": 0.654902796,
+    "FinishRsn": "stop",
+    "Content": "DATE: 2025-11-03\nSOURCE: S-17",
+    "InTokens": 171,
+    "OutTokens": 16,
+    "Error": ""
+  }
+]
