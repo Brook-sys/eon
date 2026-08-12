@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-12T19:43:24Z",
+  "timestamp": "2026-08-12T21:03:02Z",
   "total_trials": 6,
   "successes": 4,
   "failures": 2,
@@ -12,7 +12,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.959455016,
+      "elapsed_s": 0.901093189,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -24,7 +24,7 @@
       "input_tokens": 59,
       "output_tokens": 677,
       "finish_reason": "stop",
-      "elapsed_s": 1.6472021319999999
+      "elapsed_s": 1.636132733
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -33,9 +33,9 @@
       "status": "ok",
       "content": "CONFLICT: YES",
       "input_tokens": 59,
-      "output_tokens": 356,
+      "output_tokens": 677,
       "finish_reason": "stop",
-      "elapsed_s": 0.965722108
+      "elapsed_s": 1.599816103
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -45,7 +45,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.770245177,
+      "elapsed_s": 1.470335583,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -57,7 +57,7 @@
       "input_tokens": 59,
       "output_tokens": 356,
       "finish_reason": "stop",
-      "elapsed_s": 0.984384255
+      "elapsed_s": 0.916914889
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -68,7 +68,7 @@
       "input_tokens": 59,
       "output_tokens": 677,
       "finish_reason": "stop",
-      "elapsed_s": 2.056308944
+      "elapsed_s": 1.636005005
     }
   ]
 }

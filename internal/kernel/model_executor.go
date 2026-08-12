@@ -920,6 +920,17 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				}
 				if newTokens > request.MaxOutputTokens {
 					request.MaxOutputTokens = newTokens
+					
+					// Recompile prompt with increased token budget
+					specForRecompile := spec
+					specForRecompile.MaxOutputTokens = request.MaxOutputTokens
+					recompiled, compileErr := compiler.Compile(specForRecompile, compileInput)
+					if compileErr != nil {
+						lastErr = fmt.Errorf("recompile after reasoning exhaustion: %w", compileErr)
+						break
+					}
+					request.Prompt = recompiled.Request.Prompt
+					
 					result.RecoveryStages = append(result.RecoveryStages, domain.RecoverySimplerFormat)
 					_ = e.appendRecoveryEvent(ctx, operation, leaseRef, domain.ModelRecoveryDecision{
 						Disposition:         domain.DispositionSimplerFormat,
