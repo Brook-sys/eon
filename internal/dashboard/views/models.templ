@@ -486,20 +486,34 @@ templ Models() {
 							const [b, p, activeRev] = await Promise.all([
 								fetch('/dash/api/model-bindings').then(r => r.json()),
 								fetch('/dash/api/model-context-pressures').then(r => r.json()),
-								fetch('/dash/api/control/config/revisions/active?scope=MODELS', { cache: 'no-store' }).then(r => r.json()).catch(() => ({}))
+								fetch('/dash/api/control/config/revisions/active?scope=MODELS&_t=' + Date.now(), { cache: 'no-store' }).then(async r => {
+									if (!r.ok) {
+										const e = await r.json().catch(() => ({}));
+										if (e?.error?.code === 'not_found') return { revision: null };
+										throw new Error('API fetch error: ' + r.status);
+									}
+									return r.json();
+								}).catch(err => {
+									console.warn("Failed to fetch active models revision:", err);
+									return { revision: null };
+								})
 							]);
 							this.bindings = b?.bindings ?? [];
 							this.note = b?.note ?? '';
 							this.pressures = p?.pressures ?? [];
 							this.pressureNote = p?.note ?? '';
 
-							const rev = activeRev?.revision || activeRev;
-							if (rev) {
-								this.cfgActiveRevision = Number(rev.id || rev.revision || 0);
-								this.cfgPayload = rev.payload || rev.models || { providers: [], bindings: [] };
-								if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
-								if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
+							const rev = (activeRev && activeRev.revision) ? activeRev.revision : null;
+							if (rev && rev.revision !== undefined) {
+								this.cfgActiveRevision = Number(rev.revision || 0);
+								this.cfgPayload = rev.payload || { providers: [], bindings: [] };
+							} else {
+								this.cfgActiveRevision = 0;
+								this.cfgPayload = { providers: [], bindings: [] };
 							}
+							
+							if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
+							if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
 
 							await this.refreshVaultStatus();
 							this.observedAt = Date.now();
@@ -874,7 +888,7 @@ templ Models() {
 						if (!appRes.ok) {
 							const code = app.error?.code || '';
 							const msg = app.error?.message || 'Erro ao aplicar rascunho';
-							if (code === 'conflict') throw new Error('Conflito detectado. Recarregando...');
+							if (code === 'conflict' || code === 'STALE_BASE' || msg.includes('stale config base revision')) throw new Error('Conflito de revisão detectado. A página será recarregada automaticamente com a última versão. Tente novamente.');
 							throw new Error(msg);
 						}
 
