@@ -66,13 +66,13 @@ templ Models() {
 				<div x-show="vaultSecrets && vaultSecrets.length > 0" class="pt-4 border-t border-[var(--border)]">
 					<div class="text-[12px] font-semibold text-[var(--subtle)] uppercase tracking-wider mb-3">Segredos no Cofre</div>
 					<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-						<template x-for="sec in vaultSecrets" x-bind:key="sec">
+						<template x-for="sec in vaultSecrets" x-bind:key="sec.name || sec">
 							<div class="flex items-center justify-between p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)]">
 								<div class="flex items-center gap-3 overflow-hidden">
 									<svg class="w-4 h-4 text-[var(--ok)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-									<span class="font-mono text-[13px] text-[var(--text)] truncate" x-text="sec"></span>
+									<span class="font-mono text-[13px] text-[var(--text)] truncate" x-text="sec.name || sec"></span>
 								</div>
-								<button type="button" class="p-1.5 rounded-lg text-[var(--err)] hover:bg-[var(--err)]/10 transition-all cursor-pointer flex-shrink-0" x-on:click="removeSecret(sec)" title="Remover Segredo">
+								<button type="button" class="p-1.5 rounded-lg text-[var(--err)] hover:bg-[var(--err)]/10 transition-all cursor-pointer flex-shrink-0" x-on:click="removeSecret(sec.name || sec)" title="Remover Segredo">
 									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
 								</button>
 							</div>
