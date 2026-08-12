@@ -68,11 +68,11 @@ func main() {
 			cancel()
 
 			r := result{
-				Model:        "qwen/qwen3.6-27b",
-				MaxTokens:    maxTok,
-				Effort:       tc.effort,
-				Format:       tc.format,
-				ElapsedSec:   elapsed,
+				Model:      "qwen/qwen3.6-27b",
+				MaxTokens:  maxTok,
+				Effort:     tc.effort,
+				Format:     tc.format,
+				ElapsedSec: elapsed,
 			}
 
 			if err != nil {

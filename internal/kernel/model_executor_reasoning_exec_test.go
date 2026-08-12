@@ -21,7 +21,7 @@ func TestModelExecutorExecutesReasoningOptions(t *testing.T) {
 	ids := source.NewSequenceIDGenerator(1)
 	store := memory.New()
 	spec := modelTestSpec()
-	
+
 	seedModelAgendaWithSpec(t, store, now, spec)
 
 	modelsConfig := domain.ModelsConfig{
@@ -52,16 +52,16 @@ func TestModelExecutorExecutesReasoningOptions(t *testing.T) {
 	}
 
 	exec := ModelExecutor{
-		Store:         store,
-		Clock:         clock,
-		IDs:           ids,
-		ModelsConfig:  &modelsConfig,
-		Providers:     map[string]port.ModelProvider{"primary": provider},
-		PrimaryBindingID: "primary",
+		Store:             store,
+		Clock:             clock,
+		IDs:               ids,
+		ModelsConfig:      &modelsConfig,
+		Providers:         map[string]port.ModelProvider{"primary": provider},
+		PrimaryBindingID:  "primary",
 		PrimaryProviderID: "groq",
-		LeaseTTL:      5 * time.Minute,
-		Changes:       processor,
-		PolicyVersion: "policy@reasoning-test",
+		LeaseTTL:          5 * time.Minute,
+		Changes:           processor,
+		PolicyVersion:     "policy@reasoning-test",
 		Compiler: prompt.Compiler{
 			Estimator:             prompt.ConservativeEstimator{},
 			ProviderContextTokens: 8000,
@@ -88,10 +88,11 @@ type captureProvider struct {
 	lastReq port.CompletionRequest
 	body    string
 }
+
 func (c *captureProvider) Kind() domain.ProviderKind { return domain.ProviderKindGroq }
 func (c *captureProvider) Complete(ctx context.Context, request port.CompletionRequest) (port.CompletionResult, error) {
 	c.lastReq = request
 	return port.CompletionResult{Text: c.body, FinishReason: port.CompletionFinishStop, InputTokens: 10, OutputTokens: 5}, nil
 }
 func (c *captureProvider) Models(ctx context.Context) ([]string, error) { return nil, nil }
-func (c *captureProvider) Close() error { return nil }
+func (c *captureProvider) Close() error                                 { return nil }

@@ -92,7 +92,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "NVIDIA_NIM_API_KEY not set\n")
 		os.Exit(1)
 	}
-	
+
 	models := []string{
 		"nvidia/llama-3.1-nemotron-70b-instruct",
 		"nvidia/llama-3.3-nemotron-super-49b-v1",
@@ -100,13 +100,13 @@ func main() {
 		"mistralai/mistral-large-2-instruct",
 		"deepseek-ai/deepseek-v4-flash-0731",
 	}
-	
+
 	var allResults []result
 	for _, model := range models {
 		results := testModel(model, apiKey)
 		allResults = append(allResults, results...)
 	}
-	
+
 	body, _ := json.MarshalIndent(allResults, "", "  ")
 	fmt.Println(string(body))
 }

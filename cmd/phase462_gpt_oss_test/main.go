@@ -94,18 +94,18 @@ func testModel(model string, apiKey string) []result {
 
 func main() {
 	apiKey := os.Getenv("GROQ_API_KEY")
-	
+
 	models := []string{
 		"openai/gpt-oss-20b",
 		"openai/gpt-oss-120b",
 	}
-	
+
 	var allResults []result
 	for _, model := range models {
 		results := testModel(model, apiKey)
 		allResults = append(allResults, results...)
 	}
-	
+
 	body, _ := json.MarshalIndent(allResults, "", "  ")
 	fmt.Println(string(body))
 }
