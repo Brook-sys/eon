@@ -8251,3 +8251,19 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 
 **Próximo passo:** (a) Investigar Qwen3.6-27b com `reasoning_format=hidden` ou sem format; (b) Implementar campos `ReasoningEffort` e `ReasoningFormat` no `ModelBinding`/`ModelOptions` do catálogo de modelos para uso em produção; (c) Validar NIM com reasoning models quando disponíveis.
 
+
+## Phase 462 — Qwen Reasoning Format & Model Catalog Extension (2026-08-12)
+
+**Objective and implementation.** Expand model catalog with `ReasoningEffort` and `ReasoningFormat` in `ModelBinding` and `ModelOptions`, and resolve `reasoning_budget_exhausted` errors on `qwen/qwen3.6-27b`.
+1. Extended `ModelBinding` and `ModelOptions` with `ReasoningEffort` and `ReasoningFormat` in `internal/port`.
+2. Verified `qwen/qwen3.6-27b` behavior with different `reasoning_format` values.
+
+**Live hypothesis and bounds.** Qwen3.6-27b on Groq returns `budget_exhausted` with `format=parsed` for `effort=low/default`. We test if omitting `reasoning_format` or setting it to `hidden` resolves the issue, allowing thinking tokens to flow normally. Isolated calls, max 256 output tokens, 60s timeout.
+
+**Observed evidence and decision.**
+- `format=hidden` falha com `INVALID_RESPONSE: reasoning_budget_exhausted` da mesma forma que `format=parsed`.
+- Omitir o `reasoning_format` (enviando `""`) tem sucesso. O modelo retorna os thinking tokens explicitamente no texto envoltos em tags `<think>...</think>`.
+- Como o limite era 256 tokens, os responses com thinking foram cortados (`finish_reason="length"`).
+- O Groq atualmente suporta `reasoning_format="parsed"|"hidden"` apenas para a família GPT-OSS, mas ainda rejeita para Qwen3.6. A recomendação para Qwen3.6 é usar `effort="none"` para desativar thinking (quando necessário) e lidar com parsing nativamente se effort for "default".
+
+**Próximo passo.** Atualizar a estrutura interna do catálogo e adapter para aceitar e propagar essas duas propriedades.

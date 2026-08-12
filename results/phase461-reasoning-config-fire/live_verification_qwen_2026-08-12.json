@@ -1,0 +1,71 @@
+{
+  "campaign": "phase462-reasoning-qwen3-hidden",
+  "timestamp": "2026-08-12T18:02:55Z",
+  "provider": "groq",
+  "hypothesis": "Qwen3.6-27b on Groq returns budget_exhausted with format=parsed for effort=low/default. We test if omitting reasoning_format or setting it to hidden resolves the issue, allowing thinking tokens to flow normally.",
+  "scenario": "Conflict detection — two observations with contradictory latency values",
+  "bounds": {
+    "max_calls": 4,
+    "max_tokens": 256,
+    "temperature": 0,
+    "timeout": "60s"
+  },
+  "results": [
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "none",
+      "format": "",
+      "status": "ok",
+      "content": "CONFLICT: YES\nThe two observations report significantly different latency values (120ms vs 410ms) for the same test and time window, indicating a discrepancy in the data.",
+      "input_tokens": 69,
+      "output_tokens": 41,
+      "finish_reason": "stop",
+      "elapsed_s": 0.407464025
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "default",
+      "format": "",
+      "status": "ok",
+      "content": "\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - Two observations: O-1 = 120ms, O-2 = 410ms\n   - Same test and time window\n   - Task: Determine if there's a conflict\n   - Output format: Exactly \"CONFLICT: YES\" or \"CONFLICT: NO\" on the first line, followed by a brief explanation.\n...",
+      "input_tokens": 67,
+      "output_tokens": 256,
+      "finish_reason": "length",
+      "elapsed_s": 0.777889251
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "low",
+      "format": "",
+      "status": "ok",
+      "content": "\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - Two observations: O-1 = 120ms, O-2 = 410ms\n   - Same test and time window\n   - Task: Determine if there's a conflict\n   - Output format: Exactly \"CONFLICT: YES\" or \"CONFLICT: NO\" on the first line, followed by a brief explanation.\n...",
+      "input_tokens": 67,
+      "output_tokens": 256,
+      "finish_reason": "length",
+      "elapsed_s": 1.3990125
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "effort": "low",
+      "format": "hidden",
+      "status": "error",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "finish_reason": "",
+      "elapsed_s": 0.719329066,
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+    }
+  ],
+  "analysis": {
+    "qwen/qwen3.6-27b_effort_default_format_": "status=ok, has_format=true, latency=0.778s, tokens=67/256, finish=length",
+    "qwen/qwen3.6-27b_effort_low_format_": "status=ok, has_format=true, latency=1.399s, tokens=67/256, finish=length",
+    "qwen/qwen3.6-27b_effort_low_format_hidden": "status=error, error=openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted",
+    "qwen/qwen3.6-27b_effort_none_format_": "status=ok, has_format=true, latency=0.407s, tokens=69/41, finish=stop"
+  },
+  "decisions": [
+    "qwen/qwen3.6-27b with effort=none format= succeeds in 0.407s with 41 output tokens",
+    "qwen/qwen3.6-27b with effort=default format= succeeds in 0.778s with 256 output tokens",
+    "qwen/qwen3.6-27b with effort=low format= succeeds in 1.399s with 256 output tokens",
+    "qwen/qwen3.6-27b with effort=low format=hidden failed: openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  ]
+}
