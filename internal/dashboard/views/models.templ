@@ -44,21 +44,40 @@ templ Models() {
 			</div>
 
 			<!-- Status do Cofre de Credenciais -->
-			<div class="p-6 rounded-[20px] bg-[var(--panel)] border border-[var(--border)] flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-sm hover:border-[var(--border-focus)] transition-all">
-				<div class="flex items-center gap-4">
-					<div class="w-10 h-10 rounded-full bg-[var(--info)]/10 flex items-center justify-center border border-[var(--info)]/20">
-						<svg class="w-5 h-5 text-[var(--info)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-					</div>
-					<div>
-						<div class="font-bold text-[15px] text-[var(--text)]">Cofre de Credenciais Local</div>
-						<div class="text-[13px] text-[var(--muted)] font-mono mt-0.5 flex items-center gap-2">
-							Status: <span class="text-[var(--text)] font-semibold" x-text="vaultState"></span>
+			<div class="p-6 rounded-[20px] bg-[var(--panel)] border border-[var(--border)] flex flex-col gap-5 shadow-sm hover:border-[var(--border-focus)] transition-all">
+				<div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+					<div class="flex items-center gap-4">
+						<div class="w-10 h-10 rounded-full bg-[var(--info)]/10 flex items-center justify-center border border-[var(--info)]/20">
+							<svg class="w-5 h-5 text-[var(--info)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+						</div>
+						<div>
+							<div class="font-bold text-[15px] text-[var(--text)]">Cofre de Credenciais Local</div>
+							<div class="text-[13px] text-[var(--muted)] font-mono mt-0.5 flex items-center gap-2">
+								Status: <span class="text-[var(--text)] font-semibold" x-text="vaultState"></span>
+							</div>
 						</div>
 					</div>
+					<div class="flex items-center gap-3" x-data="{ vPass: '' }">
+						<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-5 py-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-full md:w-64 shadow-inner" @keyup.enter="unlockVault(vPass)"/>
+						<button type="button" class="px-6 py-3 rounded-xl bg-[var(--info)] text-white hover:bg-blue-600 font-semibold text-[13px] transition-all cursor-pointer shadow-sm flex-shrink-0" x-on:click="unlockVault(vPass)">Desbloquear</button>
+					</div>
 				</div>
-				<div class="flex items-center gap-3" x-data="{ vPass: '' }">
-					<input type="password" placeholder="Senha mestra..." x-model="vPass" class="px-5 py-3 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] w-full md:w-64 shadow-inner" @keyup.enter="unlockVault(vPass)"/>
-					<button type="button" class="px-6 py-3 rounded-xl bg-[var(--info)] text-white hover:bg-blue-600 font-semibold text-[13px] transition-all cursor-pointer shadow-sm flex-shrink-0" x-on:click="unlockVault(vPass)">Desbloquear</button>
+				<!-- Lista de Chaves -->
+				<div x-show="vaultSecrets && vaultSecrets.length > 0" class="pt-4 border-t border-[var(--border)]">
+					<div class="text-[12px] font-semibold text-[var(--subtle)] uppercase tracking-wider mb-3">Segredos no Cofre</div>
+					<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+						<template x-for="sec in vaultSecrets" x-bind:key="sec">
+							<div class="flex items-center justify-between p-3 rounded-xl bg-[var(--bg)] border border-[var(--border)]">
+								<div class="flex items-center gap-3 overflow-hidden">
+									<svg class="w-4 h-4 text-[var(--ok)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+									<span class="font-mono text-[13px] text-[var(--text)] truncate" x-text="sec"></span>
+								</div>
+								<button type="button" class="p-1.5 rounded-lg text-[var(--err)] hover:bg-[var(--err)]/10 transition-all cursor-pointer flex-shrink-0" x-on:click="removeSecret(sec)" title="Remover Segredo">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+								</button>
+							</div>
+						</template>
+					</div>
 				</div>
 			</div>
 
@@ -370,6 +389,7 @@ templ Models() {
 					cfgActiveRevision: 0,
 					cfgPayload: { providers: [], bindings: [] },
 					vaultState: 'Desconhecido',
+					vaultSecrets: [],
 
 					// Descoberta Dinâmica de Modelos
 					discoveredModels: [],
@@ -421,8 +441,8 @@ templ Models() {
 
 							const rev = activeRev?.revision || activeRev;
 							if (rev) {
-								this.cfgActiveRevision = Number(rev.revision || 0);
-								this.cfgPayload = rev.models || { providers: [], bindings: [] };
+								this.cfgActiveRevision = Number(rev.id || rev.revision || 0);
+								this.cfgPayload = rev.payload || rev.models || { providers: [], bindings: [] };
 								if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
 								if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
 							}
@@ -459,8 +479,14 @@ templ Models() {
 							const res = await fetch('/dash/api/vault/status');
 							const s = await res.json();
 							if (!s.initialized) this.vaultState = 'Não inicializado';
-							else if (s.locked) this.vaultState = 'Bloqueado';
-							else this.vaultState = 'Ativo (' + (s.secrets || []).length + ' chaves)';
+							else if (s.locked) {
+								this.vaultState = 'Bloqueado';
+								this.vaultSecrets = [];
+							}
+							else {
+								this.vaultState = 'Ativo (' + (s.secrets || []).length + ' chaves)';
+								this.vaultSecrets = s.secrets || [];
+							}
 						} catch (err) {
 							this.vaultState = 'Indisponível';
 						}
@@ -484,6 +510,24 @@ templ Models() {
 							}
 							await this.refreshVaultStatus();
 							if (window.notify) window.notify('Cofre desbloqueado com sucesso!', 'success');
+						} catch (err) {
+							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
+						}
+					},
+
+					async removeSecret(sec) {
+						if (!confirm("Remover o segredo " + sec + " do cofre?")) return;
+						try {
+							const res = await fetch('/dash/api/vault/secrets/' + encodeURIComponent(sec), {
+								method: 'DELETE'
+							});
+							if (!res.ok) {
+								let errMsg = 'Falha ao remover segredo';
+								try { const errBody = await res.json(); errMsg = errBody?.error?.message || errMsg; } catch (_) {}
+								throw new Error(errMsg);
+							}
+							await this.refreshVaultStatus();
+							if (window.notify) window.notify('Segredo removido.', 'success');
 						} catch (err) {
 							if (window.notify) window.notify('Erro no cofre: ' + err.message, 'error');
 						}
