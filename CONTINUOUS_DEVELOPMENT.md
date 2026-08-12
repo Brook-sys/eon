@@ -8302,3 +8302,14 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 5. Concluded that Groq's Qwen3.6 deployment applies severe output overhead when reasoning is enabled but not requested as hidden/parsed. The adapter must dynamically adjust constraints (e.g. falling back to `effort="none"` for narrow tasks, or allocating 1000+ tokens for Qwen reasoning).
 
 **Verification.** `go test ./...` and `git diff --check` passed cleanly. All `internal/runtime/bootstrap` tests pass.
+## Phase 466 — Qwen Reasoning Formats and Strict Budget Exhaustion Test (2026-08-12 16:44 -03)
+
+**Objective and implementation.** We executed a focused retest of Groq `qwen/qwen3.6-27b` (`cmd/phase466_qwen_budget_retest/main.go`) measuring the behavior of format types (`parsed` vs `hidden`) against hard `max_tokens` boundaries (256, 1024, 2048) under reasoning `effort="low"`.
+1. Confirmed both `format="parsed"` and `format="hidden"` suffer exactly the same `reasoning_budget_exhausted` failure when clamped at `max_tokens=256`. The hidden token tax still consumes the output limit before a semantic response is generated.
+2. Confirmed that both formats succeed normally at `max_tokens=1024` and `2048`, returning the exact expected `CONFLICT: YES` string after expending 300-700 hidden reasoning tokens.
+3. Validated that `internal/provider/openai/provider.go` correctly tracks and intercepts the reasoning exhaustion (mapped to `ErrorInvalidResponse` / `reasoning_budget_exhausted`) instead of passing an empty string to the parser.
+
+**Live hypothesis and bounds.** No additional tests are needed; metrics are cleanly documented in `results/phase466_qwen_budget_retest/summary.json`.
+
+**Decision.** The adapter should implement a safety check: if `qwen/qwen3.6-27b` is configured for reasoning, `max_tokens` must be forcibly elevated (e.g. minimum 1024) to avoid systemic silent failures when invoked by narrow-output tasks.
+

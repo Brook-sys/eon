@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-08-12T19:43:24Z",
+  "total_trials": 6,
+  "successes": 4,
+  "failures": 2,
+  "results": [
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "parsed",
+      "max_tokens": 256,
+      "status": "error",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "finish_reason": "",
+      "elapsed_s": 0.959455016,
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "parsed",
+      "max_tokens": 1024,
+      "status": "ok",
+      "content": "CONFLICT: YES",
+      "input_tokens": 59,
+      "output_tokens": 677,
+      "finish_reason": "stop",
+      "elapsed_s": 1.6472021319999999
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "parsed",
+      "max_tokens": 2048,
+      "status": "ok",
+      "content": "CONFLICT: YES",
+      "input_tokens": 59,
+      "output_tokens": 356,
+      "finish_reason": "stop",
+      "elapsed_s": 0.965722108
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "hidden",
+      "max_tokens": 256,
+      "status": "error",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "finish_reason": "",
+      "elapsed_s": 0.770245177,
+      "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "hidden",
+      "max_tokens": 1024,
+      "status": "ok",
+      "content": "CONFLICT: YES",
+      "input_tokens": 59,
+      "output_tokens": 356,
+      "finish_reason": "stop",
+      "elapsed_s": 0.984384255
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "format": "hidden",
+      "max_tokens": 2048,
+      "status": "ok",
+      "content": "CONFLICT: YES",
+      "input_tokens": 59,
+      "output_tokens": 677,
+      "finish_reason": "stop",
+      "elapsed_s": 2.056308944
+    }
+  ]
+}
