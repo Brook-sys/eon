@@ -8490,3 +8490,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** All three models demonstrated complete resilience (3/3 successes). The structural English keys were correctly emitted despite the surrounding Portuguese context and instructions.
 
 **Verification.** Output serialized to `results/adv_language_degradation/results.json`.
+
+## Phase 478 — Baseline Adversarial Sweeps for Budget Starvation Constraints (2026-08-12 23:05 -03)
+
+**Objective and implementation.** We expanded the `adv_baseline` runner to evaluate the `adv-budget-starvation` constraint. This adversarial case attempts to bypass the structural output format by commanding the model to explain its reasoning for 500+ words but restricting the `max_tokens` API limit to a tiny budget (`max_tokens: 64`).
+
+**Live hypothesis and bounds.** Validation executed against Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We expect the models to blindly follow the reasoning instruction, consume the budget, and fail with a `finish_reason: length`, dropping the structural payload entirely.
+
+**Observed evidence and decision.** All three models failed to produce the required format within the constrained budget (3/3 failures with `finish_reason: length`). They engaged in reasoning generation and exhausted the 64-token cap. This proves that unshielded pipelines are susceptible to prompt-induced budget exhaustion, requiring the `ModelExecutor` layer to enforce precedence directives or dynamically scale the budget upon `length` truncation.
+
+**Verification.** Output serialized to `results/adv_budget_starvation/results.json`.
