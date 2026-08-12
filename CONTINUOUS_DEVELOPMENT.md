@@ -8372,3 +8372,41 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 **Decision.** The heartbeat cycle is suspended. No new modifications will be committed until credentials are rotated. The kernel Qwen fix (Phase 467) is structurally sound, passes the isolated test suite, and is pushed to `main`, but lacks live evidence due to this blocker.
 
 **Próximo passo.** The operator must provision a valid `GROQ_API_KEY` (and verify `NVIDIA_NIM_API_KEY`) in `.provider-secrets.env`. Once unblocked, we will run the `adv_baseline` sweep and the Qwen budget test.
+## Phase 467 — Adversarial Retry and Prompt Engineering (2026-08-12 19:25 -03)
+
+**Objective and implementation.** Addressed the operator directive to expand live-fire bounds over adversarial scenarios (ambiguous, polluted, budget-starved, and cot_poisoned). Added a loop wrapper  demonstrating a robust recovery strategy. The retry intercepts  exits from max_tokens exhaustion and triggers a secondary fallback prompt with an expanded budget to safely recover.
+
+**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM  and Groq (, ). Each adversarial case expects specific failure or pass modes. Budget starvation triggers a length error. CoT-poison induces structural drift on weaker models.
+
+**Observed evidence and decision.** The campaign executed successfully (15 calls). Budget starvation properly yielded `finish_reason: length`. Our retry harness successfully recovered by increasing the budget and applying a stricter constraint prompt on the second pass ( properly emitted).  proved most resilient to CoT poisoning. NIM  suffered from hallucinated extensions on CoT. All models completed within quotas. Future integration of this pattern will wrap kernel operations for automated retry/recovery without compromising max_tokens bounds on initial reads.
+
+**Verification.** The standalone campaign binary executed cleanly and correctly serialized results without exposing API keys. On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   CONTINUOUS_DEVELOPMENT.md
+	modified:   results/phase390-reasoning-effort/results.json
+	modified:   results/phase466_qwen_budget_retest/summary.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	cmd/phase467_prompt_adversarial_retry_campaign/
+	memory/2026-08-12.md
+	motor
+	results/phase467_prompt_adversarial_retry/
+	scripts/sweep/campaigns/
+	update_md.sh
+
+no changes added to commit (use "git add" and/or "git commit -a") preserved.
+
+## Phase 467 — Adversarial Retry and Prompt Engineering (2026-08-12 19:25 -03)
+
+**Objective and implementation.** Addressed the operator directive to expand live-fire bounds over adversarial scenarios (ambiguous, polluted, budget-starved, and cot_poisoned). Added a loop wrapper phase467_prompt_adversarial_retry_campaign demonstrating a robust recovery strategy. The retry intercepts length exits from max_tokens exhaustion and triggers a secondary fallback prompt with an expanded budget to safely recover.
+
+**Live hypothesis and bounds.** Cross-provider rotation using NVIDIA NIM meta/llama-3.1-8b-instruct and Groq (llama-3.1-8b-instant, llama-3.3-70b-versatile). Each adversarial case expects specific failure or pass modes. Budget starvation triggers a length error. CoT-poison induces structural drift on weaker models.
+
+**Observed evidence and decision.** The campaign executed successfully (15 calls). Budget starvation properly yielded finish_reason: length. Our retry harness successfully recovered by increasing the budget and applying a stricter constraint prompt on the second pass (CONFLICT: YES properly emitted). llama-3.3-70b-versatile proved most resilient to CoT poisoning. NIM meta/llama-3.1-8b-instruct suffered from hallucinated extensions on CoT. All models completed within quotas. Future integration of this pattern will wrap kernel operations for automated retry/recovery without compromising max_tokens bounds on initial reads.
+
+**Verification.** The standalone campaign binary executed cleanly and correctly serialized results without exposing API keys.
