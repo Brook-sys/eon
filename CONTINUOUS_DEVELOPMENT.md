@@ -8291,4 +8291,14 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 - `max_tokens=256` fails with `budget_exhausted` since Qwen needs ~588 thinking tokens before producing the result.
 - `max_tokens=1024` and `max_tokens=2048` pass with exact match (`CONFLICT: YES`), returning output successfully.
 
+
+## Phase 465 — Reasoning Matrix Campaign Analysis and Validation (2026-08-12 16:42 -03)
+
+**Objective and implementation.** We executed a comprehensive live matrix campaign (`cmd/phase462_reasoning_matrix_campaign/main.go`) spanning multiple Groq models (Llama 3.3, Llama 3.1, Qwen 3.6, GPT OSS 20b/120b) and tasks (`conflict_detection`, `json_extraction`) to measure reasoning feature behaviors (`reasoning_effort`, `reasoning_format`). This validated our hypothesis around `qwen/qwen3.6-27b` failures with reasoning budgets.
+1. Executed a bounded matrix of 22 combinations across models, tasks, efforts (`"none"`, `"low"`, `""`), and formats (`"parsed"`, `""`).
+2. Confirmed that `qwen/qwen3.6-27b` returns HTTP 200 but consumes the entire `max_tokens=256` output budget in hidden reasoning when configured with `effort="low"` and `format="parsed"`, resulting in `finish_reason=length` and an empty content string. The OpenAI provider correctly intercepts this and surfaces `reasoning_budget_exhausted`, proving our robust error mapping from Phase 369 holds for Qwen.
+3. Confirmed that `qwen/qwen3.6-27b` successfully evaluates using `effort="none"` (both with and without `format="parsed"`), exhibiting low latency (~200ms) and concise responses.
+4. Confirmed that `openai/gpt-oss-20b` and `openai/gpt-oss-120b` successfully parse `effort="low"` and `format="parsed"`, extracting responses cleanly.
+5. Concluded that Groq's Qwen3.6 deployment applies severe output overhead when reasoning is enabled but not requested as hidden/parsed. The adapter must dynamically adjust constraints (e.g. falling back to `effort="none"` for narrow tasks, or allocating 1000+ tokens for Qwen reasoning).
+
 **Verification.** `go test ./...` and `git diff --check` passed cleanly. All `internal/runtime/bootstrap` tests pass.

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-12T14:45:09Z",
+  "timestamp": "2026-08-12T19:41:55Z",
   "total_trials": 22,
   "successes": 20,
   "failures": 2,
@@ -14,7 +14,7 @@
       "input_tokens": 80,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.291074988
+      "elapsed_s": 0.277154844
     },
     {
       "model": "llama-3.1-8b-instant",
@@ -26,7 +26,7 @@
       "input_tokens": 80,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.278256096
+      "elapsed_s": 0.278660308
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -38,7 +38,7 @@
       "input_tokens": 59,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 0.90217695
+      "elapsed_s": 1.127619776
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -50,7 +50,7 @@
       "input_tokens": 61,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.253299135
+      "elapsed_s": 0.419203359
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -62,7 +62,7 @@
       "input_tokens": 61,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.190057153
+      "elapsed_s": 0.194430398
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -73,7 +73,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.725120438,
+      "elapsed_s": 0.733162242,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -86,7 +86,7 @@
       "input_tokens": 116,
       "output_tokens": 109,
       "finish_reason": "stop",
-      "elapsed_s": 0.354023046
+      "elapsed_s": 0.392372552
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -98,7 +98,7 @@
       "input_tokens": 116,
       "output_tokens": 109,
       "finish_reason": "stop",
-      "elapsed_s": 0.465746474
+      "elapsed_s": 0.395131647
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -110,7 +110,7 @@
       "input_tokens": 116,
       "output_tokens": 73,
       "finish_reason": "stop",
-      "elapsed_s": 0.401287457
+      "elapsed_s": 0.353549255
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -122,7 +122,7 @@
       "input_tokens": 116,
       "output_tokens": 135,
       "finish_reason": "stop",
-      "elapsed_s": 0.526519273
+      "elapsed_s": 0.520997426
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -134,7 +134,7 @@
       "input_tokens": 116,
       "output_tokens": 41,
       "finish_reason": "stop",
-      "elapsed_s": 0.277027766
+      "elapsed_s": 0.324955547
     },
     {
       "model": "llama-3.3-70b-versatile",
@@ -146,7 +146,7 @@
       "input_tokens": 76,
       "output_tokens": 13,
       "finish_reason": "stop",
-      "elapsed_s": 0.317491887
+      "elapsed_s": 0.315773997
     },
     {
       "model": "llama-3.1-8b-instant",
@@ -158,7 +158,7 @@
       "input_tokens": 76,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 0.591521271
+      "elapsed_s": 0.933907038
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -170,7 +170,7 @@
       "input_tokens": 55,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 0.706897509
+      "elapsed_s": 0.771303994
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -182,7 +182,7 @@
       "input_tokens": 57,
       "output_tokens": 11,
       "finish_reason": "stop",
-      "elapsed_s": 0.532040906
+      "elapsed_s": 0.202744114
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -194,7 +194,7 @@
       "input_tokens": 57,
       "output_tokens": 11,
       "finish_reason": "stop",
-      "elapsed_s": 0.216228063
+      "elapsed_s": 0.208513605
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -205,7 +205,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.782409031,
+      "elapsed_s": 0.771704599,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -218,7 +218,7 @@
       "input_tokens": 112,
       "output_tokens": 62,
       "finish_reason": "stop",
-      "elapsed_s": 0.314531146
+      "elapsed_s": 0.336775026
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -228,9 +228,9 @@
       "status": "ok",
       "content": "{\"latency_ms\": 340}",
       "input_tokens": 112,
-      "output_tokens": 62,
+      "output_tokens": 64,
       "finish_reason": "stop",
-      "elapsed_s": 0.376197716
+      "elapsed_s": 0.340916582
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -242,7 +242,7 @@
       "input_tokens": 112,
       "output_tokens": 32,
       "finish_reason": "stop",
-      "elapsed_s": 0.280856443
+      "elapsed_s": 0.231465626
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -254,7 +254,7 @@
       "input_tokens": 112,
       "output_tokens": 41,
       "finish_reason": "stop",
-      "elapsed_s": 0.525243809
+      "elapsed_s": 0.324130935
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -266,7 +266,7 @@
       "input_tokens": 112,
       "output_tokens": 24,
       "finish_reason": "stop",
-      "elapsed_s": 0.292626789
+      "elapsed_s": 0.388068722
     }
   ]
 }
