@@ -8267,3 +8267,13 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 - O Groq atualmente suporta `reasoning_format="parsed"|"hidden"` apenas para a família GPT-OSS, mas ainda rejeita para Qwen3.6. A recomendação para Qwen3.6 é usar `effort="none"` para desativar thinking (quando necessário) e lidar com parsing nativamente se effort for "default".
 
 **Próximo passo.** Atualizar a estrutura interna do catálogo e adapter para aceitar e propagar essas duas propriedades.
+
+## Phase 463 — Unit Testing for Domain Reasoning Constraints (2026-08-12)
+
+**Objective and implementation.** Refactor and verify deterministic bounds on `ModelBindingConfig` configuration rules regarding reasoning formats to ensure the core policy stays safe against arbitrary string injection and typos.
+
+**Live hypothesis and bounds.** No live evaluation needed (domain validation layer only).
+
+**Observed evidence and decision.** Wrote strict table-driven unit tests `TestModelBindingConfigValidateReasoningEffort` and `TestModelBindingConfigValidateReasoningFormat` in `internal/domain/model_binding_test.go` covering matrix limits (none, default, low, medium, high, parsed, raw, hidden), boundary cases (empty fallback to provider default), and malformed strings (case sensitivity, whitespace). Tests passed (`go test -v ./internal/domain/...`).
+
+**Próximo passo.** (a) Implement support in ModelOptions for prompt compiling and (b) Expand testing for token exhaustion bounds with format=hidden and qwen3.6-27b on Groq.
