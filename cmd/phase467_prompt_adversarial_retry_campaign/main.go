@@ -16,7 +16,7 @@ func main() {
 		fmt.Println("Missing credentials. Please source .provider-secrets.env")
 		os.Exit(1)
 	}
-	
+
 	cases := []struct {
 		Name      string
 		Prompt    string
@@ -39,31 +39,31 @@ func main() {
 		{"llama-3.3-70b-versatile", "https://api.groq.com/openai/v1", os.Getenv("GROQ_API_KEY")},
 		{"meta/llama-3.1-8b-instruct", "https://integrate.api.nvidia.com/v1", os.Getenv("NVIDIA_NIM_API_KEY")},
 	}
-	
+
 	type Result struct {
-		Model      string
-		Case       string
-		AdvType    string
-		Recovery   bool
-		Success    bool
-		ElapsedS   float64
-		FinishRsn  string
-		Content    string
-		InTokens   int
-		OutTokens  int
-		Error      string
+		Model     string
+		Case      string
+		AdvType   string
+		Recovery  bool
+		Success   bool
+		ElapsedS  float64
+		FinishRsn string
+		Content   string
+		InTokens  int
+		OutTokens int
+		Error     string
 	}
 	var results []Result
 
 	for _, m := range models {
 		for _, c := range cases {
 			req := port.CompletionRequest{
-				Prompt: c.Prompt,
+				Prompt:          c.Prompt,
 				MaxOutputTokens: c.MaxTokens,
-				Temperature: 0.1,
+				Temperature:     0.1,
 			}
 			t0 := time.Now()
-			
+
 			p, _ := openai.New(openai.Config{
 				BaseURL: m.Base,
 				APIKey:  m.Key,
@@ -72,7 +72,7 @@ func main() {
 
 			res, err := p.Complete(context.Background(), req)
 			elapsed := time.Since(t0).Seconds()
-			
+
 			r := Result{Model: m.ID, Case: c.Name, AdvType: c.AdvType, Recovery: false, ElapsedS: elapsed}
 			if err != nil {
 				r.Error = err.Error()
@@ -82,10 +82,10 @@ func main() {
 				r.InTokens = res.InputTokens
 				r.OutTokens = res.OutputTokens
 				r.FinishRsn = string(res.FinishReason)
-				r.Success = res.Text != "" 
+				r.Success = res.Text != ""
 			}
 			results = append(results, r)
-			
+
 			if !r.Success || (c.AdvType == "budget_starvation" && r.FinishRsn == "length") || (r.Content != "" && len(r.Content) < 5) {
 				for i := 1; i <= 3; i++ {
 					req.Prompt = fmt.Sprintf("RECOVERY %d: %s. Please strictly follow instructions and answer CONFLICT: YES or CONFLICT: NO.", i, c.Prompt)
@@ -95,7 +95,7 @@ func main() {
 					t0 := time.Now()
 					resRetry, errRetry := p.Complete(context.Background(), req)
 					elapsed = time.Since(t0).Seconds()
-					
+
 					rRetry := Result{Model: m.ID, Case: c.Name, AdvType: c.AdvType, Recovery: true, ElapsedS: elapsed}
 					if errRetry != nil {
 						rRetry.Error = errRetry.Error()
@@ -105,7 +105,7 @@ func main() {
 						rRetry.InTokens = resRetry.InputTokens
 						rRetry.OutTokens = resRetry.OutputTokens
 						rRetry.FinishRsn = string(resRetry.FinishReason)
-						rRetry.Success = resRetry.Text != "" 
+						rRetry.Success = resRetry.Text != ""
 					}
 					results = append(results, rRetry)
 					if rRetry.Success && (rRetry.FinishRsn != "length" || req.MaxOutputTokens >= 50) {
@@ -115,7 +115,7 @@ func main() {
 			}
 		}
 	}
-	
+
 	os.MkdirAll("results/phase467_prompt_adversarial_retry", 0755)
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile("results/phase467_prompt_adversarial_retry/results.json", b, 0644)

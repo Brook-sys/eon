@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-11T21:12:27Z",
+  "timestamp": "2026-08-12T21:51:20Z",
   "hypothesis": "Phase 458 NIM timeouts (llama-3.3-70b-instruct, gemma-4-31b-it) were cold-start artifacts; graduated timeouts should recover or classify faster.",
   "bounds": "12 planned calls, 32 max_tokens each, temp=0.0, warmup=10-15s, main=30-60s, stop after 3 consecutive model failures",
   "planned_calls": 12,
@@ -9,7 +9,7 @@
       "provider": "groq",
       "model": "llama-3.3-70b-versatile",
       "round": "warmup",
-      "latency_ms": 350467084,
+      "latency_ms": 408897376,
       "response": {
         "Text": "NODE_ID: confirmed as phase459-probe\nMTLS: confirmed as ENFORCED\nSYNC_CAPABILITY: confirmed as event_sync_v1\nRETENTION",
         "ToolCalls": null,
@@ -25,7 +25,7 @@
       "provider": "groq",
       "model": "llama-3.3-70b-versatile",
       "round": "main",
-      "latency_ms": 639344925,
+      "latency_ms": 260986274,
       "response": {
         "Text": "NODE_ID: confirmed as phase459-probe\nMTLS: confirmed as ENFORCED\nSYNC_CAPABILITY: confirmed as event_sync_v1\nRETENTION",
         "ToolCalls": null,
@@ -41,7 +41,7 @@
       "provider": "groq",
       "model": "llama-3.1-8b-instant",
       "round": "warmup",
-      "latency_ms": 337268773,
+      "latency_ms": 627441155,
       "response": {
         "Text": "NODE_ID: phase459-probe is valid.\nMTLS: ENFORCED is enabled.\nSYNC_CAPABILITY: event_sync_v1 is supported.\nRETENTION",
         "ToolCalls": null,
@@ -57,7 +57,7 @@
       "provider": "groq",
       "model": "llama-3.1-8b-instant",
       "round": "main",
-      "latency_ms": 666296942,
+      "latency_ms": 318796556,
       "response": {
         "Text": "NODE_ID: phase459-probe is valid.\nMTLS: ENFORCED is enabled.\nSYNC_CAPABILITY: event_sync_v1 is supported.\nRETENTION",
         "ToolCalls": null,
@@ -73,7 +73,7 @@
       "provider": "groq",
       "model": "allam-2-7b",
       "round": "warmup",
-      "latency_ms": 345448467,
+      "latency_ms": 341875842,
       "response": {
         "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v",
         "ToolCalls": null,
@@ -89,7 +89,7 @@
       "provider": "groq",
       "model": "allam-2-7b",
       "round": "main",
-      "latency_ms": 335895051,
+      "latency_ms": 345669861,
       "response": {
         "Text": "NODE_ID: phase459-probe\nMTLS: ENFORCED\nSYNC_CAPABILITY: event_sync_v",
         "ToolCalls": null,
@@ -105,7 +105,7 @@
       "provider": "nvidia_nim",
       "model": "meta/llama-3.3-70b-instruct",
       "round": "warmup",
-      "latency_ms": 15007357727,
+      "latency_ms": 15003707610,
       "response": {
         "Text": "",
         "ToolCalls": null,
@@ -121,7 +121,7 @@
       "provider": "nvidia_nim",
       "model": "google/gemma-4-31b-it",
       "round": "warmup",
-      "latency_ms": 15014145885,
+      "latency_ms": 15014429056,
       "response": {
         "Text": "",
         "ToolCalls": null,
@@ -137,7 +137,7 @@
       "provider": "nvidia_nim",
       "model": "meta/llama-3.1-70b-instruct",
       "round": "warmup",
-      "latency_ms": 15002041798,
+      "latency_ms": 15014201646,
       "response": {
         "Text": "",
         "ToolCalls": null,
