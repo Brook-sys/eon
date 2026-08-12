@@ -8348,3 +8348,4 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 **Observed evidence and decision.** The existing deterministic baseline coverage (`TestModelExecutorAutoScalesMaxOutputTokensOnReasoningBudgetExhausted`) covers the safety behaviors. All tests in `motor-autonomo/internal/kernel` passed correctly.
 
 **Próximo passo.** We will implement integration tests for runtime metrics around throttling events with NIM, or continue refining adapter capabilities depending on immediate user directions.
+2026-08-12 17:48 — Phase 389 — strip_unclosed_thinking_tag recovery ladder — test suite e build live executado com sucesso — 7d0eefd/NEXT
