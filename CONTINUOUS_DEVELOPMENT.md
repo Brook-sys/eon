@@ -8313,3 +8313,13 @@ Executado runner `cmd/phase459_nim_large_model_availability_test` com 12 chamada
 
 **Decision.** The adapter should implement a safety check: if `qwen/qwen3.6-27b` is configured for reasoning, `max_tokens` must be forcibly elevated (e.g. minimum 1024) to avoid systemic silent failures when invoked by narrow-output tasks.
 
+## Phase 467 — Qwen Reasoning Budget Adapter Fix (2026-08-12 16:48 -03)
+
+**Objective and implementation.** We implemented the safety threshold discovered in Phase 466. 
+1. Modified `internal/kernel/model_executor.go` inside `resolveBindingReasoning` / request preparation to detect `qwen` models where reasoning is active.
+2. When `qwen` + reasoning is detected, and the requested `MaxOutputTokens` is `< 1024`, the adapter forcibly elevates `MaxOutputTokens` to 1024 to accommodate Qwen's hidden thinking overhead tax.
+
+**Live hypothesis and bounds.** No live evaluation needed (domain validation).
+
+**Observed evidence and decision.** The adapter will now protect short-response tasks from silent budget exhaustion when Qwen is dynamically elected as the reasoning backend.
+
