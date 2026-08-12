@@ -8450,3 +8450,13 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** Both `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` demonstrated perfect resilience (6/6 successes) to context pollution and CoT poisoning on the restated constraints format, properly isolating the single failed constraint (`F-2`) out of the set without generating extraneous tokens or falling for the poisoning prompt. 
 
 **Verification.** Output serialized to `results/adv_restated/results.json`.
+
+## Phase 474 — Baseline Adversarial Sweeps for PT-BR Format Anchored Constraints (2026-08-12 22:40 -03)
+
+**Objective and implementation.** We expanded the `adv_baseline` runner to assess language degradation resilience. Specifically, the test evaluated format-anchored constraints containing instructions and context in Portuguese (PT-BR) but requiring precise English structural outputs (`DATE:`, `SOURCE:`, `CONFLICT:`, `PAIR:`).
+
+**Live hypothesis and bounds.** Cross-provider validation executed against Groq (`llama-3.1-8b-instant`, `llama-3.3-70b-versatile`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`). We expect models to cleanly produce the English-prefixed structural values without reverting to translated prefixes or conversational padding.
+
+**Observed evidence and decision.** All tested models (6/6 successes) successfully maintained strict English structural prefixes while parsing Portuguese constraints and examples. No translations leaked into the structural format.
+
+**Verification.** Output serialized to `results/adv_ptbr_format/results.json`.
