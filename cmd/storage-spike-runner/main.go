@@ -1,4 +1,3 @@
-
 // Command storage-spike-runner executes the same deterministic measured
 // workload against one durable backend and writes reviewable artifacts.
 package main

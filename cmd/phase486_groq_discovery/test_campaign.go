@@ -3,12 +3,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
-	"bytes"
 )
 
 type Msg struct {
@@ -17,10 +17,10 @@ type Msg struct {
 }
 
 type Req struct {
-	Model       string `json:"model"`
-	Messages    []Msg  `json:"messages"`
-	MaxTokens   int    `json:"max_tokens,omitempty"`
-	Temperature float64`json:"temperature"`
+	Model       string  `json:"model"`
+	Messages    []Msg   `json:"messages"`
+	MaxTokens   int     `json:"max_tokens,omitempty"`
+	Temperature float64 `json:"temperature"`
 }
 
 type Resp struct {
@@ -34,7 +34,7 @@ type Resp struct {
 func main() {
 	key := os.Getenv("GROQ_API_KEY")
 	url := "https://api.groq.com/openai/v1/chat/completions"
-	
+
 	models := []string{
 		"openai/gpt-oss-safeguard-20b",
 		"groq/compound",
@@ -47,26 +47,26 @@ func main() {
 
 	for _, m := range models {
 		reqData := Req{
-			Model: m,
-			Messages: []Msg{{Role: "user", Content: prompt}},
-			MaxTokens: 10,
+			Model:       m,
+			Messages:    []Msg{{Role: "user", Content: prompt}},
+			MaxTokens:   10,
 			Temperature: 0,
 		}
-		
+
 		body, _ := json.Marshal(reqData)
 		req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
 		req.Header.Set("Authorization", "Bearer "+key)
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		client := &http.Client{Timeout: 10 * time.Second}
 		start := time.Now()
 		resp, err := client.Do(req)
-		
+
 		if err != nil {
 			fmt.Printf("Model %s: ERROR %v\n", m, err)
 			continue
 		}
-		
+
 		var res Resp
 		if resp.StatusCode == 200 {
 			json.NewDecoder(resp.Body).Decode(&res)

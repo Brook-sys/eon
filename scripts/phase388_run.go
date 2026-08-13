@@ -39,19 +39,19 @@ func main() {
 	// Phase 388 specific: test deep budget starvation (max_tokens=20) on a simple instruction
 	req := port.CompletionRequest{
 		Prompt:          "You are a helpful assistant. Be concise.\n\nReply with exactly: READY",
-		MaxOutputTokens:  20,
-		Temperature:      0.0,
-		ReasoningEffort:  "none",
+		MaxOutputTokens: 20,
+		Temperature:     0.0,
+		ReasoningEffort: "none",
 	}
 
 	for _, modelName := range models {
 		config := openai.Config{
-			BaseURL: "https://api.groq.com/openai/v1",
-			APIKey:  groqKey,
-			Model:   modelName,
+			BaseURL:        "https://api.groq.com/openai/v1",
+			APIKey:         groqKey,
+			Model:          modelName,
 			MaxOutputField: openai.MaxOutputTokensLegacy,
 		}
-		
+
 		provider, err := openai.New(config)
 		if err != nil {
 			fmt.Printf("Failed to init provider for %s: %v\n", modelName, err)
@@ -60,17 +60,17 @@ func main() {
 
 		for i := 0; i < 3; i++ {
 			start := time.Now()
-			
+
 			resp, err := provider.Complete(context.Background(), req)
-			
+
 			lat := time.Since(start).Milliseconds()
-			
+
 			trial := TrialResult{
 				Model:     modelName,
 				Format:    "exact_match",
 				LatencyMs: lat,
 			}
-			
+
 			if err != nil {
 				trial.Success = false
 				trial.Error = err.Error()
@@ -82,10 +82,10 @@ func main() {
 					trial.Error = fmt.Sprintf("content mismatch: %q", resp.Text)
 				}
 			}
-			
+
 			fmt.Printf("[%s] trial %d: success=%v lat=%dms\n", modelName, i, trial.Success, trial.LatencyMs)
 			results = append(results, trial)
-			
+
 			time.Sleep(500 * time.Millisecond) // rate limit backoff
 		}
 	}
