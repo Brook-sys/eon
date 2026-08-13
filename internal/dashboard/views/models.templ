@@ -798,9 +798,11 @@ templ Models() {
 							if (pi >= 0) currentProviders[pi] = newP; else currentProviders.push(newP);
 
 							const next = { providers: currentProviders, bindings: [...(this.cfgPayload.bindings || [])] };
-							await this.createModelsDraft(next, (pi >= 0 ? "Atualizar provedor " : "Adicionar provedor ") + id);
-							if (window.notify) window.notify('Provedor salvo!', 'success');
-							this.showProviderForm = false;
+							const result = await this.createModelsDraft(next, (pi >= 0 ? "Atualizar provedor " : "Adicionar provedor ") + id);
+							if (result && result.applied) {
+								if (window.notify) window.notify('Provedor salvo!', 'success');
+								this.showProviderForm = false;
+							}
 						} catch (err) {
 							this.formMsg = err.message;
 							this.formIsErr = true;
@@ -835,9 +837,11 @@ templ Models() {
 							if (bi >= 0) currentBindings[bi] = newB; else currentBindings.push(newB);
 
 							const next = { providers: [...(this.cfgPayload.providers || [])], bindings: currentBindings };
-							await this.createModelsDraft(next, "Adicionar preferência " + mId);
-							if (window.notify) window.notify('Preferência salva!', 'success');
-							this.showBindingForm = false;
+							const result = await this.createModelsDraft(next, "Adicionar preferência " + mId);
+							if (result && result.applied) {
+								if (window.notify) window.notify('Preferência salva!', 'success');
+								this.showBindingForm = false;
+							}
 						} catch (err) {
 							this.formMsg = err.message;
 							this.formIsErr = true;
@@ -851,8 +855,10 @@ templ Models() {
 						try {
 							const nextP = (this.cfgPayload.providers || []).filter(x => x.id !== id);
 							const nextB = (this.cfgPayload.bindings || []).filter(x => x.provider_ref !== id);
-							await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
-							if (window.notify) window.notify('Provedor removido.', 'success');
+							const result = await this.createModelsDraft({ providers: nextP, bindings: nextB }, "Remover provedor " + id);
+							if (result && result.applied) {
+								if (window.notify) window.notify('Provedor removido.', 'success');
+							}
 						} catch (err) {
 							if (window.notify) window.notify('Erro ao remover: ' + err.message, 'error');
 						}
@@ -862,8 +868,10 @@ templ Models() {
 						if (!confirm("Remover esta regra de roteamento?")) return;
 						try {
 							const nextB = (this.cfgPayload.bindings || []).filter(x => x.id !== idOrSlot && x.slot !== idOrSlot);
-							await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover regra");
-							if (window.notify) window.notify('Regra removida.', 'success');
+							const result = await this.createModelsDraft({ providers: [...(this.cfgPayload.providers || [])], bindings: nextB }, "Remover regra");
+							if (result && result.applied) {
+								if (window.notify) window.notify('Regra removida.', 'success');
+							}
 						} catch (err) {
 							if (window.notify) window.notify('Erro ao remover: ' + err.message, 'error');
 						}
@@ -901,7 +909,7 @@ templ Models() {
 							const notes = (val.preview?.notes || []).join('; ');
 							if (notes.includes('no-op draft')) {
 								if (window.notify) window.notify('Nenhuma modificação detectada. Configuração já está atualizada.', 'info');
-								return; // Termina graciosamente, não foi um erro
+								return { applied: false, reason: 'no-op' };
 							}
 							throw new Error('Rascunho bloqueado na validação de impacto: ' + notes);
 						}
@@ -923,6 +931,7 @@ templ Models() {
 						}
 
 						await this.refresh();
+						return { applied: true };
 					},
 
 					start() {
