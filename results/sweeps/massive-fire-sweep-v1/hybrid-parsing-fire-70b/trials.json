@@ -1,0 +1,1155 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "hybrid-parsing-fire-70b",
+ "executed_at": "2026-08-12T23:27:13Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 40,
+ "calls_ok": 38,
+ "calls_error": 2,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 364.7,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 374.0,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 392.7,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 342.9,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 339.6,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "latency_ms": 375.8,
+   "prompt_tokens": 195,
+   "completion_tokens": 16,
+   "total_tokens": 211,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 377.7,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 379.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 372.9,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "latency_ms": 436.4,
+   "prompt_tokens": 201,
+   "completion_tokens": 16,
+   "total_tokens": 217,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "latency_ms": 561.1,
+   "prompt_tokens": 199,
+   "completion_tokens": 38,
+   "total_tokens": 237,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is returned as it was explicitly stated, without considering any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "latency_ms": 567.4,
+   "prompt_tokens": 199,
+   "completion_tokens": 38,
+   "total_tokens": 237,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is returned as it was explicitly stated, without considering any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "latency_ms": 425.2,
+   "prompt_tokens": 199,
+   "completion_tokens": 38,
+   "total_tokens": 237,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is returned as it was explicitly stated, without considering any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "latency_ms": 444.7,
+   "prompt_tokens": 199,
+   "completion_tokens": 38,
+   "total_tokens": 237,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is returned as it was explicitly stated, without considering any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "latency_ms": 466.6,
+   "prompt_tokens": 199,
+   "completion_tokens": 38,
+   "total_tokens": 237,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is returned as it was explicitly stated, without considering any subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 399.1,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 404.2,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 401.8,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 349.9,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "latency_ms": 327.9,
+   "prompt_tokens": 241,
+   "completion_tokens": 14,
+   "total_tokens": 255,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "latency_ms": 333.3,
+   "prompt_tokens": 147,
+   "completion_tokens": 16,
+   "total_tokens": 163,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "latency_ms": 416.2,
+   "prompt_tokens": 147,
+   "completion_tokens": 16,
+   "total_tokens": 163,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "latency_ms": 350.9,
+   "prompt_tokens": 147,
+   "completion_tokens": 16,
+   "total_tokens": 163,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "latency_ms": 400.3,
+   "prompt_tokens": 147,
+   "completion_tokens": 16,
+   "total_tokens": 163,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "latency_ms": 410.1,
+   "prompt_tokens": 147,
+   "completion_tokens": 16,
+   "total_tokens": 163,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "latency_ms": 507.8,
+   "prompt_tokens": 163,
+   "completion_tokens": 40,
+   "total_tokens": 203,
+   "finish_reason": "stop",
+   "response_text": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.\nA resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+   "scored_correct": false,
+   "scored_via_fallback": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "A resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "latency_ms": 512.7,
+   "prompt_tokens": 163,
+   "completion_tokens": 40,
+   "total_tokens": 203,
+   "finish_reason": "stop",
+   "response_text": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.\nA resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+   "scored_correct": false,
+   "scored_via_fallback": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "A resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "latency_ms": 432.0,
+   "prompt_tokens": 163,
+   "completion_tokens": 40,
+   "total_tokens": 203,
+   "finish_reason": "stop",
+   "response_text": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.\nA resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+   "scored_correct": false,
+   "scored_via_fallback": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "A resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "latency_ms": 509.6,
+   "prompt_tokens": 163,
+   "completion_tokens": 40,
+   "total_tokens": 203,
+   "finish_reason": "stop",
+   "response_text": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.\nA resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+   "scored_correct": false,
+   "scored_via_fallback": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "A resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "latency_ms": 494.7,
+   "prompt_tokens": 163,
+   "completion_tokens": 40,
+   "total_tokens": 203,
+   "finish_reason": "stop",
+   "response_text": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.\nA resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+   "scored_correct": false,
+   "scored_via_fallback": true,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "A data de publica\u00e7\u00e3o original da fonte S-17 \u00e9 2025-11-03.",
+     "ok": false
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "A resposta segue as restri\u00e7\u00f5es, retornando a data original de S-17.",
+     "ok": false
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "latency_ms": 414.1,
+   "prompt_tokens": 145,
+   "completion_tokens": 16,
+   "total_tokens": 161,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "latency_ms": 331.0,
+   "prompt_tokens": 145,
+   "completion_tokens": 16,
+   "total_tokens": 161,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "latency_ms": 336.8,
+   "prompt_tokens": 145,
+   "completion_tokens": 16,
+   "total_tokens": 161,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "latency_ms": 406.5,
+   "prompt_tokens": 145,
+   "completion_tokens": 16,
+   "total_tokens": 161,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 134.2,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on requests per minute (RPM): Limit 30, Used 30, Requested 1. Please try again in 2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"requests\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 333.9,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 126.0,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on requests per minute (RPM): Limit 30, Used 30, Requested 1. Please try again in 2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"requests\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 326.3,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 339.8,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "latency_ms": 318.5,
+   "prompt_tokens": 219,
+   "completion_tokens": 16,
+   "total_tokens": 235,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  }
+ ]
+}

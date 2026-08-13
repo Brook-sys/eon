@@ -1,0 +1,3863 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "hybrid-parsing-fire-v2",
+ "executed_at": "2026-08-12T23:23:45Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 200,
+ "calls_ok": 34,
+ "calls_error": 166,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 194.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 200.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 243.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 150.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 135.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 144.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 130.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 458.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 164.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 138.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 168.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 130.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 448.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 132.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 145.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 154.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 166.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 144.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 150.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 143.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 138.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 137.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 138.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 147.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 179.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 156.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 189.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 123.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 131.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 161.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 141.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 127.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 158.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.3-70b-versatile",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 127.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 153.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 162.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 139.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 167.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 151.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 211.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 144.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 150.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 133.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 145.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 161.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 213.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 126.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 142.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 131.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 138.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 133.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 127.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 149.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 141.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 132.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 171.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 159.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 174.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 156.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 159.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 151.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 156.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 160.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 155.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 151.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 147.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 178.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "llama-3.1-8b-instant",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 178.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` is not supported with this model\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 138.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 149.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 170.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 135.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 146.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 128.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 135.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 128.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 142.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 145.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 430.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 142.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 143.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 152.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 137.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 123.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 145.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 147.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 150.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 145.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 127.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 137.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 132.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 127.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 134.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 157.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 148.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 128.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 131.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 133.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 136.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 140.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 142.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 135.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "openai/gpt-oss-20b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 139.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"`reasoning_effort` must be one of `low`, `medium`, or `high`\",\"type\":\"invalid_request_error\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 327.2,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 335.1,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 627.1,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 351.1,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 552.3,
+   "prompt_tokens": 191,
+   "completion_tokens": 21,
+   "total_tokens": 212,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 328.7,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 327.4,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 636.8,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 341.2,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 351.9,
+   "prompt_tokens": 206,
+   "completion_tokens": 21,
+   "total_tokens": 227,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 423.3,
+   "prompt_tokens": 198,
+   "completion_tokens": 54,
+   "total_tokens": 252,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is explicitly stated as 2025-11-03, which remains unchanged by subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 411.9,
+   "prompt_tokens": 198,
+   "completion_tokens": 54,
+   "total_tokens": 252,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is explicitly stated as 2025-11-03, which remains unchanged by subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 404.2,
+   "prompt_tokens": 198,
+   "completion_tokens": 54,
+   "total_tokens": 252,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is explicitly stated as 2025-11-03, which remains unchanged by subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 403.0,
+   "prompt_tokens": 198,
+   "completion_tokens": 54,
+   "total_tokens": 252,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is explicitly stated as 2025-11-03, which remains unchanged by subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 403.5,
+   "prompt_tokens": 198,
+   "completion_tokens": 54,
+   "total_tokens": 252,
+   "finish_reason": "stop",
+   "response_text": "The original publication date of S-17 is explicitly stated as 2025-11-03, which remains unchanged by subsequent revisions.\nDATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 326.3,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 326.0,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 327.4,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 324.6,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 318.9,
+   "prompt_tokens": 244,
+   "completion_tokens": 14,
+   "total_tokens": 258,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 336.2,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 334.8,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 334.7,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 327.6,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 329.9,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 349.6,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 133.4,
+    "retry_after": 1,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7877, Requested 167. Please try again in 329.999999ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 123.0,
+    "retry_after": 1,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7904, Requested 167. Please try again in 532.5ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 323.8,
+   "prompt_tokens": 146,
+   "completion_tokens": 21,
+   "total_tokens": 167,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 163.3,
+    "retry_after": 1,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7883, Requested 167. Please try again in 375ms. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 422.1,
+   "prompt_tokens": 143,
+   "completion_tokens": 21,
+   "total_tokens": 164,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 794.7,
+   "prompt_tokens": 143,
+   "completion_tokens": 21,
+   "total_tokens": 164,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 142.9,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on requests per minute (RPM): Limit 30, Used 30, Requested 1. Please try again in 2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"requests\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 639.1,
+   "prompt_tokens": 143,
+   "completion_tokens": 21,
+   "total_tokens": 164,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 147.8,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on requests per minute (RPM): Limit 30, Used 30, Requested 1. Please try again in 2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"requests\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 636.8,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 131.1,
+    "retry_after": 2,
+    "error_class": "throttle",
+    "error_body": "{\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.6-27b` in organization `org_01hwrrejc4eje9mbn5z6j0wxan` service tier `on_demand` on requests per minute (RPM): Limit 30, Used 30, Requested 1. Please try again in 2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"requests\",\"code\":\"rate_limit_exceeded\"}}\n"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 1402.3,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 624.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 823\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 593.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 823\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 376.1,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 583.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 823\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 658.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 823\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ambiguous-instruction",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "0af7c7de943c867c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 585.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 823\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 608.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 802\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 646.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 802\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 620.8,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 802\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 760.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 802\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 326.1,
+   "prompt_tokens": 203,
+   "completion_tokens": 21,
+   "total_tokens": 224,
+   "finish_reason": "stop",
+   "response_text": "DATE: 2025-11-03\nSOURCE: S-17",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "DATE": {
+     "expected": "2025-11-03",
+     "got": "2025-11-03",
+     "ok": true
+    },
+    "SOURCE": {
+     "expected": "S-17",
+     "got": "S-17",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-context-pollution",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "f88ce9aa50b24fa4",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 584.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 802\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 609.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 830\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 585.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 830\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 615.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 830\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 589.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 830\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-format-pressure",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "72c922782231c358",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 575.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 830\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 580.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 948\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 670.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 948\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 660.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 948\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 620.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 948\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "cc311b42b065008a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 583.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 948\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 626.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 569\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 592.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 569\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 577.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 569\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 585.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 569\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-prompt-injection",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "081077bfe4c151ba",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 596.4,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 569\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 571.3,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 623\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 572.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 623\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 592.6,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 623\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 600.1,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 623\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-language-degradation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8bd01d42fa534c1c",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 571.5,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 623\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 610.2,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 575\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 410.2,
+    "retry_after": null,
+    "error_class": "throttle",
+    "error_body": "{\"status\":429,\"title\":\"Too Many Requests\"}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 582.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 575\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 573.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 575\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-budget-starvation",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "8709b08ba06b0897",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 571.7,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 575\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 623.0,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 826\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 3,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 409.5,
+    "retry_after": null,
+    "error_class": "throttle",
+    "error_body": "{\"status\":429,\"title\":\"Too Many Requests\"}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 400,
+    "latency_ms": 624.9,
+    "retry_after": null,
+    "error_class": "client",
+    "error_body": "{\"error\":{\"message\":\"Failed to deserialize the JSON body into the target type: unknown variant `none`, expected one of `minimal`, `low`, `medium`, `high` at line 1 column 826\",\"type\":\"Bad Request\",\"code\":400}}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 4,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 415.9,
+    "retry_after": null,
+    "error_class": "throttle",
+    "error_body": "{\"status\":429,\"title\":\"Too Many Requests\"}"
+   }
+  },
+  {
+   "provider": "nvidia_nim",
+   "model": "meta/llama-3.1-8b-instruct",
+   "task": "adv-ptbr-format-anchor",
+   "temperature": 0.0,
+   "rep": 5,
+   "prompt_sha256": "057d1f44fc1a985a",
+   "outcome": "error",
+   "reasoning_effort": "none",
+   "error": {
+    "http_status": 429,
+    "latency_ms": 416.8,
+    "retry_after": null,
+    "error_class": "throttle",
+    "error_body": "{\"status\":429,\"title\":\"Too Many Requests\"}"
+   }
+  }
+ ]
+}
