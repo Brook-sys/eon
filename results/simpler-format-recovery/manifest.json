@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "simpler_format_exhaustion",
+  "timeout_seconds": 60,
+  "max_calls": 3,
+  "injected_failures": 2,
+  "max_output_tokens": 256,
+  "probe_prompt": "Reply ONLY with valid JSON matching the following schema. {\"type\": \"object\", \"properties\": {\"schema_version\": {\"type\": \"integer\"}, \"id\": {\"type\": \"string\"}, \"mission_revision_id\": {\"type\": \"string\"}, \"operation_id\": {\"type\": \"string\"}, \"base_commit_id\": {\"type\": \"string\"}, \"read_set\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"preconditions\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"changes\": {\"type\": \"array\", \"items\": {\"type\": \"object\", \"properties\": {\"kind\": {\"type\": \"string\"}, \"entity_type\": {\"type\": \"string\"}, \"entity_id\": {\"type\": \"string\"}, \"payload_ref\": {\"type\": \"string\"}}}}, \"expected_delta\": {\"type\": \"string\"}, \"validator_ids\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"provenance\": {\"type\": \"string\"}, \"idempotency_key\": {\"type\": \"string\"}}, \"required\": [\"schema_version\", \"id\", \"mission_revision_id\", \"operation_id\", \"base_commit_id\", \"read_set\", \"preconditions\", \"changes\", \"expected_delta\", \"validator_ids\", \"provenance\", \"idempotency_key\"]}",
+  "bindings": [
+    {
+      "provider": "groq",
+      "provider_kind": "openai_compatible",
+      "binding_id": "groq-llama8b",
+      "base_url": "https://api.groq.com/openai/v1",
+      "model": "llama-3.1-8b-instant",
+      "api_key_env": "GROQ_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 1
+    },
+    {
+      "provider": "nim",
+      "provider_kind": "openai_compatible",
+      "binding_id": "nim-llama8b",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "model": "meta/llama-3.1-8b-instruct",
+      "api_key_env": "NVIDIA_NIM_API_KEY",
+      "max_output_field": "max_tokens",
+      "context_tokens": 8192,
+      "priority": 2
+    }
+  ]
+}
