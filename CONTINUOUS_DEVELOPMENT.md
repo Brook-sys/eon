@@ -8666,3 +8666,14 @@ P50 latency across valid responses was 521ms.
 
 **Verification.** `go test -count=1 ./internal/dashboard/...` passed cleanly. Draft creation, validation, application, and refresh simulation (Scenario 3) verified end-to-end. Commit `30c6f36` pushed to `main`.
 
+## Phase 491 — Dashboard No-Op Provider Draft Notification & Status Handling (2026-08-13 18:20 -03)
+
+**Objective and diagnosis.** Resolved user report where submitting a provider form showed a success toast ("Provedor salvo!"), but no provider appeared in the UI even after refreshing the page (F5).
+- **Root cause:** When a provider form was submitted with values identical to the active configuration (or re-using an existing `api_key_env` without field changes), `createModelsDraft` detected a no-op diff (`diff.Empty = true`), leading `/validate` to return `preview.Blocked = true` (`REJECTED` draft). `createModelsDraft` caught this, displayed an `info` toast ("Nenhuma modificação detectada..."), and returned `undefined`. However, callers (`submitProviderForm`, `submitBindingForm`, `removeProvider`, `removeBinding`) did not check the return value and unconditionally showed a misleading success toast ("Provedor salvo!"), deceiving the user into thinking the provider was added.
+
+**Fix implemented.**
+- Updated `createModelsDraft` in `internal/dashboard/views/models.templ` to return an explicit status object: `{ applied: false, reason: 'no-op' }` on no-op drafts and `{ applied: true }` on successful application.
+- Refactored `submitProviderForm`, `submitBindingForm`, `removeProvider`, and `removeBinding` to check `if (result && result.applied)` before displaying success toasts and closing modal forms.
+- Re-transpiled templates via `templ generate` and ran `go test ./internal/dashboard/...`.
+- Pushed commits `20b2a81` and `1753ec1` to `main`.
+
