@@ -78,14 +78,14 @@ def _task(expected):
 
 
 def test_score_exact_match():
-    ok, fields = score_task(_task({"claim": "C-14", "status": "REPAIRED"}),
+    ok, fields, _ = score_task(_task({"claim": "C-14", "status": "REPAIRED"}),
                             "CLAIM: C-14\nSTATUS: REPAIRED")
     assert ok and all(f["ok"] for f in fields.values()), fields
 
 
 def test_score_truncated_fails_field():
     # extract-date-reinforced truncation case: "DATE: 2025-11" without day
-    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+    ok, fields, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
                             "DATE: 2025-11")
     assert not ok
     assert fields["DATE"] == {"expected": "2025-11-03", "got": "2025-11", "ok": False}
@@ -95,7 +95,7 @@ def test_score_truncated_fails_field():
 def test_score_bare_value_fallback_recovers_semantic():
     # Fire-sweep finding: llama-3.1-8b emits bare values without DATE:/SOURCE:
     # prefix but the semantic data is correct. Fallback should recover it.
-    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+    ok, fields, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
                             "2025-11-03\nS-17")
     assert ok, fields
     assert fields["DATE"]["ok"] is True
@@ -103,21 +103,21 @@ def test_score_bare_value_fallback_recovers_semantic():
 
 
 def test_score_empty_response_fails_all():
-    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}), "")
+    ok, fields, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}), "")
     assert not ok
     assert all(not f["ok"] and f["got"] is None for f in fields.values())
 
 
 def test_score_bare_value_wrong_count_fails():
     # Bare values with wrong count should not produce false positives.
-    ok, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+    ok, _, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
                       "2025-11-03")
     assert not ok
 
 
 def test_score_bare_value_wrong_order_fails():
     # Bare values in wrong order must fail (positional assignment).
-    ok, fields = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+    ok, fields, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
                             "S-17\n2025-11-03")
     assert not ok
     assert fields["DATE"]["got"] == "S-17"
@@ -125,18 +125,18 @@ def test_score_bare_value_wrong_order_fails():
 
 
 def test_score_case_sensitive_values():
-    ok, fields = score_task(_task({"status": "REPAIRED"}), "STATUS: repaired")
+    ok, fields, _ = score_task(_task({"status": "REPAIRED"}), "STATUS: repaired")
     assert not ok and fields["STATUS"]["got"] == "repaired"
 
 
 def test_score_extra_lines_ignored():
-    ok, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
+    ok, _, _ = score_task(_task({"date": "2025-11-03", "source": "S-17"}),
                        "I think...\nDATE: 2025-11-03\nSOURCE: S-17\n(trailing)")
     assert ok
 
 
 def test_score_unknown_scoring_fails_closed():
-    ok, fields = score_task({"scoring": "contains:foo", "expected": {}}, "foo")
+    ok, fields, _ = score_task({"scoring": "contains:foo", "expected": {}}, "foo")
     assert not ok and "error" in fields
 
 
@@ -204,7 +204,7 @@ def test_tasks_manifest_offline_oracle_self_scores_perfectly():
     for t in doc["tasks"]:
         keys = t["scoring"].split(":", 1)[1].split(",")
         oracle = "\n".join(k + ": " + str(t["expected"][k.lower()]) for k in keys)
-        ok, fields = score_task(t, oracle)
+        ok, fields, _ = score_task(t, oracle)
         assert ok, (t["id"], fields)
 
 
@@ -217,7 +217,7 @@ def test_multi_factor_superset_wrong_answer_fails_both_fields():
     doc = _load_tasks_manifest()
     for tid in ("synthesize-multi-factor", "synthesize-multi-factor-restated"):
         t = next(x for x in doc["tasks"] if x["id"] == tid)
-        ok, fields = score_task(t, "VERDICT: FAIL\nFACTORS: F-3,F-4")
+        ok, fields, _ = score_task(t, "VERDICT: FAIL\nFACTORS: F-3,F-4")
         assert not ok, (tid, fields)
         assert fields["VERDICT"]["ok"] is True
         assert fields["FACTORS"]["ok"] is False
@@ -230,9 +230,9 @@ def test_multi_factor_order_and_duplicates_are_scored_strictly():
     doc = _load_tasks_manifest()
     t = next(x for x in doc["tasks"] if x["id"] == "synthesize-multi-factor")
     for bad in ("VERDICT: FAIL\nFACTORS: F-4,F-4", "VERDICT: FAIL\nFACTORS: "):
-        ok, fields = score_task(t, bad)
+        ok, fields, _ = score_task(t, bad)
         assert not ok, (bad, fields)
-    ok, _ = score_task(t, "VERDICT: FAIL\nFACTORS: F-4")
+    ok, _, _ = score_task(t, "VERDICT: FAIL\nFACTORS: F-4")
     assert ok
 
 
@@ -243,7 +243,7 @@ def test_factor_trace_per_line_scoring_isolates_the_gap():
     # (F lines) from negation filtering (FACTORS).
     doc = _load_tasks_manifest()
     t = next(x for x in doc["tasks"] if x["id"] == "synthesize-factor-trace")
-    ok, fields = score_task(
+    ok, fields, _ = score_task(
         t, "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-3,F-4")
     assert not ok
     per_line_ok = all(fields[k]["ok"] for k in ("F3", "F4", "F5", "VERDICT"))
@@ -251,7 +251,7 @@ def test_factor_trace_per_line_scoring_isolates_the_gap():
     assert fields["FACTORS"]["ok"] is False
     # full oracle passes
     oracle = "F3: OK\nF4: FAIL\nF5: OK\nVERDICT: FAIL\nFACTORS: F-4"
-    ok_all, _ = score_task(t, oracle)
+    ok_all, _, _ = score_task(t, oracle)
     assert ok_all
 
 
