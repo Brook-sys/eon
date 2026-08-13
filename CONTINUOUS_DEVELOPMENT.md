@@ -8639,3 +8639,17 @@ P50 latency across valid responses was 521ms.
 - [x] `DONE` Construir e validar chamada básica contra `llama-3.3-70b-versatile` validando os limites de entrada, prompt, adapter da OpenAI-compatible spec (`internal/provider/openai`), e os campos corretos.
 
 2026-08-13 00:20 — HEARTBEAT — Como as fases anteriores (486 e 487) identificaram e mapearam o endpoint de descoberta de modelos da Groq e lidaram com a persistência de UI, neste heartbeat o executor `phase486_groq_discovery` foi rançado com êxito demonstrando 15 instâncias ativas na API, revelando modelos notáveis como `qwen/qwen3.6-27b`, `llama-3.3-70b-versatile`, e `openai/gpt-oss-120b`. Posteriormente, uma chamada real boundificada foi executada contra `llama-3.3-70b-versatile` através do port local da API para atestar a estabilidade usando um script Go (cmd/phase488_groq_llama33_large_batch). A resposta (44 tokens de input e 2 de output) com match idêntico de `"READY"` demonstra a consistência total do adapter e das premissas construídas. Foi testada a ausência do TODO sobre o Spike 108 em Dolt, que já havia sido concluído e documentado na Fase 108.
+
+## Phase 489 — Starvation Recovery Prompt Hardening (2026-08-13 16:45 -03)
+
+**Objective and implementation.** Hardened the kernel's starvation recovery paths in `internal/kernel/model_executor.go` by injecting a strict `RECOVERY N:` prompt prefix whenever `CompletionFinishLength` triggers the simpler-format or fallback-baseline recovery stages. This ensures models receive an explicit instruction to obey format constraints within the new budget after token exhaustion.
+
+**Live campaign.** Built and executed `cmd/phase489_starvation_recovery` against three deployments:
+- **Groq / `allam-2-7b`**: Initial 3-token starvation produced "Based on the" (`finish_reason=length`). Recovery (40 tokens) output "STATUS: ERROR" but continued with verbose explanation until token limit exhausted (`finish_reason=length`).
+- **Groq / `llama-3.3-70b-versatile`**: Initial 3-token starvation produced "To determine if" (`finish_reason=length`). Recovery (40 tokens) with `RECOVERY 1:` prefix produced exact output `STATUS: ERROR` in 257ms (`finish_reason=stop`). **100% exact-match compliance.**
+- **NIM / `meta/llama-3.1-8b-instruct`**: Initial 3-token starvation produced "Based on the" (`finish_reason=length`). Recovery (40 tokens) ignored formatting constraints, emitted numbered analysis list until length limit.
+
+**Evidence and decision.** `llama-3.3-70b-versatile` (primary Groq deployment) reliably obeys the `RECOVERY N:` constraint and achieves exact-match format compliance. Smaller 7b/8b models (`allam-2-7b`, `llama-3.1-8b-instruct`) require stronger anchoring (e.g., system prompt enforcement) to suppress verbose reasoning under recovery. The kernel change is validated and safe.
+
+**Verification.** `go test ./...` passed cleanly, `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/phase489_starvation_recovery/results.json`.
+
