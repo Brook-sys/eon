@@ -19,56 +19,63 @@ from runner import (  # noqa: E402
 
 
 def test_parse_lines_basic():
-    t = parse_lines("CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
+    t, _ = parse_lines("CLAIM: C-14\nSTATUS: REPAIRED\nEVIDENCE_COUNT: 3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
     assert t == {"CLAIM": "C-14", "STATUS": "REPAIRED", "EVIDENCE_COUNT": "3"}, t
 
 
 def test_parse_lines_strips_value_whitespace():
-    t = parse_lines("DATE:   2025-11-03  \nSOURCE:\tS-17", ["DATE", "SOURCE"])
+    t, _ = parse_lines("DATE:   2025-11-03  \nSOURCE:\tS-17", ["DATE", "SOURCE"])
     assert t == {"DATE": "2025-11-03", "SOURCE": "S-17"}, t
 
 
 def test_parse_lines_ignores_non_matching():
-    t = parse_lines("CLAIMANT: X\nnote about CLAIM\nCLAIM: C-14", ["CLAIM"])
+    t, _ = parse_lines("CLAIMANT: X\nnote about CLAIM\nCLAIM: C-14", ["CLAIM"])
     assert t == {"CLAIM": "C-14"}, t
 
 
 def test_parse_lines_fallback_bare_values_positional():
     # Fire-sweep 2026-08-05 finding #1: models drop DATE:/SOURCE: prefix
     # but emit correct values in expected order. Fallback positional parse.
-    t = parse_lines("2025-11-03\nS-17", ["DATE", "SOURCE"])
+    t, used_fb = parse_lines("2025-11-03\nS-17", ["DATE", "SOURCE"])
     assert t == {"DATE": "2025-11-03", "SOURCE": "S-17"}, t
+    assert used_fb is True
 
 
 def test_parse_lines_fallback_no_partial_mixed():
     # When some keys found by prefix, no fallback attempted (mixed format
     # is treated as intentional, not a non-compliant response).
-    t = parse_lines("DATE: 2025-11-03\nS-17", ["DATE", "SOURCE"])
+    t, used_fb = parse_lines("DATE: 2025-11-03\nS-17", ["DATE", "SOURCE"])
     assert t == {"DATE": "2025-11-03"}, t
     assert "SOURCE" not in t
+    assert used_fb is False
 
 
 def test_parse_lines_fallback_wrong_count_no_match():
     # Line count != key count: no fallback (avoids false positives on prose).
-    t = parse_lines("just one line", ["DATE", "SOURCE"])
+    t, used_fb = parse_lines("just one line", ["DATE", "SOURCE"])
     assert t == {}, t
+    assert used_fb is False
 
 
 def test_parse_lines_fallback_three_fields():
-    t = parse_lines("C-14\nREPAIRED\n3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
+    t, used_fb = parse_lines("C-14\nREPAIRED\n3", ["CLAIM", "STATUS", "EVIDENCE_COUNT"])
     assert t == {"CLAIM": "C-14", "STATUS": "REPAIRED", "EVIDENCE_COUNT": "3"}, t
+    assert used_fb is True
 
 
 def test_parse_lines_empty_and_truncated():
-    assert parse_lines("", ["DATE", "SOURCE"]) == {}
-    assert parse_lines("DATE: 2025-", ["DATE", "SOURCE"]) == {"DATE": "2025-"}
+    t1, fb1 = parse_lines("", ["DATE", "SOURCE"])
+    assert t1 == {} and fb1 is False
+    t2, fb2 = parse_lines("DATE: 2025-", ["DATE", "SOURCE"])
+    assert t2 == {"DATE": "2025-"} and fb2 is False
     # no line starting with SOURCE -> missing key
-    assert "SOURCE" not in parse_lines("DATE: 2025-11-03", ["DATE", "SOURCE"])
+    t3, fb3 = parse_lines("DATE: 2025-11-03", ["DATE", "SOURCE"])
+    assert "SOURCE" not in t3 and fb3 is False
 
 
 def test_parse_lines_last_occurrence_wins():
     # Document behavior: later duplicate key overwrites earlier one.
-    t = parse_lines("A: 1\nA: 2", ["A"])
+    t, _ = parse_lines("A: 1\nA: 2", ["A"])
     assert t == {"A": "2"}, t
 
 
