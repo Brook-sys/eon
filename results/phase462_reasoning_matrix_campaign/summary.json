@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-13T00:30:34Z",
+  "timestamp": "2026-08-13T00:44:09Z",
   "total_trials": 22,
   "successes": 20,
   "failures": 2,
@@ -14,7 +14,7 @@
       "input_tokens": 80,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.432326982
+      "elapsed_s": 0.279399007
     },
     {
       "model": "llama-3.1-8b-instant",
@@ -26,7 +26,7 @@
       "input_tokens": 80,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.28472162
+      "elapsed_s": 0.281951336
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -34,11 +34,11 @@
       "effort": "",
       "format": "",
       "status": "ok",
-      "content": "\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - Two observations: O-1 = 120ms, O-2 = 410ms\n   - Both report latency for the *same test window*\n   - Task: Determine if there's a conflict\n   - Output format: Exactly \"CONFLICT: YES\" or \"CONFLICT: NO\" on the first line\n\n2.  **Define \"Conflict\" in this context:**\n   - In data/observation contexts, a conflict typically means contradictory or significantly different values for the same metric under the same conditions.\n   - 120ms vs 410ms is a substantial difference (more than 3x difference, 290ms absolute difference).\n   - Since they refer to the exact same test window, they should theoretically match or be within a reasonable tolerance. The large discrepancy indicates a conflict.\n\n3.  **Formulate Output:**\n   - Must start with exactly \"CONFLICT: YES\" or \"CONFLICT: NO\"\n   - Based on analysis: CONFLICT: YES\n\n4.  **Check Constraints:**\n   - \"Answer with exactly CONFLICT: YES or CONFLICT",
+      "content": "\u003cthink\u003e\nHere's a thinking process:\n\n1.  **Analyze User Input:**\n   - Two observations: O-1 = 120ms, O-2 = 410ms\n   - Both report latency for the *same test window*\n   - Task: Determine if there's a conflict\n   - Output format: Exactly \"CONFLICT: YES\" or \"CONFLICT: NO\" on the first line\n\n2.  **Define \"Conflict\" in this context:**\n   - In data/observation contexts, a conflict typically means contradictory or significantly different values for the same metric under the same conditions.\n   - 120ms vs 410ms is a large difference (more than 3x difference, 290ms absolute difference)\n   - For latency measurements, this is a clear discrepancy/conflict.\n\n3.  **Check Output Requirements:**\n   - Must start with exactly \"CONFLICT: YES\" or \"CONFLICT: NO\" on the first line.\n   - No extra text before it.\n   - I can add explanation after if needed, but the prompt says \"Answer with exactly CONFLICT: YES or CONFLICT: NO on the first line.\"\n\n4",
       "input_tokens": 59,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 1.153641267
+      "elapsed_s": 0.767929311
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -50,7 +50,7 @@
       "input_tokens": 61,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.203756491
+      "elapsed_s": 0.465192968
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -62,7 +62,7 @@
       "input_tokens": 61,
       "output_tokens": 5,
       "finish_reason": "stop",
-      "elapsed_s": 0.198585064
+      "elapsed_s": 0.258768533
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -73,7 +73,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.761861158,
+      "elapsed_s": 0.790548148,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -86,7 +86,7 @@
       "input_tokens": 116,
       "output_tokens": 109,
       "finish_reason": "stop",
-      "elapsed_s": 0.387725654
+      "elapsed_s": 0.455197389
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -98,7 +98,7 @@
       "input_tokens": 116,
       "output_tokens": 109,
       "finish_reason": "stop",
-      "elapsed_s": 0.398384821
+      "elapsed_s": 0.643047753
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -110,7 +110,7 @@
       "input_tokens": 116,
       "output_tokens": 73,
       "finish_reason": "stop",
-      "elapsed_s": 0.400213753
+      "elapsed_s": 0.412633556
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -120,9 +120,9 @@
       "status": "ok",
       "content": "CONFLICT: YES",
       "input_tokens": 116,
-      "output_tokens": 166,
+      "output_tokens": 135,
       "finish_reason": "stop",
-      "elapsed_s": 0.587068792
+      "elapsed_s": 0.646567373
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -134,7 +134,7 @@
       "input_tokens": 116,
       "output_tokens": 33,
       "finish_reason": "stop",
-      "elapsed_s": 0.429353159
+      "elapsed_s": 0.349464787
     },
     {
       "model": "llama-3.3-70b-versatile",
@@ -146,7 +146,7 @@
       "input_tokens": 76,
       "output_tokens": 13,
       "finish_reason": "stop",
-      "elapsed_s": 0.316315114
+      "elapsed_s": 0.316188996
     },
     {
       "model": "llama-3.1-8b-instant",
@@ -158,7 +158,7 @@
       "input_tokens": 76,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 0.570223351
+      "elapsed_s": 0.577521003
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -170,7 +170,7 @@
       "input_tokens": 55,
       "output_tokens": 256,
       "finish_reason": "length",
-      "elapsed_s": 0.682658764
+      "elapsed_s": 0.689991178
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -182,7 +182,7 @@
       "input_tokens": 57,
       "output_tokens": 11,
       "finish_reason": "stop",
-      "elapsed_s": 0.262186519
+      "elapsed_s": 0.969879605
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -194,7 +194,7 @@
       "input_tokens": 57,
       "output_tokens": 11,
       "finish_reason": "stop",
-      "elapsed_s": 0.641738717
+      "elapsed_s": 0.207974241
     },
     {
       "model": "qwen/qwen3.6-27b",
@@ -205,7 +205,7 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "finish_reason": "",
-      "elapsed_s": 0.804597129,
+      "elapsed_s": 0.781229038,
       "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
     },
     {
@@ -218,7 +218,7 @@
       "input_tokens": 112,
       "output_tokens": 64,
       "finish_reason": "stop",
-      "elapsed_s": 0.322248181
+      "elapsed_s": 0.330715076
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -230,7 +230,7 @@
       "input_tokens": 112,
       "output_tokens": 64,
       "finish_reason": "stop",
-      "elapsed_s": 0.383911611
+      "elapsed_s": 0.295181443
     },
     {
       "model": "openai/gpt-oss-20b",
@@ -242,7 +242,7 @@
       "input_tokens": 112,
       "output_tokens": 32,
       "finish_reason": "stop",
-      "elapsed_s": 0.231099032
+      "elapsed_s": 0.305555582
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -252,9 +252,9 @@
       "status": "ok",
       "content": "{\"latency_ms\": 340}",
       "input_tokens": 112,
-      "output_tokens": 41,
+      "output_tokens": 68,
       "finish_reason": "stop",
-      "elapsed_s": 0.414151729
+      "elapsed_s": 0.383906357
     },
     {
       "model": "openai/gpt-oss-120b",
@@ -262,11 +262,11 @@
       "effort": "low",
       "format": "parsed",
       "status": "ok",
-      "content": "{\"latency_ms\": 340}",
+      "content": "{\n  \"latency_ms\": 340\n}",
       "input_tokens": 112,
-      "output_tokens": 24,
+      "output_tokens": 27,
       "finish_reason": "stop",
-      "elapsed_s": 0.291279334
+      "elapsed_s": 0.30720015
     }
   ]
 }

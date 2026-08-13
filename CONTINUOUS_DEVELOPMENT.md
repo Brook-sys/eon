@@ -8524,3 +8524,17 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 P50 latency across valid responses was 521ms.
 
 **Verification.** Output serialized to `results/phase397-reasoning-recovery`.
+
+## Phase 481 — Phase 462 Reasoning Matrix Campaign Rerun (2026-08-13 00:55 -03)
+
+**Objective and implementation.** We reran the `cmd/phase462_reasoning_matrix_campaign` test suite to re-verify matrix functionality of reasoning-capable models (qwen, gpt-oss) with `reasoning_effort` permutations against standard control models.
+
+**Live hypothesis and bounds.** The campaign matrix covers conflict detection and structured JSON extraction permutations against `reasoning_effort` ("", "none", "low") and parsing strategies across Groq models. Specifically testing if shadow-thinking exhaustion triggers the correct `reasoning_budget_exhausted` error.
+
+**Observed evidence and decision.** The campaign executed successfully with 22 total trials, 20 successes, and 2 expected failures.
+- `qwen/qwen3.6-27b` successfully threw `INVALID_RESPONSE: reasoning_budget_exhausted` when restricted to a tight budget and subjected to `reasoning_effort="low"`.
+- Applying `reasoning_effort="none"` to `qwen/qwen3.6-27b` correctly suppressed shadow thinking, returning the structured target cleanly in fast execution times (<300ms on some runs).
+- `gpt-oss-20b` and `gpt-oss-120b` succeeded uniformly across reasoning constraints.
+- `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` succeeded on standard formatting.
+
+**Verification.** Output serialized to `results/phase462_reasoning_matrix_campaign/summary.json`.
