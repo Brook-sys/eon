@@ -8710,3 +8710,22 @@ P50 latency across valid responses was 521ms.
 **Deterministic verification.** 
 - 16/16 exact match responses. No positional fallbacks triggered. Zero 429 rate limit backoffs.
 - Artifacts generated in `results/sweeps/massive-fire-sweep-v1/hb-test-adv-conflict-*`.
+
+## Phase 494 — NVIDIA NIM Conflict Data Verification (2026-08-13 20:50 -03)
+
+**Objective and diagnosis.** Extend the adversarial conflict data reasoning checks (`adv-conflicting-data`) to the NVIDIA NIM provider baseline, measuring reliability and performance of heavy weights vs 8B class across the NIM platform to supplement the Groq findings.
+
+**Live campaign and decisions.**
+- Executed bounded 2-rep checks across NVIDIA NIM models using the updated mathematical hint prompt variant (v2).
+- `nvidia_nim:nvidia/llama-3.3-nemotron-super-49b-v1`: 2/2 correct (P50 3502.4ms).
+- `nvidia_nim:meta/llama-3.1-70b-instruct`: 2/2 correct (P50 2839.2ms).
+- `nvidia_nim:meta/llama-3.1-8b-instruct`: 2/2 correct (P50 687.9ms).
+- `nvidia_nim:meta/llama-3.3-70b-instruct`: Unavailable due to platform timeout bounds matching the probe snapshot.
+
+**Findings.**
+- NIM models across parameter classes (8B, 49B, 70B) all successfully pass the adversarial constraint utilizing the restated mathematical boundary hint. 
+- Relative latency on heavy NIM models (49B/70B) remains 6-8x higher than Groq baseline (e.g. 2839ms vs 413ms for LLaMA 70B class).
+
+**Deterministic verification.** 
+- All 6 attempted calls were 100% exact-match correct, utilizing no positional fallbacks and generating valid traces.
+- Validated bounded execution JSON artifacts in `results/sweeps/massive-fire-sweep-v1/hb-test-nim-*`.
