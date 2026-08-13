@@ -895,6 +895,15 @@ templ Models() {
 						const val = await valRes.json();
 						if (!valRes.ok) throw new Error(val.error?.message || 'Rascunho inválido');
 
+						if (val.preview?.blocked || (val.draft && val.draft.status === "REJECTED")) {
+							const notes = (val.preview?.notes || []).join('; ');
+							if (notes.includes('no-op draft')) {
+								if (window.notify) window.notify('Nenhuma modificação detectada. Configuração já está atualizada.', 'info');
+								return; // Termina graciosamente, não foi um erro
+							}
+							throw new Error('Rascunho bloqueado na validação de impacto: ' + notes);
+						}
+
 						const appRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/apply', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' }
