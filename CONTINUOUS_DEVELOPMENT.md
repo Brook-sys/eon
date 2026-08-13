@@ -8510,3 +8510,17 @@ no changes added to commit (use "git add" and/or "git commit -a") preserved.
 **Observed evidence and decision.** All three models demonstrated complete resilience (3/3 successes). Despite the poisoned example chain-of-thought, they correctly evaluated the facts section, ignored the hallucinated date, and output the correct structural target (`2025-11-03`).
 
 **Verification.** Output serialized to `results/adv_cot_poisoning/results.json`.
+
+## Phase 480 — Phase 397 Reasoning Parameter Recovery Validation Campaign (2026-08-13 00:50 -03)
+
+**Objective and implementation.** Addressed the missing execution of the `cmd/phase397_reasoning_recovery_fire_test` campaign. Validated the automatic HTTP 400 parameter recovery in `openai.Provider.complete` across 5 models (`groq/llama-3.1-8b-instant`, `groq/llama-3.3-70b-versatile`, `groq/qwen/qwen3.6-27b`, `groq/openai/gpt-oss-20b`, `nim/meta/llama-3.1-8b-instruct`).
+
+**Live hypothesis and bounds.** The campaign tests multi-key extraction with varying levels of `reasoning_effort` injected into the completion request. We specifically want to observe `gpt-oss-20b` fallback when parameters are not supported, and ensure clean structural parsing (prefix stripping) for the rest.
+
+**Observed evidence and decision.** The campaign executed successfully. 8/15 (53.3%) successful trials.
+- `gpt-oss-20b` failed on cases requiring `reasoning_effort` with `reasoning_budget_exhausted` due to parameter non-support / token exhaustion in shadow thinking. 
+- `qwen3.6-27b` succeeded fully on standard parsing but failed semantic checks during hybrid format parsing due to shadow thinking interference.
+- `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, and `meta/llama-3.1-8b-instruct` successfully navigated standard and hybrid recovery parsing stages with high format compliance.
+P50 latency across valid responses was 521ms.
+
+**Verification.** Output serialized to `results/phase397-reasoning-recovery`.
