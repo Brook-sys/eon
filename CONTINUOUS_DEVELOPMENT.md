@@ -8695,3 +8695,18 @@ P50 latency across valid responses was 521ms.
 
 **Deterministic artifacts.** Test suites passed locally (`go test ./...` 100% OK, python `test_runner.py` 100% OK). Generated bounded artifacts for `adv-prompt-injection` inside `results/sweeps/massive-fire-sweep-v1/`.
 
+
+## Phase 493 — Conflict Data Reasoning Verification Campaign (2026-08-13 20:48 -03)
+
+**Objective and diagnosis.** Re-run verification on the `adv-conflicting-data` task across Groq providers. This task was previously problematic for small models (`allam-2-7b`) failing the implicit math constraint, requiring an explicitly restated mathematical limit ("120ms vs 410ms") in the prompt (Phase 386).
+
+**Live campaign and decisions.**
+- Executed 16 live bounded checks on `adv-conflicting-data` using the restored Python test runner.
+- `groq:qwen/qwen3.6-27b` (reasoning="none"): 4/4 correct (P50 387.2ms).
+- `groq:allam-2-7b`: 4/4 correct (P50 484.3ms, proving the v2 mathematical hint remains 100% effective).
+- `groq:llama-3.1-8b-instant`: 4/4 correct (P50 445.5ms).
+- `groq:llama-3.3-70b-versatile`: 4/4 correct (P50 413.1ms).
+
+**Deterministic verification.** 
+- 16/16 exact match responses. No positional fallbacks triggered. Zero 429 rate limit backoffs.
+- Artifacts generated in `results/sweeps/massive-fire-sweep-v1/hb-test-adv-conflict-*`.
