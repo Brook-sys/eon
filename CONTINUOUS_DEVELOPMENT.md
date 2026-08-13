@@ -8538,3 +8538,16 @@ P50 latency across valid responses was 521ms.
 - `llama-3.1-8b-instant` and `llama-3.3-70b-versatile` succeeded on standard formatting.
 
 **Verification.** Output serialized to `results/phase462_reasoning_matrix_campaign/summary.json`.
+
+## Phase 484 — Qwen3.6-27B Adversarial Retry & Reasoning Effort Campaign (2026-08-12 23:05 -03)
+
+**Objective and implementation.** Re-tested the adversarial prompt suite directly against Groq's `qwen/qwen3.6-27b` specifically isolating the behavior of `reasoning_effort`. Wrote and executed `cmd/phase484_adversarial_retry_qwen`.
+1. Tested 4 adversarial scenarios (ambiguous, polluted context, budget starvation, CoT poisoning).
+2. Toggled `reasoning_effort` between `"none"` (with `reasoning_format="parsed"`) and `"low"`.
+
+**Live Evidence & Decision.** 10 live calls executed.
+- When `reasoning_effort="none"`, `qwen/qwen3.6-27b` scored **100% compliance** across all adversarial tasks, outputting exactly the requested strings (`CONFLICT: YES/NO`) in 5 tokens. Budget starvation auto-recovery also cleanly succeeded.
+- When `reasoning_effort="low"`, the model experienced **0% compliance**. In all 4 scenarios, the model consumed its entire token budget (whether 200 or 50 on retry) emitting `<think>Here's a thinking process...` and never reaching the final answer.
+- **Engine Design Rule**: `qwen/qwen3.6-27b` *must* be invoked with `reasoning_effort="none"` for all bounded, structured, or exact-match contracts. Retries with slightly larger budgets will not save a reasoning-entangled response.
+
+**Artifacts & Verification.** `results/phase484_adversarial_retry_qwen/results.json`, `cmd/phase484_adversarial_retry_qwen/REPORT.md`. All live tests completed with valid telemetry.
