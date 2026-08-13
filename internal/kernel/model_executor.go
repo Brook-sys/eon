@@ -1360,7 +1360,13 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				corr.Prompt = fmt.Sprintf("RECOVERY %d: %s\nPlease strictly follow instructions and ensure the response fits within the new budget.", budget.ModelCallsUsed, corr.Prompt)
 			}
 
+			sysPrompt := ""
+			if lastCompletion.FinishReason == port.CompletionFinishLength {
+				sysPrompt = fmt.Sprintf("STRICT SYSTEM RECOVERY %d: Fit exact response in budget. No preambles, fences, thinking, or commentary.", budget.ModelCallsUsed)
+			}
+
 			request = port.CompletionRequest{
+				SystemPrompt:    sysPrompt,
 				Prompt:          corr.Prompt,
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
@@ -1378,7 +1384,12 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			}
 			// Simpler format recovery always drops enrichment (baseline text).
 			plan = domain.PlanAfterDemotion(domain.AdaptationPlan{Level: domain.AdaptationAssistedJSON}, profile)
+			sysPrompt := ""
+			if lastCompletion.FinishReason == port.CompletionFinishLength {
+				sysPrompt = fmt.Sprintf("STRICT SYSTEM RECOVERY %d: Fit exact response in budget. No preambles, fences, thinking, or commentary.", budget.ModelCallsUsed)
+			}
 			request = port.CompletionRequest{
+				SystemPrompt:    sysPrompt,
 				Prompt:          corr.Prompt,
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
 				Temperature:     0,
@@ -1439,6 +1450,7 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			// Phase 489: Strict adversarial constraint if we starved and fell back
 			if lastCompletion.FinishReason == port.CompletionFinishLength {
 				request.Prompt = fmt.Sprintf("RECOVERY %d: %s\nPlease strictly follow instructions and ensure the response fits within the new budget.", budget.ModelCallsUsed, request.Prompt)
+				request.SystemPrompt = fmt.Sprintf("STRICT SYSTEM RECOVERY %d: Fit exact response in budget. No preambles, fences, thinking, or commentary.", budget.ModelCallsUsed)
 			}
 			// Remote fallback profiles (notably constrained NIM/Groq bindings)
 			// use the reduced line format. The changeset decoder accepts only the

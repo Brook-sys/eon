@@ -362,7 +362,11 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 		ctx, cancel = context.WithTimeout(ctx, request.Timeout)
 		defer cancel()
 	}
-	messages := []chatMessage{{Role: "user", Content: request.Prompt}}
+	messages := make([]chatMessage, 0, 3)
+	if strings.TrimSpace(request.SystemPrompt) != "" {
+		messages = append(messages, chatMessage{Role: "system", Content: request.SystemPrompt})
+	}
+	messages = append(messages, chatMessage{Role: "user", Content: request.Prompt})
 	if prefill := strings.TrimSpace(request.PrefillAssistant); prefill != "" {
 		messages = append(messages, chatMessage{Role: "assistant", Content: prefill})
 	}

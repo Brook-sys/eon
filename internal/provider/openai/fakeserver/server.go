@@ -15,6 +15,7 @@ import (
 const maxRequestBytes int64 = 1 << 20
 
 type Exchange struct {
+	ExpectedSystemPrompt   string
 	ExpectedPrompt         string
 	ExpectedModel          string
 	ExpectedMaxOutputField string
@@ -50,6 +51,7 @@ type Exchange struct {
 }
 
 type Request struct {
+	SystemPrompt    string
 	Prompt          string
 	Model           string
 	MaxOutputTokens int
@@ -138,7 +140,23 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if decodeErr == nil {
 		trailingErr = decoder.Decode(&struct{}{})
 	}
-	if decodeErr != nil || trailingErr != io.EOF || len(body.Messages) == 0 || body.Messages[0].Role != "user" {
+	if decodeErr != nil || trailingErr != io.EOF {
+		s.failures = append(s.failures, "invalid Chat Completions request")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	msgs := body.Messages
+	if len(msgs) == 0 {
+		s.failures = append(s.failures, "invalid Chat Completions request")
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	systemPrompt := ""
+	if msgs[0].Role == "system" {
+		systemPrompt = msgs[0].Content
+		msgs = msgs[1:]
+	}
+	if len(msgs) == 0 || msgs[0].Role != "user" {
 		// Keep the externally asserted failure stable and free of request/body
 		// details. Tests need deterministic classification, not decoder text.
 		s.failures = append(s.failures, "invalid Chat Completions request")
@@ -146,16 +164,16 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	prefill := ""
-	switch len(body.Messages) {
+	switch len(msgs) {
 	case 1:
 		// baseline single user message
 	case 2:
-		if body.Messages[1].Role != "assistant" {
+		if msgs[1].Role != "assistant" {
 			s.failures = append(s.failures, "invalid Chat Completions request")
 			http.Error(w, "invalid request", http.StatusBadRequest)
 			return
 		}
-		prefill = body.Messages[1].Content
+		prefill = msgs[1].Content
 	default:
 		s.failures = append(s.failures, "invalid Chat Completions request")
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -177,7 +195,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		responseFormat = body.ResponseFormat.Type
 	}
 	req := Request{
-		Prompt: body.Messages[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens,
+		SystemPrompt: systemPrompt, Prompt: msgs[0].Content, Model: body.Model, MaxOutputTokens: maxOutputTokens,
 		MaxOutputField: maxOutputField, Temperature: body.Temperature,
 		Authorization: r.Header.Get("Authorization"), ResponseFormat: responseFormat,
 		ReasoningEffort: body.ReasoningEffort, UserAgent: r.Header.Get("User-Agent"),
@@ -205,6 +223,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		case <-time.After(delay):
 		}
 		s.mu.Lock()
+	}
+	if exchange.ExpectedSystemPrompt != "" && exchange.ExpectedSystemPrompt != req.SystemPrompt {
+		s.failures = append(s.failures, fmt.Sprintf("system prompt mismatch: got %q", req.SystemPrompt))
 	}
 	if exchange.ExpectedPrompt != "" && exchange.ExpectedPrompt != req.Prompt {
 		s.failures = append(s.failures, fmt.Sprintf("prompt mismatch: got %q", req.Prompt))

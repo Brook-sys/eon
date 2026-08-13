@@ -12,6 +12,9 @@ import (
 // features must remain optional, authority-free adapter details selected by
 // the kernel from a confirmed ProviderProfile (FR-MODEL-006).
 type CompletionRequest struct {
+	// SystemPrompt is an optional system-level instruction. When set, adapters
+	// map this to the provider's system role (e.g. messages[0].role="system").
+	SystemPrompt    string
 	Prompt          string
 	MaxOutputTokens int
 	Temperature     float64
