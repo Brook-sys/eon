@@ -8552,3 +8552,11 @@ P50 latency across valid responses was 521ms.
 
 **Artifacts & Verification.** `results/phase484_adversarial_retry_qwen/results.json`, `cmd/phase484_adversarial_retry_qwen/REPORT.md`. All live tests completed with valid telemetry.
 2026-08-13 06:10 — Fase 486/Groq Discovery — descobertas 15 models em `/v1/models`; testamos `gpt-oss-safeguard-20b` (sem generative output), `groq/compound` (quebra a instrução e retorna Chain-of-Thought), `groq/compound-mini` (falhou rate limit internamente no `gpt-oss-120b`), `allam-2-7b` (passou) e `canopylabs/orpheus-v1-english` (HTTP 400 termo exigido); descartamos uso dos ensembles Groq por quebrarem determinismo contratual — verificação: `go run ./cmd/phase486_groq_discovery/test_campaign.go` — próximo: incluir `allam-2-7b` em matrizes de estresse se apropriado e continuar com sweeps.
+
+## Phase 487 — UI Stale Base Conflict Fix (2026-08-13 06:30 -03)
+
+**Objective and implementation.** Fixed the spurious `config_draft conflict` error encountered on the UI when reusing API keys or rapidly submitting configurations.
+- Identified that `mapStoreError` in `internal/control/httpapi.go` mapped both `port.ErrConflict` and `domain.ErrConflict` (STALE_BASE) to the identical string `config_draft conflict`, obscuring the real concurrency/stale-base error. Reordered the switch statement to properly map `domain.ErrConflict` to `STALE_BASE`.
+- Discovered race condition in Dashboard UI (`views/models.templ`) where double-clicks on submit buttons dispatched multiple draft apply operations using the same `cfgActiveRevision`, triggering `STALE_BASE` errors on the backend. Added early return `if (this.formSubmitting) return;` to prevent double submissions.
+
+**Verification.** Ran `go test -v ./internal/control` locally, all tests pass. UI resilience improved; genuine concurrency conflicts now properly show `Conflito de revisão! BaseUI=X vs Erro=stale config base revision`.

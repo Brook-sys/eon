@@ -1481,7 +1481,9 @@ func mapStoreError(err error, resource string) error {
 	switch {
 	case errors.Is(err, port.ErrNotFound):
 		return apiError{status: http.StatusNotFound, code: "not_found", message: resource + " not found"}
-	case errors.Is(err, port.ErrConflict), errors.Is(err, domain.ErrConflict):
+	case errors.Is(err, domain.ErrConflict):
+		return apiError{status: http.StatusConflict, code: "STALE_BASE", message: err.Error()}
+	case errors.Is(err, port.ErrConflict):
 		return apiError{status: http.StatusConflict, code: "conflict", message: resource + " conflict"}
 	case isValidationError(err):
 		return apiError{status: http.StatusBadRequest, code: "invalid_request", message: sanitizeValidationMessage(err)}

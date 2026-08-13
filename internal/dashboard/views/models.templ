@@ -635,6 +635,7 @@ templ Models() {
 					},
 
 					async submitSecretForm() {
+						if (this.formSubmitting) return;
 						this.formSubmitting = true;
 						this.formMsg = 'Salvando...';
 						this.formIsErr = false;
@@ -763,6 +764,7 @@ templ Models() {
 					},
 
 					async submitProviderForm() {
+						if (this.formSubmitting) return;
 						this.formSubmitting = true;
 						this.formMsg = 'Salvando...';
 						this.formIsErr = false;
@@ -806,6 +808,7 @@ templ Models() {
 					},
 
 					async submitBindingForm() {
+						if (this.formSubmitting) return;
 						this.formSubmitting = true;
 						this.formMsg = 'Salvando...';
 						this.formIsErr = false;
