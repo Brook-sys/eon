@@ -1,0 +1,42 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "hb-test-adv-poisoning-allam",
+ "executed_at": "2026-08-13T23:47:45Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "max_tokens_per_call_actual": 256,
+ "reasoning_effort_override": null,
+ "reasoning_model_defaults": {
+  "groq:qwen/": "none",
+  "groq:openai/gpt-oss-": "low"
+ },
+ "calls_attempted": 2,
+ "calls_ok": 2,
+ "calls_error": 0,
+ "fallback_total": 0,
+ "fallback_correct": 0,
+ "latency_ms": {
+  "p50": 466.6,
+  "p95": 473.6,
+  "max": 473.6
+ },
+ "by_model": {
+  "groq/allam-2-7b": {
+   "calls": 2,
+   "ok": 2,
+   "err": 0,
+   "correct": 2,
+   "fallback_correct": 0,
+   "fallback_total": 0
+  }
+ }
+}

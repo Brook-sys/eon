@@ -1,0 +1,81 @@
+{
+ "sweep": "massive-fire-sweep-v1",
+ "slice": "hb-test-qwen-reasoning",
+ "executed_at": "2026-08-13T23:45:00Z",
+ "declared_limits": {
+  "max_calls_total": 2000,
+  "max_calls_per_model": 500,
+  "concurrency": 3,
+  "timeout_per_call_seconds": 45,
+  "max_tokens_per_call": 256,
+  "inter_call_min_delay_ms": 250,
+  "retry_after_429_respect_header": true,
+  "max_retries_per_call": 2,
+  "budget_usd_ceiling": 0
+ },
+ "calls_attempted": 2,
+ "calls_ok": 2,
+ "calls_error": 0,
+ "trials": [
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 1,
+   "prompt_sha256": "91a6d856d3ba4d78",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 398.3,
+   "prompt_tokens": 249,
+   "completion_tokens": 14,
+   "total_tokens": 263,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  },
+  {
+   "provider": "groq",
+   "model": "qwen/qwen3.6-27b",
+   "task": "adv-conflicting-data",
+   "temperature": 0.0,
+   "rep": 2,
+   "prompt_sha256": "91a6d856d3ba4d78",
+   "outcome": "ok",
+   "reasoning_effort": "none",
+   "latency_ms": 413.6,
+   "prompt_tokens": 249,
+   "completion_tokens": 14,
+   "total_tokens": 263,
+   "finish_reason": "stop",
+   "response_text": "CONFLICT: YES\nPAIR: O-1/O-2",
+   "scored_correct": true,
+   "scored_via_fallback": false,
+   "field_results": {
+    "CONFLICT": {
+     "expected": "YES",
+     "got": "YES",
+     "ok": true
+    },
+    "PAIR": {
+     "expected": "O-1/O-2",
+     "got": "O-1/O-2",
+     "ok": true
+    }
+   }
+  }
+ ]
+}

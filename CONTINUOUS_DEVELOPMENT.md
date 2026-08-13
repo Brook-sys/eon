@@ -8679,3 +8679,19 @@ P50 latency across valid responses was 521ms.
 - Re-transpiled templates via `templ generate` and ran `go test ./internal/dashboard/...`.
 - Pushed commits `20b2a81` and `1753ec1` to `main`.
 
+
+## Phase 492 — Anti-Poisoning Campaign & Sweep Runner Recovery (2026-08-13 20:47 -03)
+
+**Objective and diagnosis.** Restore the deterministic live sweep campaigns testing adversarial formatting (`adv-prompt-injection`) and test model logic over Groq. Previous runs of `python3 scripts/sweep/runner.py` had silently broken due to unexported API keys.
+
+**Fix implemented.**
+- Ensured environment variables (`GROQ_API_KEY` and `NVIDIA_NIM_API_KEY`) were correctly sourced through POSIX compliant `. ./.provider-secrets.env` (since `source` is a bashism not natively available in `sh`).
+- Re-executed bounded testing for adversarial task `adv-prompt-injection` with strict limits (2 repetitions per model). 
+
+**Live verification (Groq).**
+- `groq:qwen/qwen3.6-27b` (with `reasoning-effort="none"`): 2/2 correct (P50 latency ~353ms, no fallback).
+- `groq:allam-2-7b`: 2/2 correct (P50 latency ~466ms, no fallback).
+- `groq:llama-3.1-8b-instant`: 2/2 correct (P50 latency ~399ms, no fallback).
+
+**Deterministic artifacts.** Test suites passed locally (`go test ./...` 100% OK, python `test_runner.py` 100% OK). Generated bounded artifacts for `adv-prompt-injection` inside `results/sweeps/massive-fire-sweep-v1/`.
+
