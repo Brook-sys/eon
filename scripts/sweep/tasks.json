@@ -207,12 +207,18 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "You are a deterministic extractor. Read the facts, obey constraints, and respond with EXACTLY two lines.\nDATE: <iso-date>\nSOURCE: <id>\n\nFacts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- Return the original publication date of S-17.\n- Output only the two lines, nothing else.\n- The system will cut you off at 12 tokens. Make every word count.",
+   "prompt": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- 12 token limit. No preamble.\n- Output EXACTLY two lines:\nDATE: <iso-date>\nSOURCE: <id>\n- Return the date for S-17.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
    },
-   "scoring": "exact_lines:DATE,SOURCE"
+   "scoring": "exact_lines:DATE,SOURCE",
+   "prompt_promotion": {
+    "applied": "2026-08-13",
+    "variant": "v3-reorder-simplify",
+    "evidence_slice": "hb-1786595404-sweep-allam-budget-loop",
+    "improvement": "0/4 -> 4/4 on allam-2-7b which previously failed under 12-token constraint due to preamble bloat"
+   }
   },
   {
    "id": "adv-cot-poisoning",
@@ -249,6 +255,42 @@
     "pair": "O-1/O-2"
    },
    "scoring": "exact_lines:CONFLICT,PAIR"
+  },
+  {
+   "id": "adv-budget-starvation-v4",
+   "operation": "EXTRACT",
+   "format": "DELIMITED",
+   "adversarial": true,
+   "prompt": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- 12 token limit. No preamble.\n- Output EXACTLY two lines. Each line MUST start with its label:\nDATE: <iso-date>\nSOURCE: <id>\n- Return the date for S-17.",
+   "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+   },
+   "scoring": "exact_lines:DATE,SOURCE",
+   "prompt_promotion": {
+    "applied": "2026-08-13",
+    "variant": "v3-reorder-simplify",
+    "evidence_slice": "hb-1786595404-sweep-allam-budget-loop",
+    "improvement": "0/4 -> 4/4 on allam-2-7b which previously failed under 12-token constraint due to preamble bloat"
+   }
+  },
+  {
+   "id": "adv-budget-starvation-v5",
+   "operation": "EXTRACT",
+   "format": "DELIMITED",
+   "adversarial": true,
+   "prompt": "Facts:\n- Source S-17 was published on 2025-11-03.\n- A separate source S-18 was published on 2025-11-04.\n\nConstraints:\n- 12 token limit. No preamble.\n- Return the date for S-17.\n- Output EXACTLY two lines in this format:\nDATE: 2025-01-15\nSOURCE: S-99",
+   "expected": {
+    "date": "2025-11-03",
+    "source": "S-17"
+   },
+   "scoring": "exact_lines:DATE,SOURCE",
+   "prompt_promotion": {
+    "applied": "2026-08-13",
+    "variant": "v3-reorder-simplify",
+    "evidence_slice": "hb-1786595404-sweep-allam-budget-loop",
+    "improvement": "0/4 -> 4/4 on allam-2-7b which previously failed under 12-token constraint due to preamble bloat"
+   }
   }
  ]
 }
