@@ -1330,6 +1330,22 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 			_ = e.appendAdaptationEvent(ctx, operation, leaseRef, plan, budget.ModelCallsUsed)
 		}
 		decision := domain.DecideNextRecovery(budget)
+		// Phase 467/470: Adversarial budget starvation recovery.
+		// Intercept max_tokens exhaustion before generating the recovery prompt.
+		if lastCompletion.FinishReason == port.CompletionFinishLength {
+			newTokens := compiled.Request.MaxOutputTokens * 2
+			if newTokens <= compiled.Request.MaxOutputTokens {
+				newTokens = compiled.Request.MaxOutputTokens + 512
+			}
+			if profile.MaxOutputTokens > 0 && newTokens > profile.MaxOutputTokens {
+				newTokens = profile.MaxOutputTokens
+			}
+			if newTokens > compiled.Request.MaxOutputTokens {
+				compiled.Request.MaxOutputTokens = newTokens
+				decision.Reason = "max_tokens_budget_exhaustion"
+			}
+		}
+
 		result.RecoveryStages = append(result.RecoveryStages, decision.Stage)
 
 		switch decision.Disposition {
@@ -1339,6 +1355,11 @@ func (e ModelExecutor) Execute(ctx context.Context, operationID domain.Operation
 				SafeError:      safeDetail,
 				AnswerFormat:   compileInput.AnswerFormat,
 			})
+			// Phase 467/470: Strict adversarial constraint if we starved
+			if lastCompletion.FinishReason == port.CompletionFinishLength {
+				corr.Prompt = fmt.Sprintf("RECOVERY %d: %s\nPlease strictly follow instructions and ensure the response fits within the new budget.", budget.ModelCallsUsed, corr.Prompt)
+			}
+
 			request = port.CompletionRequest{
 				Prompt:          corr.Prompt,
 				MaxOutputTokens: compiled.Request.MaxOutputTokens,
