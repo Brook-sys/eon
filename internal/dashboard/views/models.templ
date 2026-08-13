@@ -251,65 +251,67 @@ templ Models() {
 				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
 					@EmptyState("Nenhum provedor configurado no catálogo ativo.")
 				</template>
-				<div class="grid gap-6 grid-cols-1 xl:grid-cols-2" x-show="cfgPayload && (cfgPayload.providers ?? []).length > 0">
-					<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
-						<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)] transition-all flex flex-col gap-5">
-							<div class="flex flex-wrap items-start justify-between gap-4">
-								<div class="flex items-center gap-4">
-									<div class="w-12 h-12 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex items-center justify-center font-bold text-lg text-[var(--text)] uppercase" x-text="p.id.substring(0,2)"></div>
-									<div>
-										<div class="font-bold text-[18px] text-[var(--text)] font-mono tracking-tight" x-text="p.id"></div>
-										<div class="text-[12px] text-[var(--subtle)] font-mono mt-0.5" x-text="p.kind"></div>
+				<template x-if="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+					<div class="grid gap-6 grid-cols-1 xl:grid-cols-2">
+						<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
+							<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)] transition-all flex flex-col gap-5">
+								<div class="flex flex-wrap items-start justify-between gap-4">
+									<div class="flex items-center gap-4">
+										<div class="w-12 h-12 rounded-xl bg-[var(--panel)] border border-[var(--border)] flex items-center justify-center font-bold text-lg text-[var(--text)] uppercase" x-text="p.id.substring(0,2)"></div>
+										<div>
+											<div class="font-bold text-[18px] text-[var(--text)] font-mono tracking-tight" x-text="p.id"></div>
+											<div class="text-[12px] text-[var(--subtle)] font-mono mt-0.5" x-text="p.kind"></div>
+										</div>
+									</div>
+									<div class="flex items-center gap-2">
+										<button
+											type="button"
+											class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--panel)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+											x-on:click="editProvider(p.id)"
+										>
+											<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+											Editar
+										</button>
+										<button
+											type="button"
+											class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--err)]/5 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+											x-on:click="removeProvider(p.id)"
+										>
+											<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+											Remover
+										</button>
 									</div>
 								</div>
-								<div class="flex items-center gap-2">
-									<button
-										type="button"
-										class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--panel)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-										x-on:click="editProvider(p.id)"
-									>
-										<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-										Editar
-									</button>
-									<button
-										type="button"
-										class="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--err)]/5 border border-[var(--err)]/20 text-[var(--err)] hover:bg-[var(--err)]/20 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-										x-on:click="removeProvider(p.id)"
-									>
-										<svg class="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-										Remover
-									</button>
+
+								<div class="px-4 py-3 bg-[var(--panel)] rounded-xl border border-[var(--border)] text-[12px] font-mono text-[var(--muted)] truncate" x-text="p.base_url"></div>
+
+								<div class="grid grid-cols-3 gap-3 border-t border-[var(--border)] pt-5">
+									<div class="flex flex-col gap-1">
+										<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Env Key</span>
+										<span class="text-[13px] font-mono text-[var(--text)] bg-[var(--panel)] px-2 py-1 rounded inline-block truncate" x-text="p.api_key_env || 'N/A'"></span>
+									</div>
+									<div class="flex flex-col gap-1">
+										<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Concorrência</span>
+										<span class="text-[16px] font-bold text-[var(--text)] mt-1" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></span>
+									</div>
+									<div class="flex flex-col gap-1">
+										<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Bindings</span>
+										<span class="text-[16px] font-bold text-white mt-1" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></span>
+									</div>
 								</div>
+
+								<button
+									type="button"
+									class="mt-1 w-full px-4 py-3 rounded-xl text-[13px] font-semibold text-[var(--text)] bg-[var(--panel-sub)] border border-[var(--border)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+									x-on:click="discoverModelsForProvider(p.id)"
+								>
+									<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+									Descobrir Modelos via API
+								</button>
 							</div>
-							
-							<div class="px-4 py-3 bg-[var(--panel)] rounded-xl border border-[var(--border)] text-[12px] font-mono text-[var(--muted)] truncate" x-text="p.base_url"></div>
-							
-							<div class="grid grid-cols-3 gap-3 border-t border-[var(--border)] pt-5">
-								<div class="flex flex-col gap-1">
-									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Env Key</span>
-									<span class="text-[13px] font-mono text-[var(--text)] bg-[var(--panel)] px-2 py-1 rounded inline-block truncate" x-text="p.api_key_env || 'N/A'"></span>
-								</div>
-								<div class="flex flex-col gap-1">
-									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Concorrência</span>
-									<span class="text-[16px] font-bold text-[var(--text)] mt-1" x-text="(p.global_limit && p.global_limit.max_concurrent) || 1"></span>
-								</div>
-								<div class="flex flex-col gap-1">
-									<span class="text-[11px] font-semibold text-[var(--subtle)] uppercase tracking-wider">Bindings</span>
-									<span class="text-[16px] font-bold text-white mt-1" x-text="(cfgPayload.bindings || []).filter(b => b.provider_ref === p.id).length"></span>
-								</div>
-							</div>
-							
-							<button
-								type="button"
-								class="mt-1 w-full px-4 py-3 rounded-xl text-[13px] font-semibold text-[var(--text)] bg-[var(--panel-sub)] border border-[var(--border)] hover:bg-[var(--panel-hover)] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-								x-on:click="discoverModelsForProvider(p.id)"
-							>
-								<svg class="w-4 h-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-								Descobrir Modelos via API
-							</button>
-						</div>
-					</template>
-				</div>
+						</template>
+					</div>
+				</template>
 			}
 
 			<!-- Modelos Descobertos Dinamicamente via API OpenAI -->
@@ -329,11 +331,11 @@ templ Models() {
 							Sincronizar Lista
 						</button>
 					</div>
-					
+
 					<template x-if="discoveredModels.length === 0">
 						@EmptyState("Nenhum modelo carregado ainda. Clique em Sincronizar para buscar na API.")
 					</template>
-					
+
 					<div class="flex flex-wrap gap-3 pt-2" x-show="discoveredModels.length > 0">
 						<template x-for="m in discoveredModels" x-bind:key="m">
 							<div class="inline-flex items-center justify-between gap-4 pl-4 pr-1.5 py-1.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono shadow-sm hover:border-[var(--border-focus)] transition-colors group">
@@ -356,7 +358,7 @@ templ Models() {
 			<!-- Preferências de Modelo / Bindings Registradas (Opcional) -->
 			@card("Regras de Roteamento / Bindings") {
 				<p class="text-[14px] text-[var(--muted)] mb-5 font-medium leading-relaxed" x-show="note" x-text="note"></p>
-				
+
 				<div class="rounded-[20px] border border-[var(--border)] shadow-sm overflow-hidden bg-[var(--bg)]">
 					<div class="overflow-x-auto">
 						<table class="w-full text-left border-collapse text-[14px]">
@@ -397,7 +399,7 @@ templ Models() {
 			<!-- Pressões de Contexto -->
 			@card("Pressão de Contexto Ativa") {
 				<p class="text-[14px] text-[var(--muted)] mb-6 font-medium leading-relaxed" x-show="pressureNote" x-text="pressureNote"></p>
-				
+
 				<div class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 					<template x-if="pressures.length === 0">
 						<div class="col-span-full">
@@ -414,7 +416,7 @@ templ Models() {
 									x-text="((p.ratio ?? 0) * 100).toFixed(1) + '%'"
 								></span>
 							</div>
-							
+
 							<!-- Custom Progress Bar -->
 							<div class="w-full bg-[var(--panel)] rounded-full h-3 overflow-hidden border border-[var(--border)]">
 								<div
@@ -423,7 +425,7 @@ templ Models() {
 									x-bind:style="'width: ' + Math.min(100, Math.max(0, (p.ratio ?? 0) * 100)) + '%'"
 								></div>
 							</div>
-							
+
 							<div class="flex justify-between text-[12px] text-[var(--muted)] font-mono">
 								<span>Usado: <strong class="text-[var(--text)] font-semibold" x-text="p.used_tokens ?? 0"></strong></span>
 								<span>Limite: <strong class="text-[var(--text)] font-semibold" x-text="p.limit_tokens ?? 0"></strong></span>
@@ -496,8 +498,8 @@ templ Models() {
 					async refresh() {
 						try {
 							const [b, p, activeRev] = await Promise.all([
-								fetch('/dash/api/model-bindings').then(r => r.json()),
-								fetch('/dash/api/model-context-pressures').then(r => r.json()),
+								fetch('/dash/api/model-bindings').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+								fetch('/dash/api/model-context-pressures').then(r => r.ok ? r.json() : {}).catch(() => ({})),
 								fetch('/dash/api/control/config/revisions/active?scope=MODELS&_t=' + Date.now(), { cache: 'no-store' }).then(async r => {
 									if (!r.ok) {
 										const e = await r.json().catch(() => ({}));
@@ -523,7 +525,7 @@ templ Models() {
 								this.cfgActiveRevision = 0;
 								this.cfgPayload = { providers: [], bindings: [] };
 							}
-							
+
 							if (!Array.isArray(this.cfgPayload.providers)) this.cfgPayload.providers = [];
 							if (!Array.isArray(this.cfgPayload.bindings)) this.cfgPayload.bindings = [];
 
@@ -815,7 +817,7 @@ templ Models() {
 						try {
 							const pRef = this.bindingForm.provider_ref;
 							const mId = this.bindingForm.model_id.trim();
-							
+
 							const currentBindings = [...(this.cfgPayload.bindings || [])];
 							const newB = {
 								id: "binding_" + pRef + "_" + mId.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(),
