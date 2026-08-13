@@ -1,0 +1,128 @@
+[
+  {
+    "model": "llama-3.1-8b-instant",
+    "format": "exact_match",
+    "latency_ms": 309,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "format": "exact_match",
+    "latency_ms": 230,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "llama-3.1-8b-instant",
+    "format": "exact_match",
+    "latency_ms": 457,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "format": "exact_match",
+    "latency_ms": 312,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "format": "exact_match",
+    "latency_ms": 222,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "llama-3.3-70b-versatile",
+    "format": "exact_match",
+    "latency_ms": 238,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "allam-2-7b",
+    "format": "exact_match",
+    "latency_ms": 356,
+    "status_code": 200,
+    "success": false,
+    "tokens": 4,
+    "error": "content mismatch: \"READY \""
+  },
+  {
+    "model": "allam-2-7b",
+    "format": "exact_match",
+    "latency_ms": 340,
+    "status_code": 200,
+    "success": false,
+    "tokens": 4,
+    "error": "content mismatch: \"READY \""
+  },
+  {
+    "model": "allam-2-7b",
+    "format": "exact_match",
+    "latency_ms": 360,
+    "status_code": 200,
+    "success": false,
+    "tokens": 4,
+    "error": "content mismatch: \"READY \""
+  },
+  {
+    "model": "openai/gpt-oss-20b",
+    "format": "exact_match",
+    "latency_ms": 422,
+    "status_code": 0,
+    "success": false,
+    "tokens": 0,
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  },
+  {
+    "model": "openai/gpt-oss-20b",
+    "format": "exact_match",
+    "latency_ms": 312,
+    "status_code": 0,
+    "success": false,
+    "tokens": 0,
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  },
+  {
+    "model": "openai/gpt-oss-20b",
+    "format": "exact_match",
+    "latency_ms": 293,
+    "status_code": 0,
+    "success": false,
+    "tokens": 0,
+    "error": "openai-compatible provider: INVALID_RESPONSE: reasoning_budget_exhausted"
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "format": "exact_match",
+    "latency_ms": 183,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "format": "exact_match",
+    "latency_ms": 196,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  },
+  {
+    "model": "qwen/qwen3.6-27b",
+    "format": "exact_match",
+    "latency_ms": 341,
+    "status_code": 200,
+    "success": true,
+    "tokens": 2
+  }
+]
