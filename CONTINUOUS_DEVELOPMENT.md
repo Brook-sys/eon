@@ -8653,3 +8653,16 @@ P50 latency across valid responses was 521ms.
 
 **Verification.** `go test ./...` passed cleanly, `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/phase489_starvation_recovery/results.json`.
 
+## Phase 490 — Dashboard Models UI Provider Persistence & Reactivity (2026-08-13 16:50 -03)
+
+**Objective and diagnosis.** Investigated reported UI behavior where saving a new provider showed a success toast ("Provedor salvo!"), but the provider card did not appear in the dashboard list. Deep trace identified two structural causes in Alpine.js component:
+1. **Uncaught Inspection API Errors in `Promise.all`**: `refresh()` executed `fetch('/dash/api/model-bindings')` and `fetch('/dash/api/model-context-pressures')` alongside active config revision fetch. Any non-ok status or JSON parse failure in either inspection endpoint caused `Promise.all` to reject, aborting execution before updating `this.cfgActiveRevision` and `this.cfgPayload`.
+2. **Alpine.js v3 `x-show` Reversibility Gap**: The provider cards container used `x-show` on `(cfgPayload.providers ?? []).length > 0` wrapping a `<template x-for>`. When initializing with 0 providers, Alpine hid the wrapper without attaching DOM reactivity, preventing `<template x-for>` from instantiating cards when array elements were added.
+
+**Fix implemented.**
+- Hardened `refresh()`: Wrapped inspection fetches with `.then(r => r.ok ? r.json() : {}).catch(() => ({}))`, ensuring inspection API transient failures never block active config revision loading.
+- Replaced `x-show` with `<template x-if="cfgPayload && (cfgPayload.providers ?? []).length > 0">` around the `<template x-for>` grid. `<template x-if>` dynamically creates/destroys the DOM node on condition changes, triggering full Alpine.js iteration.
+- Regenerated transpiled template (`templ generate`).
+
+**Verification.** `go test -count=1 ./internal/dashboard/...` passed cleanly. Draft creation, validation, application, and refresh simulation (Scenario 3) verified end-to-end. Commit `30c6f36` pushed to `main`.
+
