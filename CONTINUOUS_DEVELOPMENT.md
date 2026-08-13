@@ -1,3 +1,16 @@
+## Phase 388 — Resilience Audit: Prompt starvation & reasoning budget controls (2026-08-13 02:00 -03)
+
+**Objective and implementation.** Audited the behavior of multiple Groq models under deep output token starvation (`max_tokens=10` to `20`) with and without explicit `reasoning_effort` controls to validate the provider adapter parity established in Phase 384. Created `scripts/phase388_run.go` as an isolated execution harness calling the provider adapter directly. Target exact baseline response: `"READY"`. Tested models: `llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, `allam-2-7b`, `openai/gpt-oss-20b`, `qwen/qwen3.6-27b`.
+
+**Live campaign and decision.**
+- **Llama 3 family:** Perfect 100% compliance returning exactly `"READY"` within 10 tokens (uses 2 tokens).
+- **Qwen 3.6-27b:** With `reasoning_effort=none`, 100% compliant (uses 2 tokens). Without it, fails completely by consuming tokens into `<think>` tags until length exhaustion before emitting semantic content.
+- **GPT-OSS-20b:** Fails under extreme budget starvation (`max_tokens <= 20`), even with `reasoning_effort="low"`. The adapter accurately intercepts this and returns `INVALID_RESPONSE: reasoning_budget_exhausted` as internal reasoning drains the budget with `finish_reason=length`.
+- **Allam-2-7b:** Fails exact string matching due to trailing spaces `"READY "` (uses 4 tokens vs 2). 
+
+Decisions: `reasoning_effort="none"` is structurally mandatory for `qwen3.6-27b` on bounded extractions. `gpt-oss-*` models require a larger minimum output floor (`>= 64` tokens) to account for reasoning overhead. Engine normalizers must rigidly trim whitespace for models like `allam-2-7b`. 
+
+**Deterministic verification.** Added `scripts/phase388_run.go` and `results/phase388-resilience-audit/REPORT.md`.
 # Programa de Desenvolvimento Contínuo
 
 Status: ativo
