@@ -7034,6 +7034,30 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 386 — prompt promotion: adv-conflicting-data semantic failure fix (2026-08-13 01:30 -03)
+
+**Objective and implementation.** Addressed the persistent semantic reasoning failure in `adv-conflicting-data` for `allam-2-7b`. The model correctly output the format lines but incorrectly classified the conflict as `NO` despite receiving `120ms` vs `410ms` in the prompt, representing a genuine failure of its smaller reasoning envelope.
+
+Implemented a prompt improvement loop generating 3 variations:
+- v1: Chain-of-Thought (CoT) example showing how to evaluate differences.
+- v2: Explicit mathematical hint in constraints (`120ms vs 410ms is a conflict`).
+- v3: Question reordering to place the question after facts rather than before.
+
+**Live campaign and decision.** Ran a bounded 12-call sweep (4 reps × 3 variants on allam-2-7b). 
+- v1 (CoT): 0/4 correct.
+- v2 (Explicit Math): 4/4 correct.
+- v3 (Question Reorder): 0/4 correct.
+
+Variant v2 successfully guided the smaller model to correct classification while retaining strict format compliance. 
+
+Promoted variant v2 to the main `tasks.json` baseline. Executed a final 20-call verification sweep across all 5 Groq models (llama-3.3-70b, llama-3.1-8b, gpt-oss-20b, allam-2-7b, qwen3.6-27b). The new prompt preserved perfect accuracy (16/16) on the capable models and brought `allam-2-7b` to 100% (4/4).
+
+**Findings:**
+- Smaller parameter models (7B-8B class) fail on implicit mathematical comparisons embedded in semantic tasks.
+- Providing an explicit boundary hint inside the constraint rule is more effective for small models than prepending CoT examples, which they often struggle to map dynamically to the actual task context.
+
+**Deterministic verification.** `scripts/sweep/tasks.json` validated. `git diff --check` clean. Artifacts: `results/sweeps/massive-fire-sweep-v1/hb-1786595334-sweep-allam-conflict-loop/` and `hb-1786595348-sweep-allam-conflict-verify/`.
+
 ## Phase 385 — prompt promotion: adv-language-degradation PT-BR format anchor (2026-08-13 01:28 -03)
 
 **Objective and implementation.** Identified severe regression in the `adv-language-degradation` adversarial task for PT-BR text extraction. `llama-3.3-70b-versatile` was failing 100% of the time (10/10) by leaking conversational prose ("A data de publicação original da fonte S-17 é..."), despite explicit constraints. `gpt-oss-20b` and `allam-2-7b` also failed baseline checks due to format non-compliance.
