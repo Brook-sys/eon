@@ -7034,6 +7034,25 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+## Phase 385 — prompt promotion: adv-language-degradation PT-BR format anchor (2026-08-13 01:28 -03)
+
+**Objective and implementation.** Identified severe regression in the `adv-language-degradation` adversarial task for PT-BR text extraction. `llama-3.3-70b-versatile` was failing 100% of the time (10/10) by leaking conversational prose ("A data de publicação original da fonte S-17 é..."), despite explicit constraints. `gpt-oss-20b` and `allam-2-7b` also failed baseline checks due to format non-compliance.
+
+Implemented a prompt improvement loop generating 3 variations:
+- v1: Strict precedence contract (similar to `adv-format-pressure`).
+- v2: English negative constraints inside PT-BR instructions.
+- v3: Explicit format anchor with an example (similar to `adv-ptbr-format-anchor`).
+
+**Live campaign and decision.** Ran a bounded 36-call sweep (4 reps × 3 variants × 3 models). Variant v3 achieved 100% accuracy (12/12) on `llama-3.3-70b-versatile`, recovering from 0%. It also achieved 100% on `llama-3.1-8b-instant`, `gpt-oss-20b`, and `allam-2-7b` (48/48 total calls in the prompt loop). 
+
+Promoted variant v3 to the main `tasks.json` baseline for `adv-language-degradation`. Executed a final 100-call massive fire sweep across all 10 adversarial tasks and 5 Groq models (llama-3.3-70b, llama-3.1-8b, gpt-oss-20b, allam-2-7b, qwen3.6-27b). `adv-language-degradation` passed 10/10 across all 5 models.
+
+**Findings:**
+- LLMs degrade heavily on format constraints when instructions are translated to PT-BR, even if the model understands the semantic task perfectly.
+- Explicit few-shot format anchors (v3) are significantly more effective at suppressing conversational prose in non-English tasks than negative constraints (v2) or precedence rules (v1).
+
+**Deterministic verification.** `scripts/sweep/tasks.json` validated. `git diff --check` clean. Artifacts: `results/sweeps/massive-fire-sweep-v1/hb-1786595221-sweep-llama-70b-ptbr-loop/` and `hb-1786595254-sweep-all-final/`.
+
 ## Phase 384 — provider adapter: reasoning_effort, User-Agent, seed, stop, probe fix (2026-08-06 00:45 -03)
 
 **Objective and implementation.** Improved the OpenAI-compatible adapter (`internal/provider/openai/`) with four new port-level features and one critical probe fix, all directly evidenced by the 2026-08-05 adversarial fire sweep results.
