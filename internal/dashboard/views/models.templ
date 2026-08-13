@@ -63,7 +63,7 @@ templ Models() {
 					</div>
 				</div>
 				<!-- Lista de Chaves -->
-				<div x-show="vaultSecrets && vaultSecrets.length > 0" class="pt-4 border-t border-[var(--border)]">
+				<div x-show="vaultSecrets && vaultSecrets.length !== 0" class="pt-4 border-t border-[var(--border)]">
 					<div class="text-[12px] font-semibold text-[var(--subtle)] uppercase tracking-wider mb-3 flex items-center justify-between">
 						<span>Segredos no Cofre</span>
 						<button type="button" class="px-3 py-1.5 rounded-lg bg-[var(--panel-sub)] hover:bg-[var(--panel-hover)] text-[var(--text)] font-semibold text-[11px] transition-all cursor-pointer shadow-sm border border-[var(--border)]" x-on:click="openAddSecretModal()">+ Adicionar Credencial</button>
@@ -248,10 +248,10 @@ templ Models() {
 					</div>
 				</div>
 
-				<template x-if="!cfgPayload || (cfgPayload.providers ?? []).length === 0">
+				<template x-if="!cfgPayload || (cfgPayload.providers || []).length === 0">
 					@EmptyState("Nenhum provedor configurado no catálogo ativo.")
 				</template>
-				<template x-if="cfgPayload && (cfgPayload.providers ?? []).length > 0">
+				<template x-if="cfgPayload && (cfgPayload.providers || []).length !== 0">
 					<div class="grid gap-6 grid-cols-1 xl:grid-cols-2">
 						<template x-for="p in cfgPayload.providers" x-bind:key="p.id">
 							<div class="p-6 rounded-[20px] bg-[var(--bg)] border border-[var(--border)] shadow-sm hover:border-[var(--border-focus)] transition-all flex flex-col gap-5">
@@ -336,7 +336,7 @@ templ Models() {
 						@EmptyState("Nenhum modelo carregado ainda. Clique em Sincronizar para buscar na API.")
 					</template>
 
-					<div class="flex flex-wrap gap-3 pt-2" x-show="discoveredModels.length > 0">
+					<div class="flex flex-wrap gap-3 pt-2" x-show="discoveredModels.length !== 0">
 						<template x-for="m in discoveredModels" x-bind:key="m">
 							<div class="inline-flex items-center justify-between gap-4 pl-4 pr-1.5 py-1.5 rounded-xl bg-[var(--bg)] border border-[var(--border)] text-[14px] font-mono shadow-sm hover:border-[var(--border-focus)] transition-colors group">
 								<span class="font-bold text-[var(--text)] tracking-tight" x-text="m"></span>

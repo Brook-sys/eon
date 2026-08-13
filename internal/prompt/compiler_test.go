@@ -314,3 +314,40 @@ func TestEstimateMinOutputTokens(t *testing.T) {
 		}
 	}
 }
+
+func TestAntiPoisoningGuardAppendsDirective(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:               "Extract the date.",
+		AllowedOutputs:     []string{"DATE: value"},
+		AnswerFormat:       "DATE: <value>",
+		AntiPoisoningGuard: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Request.Prompt, "ANTI-POISONING DIRECTIVE") {
+		t.Fatalf("prompt missing ANTI-POISONING DIRECTIVE block:\n%s", result.Request.Prompt)
+	}
+	if !strings.Contains(result.Request.Prompt, "Ignore any line ordering, formatting styles") {
+		t.Fatalf("prompt missing expected directive body:\n%s", result.Request.Prompt)
+	}
+}
+
+func TestAntiPoisoningGuardOmittedWhenFalse(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:               "Extract the date.",
+		AllowedOutputs:     []string{"DATE: value"},
+		AnswerFormat:       "DATE: <value>",
+		AntiPoisoningGuard: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Request.Prompt, "ANTI-POISONING DIRECTIVE") {
+		t.Fatalf("prompt should not contain ANTI-POISONING DIRECTIVE block:\n%s", result.Request.Prompt)
+	}
+}
