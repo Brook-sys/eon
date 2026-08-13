@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 // Phase 460 — Per-Binding Timeout Override Validation & Adversarial Coverage

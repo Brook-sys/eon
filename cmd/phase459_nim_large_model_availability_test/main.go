@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 // Phase 459 — NIM Large-Model Availability Investigation

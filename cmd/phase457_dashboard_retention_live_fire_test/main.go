@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Phase 457 — Dashboard Retention Panel Live Fire Campaign
 //
 // Hypothesis: All available Groq text-completion models and NVIDIA NIM models

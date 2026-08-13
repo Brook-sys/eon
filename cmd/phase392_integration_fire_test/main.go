@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Phase 392 — Full-chain integration fire test: BudgetGuard + reasoning effort
 // auto-suppression + thinking tag stripping + format-tolerant parsing across
 // multiple Groq models.

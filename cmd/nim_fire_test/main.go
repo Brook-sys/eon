@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command nim_fire_test runs a bounded live campaign testing the FormatExample
 // prompt field against NVIDIA NIM meta/llama-3.1-8b-instruct, which showed
 // different failure modes than Groq 8B in Phase 383 (polarity inversion on

@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command storage-spike-worker executes one durable mutation and deliberately
 // terminates at a configured adapter boundary. It exists only for the storage
 // comparison harness; the runtime never invokes it.

@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command fire_test runs a bounded live campaign testing the FormatExample
 // prompt field against adversarial scenarios from the operator-mandated list
 // that were not covered in the previous FormatExample campaign (2026-08-07).

@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command cot_anti_poisoning_fire_test runs a bounded live campaign testing an
 // anti-poisoning instruction guard against CoT-poisoned prompts.
 //

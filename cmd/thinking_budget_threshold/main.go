@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command thinking_budget_threshold runs a bounded live campaign testing
 // the hypothesis that thinking models (qwen3.6-27b) need significantly
 // larger max_tokens to produce both thinking AND the structured answer.

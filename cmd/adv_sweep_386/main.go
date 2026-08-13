@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command adv_sweep_386 runs a bounded adversarial fire sweep testing
 // FormatExample across all 8 operator-mandated adversarial scenarios
 // on all available Groq models + 2 NIM cross-provider models.
