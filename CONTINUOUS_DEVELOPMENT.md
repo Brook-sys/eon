@@ -7034,6 +7034,20 @@ Implementação:
 
 **Observed evidence and decision.** Groq primary rejected with `circuit_open` as seeded, and NVIDIA NIM `meta/llama-3.1-8b-instruct` completed the live call in 617.09 ms (HTTP status 0 internally / 200 OK from provider API, `finish_reason=stop`, exact match `READY`, durable reopen verified `true`). The second acquire was throttled by local minute quota (`resource_resource_rate_limit`, `WAITING_TIME` persisted). Deterministic verification: `go test ./...` passed cleanly (100% ok), `go vet ./...` clean, `gofmt -l .` empty, `git diff --check` clean. Artifacts saved in `results/runtime-gate/phase371-groq-gptoss120b-vault-token-refresh/`.
 
+
+## Phase 387 — prompt strategy consolidation and baseline cleanup (2026-08-13 01:45 -03)
+
+**Objective and implementation.** Following the successful validation of the prompt improvement loops in Phases 385 and 386, the redundant budget starvation variants (`adv-budget-starvation-v4` and `adv-budget-starvation-v5`) were pruned from the baseline `tasks.json`. The successful strategy (v3) is already promoted to the primary `adv-budget-starvation` task.
+To institutionalize the findings from the 288-call adversarial fire sweeps and targeted prompt campaigns, created `ADR-005-prompt-engineering-strategies.md`.
+
+**Documented findings in ADR-005:**
+1. Explicit math hints inside constraints are superior to CoT examples for 7B-8B parameter models.
+2. Explicit format anchors (e.g. `Exemplo de resposta correta:`) are the most effective way to suppress conversational prose in translated (PT-BR) instructions.
+3. Placing format constraints *last* and explicitly forbidding preambles recovers model compliance under extreme budget starvation (e.g. 12 tokens).
+4. `reasoning_effort=none` is critical for hybrid models in deterministic bounded extraction.
+
+**Deterministic verification.** `go test ./...` passed cleanly (100% ok). No functional code changes.
+
 ## Phase 386 — prompt promotion: adv-conflicting-data semantic failure fix (2026-08-13 01:30 -03)
 
 **Objective and implementation.** Addressed the persistent semantic reasoning failure in `adv-conflicting-data` for `allam-2-7b`. The model correctly output the format lines but incorrectly classified the conflict as `NO` despite receiving `120ms` vs `410ms` in the prompt, representing a genuine failure of its smaller reasoning envelope.
