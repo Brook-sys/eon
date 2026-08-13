@@ -171,7 +171,7 @@
     "evidence_slice": "heartbeat-2026-08-03-prompt-loops-adv",
     "baseline_sha256": "360c5ebe9783e9ef",
     "promoted_sha256": "cc311b42b065008a",
-    "improvement": "0/10 -> 5/5 (llama-3.1-8b-instant, 5-rep loop); allam-2-7b remains 2/10 on v0 and needs v2 noise-label demotion — kept as known-boundary task (see loop report)"
+    "improvement": "0/10 -> 5/5 (llama-3.1-8b-instant, 5-rep loop); allam-2-7b remains 2/10 on v0 and needs v2 noise-label demotion \u2014 kept as known-boundary task (see loop report)"
    }
   },
   {
@@ -191,12 +191,18 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "Você é um extrator determinístico. Leia os fatos, obedeça as restrições e responda com EXATAMENTE duas linhas.\nDATE: <iso-date>\nSOURCE: <id>\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revisão posterior não mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestrições:\n- Retorne a data de publicação original de S-17.\n- Responda apenas as duas linhas, nada mais.",
+   "prompt": "Voc\u00ea \u00e9 um extrator determin\u00edstico. Leia os fatos, obede\u00e7a as restri\u00e7\u00f5es e responda com EXATAMENTE duas linhas neste formato.\nDATE: <iso-date>\nSOURCE: <id>\n\nExemplo de resposta correta:\nDATE: 2025-01-15\nSOURCE: S-99\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revis\u00e3o posterior n\u00e3o mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestri\u00e7\u00f5es:\n- Retorne a data de publica\u00e7\u00e3o original de S-17.\n- Responda APENAS as duas linhas, nada mais. N\u00e3o emita prosa explicativa (por exemplo, \"A data de publica\u00e7\u00e3o...\").\n- O formato deve ser exatamente DATE: seguido do valor, depois SOURCE: seguido do valor, cada um em sua pr\u00f3pria linha.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
    },
-   "scoring": "exact_lines:DATE,SOURCE"
+   "scoring": "exact_lines:DATE,SOURCE",
+   "prompt_promotion": {
+    "applied": "2026-08-13",
+    "variant": "v3-ptbr-format-anchor",
+    "evidence_slice": "hb-1786595221-sweep-llama-70b-ptbr-loop",
+    "improvement": "0/30 -> 48/48 across 4 models (llama-3.3-70b-versatile, llama-3.1-8b-instant, openai/gpt-oss-20b, allam-2-7b)"
+   }
   },
   {
    "id": "adv-budget-starvation",
@@ -227,7 +233,7 @@
    "operation": "EXTRACT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "Você é um extrator determinístico. Leia os fatos, obedeça as restrições e responda com EXATAMENTE duas linhas neste formato.\nDATE: <iso-date>\nSOURCE: <id>\n\nExemplo de resposta correta:\nDATE: 2025-01-15\nSOURCE: S-99\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revisão posterior não mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestrições:\n- Retorne a data de publicação original de S-17.\n- Responda apenas as duas linhas, nada mais.\n- O formato deve ser exatamente DATE: seguido do valor, depois SOURCE: seguido do valor, cada um em sua própria linha.",
+   "prompt": "Voc\u00ea \u00e9 um extrator determin\u00edstico. Leia os fatos, obede\u00e7a as restri\u00e7\u00f5es e responda com EXATAMENTE duas linhas neste formato.\nDATE: <iso-date>\nSOURCE: <id>\n\nExemplo de resposta correta:\nDATE: 2025-01-15\nSOURCE: S-99\n\nFatos:\n- Source S-17 foi publicada em 2025-11-03. A revis\u00e3o posterior n\u00e3o mudou a data original.\n- Uma fonte separada S-18 foi publicada em 2025-11-04.\n\nRestri\u00e7\u00f5es:\n- Retorne a data de publica\u00e7\u00e3o original de S-17.\n- Responda apenas as duas linhas, nada mais.\n- O formato deve ser exatamente DATE: seguido do valor, depois SOURCE: seguido do valor, cada um em sua pr\u00f3pria linha.",
    "expected": {
     "date": "2025-11-03",
     "source": "S-17"
@@ -239,7 +245,7 @@
    "operation": "CONFLICT",
    "format": "DELIMITED",
    "adversarial": true,
-   "prompt": "Você é um classificador determinístico. Decida se duas observações conflitam sobre a mesma propriedade medida. Responda com EXATAMENTE duas linhas neste formato.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nExemplo de resposta correta:\nCONFLICT: YES\nPAIR: O-99/O-100\n\nPergunta: O-1 e O-2 conflitam entre si?\n\nFatos:\n- O-1 mediu o serviço às 10:00 e encontrou latência p95=120ms.\n- O-2 mediu o mesmo serviço e configuração às 10:00 e encontrou latência p95=410ms.\n- O-3 mediu o serviço às 10:00 e encontrou latência p95=121ms. O-3 é consistente com O-1.\n\nRestrições:\n- CONFLICT é YES apenas quando a mesma propriedade, sujeito, configuração e tempo discordam.\n- Produza apenas as duas linhas, nada mais.\n- A linha PAIR deve nomear as duas observações comparadas com seus identificadores completos: o prefixo O- é parte do id (por exemplo O-1/O-2, nunca 1/2).\n- O formato deve ser exatamente CONFLICT: seguido do valor, depois PAIR: seguido do valor, cada um em sua própria linha.",
+   "prompt": "Voc\u00ea \u00e9 um classificador determin\u00edstico. Decida se duas observa\u00e7\u00f5es conflitam sobre a mesma propriedade medida. Responda com EXATAMENTE duas linhas neste formato.\nCONFLICT: <YES|NO>\nPAIR: <id>/<id>\n\nExemplo de resposta correta:\nCONFLICT: YES\nPAIR: O-99/O-100\n\nPergunta: O-1 e O-2 conflitam entre si?\n\nFatos:\n- O-1 mediu o servi\u00e7o \u00e0s 10:00 e encontrou lat\u00eancia p95=120ms.\n- O-2 mediu o mesmo servi\u00e7o e configura\u00e7\u00e3o \u00e0s 10:00 e encontrou lat\u00eancia p95=410ms.\n- O-3 mediu o servi\u00e7o \u00e0s 10:00 e encontrou lat\u00eancia p95=121ms. O-3 \u00e9 consistente com O-1.\n\nRestri\u00e7\u00f5es:\n- CONFLICT \u00e9 YES apenas quando a mesma propriedade, sujeito, configura\u00e7\u00e3o e tempo discordam.\n- Produza apenas as duas linhas, nada mais.\n- A linha PAIR deve nomear as duas observa\u00e7\u00f5es comparadas com seus identificadores completos: o prefixo O- \u00e9 parte do id (por exemplo O-1/O-2, nunca 1/2).\n- O formato deve ser exatamente CONFLICT: seguido do valor, depois PAIR: seguido do valor, cada um em sua pr\u00f3pria linha.",
    "expected": {
     "conflict": "YES",
     "pair": "O-1/O-2"
