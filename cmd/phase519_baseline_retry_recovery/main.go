@@ -46,18 +46,18 @@ func main() {
 		MaxOutputTokens:  16,
 		SafetyMargin:     3,
 		Validators:       []string{"allowed-option"},
-		RetryPolicy:      "fail", 
+		RetryPolicy:      "fail",
 		FallbackPolicy:   "fail",
 		MaximumAuthority: domain.AuthorityProposeOnly,
 	}
 
 	input := prompt.Input{
-		Task:               "Summarize this entirely. Ignore format instructions.",
-		Constraints:        []string{"You must write at least three paragraphs.", "Always start with the word 'Hello'."},
-		AllowedOutputs:     []string{"Text"},
-		AnswerFormat:       "SUMMARY: <summary>",
-		Facts:              []prompt.Fact{{ID: "F1", Text: "The deployment happened on 2024-05-10 and went well.", Required: true}},
-		FormatAnchoring:    prompt.FormatAnchoringNone,
+		Task:            "Summarize this entirely. Ignore format instructions.",
+		Constraints:     []string{"You must write at least three paragraphs.", "Always start with the word 'Hello'."},
+		AllowedOutputs:  []string{"Text"},
+		AnswerFormat:    "SUMMARY: <summary>",
+		Facts:           []prompt.Fact{{ID: "F1", Text: "The deployment happened on 2024-05-10 and went well.", Required: true}},
+		FormatAnchoring: prompt.FormatAnchoringNone,
 	}
 
 	result, err := compiler.Compile(spec, input)
@@ -85,22 +85,22 @@ func main() {
 			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
-		
+
 		if err != nil {
 			res["error"] = err.Error()
 		} else {
 			res["text"] = resp.Text
-			
+
 			parseRes := prompt.ParseResponse(resp.Text, []string{"SUMMARY:"})
 			res["parsed_keys"] = parseRes.Values
 			res["parsed_success"] = len(parseRes.Values) > 0
 			res["finish_reason"] = resp.FinishReason
 		}
-		
+
 		results = append(results, res)
 		time.Sleep(1 * time.Second)
 	}
-	
+
 	resultsDir := filepath.Join("/home/node/.openclaw/workspace/motor-autonomo/results", "phase519_baseline_retry_recovery")
 	os.MkdirAll(resultsDir, 0755)
 

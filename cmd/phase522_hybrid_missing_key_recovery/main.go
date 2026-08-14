@@ -46,7 +46,7 @@ func main() {
 		MaxOutputTokens:  128,
 		SafetyMargin:     3,
 		Validators:       []string{"allowed-option"},
-		RetryPolicy:      "fail", 
+		RetryPolicy:      "fail",
 		FallbackPolicy:   "fail",
 		MaximumAuthority: domain.AuthorityProposeOnly,
 	}
@@ -57,9 +57,9 @@ func main() {
 		AllowedOutputs:     []string{"Text"},
 		AnswerFormat:       "DATE: <date>\nSOURCE: <source>\nCONFIDENCE: <confidence>",
 		FormatExample:      "DATE: 2024-05-10\nSyslog\n95%",
-		AntiPoisoningGuard: false, 
+		AntiPoisoningGuard: false,
 		Facts:              []prompt.Fact{{ID: "F1", Text: "The deployment happened on 2024-05-10. It was recorded in Syslog. We are 95% certain.", Required: true}},
-		FormatAnchoring:    prompt.FormatAnchoringAuto, 
+		FormatAnchoring:    prompt.FormatAnchoringAuto,
 	}
 
 	result, err := compiler.Compile(spec, input)
@@ -87,23 +87,23 @@ func main() {
 			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
-		
+
 		if err != nil {
 			res["error"] = err.Error()
 		} else {
 			res["text"] = resp.Text
-			
+
 			parseRes := prompt.ParseResponse(resp.Text, []string{"DATE", "SOURCE", "CONFIDENCE"})
 			res["parsed_values"] = parseRes.Values
 			res["parsed_strategy"] = parseRes.Strategy
 			res["parsed_score"] = parseRes.FormatComplianceScore
 			res["finish_reason"] = resp.FinishReason
 		}
-		
+
 		results = append(results, res)
 		time.Sleep(1 * time.Second)
 	}
-	
+
 	resultsDir := filepath.Join("/home/node/.openclaw/workspace/motor-autonomo/results", "phase522_hybrid_missing_key_recovery")
 	os.MkdirAll(resultsDir, 0755)
 

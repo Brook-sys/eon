@@ -86,7 +86,7 @@ func main() {
 
 		req := result.Request
 		// Force temp high to induce deviation in output
-		req.Temperature = 0.9 
+		req.Temperature = 0.9
 		if strings.Contains(m.model, "qwen") {
 			req.ReasoningEffort = "none"
 		}

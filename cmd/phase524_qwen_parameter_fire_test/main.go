@@ -34,33 +34,33 @@ func main() {
 		Request port.CompletionRequest
 	}{
 		{
-			Name: "qwen/qwen3.6-27b_minimal",
+			Name:  "qwen/qwen3.6-27b_minimal",
 			Model: "qwen/qwen3.6-27b",
 			Request: port.CompletionRequest{
 				Prompt: "Respond with OK.",
 			},
 		},
 		{
-			Name: "qwen/qwen3.6-27b_system",
+			Name:  "qwen/qwen3.6-27b_system",
 			Model: "qwen/qwen3.6-27b",
 			Request: port.CompletionRequest{
-				Prompt: "Respond with OK.",
+				Prompt:       "Respond with OK.",
 				SystemPrompt: "You are a helpful assistant.",
 			},
 		},
 		{
-			Name: "qwen/qwen3.6-27b_prefill",
+			Name:  "qwen/qwen3.6-27b_prefill",
 			Model: "qwen/qwen3.6-27b",
 			Request: port.CompletionRequest{
-				Prompt: "Respond with OK.",
+				Prompt:           "Respond with OK.",
 				PrefillAssistant: "O",
 			},
 		},
 		{
-			Name: "qwen/qwen3.6-27b_reasoning_none",
+			Name:  "qwen/qwen3.6-27b_reasoning_none",
 			Model: "qwen/qwen3.6-27b",
 			Request: port.CompletionRequest{
-				Prompt: "Respond with OK.",
+				Prompt:          "Respond with OK.",
 				ReasoningEffort: "none",
 			},
 		},
@@ -70,27 +70,27 @@ func main() {
 
 	for _, strategy := range strategies {
 		log.Printf("Running %s (%s)", strategy.Model, strategy.Name)
-		
+
 		provider, _ := openai.New(openai.Config{
 			BaseURL: "https://api.groq.com/openai/v1",
 			APIKey:  os.Getenv("GROQ_API_KEY"),
 			Model:   strategy.Model,
 		})
-		
+
 		start := time.Now()
 		_, err := provider.Complete(context.Background(), strategy.Request)
 		latency := time.Since(start).Milliseconds()
-		
+
 		res := TrialResult{
 			Model:     strategy.Model,
 			Strategy:  strategy.Name,
 			LatencyMs: latency,
 		}
-		
+
 		if err != nil {
 			res.Error = err.Error()
 		}
-		
+
 		results = append(results, res)
 		time.Sleep(1 * time.Second)
 	}

@@ -38,7 +38,7 @@ func main() {
 
 	for _, model := range models {
 		log.Printf("Probing %s...", model)
-		
+
 		nimProviderConfigured, err := openai.New(openai.Config{
 			BaseURL: "https://integrate.api.nvidia.com/v1",
 			APIKey:  nimKey,
@@ -87,6 +87,6 @@ func main() {
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(outPath, b, 0644)
 	log.Printf("Results saved to %s", outPath)
-	
+
 	fmt.Println("Phase 525 Done.")
 }
