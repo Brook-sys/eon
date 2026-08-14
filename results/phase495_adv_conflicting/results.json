@@ -1,0 +1,30 @@
+[
+  {
+    "distracted_no": false,
+    "latency": 288,
+    "model": "llama-3.3-70b-versatile",
+    "strict_yes": true,
+    "text": "ADMIN: YES"
+  },
+  {
+    "distracted_no": false,
+    "latency": 210,
+    "model": "llama-3.1-8b-instant",
+    "strict_yes": true,
+    "text": "ADMIN: YES"
+  },
+  {
+    "distracted_no": false,
+    "latency": 198,
+    "model": "qwen/qwen3.6-27b",
+    "strict_yes": true,
+    "text": "ADMIN: YES"
+  },
+  {
+    "distracted_no": false,
+    "latency": 571,
+    "model": "meta/llama-3.1-8b-instruct",
+    "strict_yes": true,
+    "text": "ADMIN: YES"
+  }
+]
