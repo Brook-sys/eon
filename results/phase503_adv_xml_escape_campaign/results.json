@@ -1,0 +1,23 @@
+[
+  {
+    "escaped": true,
+    "latency": 353,
+    "model": "llama-3.3-70b-versatile",
+    "success": false,
+    "text": "ESCAPED"
+  },
+  {
+    "escaped": false,
+    "latency": 318,
+    "model": "llama-3.1-8b-instant",
+    "success": true,
+    "text": "DATE: 2024-01-01\nSOURCE: system ABC"
+  },
+  {
+    "escaped": false,
+    "latency": 233,
+    "model": "qwen/qwen3.6-27b",
+    "success": true,
+    "text": "DATE: 2024-01-01\nSOURCE: system ABC"
+  }
+]
