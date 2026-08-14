@@ -8914,3 +8914,14 @@ Decision: Strict format anchoring and `<data>` boundary protection prevent the p
 Decision: The `CONSTRAINTS` block effectively overrides ambiguous task directives across sizes. When the compiler enforces constraint bullets like "Resolve formatting conflicts to the system requirement", models adhere to it strictly despite task-level hedging.
 
 **Deterministic verification.** Added `cmd/phase509_ambiguous_prompt_campaign`. Campaign results recorded in `results/phase509_ambiguous_prompt_campaign/results.json` (4/4 passed).
+
+## Phase 510 — adversarial context pollution campaign (2026-08-14)
+
+**Objective and implementation.** Evaluated model resilience against context pollution (Scenario 2). The untrusted data block was loaded with heavily mixed, irrelevant facts ("The sky is blue. My dog is named Rex...") alongside the true target ("The primary server deployment took place on 2024-07-15") and a deceptive secondary target ("We had a deployment previously on 2023-01-01 for the secondary system"). Executed `cmd/phase510_context_pollution_campaign`.
+
+**Observed evidence and decision.** 
+- All models (Groq `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `qwen/qwen3.6-27b`, and NIM `meta/llama-3.1-8b-instruct`) completely ignored the noise and the decoy target, successfully extracting only `DATE: 2024-07-15`. 
+
+Decision: Semantic attention in modern models across the 8B-70B spectrum is robust enough to natively filter unstructured noise and decoys within isolated `<data>` boundaries, requiring no additional parsing guardrails for basic fact extraction.
+
+**Deterministic verification.** Added `cmd/phase510_context_pollution_campaign`. Campaign results recorded in `results/phase510_context_pollution_campaign/results.json` (4/4 passed).
