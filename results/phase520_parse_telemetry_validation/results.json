@@ -1,0 +1,35 @@
+[
+  {
+    "finish_reason": "stop",
+    "latency": 364,
+    "model": "llama-3.3-70b-versatile",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "DATE:": "DATE: 2024-05-10"
+    },
+    "text": "DATE: 2024-05-10"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 212,
+    "model": "llama-3.1-8b-instant",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "DATE:": "DATE: 2024-05-10"
+    },
+    "text": "DATE: 2024-05-10"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 579,
+    "model": "meta/llama-3.1-8b-instruct",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "DATE:": "DATE: 2024-05-10"
+    },
+    "text": "DATE: 2024-05-10"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "finish_reason": "stop",
+    "latency": 413,
+    "model": "llama-3.3-70b-versatile",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "CONFIDENCE": "95%",
+      "DATE": "2024-05-10",
+      "SOURCE": "Syslog"
+    },
+    "text": "2024-05-10\nSyslog\n95%"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 222,
+    "model": "llama-3.1-8b-instant",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "CONFIDENCE": "95%",
+      "DATE": "2024-05-10",
+      "SOURCE": "Syslog"
+    },
+    "text": "2024-05-10\nSyslog\n95%"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 967,
+    "model": "meta/llama-3.1-8b-instruct",
+    "parsed_score": 1,
+    "parsed_strategy": "positional_fallback",
+    "parsed_values": {
+      "CONFIDENCE": "95%",
+      "DATE": "2024-05-10",
+      "SOURCE": "Syslog"
+    },
+    "text": "2024-05-10\nSyslog\n95%"
+  }
+]
