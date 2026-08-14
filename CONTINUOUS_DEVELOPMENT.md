@@ -8778,3 +8778,13 @@ P50 latency across valid responses was 521ms.
 **Observed evidence and decision.** The 8B models (both Groq and NIM) suffered from internal value-space duplication (e.g., outputting `STATUS: SYSTEM_STATUS: PIFOU`), failing to cleanly separate the English instruction schema from the value extraction logic. The Llama 3.3 70B and Qwen 27B correctly maintained the requested formatting while effectively capturing the semantic values from the colloquial context.
 
 **Deterministic verification.** Logs committed to `results/phase494_adv_lang_deg`.
+
+## Phase 495 — Adversarial Conflicting Data (2026-08-14)
+
+**Objective.** Test binary classification extraction against strong negative distractions concerning alternative subjects in the context.
+
+**Live hypothesis and bounds.** A 16-token prompt asking if `User-A` has rights. The context heavily emphasizes that `User-B` does NOT have rights and that granting them is forbidden, while quietly stating `User-A` has rights. Tested across 70B, Qwen 27B, and both 8B variants.
+
+**Observed evidence and decision.** All four models achieved 100% accuracy, successfully isolating the predicate for `User-A` and ignoring the heavy negative sentiment regarding `User-B`. Both 8B and 70B models have sufficiently robust semantic logic for subject-predicate attribution.
+
+**Deterministic verification.** Logs committed to `results/phase495_adv_conflicting`.
