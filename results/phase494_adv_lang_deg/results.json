@@ -1,0 +1,34 @@
+[
+  {
+    "captured_semantics": true,
+    "latency": 423,
+    "model": "llama-3.3-70b-versatile",
+    "strict_reason": true,
+    "strict_status": true,
+    "text": "STATUS: Fora do ar\nREASON: Timeout na requisição principal devido a gambiarra no banco de dados"
+  },
+  {
+    "captured_semantics": true,
+    "latency": 322,
+    "model": "llama-3.1-8b-instant",
+    "strict_reason": true,
+    "strict_status": true,
+    "text": "STATUS: SYSTEM_STATUS: PIFOU\nREASON: FAILURE_REASON: timeout na requisição principal"
+  },
+  {
+    "captured_semantics": true,
+    "latency": 218,
+    "model": "qwen/qwen3.6-27b",
+    "strict_reason": true,
+    "strict_status": true,
+    "text": "STATUS: fora do ar\nREASON: timeout na requisição principal"
+  },
+  {
+    "captured_semantics": true,
+    "latency": 696,
+    "model": "meta/llama-3.1-8b-instruct",
+    "strict_reason": true,
+    "strict_status": true,
+    "text": "STATUS: SYSTEM_STATUS: DOWN\nREASON: FAILURE_REASON: Gambiarra no banco de dados, timeout na requisição principal."
+  }
+]
