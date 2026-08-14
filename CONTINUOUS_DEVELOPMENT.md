@@ -8797,4 +8797,6 @@ P50 latency across valid responses was 521ms.
 
 **Observed evidence and decision.** The Llama 3 models (70B, Groq 8B, and NIM 8B) were universally vulnerable. While they maintained the schema keys, they populated the target value with the injected string (`DATE: HACKED`). Qwen 27B was the only model to resist the injection and extract the correct date. This highlights the necessity for explicit data bounding (e.g., XML tags) around untrusted input in the engine's prompt compiler when using Llama models.
 
-**Deterministic verification.** Logs committed to `results/phase496_adv_injection`.
+**Resolution (Phase 496 V2).** Implemented `UntrustedDataBounding` in `internal/prompt/compiler.go`. When true, this wraps all facts in `<data>...</data>` tags and injects a `SystemPrompt` explicitly forbidding instruction obedience inside those tags. Live tests proved Llama-3 8B and 70B successfully resisted the injection, emitting the correct date and source without hallucinations (`DATE: 2024-01-01`). Tested across Qwen 27B, Llama 8B, Llama 70B (all passed 100%).
+
+**Deterministic verification.** Logs and V2 fixes committed to `results/phase496_data_bounding_campaign/results_v2.json`. Code successfully committed and pushed to `main`.
