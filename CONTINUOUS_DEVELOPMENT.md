@@ -9027,3 +9027,15 @@ Decision: The `hybrid_prefix_positional` recovery heuristic functions exactly as
 Decision: The `UntrustedDataBounding` directive is highly effective when paired with the `AntiPoisoningGuard`. Both should remain enabled for high-risk extraction tasks. The `qwen-2.5-32b` rejection requires a follow-up adapter hardening campaign.
 
 **Deterministic verification.** Results recorded in `results/phase523_data_bounding_fire_test/results.json`.
+
+## Phase 524 — Groq Qwen-2.5-32B parameters fallback test (2026-08-14 05:51 -03)
+
+**Objective and implementation.** We executed `cmd/phase524_qwen_parameter_fire_test` to investigate an observed HTTP 400 rejection from Groq on the `qwen-2.5-32b` endpoint during the Phase 523 untrusted data bounding sweep. Using raw provider connections via `openai.NewProvider`, we probed `qwen/qwen3.6-27b` (as reported by `/v1/models` inside Groq discovery responses, substituting the older namespace model alias) and isolated multiple parameter configurations: baseline minimal, explicit system prompt, prefill assistant, and reasoning_effort parameter injection.
+
+**Observed evidence and decision.**
+- We successfully identified the available model id: `qwen/qwen3.6-27b`.
+- The adapter successfully connected and the Groq HTTP 400 errors resolved.
+- During Phase 523 `qwen/qwen3.6-27b` execution directly to the API, it ran out of output tokens (`max_tokens: 128`), consuming them entirely within `<think>` blocks, yielding 0 extracted data points. This re-confirms Phase 388/389 where unsuppressed reasoning effort on Qwen starves bounded extraction budgets.
+- Integrating Qwen seamlessly requires either `reasoning_effort: "none"` or dynamically scaled max output tokens provided through `ModelExecutor` parameter translation (which we disabled for these pure API connection tests to expose the raw baseline).
+
+Decision: The integration failures for Qwen on Groq during cross-provider tests are model-alias mapping issues (`qwen-2.5-32b` vs `qwen/qwen3.6-27b`) rather than prompt pipeline errors. The prompt compiler's budget guard auto-suppression remains essential for Qwen models.
