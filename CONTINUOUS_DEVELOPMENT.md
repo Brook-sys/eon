@@ -9001,3 +9001,16 @@ It accurately mapped:
 Decision: The `ParseResponse` heuristic fallback strategy is incredibly robust. Even when models completely fail the prefix schema (due to adversarial instruction or capability limits), as long as they output the raw values in the expected positional order, the parser recovers 100% data integrity transparently.
 
 **Deterministic verification.** Added `cmd/phase521_hybrid_positional_validation`. Campaign results recorded in `results/phase521_hybrid_positional_validation/results.json` (3/3 recovered via `positional_fallback` with `parsed_score=1`).
+
+## Phase 522 — hybrid missing key format recovery pressure campaign (2026-08-14 03:50 -03)
+
+**Objective and implementation.** Formulated `cmd/phase522_hybrid_missing_key_recovery` to trigger the `hybrid_prefix_positional` strategy in `prompt.ParseResponse`. This occurs when the model correctly uses the prefix for *some* keys but omits the keys for others, outputting bare values on newlines (e.g. `DATE: 2024-05-10\nSyslog\n95%`). We deliberately induced this output state on 3 models using a poisoned constraint/example and measured the parser's telemetry.
+
+**Observed evidence and decision.** 
+- The 8B-class models (`llama-3.1-8b-instant` and NIM `meta/llama-3.1-8b-instruct`) ignored the poisoned example and simply output all 3 keys correctly, triggering the standard `primary_prefix` strategy and achieving a score of `1`.
+- The 70B model (`llama-3.3-70b-versatile`) precisely followed the adversarial instruction and output exactly `DATE: 2024-05-10\nSyslog\n95%`.
+- The parser correctly identified that only 1 key was matched via prefix. It computed 2 remaining unmatched non-empty lines, mapped them to the 2 missing keys positionally (`SOURCE` -> `Syslog`, `CONFIDENCE` -> `95%`), and set `parsed_strategy` to `hybrid_prefix_positional` with a `parsed_score` of `1`.
+
+Decision: The `hybrid_prefix_positional` recovery heuristic functions exactly as designed and reliably patches partial-prefix outputs without dropping data, effectively increasing resilience against formatting degradation on complex extraction tasks. 
+
+**Deterministic verification.** Added `cmd/phase522_hybrid_missing_key_recovery`. Campaign results recorded in `results/phase522_hybrid_missing_key_recovery/results.json`.
