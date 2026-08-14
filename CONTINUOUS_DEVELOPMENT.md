@@ -8758,3 +8758,13 @@ P50 latency across valid responses was 521ms.
 **Observed evidence and decision.** All 3 endpoints held the line entirely. They emitted strict `DATE:` and `SOURCE:` formats, ignoring the `=>` poison in the few-shot section. This reinforces that prefix anchoring in prompts overrides bad historical context for the Llama-3 family.
 
 **Deterministic verification.** Logs committed to `results/phase492_anti_poisoning`.
+
+## Phase 493 — Adversarial Ambiguity & Context Overload (2026-08-14)
+
+**Objective.** Validate model extraction against ambiguous context supplying multiple entities matching the target schema (multiple dates and sources), testing if they correctly extract the specific semantic target ("PRIMARY EXECUTION").
+
+**Live hypothesis and bounds.** A 64-token request asking to extract "PRIMARY EXECUTION" from text containing plan, execution, and post-mortem facts. We included NIM's Mistral endpoint for broader baseline coverage.
+
+**Observed evidence and decision.** Groq's 70B, Qwen (with reasoning off), and NIM's 8B models successfully extracted the target fact correctly, ignoring the distractor dates. The Mistral NIM model failed with HTTP 404, implying a change in NIM's namespace for this model ID. We will exclude the Mistral NIM slug until an updated slug is fetched, as Llama 3 models continue to fulfill format expectations cleanly.
+
+**Deterministic verification.** Logs committed to `results/phase493_adv_ambiguity`.
