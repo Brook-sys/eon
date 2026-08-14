@@ -1,0 +1,31 @@
+[
+  {
+    "latency": 380,
+    "model": "llama-3.3-70b-versatile",
+    "semantic_date_correct": true,
+    "semantic_source_correct": true,
+    "strict_format": true,
+    "text": "DATE: 2025-05-12\nSOURCE: SYS-B"
+  },
+  {
+    "latency": 226,
+    "model": "qwen/qwen3.6-27b",
+    "semantic_date_correct": true,
+    "semantic_source_correct": true,
+    "strict_format": true,
+    "text": "DATE: 2025-05-12\nSOURCE: SYS-B"
+  },
+  {
+    "latency": 627,
+    "model": "meta/llama-3.1-8b-instruct",
+    "semantic_date_correct": true,
+    "semantic_source_correct": true,
+    "strict_format": true,
+    "text": "DATE: 2025-05-12\nSOURCE: SYS-B"
+  },
+  {
+    "error": "openai-compatible provider: HTTP (status 404)",
+    "latency": 147,
+    "model": "mistralai/mistral-large-2-instruct"
+  }
+]
