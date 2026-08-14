@@ -6,17 +6,17 @@
   },
   {
     "error": "openai-compatible provider: HTTP (status 401)",
-    "latency": 30,
+    "latency": 35,
     "model": "llama-3.1-8b-instant"
   },
   {
     "error": "openai-compatible provider: HTTP (status 401)",
-    "latency": 31,
+    "latency": 46,
     "model": "qwen/qwen3.6-27b"
   },
   {
     "error": "openai-compatible provider: HTTP (status 401)",
-    "latency": 362,
+    "latency": 360,
     "model": "meta/llama-3.1-8b-instruct"
   }
 ]

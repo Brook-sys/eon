@@ -1,35 +1,17 @@
 [
   {
-    "finish_reason": "stop",
-    "latency": 364,
-    "model": "llama-3.3-70b-versatile",
-    "parsed_score": 1,
-    "parsed_strategy": "positional_fallback",
-    "parsed_values": {
-      "DATE:": "DATE: 2024-05-10"
-    },
-    "text": "DATE: 2024-05-10"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 110,
+    "model": "llama-3.3-70b-versatile"
   },
   {
-    "finish_reason": "stop",
-    "latency": 212,
-    "model": "llama-3.1-8b-instant",
-    "parsed_score": 1,
-    "parsed_strategy": "positional_fallback",
-    "parsed_values": {
-      "DATE:": "DATE: 2024-05-10"
-    },
-    "text": "DATE: 2024-05-10"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 36,
+    "model": "llama-3.1-8b-instant"
   },
   {
-    "finish_reason": "stop",
-    "latency": 579,
-    "model": "meta/llama-3.1-8b-instruct",
-    "parsed_score": 1,
-    "parsed_strategy": "positional_fallback",
-    "parsed_values": {
-      "DATE:": "DATE: 2024-05-10"
-    },
-    "text": "DATE: 2024-05-10"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 359,
+    "model": "meta/llama-3.1-8b-instruct"
   }
 ]

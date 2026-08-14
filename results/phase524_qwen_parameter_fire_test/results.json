@@ -2,21 +2,21 @@
   {
     "model": "qwen/qwen3.6-27b",
     "strategy": "qwen/qwen3.6-27b_minimal",
-    "latency": 467
+    "latency": 880
   },
   {
     "model": "qwen/qwen3.6-27b",
     "strategy": "qwen/qwen3.6-27b_system",
-    "latency": 389
+    "latency": 448
   },
   {
     "model": "qwen/qwen3.6-27b",
     "strategy": "qwen/qwen3.6-27b_prefill",
-    "latency": 612
+    "latency": 535
   },
   {
     "model": "qwen/qwen3.6-27b",
     "strategy": "qwen/qwen3.6-27b_reasoning_none",
-    "latency": 191
+    "latency": 213
   }
 ]

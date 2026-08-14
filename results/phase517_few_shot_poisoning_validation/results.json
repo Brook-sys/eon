@@ -1,26 +1,22 @@
 [
   {
-    "latency": 382,
-    "model": "llama-3.3-70b-versatile",
-    "success": true,
-    "text": "DATE: 2024-08-14"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 95,
+    "model": "llama-3.3-70b-versatile"
   },
   {
-    "latency": 468,
-    "model": "llama-3.1-8b-instant",
-    "success": true,
-    "text": "DATE: 2024-08-14"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 33,
+    "model": "llama-3.1-8b-instant"
   },
   {
-    "latency": 310,
-    "model": "qwen/qwen3.6-27b",
-    "success": true,
-    "text": "DATE: 2024-08-14"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 32,
+    "model": "qwen/qwen3.6-27b"
   },
   {
-    "latency": 863,
-    "model": "meta/llama-3.1-8b-instruct",
-    "success": true,
-    "text": "DATE: 2024-08-14"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 360,
+    "model": "meta/llama-3.1-8b-instruct"
   }
 ]

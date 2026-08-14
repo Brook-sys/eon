@@ -1,32 +1,17 @@
 [
   {
-    "finish_reason": "length",
-    "latency": 437,
-    "model": "llama-3.3-70b-versatile",
-    "parsed_keys": {
-      "SUMMARY:": "Hello, the given information is quite straightforward and pertains to a specific event that"
-    },
-    "parsed_success": true,
-    "text": "Hello, the given information is quite straightforward and pertains to a specific event that"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 99,
+    "model": "llama-3.3-70b-versatile"
   },
   {
-    "finish_reason": "length",
-    "latency": 220,
-    "model": "llama-3.1-8b-instant",
-    "parsed_keys": {
-      "SUMMARY:": "Hello, a deployment occurred on May 10, 2024, and it"
-    },
-    "parsed_success": true,
-    "text": "Hello, a deployment occurred on May 10, 2024, and it"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 36,
+    "model": "llama-3.1-8b-instant"
   },
   {
-    "finish_reason": "length",
-    "latency": 998,
-    "model": "meta/llama-3.1-8b-instruct",
-    "parsed_keys": {
-      "SUMMARY:": "Hello, the deployment occurred on 2024-05-10 and was successful"
-    },
-    "parsed_success": true,
-    "text": "Hello, the deployment occurred on 2024-05-10 and was successful"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 368,
+    "model": "meta/llama-3.1-8b-instruct"
   }
 ]

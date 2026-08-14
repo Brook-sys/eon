@@ -1,26 +1,22 @@
 [
   {
-    "latency": 313,
-    "model": "llama-3.3-70b-versatile",
-    "success": true,
-    "text": "DATE: 2024-08-14\nSOURCE: Syslog"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 95,
+    "model": "llama-3.3-70b-versatile"
   },
   {
-    "latency": 214,
-    "model": "llama-3.1-8b-instant",
-    "success": true,
-    "text": "DATE: 2024-08-14\nSOURCE: Syslog"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 35,
+    "model": "llama-3.1-8b-instant"
   },
   {
-    "latency": 236,
-    "model": "qwen/qwen3.6-27b",
-    "success": true,
-    "text": "DATE: 2024-08-14\nSOURCE: Syslog"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 31,
+    "model": "qwen/qwen3.6-27b"
   },
   {
-    "latency": 626,
-    "model": "meta/llama-3.1-8b-instruct",
-    "success": true,
-    "text": "DATE: 2024-08-14\nSOURCE: Syslog"
+    "error": "openai-compatible provider: HTTP (status 401)",
+    "latency": 366,
+    "model": "meta/llama-3.1-8b-instruct"
   }
 ]
