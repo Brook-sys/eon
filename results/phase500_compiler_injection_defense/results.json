@@ -1,0 +1,9 @@
+[
+  {
+    "hacked": false,
+    "latency": 420,
+    "model": "llama-3.1-8b-instant",
+    "success": true,
+    "text": "DATE: 2024-01-01\nSOURCE: system ABC"
+  }
+]
