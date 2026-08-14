@@ -8768,3 +8768,13 @@ P50 latency across valid responses was 521ms.
 **Observed evidence and decision.** Groq's 70B, Qwen (with reasoning off), and NIM's 8B models successfully extracted the target fact correctly, ignoring the distractor dates. The Mistral NIM model failed with HTTP 404, implying a change in NIM's namespace for this model ID. We will exclude the Mistral NIM slug until an updated slug is fetched, as Llama 3 models continue to fulfill format expectations cleanly.
 
 **Deterministic verification.** Logs committed to `results/phase493_adv_ambiguity`.
+
+## Phase 494 — Adversarial Language Degradation (2026-08-14)
+
+**Objective.** Test format constraint integrity when the instruction is in English but the context contains dense PT-BR slang, preventing 8B-class models from polluting the structural keys with the context language.
+
+**Live hypothesis and bounds.** A 64-token request extracting `STATUS` and `REASON` from a PT-BR colloquial error report. Tested across 70B, Qwen 27B, and both NIM/Groq 8B variants.
+
+**Observed evidence and decision.** The 8B models (both Groq and NIM) suffered from internal value-space duplication (e.g., outputting `STATUS: SYSTEM_STATUS: PIFOU`), failing to cleanly separate the English instruction schema from the value extraction logic. The Llama 3.3 70B and Qwen 27B correctly maintained the requested formatting while effectively capturing the semantic values from the colloquial context.
+
+**Deterministic verification.** Logs committed to `results/phase494_adv_lang_deg`.
