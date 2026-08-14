@@ -1,0 +1,20 @@
+[
+  {
+    "latency": 440,
+    "model": "llama-3.3-70b-versatile",
+    "success": true,
+    "text": "DATE: 2024-03-15\nSOURCE: sistema central de faturamento"
+  },
+  {
+    "latency": 221,
+    "model": "llama-3.1-8b-instant",
+    "success": true,
+    "text": "DATE: 2024-03-15\nSOURCE: sistema central de faturamento"
+  },
+  {
+    "latency": 366,
+    "model": "qwen/qwen3.6-27b",
+    "success": true,
+    "text": "DATE: 2024-03-15\nSOURCE: sistema central de faturamento"
+  }
+]
