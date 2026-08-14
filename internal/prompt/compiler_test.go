@@ -430,3 +430,67 @@ func TestFormatAntiForgeryGuardOmittedWhenFalse(t *testing.T) {
 		t.Fatalf("prompt should not contain FORMAT ANTI-FORGERY GUARD block:\n%s", result.Request.Prompt)
 	}
 }
+
+func TestConflictDetectionGuardAppendsDirective(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:                   "Extract the date.",
+		AllowedOutputs:         []string{"DATE: value"},
+		AnswerFormat:           "DATE: <value>",
+		ConflictDetectionGuard: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Request.Prompt, "CONFLICT DETECTION DIRECTIVE") {
+		t.Fatalf("prompt missing CONFLICT DETECTION DIRECTIVE block:\n%s", result.Request.Prompt)
+	}
+	if !strings.Contains(result.Request.Prompt, "contradictory dates, sources, or claims") {
+		t.Fatalf("prompt missing expected conflict detection directive body:\n%s", result.Request.Prompt)
+	}
+}
+
+func TestConflictDetectionGuardOmittedWhenFalse(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:                   "Extract the date.",
+		AllowedOutputs:         []string{"DATE: value"},
+		AnswerFormat:           "DATE: <value>",
+		ConflictDetectionGuard: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Request.Prompt, "CONFLICT DETECTION DIRECTIVE") {
+		t.Fatalf("prompt should not contain CONFLICT DETECTION DIRECTIVE block:\n%s", result.Request.Prompt)
+	}
+}
+
+func TestEstimateModelOverhead(t *testing.T) {
+	cases := []struct {
+		modelID     string
+		isReasoning bool
+	}{
+		{"openai/gpt-oss-20b", true},
+		{"qwen/qwen3.6-27b", true},
+		{"deepseek-r1-llama-70b", true},
+		{"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", true},
+		{"llama-3.3-70b-versatile", false},
+		{"meta/llama-3.1-8b-instruct", false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		overhead, isReasoning := EstimateModelOverhead(tc.modelID)
+		if isReasoning != tc.isReasoning {
+			t.Errorf("EstimateModelOverhead(%q) isReasoning = %v, expected %v", tc.modelID, isReasoning, tc.isReasoning)
+		}
+		if tc.isReasoning && overhead != 384 {
+			t.Errorf("EstimateModelOverhead(%q) overhead = %d, expected 384", tc.modelID, overhead)
+		}
+		if !tc.isReasoning && overhead != 0 {
+			t.Errorf("EstimateModelOverhead(%q) overhead = %d, expected 0", tc.modelID, overhead)
+		}
+	}
+}

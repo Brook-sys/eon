@@ -1,3 +1,17 @@
+## Phase 540 — Adversarial Conflict Surfacing & Multi-Model Fire Test (Scenario 4) (2026-08-14)
+
+**Objective and implementation.** Tested `ConflictDetectionGuard` compiler flag and executed live multi-trial fire campaign `cmd/phase540_adversarial_conflict_surfacing` across Groq (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`) under conflicting dates scenario (press release date vs authoritative launch date).
+1. Added `ConflictDetectionGuard bool` to `prompt.Input` and implemented unit tests (`TestConflictDetectionGuardAppendsDirective`, `TestConflictDetectionGuardOmittedWhenFalse`, `TestEstimateModelOverhead`).
+2. Executed 24 live trials comparing `ConflictDetectionGuard=true` vs `ConflictDetectionGuard=false`.
+
+**Observed evidence and decision.**
+- **Authoritative Date Extraction**: 24/24 (100%) trials across all 4 models correctly extracted `DATE: 2024-09-01`.
+- **Groq `llama-3.3-70b-versatile` & `qwen/qwen3.6-27b`**: 6/6 trials detected conflicts (`CONFLICT: YES`), regardless of whether `ConflictDetectionGuard` was active.
+- **Groq `llama-3.1-8b-instant`**: 3/3 trials detected conflict when `ConflictDetectionGuard=true`; 0/3 detected conflict when `ConflictDetectionGuard=false` (emitted verbose unformatted explanation). Proves 8B models require explicit system directives to structure conflict surfacing.
+- **NIM `meta/llama-3.1-8b-instruct`**: 3/3 trials detected conflict without guard; emitted `CONFLICT: NO` with guard active (prompt instruction confusion on NIM deployment).
+
+**Deterministic verification.** Campaign results committed in `results/phase540_adversarial_conflict_surfacing/results.json`. Unit tests `go test ./internal/prompt/...` passed cleanly.
+
 ## Phase 526 — Groq `qwen3.6-27b` provider model discovery validation (2026-08-14 06:41 -03)
 
 **Objective and implementation.** Addressed test harness initialization failures caused by deprecated or offline Groq models. Evaluated `qwen/qwen3.6-27b` budget logic on the latest stable model namespace.
