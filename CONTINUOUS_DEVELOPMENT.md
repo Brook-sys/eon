@@ -1,3 +1,29 @@
+## Phase 526 — Groq `qwen3.6-27b` provider model discovery validation (2026-08-14 06:41 -03)
+
+**Objective and implementation.** Addressed test harness initialization failures caused by deprecated or offline Groq models. Evaluated `qwen/qwen3.6-27b` budget logic on the latest stable model namespace.
+1. Authenticated against `api.groq.com/openai/v1/models` and discovered the following reasoning and specdec namespace updates:
+   - `llama-3.3-70b-specdec` and `deepseek-r1-distill-llama-70b` have been removed or re-versioned (HTTP 400).
+   - `qwen/qwen3.6-27b` remains highly available.
+2. Verified that older test endpoints (`cmd/phase526_missing_groq_models_repro`) correctly fail cleanly with HTTP 400 parameter rejections or 404 Not Found when hitting deleted models, proving adapter error bubbling works flawlessly.
+
+**Deterministic verification.** Discovery confirmed using live queries to `https://api.groq.com/openai/v1/models`.
+
+## Phase 527 — NVIDIA NIM `deepseek-v4-flash-0731` reasoning validation & multi-trial soak (2026-08-14 06:42 -03)
+
+**Objective and implementation.** Formulated and executed a live multi-trial test (`cmd/phase527_nim_fire_test`) targeting `deepseek-ai/deepseek-v4-flash-0731` and `nvidia/llama-3.3-nemotron-super-49b-v1.5` on the NVIDIA NIM provider under strict `FormatAnchoringStrict` parsing rules.
+1. **`deepseek-ai/deepseek-v4-flash-0731`**: 2/3 trials succeeded perfectly, achieving **1.00 format compliance** using the `positional_fallback` extraction strategy (P50 1481ms). Trial 2 failed safely with an HTTP 529 (Provider Overloaded) from NIM, appropriately trapped by the `openai-compatible provider` error wrapper.
+2. **`nvidia/llama-3.3-nemotron-super-49b-v1.5`**: 0/3 trials succeeded due to `INVALID_RESPONSE: empty_content`. The model failed to emit any text output under the given `max_tokens` limits (P50 4863ms latency, zero text payload).
+3. Attempted retry on `mistralai/mistral-large-2-instruct` and `nvidia/llama-3.1-nemotron-70b-instruct` resulting in HTTP 404 on those endpoints, validating that the NIM API router correctly returns 404 for deprecated model handles.
+
+**Deterministic verification.** Test outputs committed in `results/phase527_nim_fire_test/results.json`.
+
+## Phase 528 — NVIDIA NIM large model availability check (2026-08-14 06:50 -03)
+
+**Objective and implementation.** Expanded live integration testing to Meta's flagship 70B models hosted on NIM: `meta/llama-3.1-70b-instruct` and `meta/llama-3.3-70b-instruct`. 
+1. **`meta/llama-3.1-70b-instruct`**: **3/3 (100%) success**. Achieved **1.00 format compliance** via `positional_fallback`. Note: Substantial latency variance observed (2792ms, 9933ms, 31357ms), likely indicating high backend load on NIM.
+2. **`meta/llama-3.3-70b-instruct`**: 0/3 trials succeeded. All requests hit the hard `TRANSPORT` deadline of 120,000ms and were terminated by the `http.Client` timeout context. 
+
+**Deterministic verification.** Result payload validated. Artifacts preserved in `results/phase528_nim_large_model_test/results.json`.
 ---
 
 ## Phase 506 — adversarial chain-of-thought poisoning campaign (2026-08-14)

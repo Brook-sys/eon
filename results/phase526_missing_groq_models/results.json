@@ -1,0 +1,23 @@
+[
+  {
+    "model": "deepseek-r1-distill-llama-70b",
+    "latency": 158,
+    "error": "openai-compatible provider: HTTP (status 400)",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "deepseek-r1-distill-qwen-32b",
+    "latency": 32,
+    "error": "openai-compatible provider: HTTP (status 400)",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "llama-3.3-70b-specdec",
+    "latency": 34,
+    "error": "openai-compatible provider: HTTP (status 400)",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  }
+]

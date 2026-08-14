@@ -1,0 +1,44 @@
+[
+  {
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 1481,
+    "format_compliance": 1,
+    "parsed_strategy": "positional_fallback",
+    "text": "STATUS: OK"
+  },
+  {
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 2097,
+    "error": "openai-compatible provider: HTTP (status 529)",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "deepseek-ai/deepseek-v4-flash-0731",
+    "latency": 929,
+    "format_compliance": 1,
+    "parsed_strategy": "positional_fallback",
+    "text": "STATUS: OK"
+  },
+  {
+    "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    "latency": 4863,
+    "error": "openai-compatible provider: INVALID_RESPONSE: empty_content",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    "latency": 4053,
+    "error": "openai-compatible provider: INVALID_RESPONSE: empty_content",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    "latency": 5367,
+    "error": "openai-compatible provider: INVALID_RESPONSE: empty_content",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  }
+]

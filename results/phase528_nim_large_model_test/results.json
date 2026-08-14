@@ -1,0 +1,44 @@
+[
+  {
+    "model": "meta/llama-3.1-70b-instruct",
+    "latency": 2792,
+    "format_compliance": 1,
+    "parsed_strategy": "positional_fallback",
+    "text": "STATUS: OK"
+  },
+  {
+    "model": "meta/llama-3.1-70b-instruct",
+    "latency": 9933,
+    "format_compliance": 1,
+    "parsed_strategy": "positional_fallback",
+    "text": "STATUS: OK"
+  },
+  {
+    "model": "meta/llama-3.1-70b-instruct",
+    "latency": 31357,
+    "format_compliance": 1,
+    "parsed_strategy": "positional_fallback",
+    "text": "STATUS: OK"
+  },
+  {
+    "model": "meta/llama-3.3-70b-instruct",
+    "latency": 120000,
+    "error": "openai-compatible provider: TRANSPORT",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "meta/llama-3.3-70b-instruct",
+    "latency": 120000,
+    "error": "openai-compatible provider: TRANSPORT",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  },
+  {
+    "model": "meta/llama-3.3-70b-instruct",
+    "latency": 120000,
+    "error": "openai-compatible provider: TRANSPORT",
+    "format_compliance": 0,
+    "parsed_strategy": ""
+  }
+]
