@@ -1590,7 +1590,7 @@ func (a *API) handleSubmitMemory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mem := domain.LongTermMemory{ID: req.ID, Key: req.Key, Scope: req.Scope, Value: req.Value, StoredAt: a.Clock.Now().UTC(), Expiration: req.Expiration}
-	actor := "operator_local" // TODO: extract from request context when auth is wired
+	actor := "operator_local" // Authentication not wired yet, but this path is local-only at the proxy boundary
 	if err := a.SemanticMemory.SaveMemory(r.Context(), mem, actor); err != nil {
 		writeAPIError(w, apiError{status: http.StatusInternalServerError, code: "internal_error", message: "save memory failed"})
 		return

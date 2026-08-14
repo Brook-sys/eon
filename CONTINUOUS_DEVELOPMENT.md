@@ -8738,3 +8738,13 @@ P50 latency across valid responses was 521ms.
   - Foi implementada uma variável dinâmica `apiBase` no `models.templ` (ex: `window.location.pathname.split('/dash/')[0] + '/dash/api'`) que ajusta os prefixos de rota adequando as chamadas `fetch` a qualquer ambiente com proxy.
   - Testes e binários correspondentes de Go gerados via `templ generate` e confirmados com sucesso.
 - **Descoberta Crítica (Rebuild do Executor):** O log assíncrono `model executor rebuild failed: missing api key mapping for provider` (ou `resolve model credential: file does not exist`) não é um bug de backend, mas uma consequência natural do servidor ter sido iniciado sem que o arquivo `.provider-secrets.env` fosse previamente carregado (sourced). Se as variáveis de ambiente necessárias estiverem ausentes, o rebuild falha.
+
+## Phase 491 — Adversarial Baseline and Reasoning Validation (2026-08-14)
+
+**Objective.** Re-validate base adversarial resilience models directly via the `prov.Complete` interface and ensure `qwen/qwen3.6-27b` successfully respects bounded formatting constraints when reasoning effort is disabled.
+
+**Live hypothesis and bounds.** Using standard `READY` matching, we tested a 16 max-token limit on `llama-3.3-70b-versatile`, `meta/llama-3.1-8b-instruct` (NIM), and `qwen/qwen3.6-27b`. For Qwen, the goal is to evaluate if explicit request struct field `ReasoningEffort: "none"` disables the `<think>` block output overhead. 
+
+**Observed evidence and decision.** Qwen cleanly emitted `READY` in 205ms without internal reasoning when `ReasoningEffort: "none"` was supplied. Without this, it exhausts the 16 max_tokens limits immediately with thinking start tags. Both other standard models succeeded natively. This confirms the baseline format control across both Groq and NVIDIA NIM. 
+
+**Deterministic verification.** Campaign pushed and serialized into `results/phase491_adv_baseline`. Commit successful.
