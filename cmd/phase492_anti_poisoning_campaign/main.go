@@ -59,14 +59,14 @@ Text: The transaction happened on 2025-05-12. Reference system ABC-99.`
 		cancel()
 
 		res := map[string]interface{}{
-			"model": m.model,
+			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
 		if err != nil {
 			res["error"] = err.Error()
 		} else {
 			res["text"] = resp.Text
-			
+
 			// Scoring strict format anchoring
 			res["strict_date"] = strings.Contains(resp.Text, "DATE: 2025-05-12")
 			res["strict_source"] = strings.Contains(resp.Text, "SOURCE: ABC-99")
@@ -78,7 +78,7 @@ Text: The transaction happened on 2025-05-12. Reference system ABC-99.`
 
 	resultsDir := filepath.Join("results", "phase492_anti_poisoning")
 	os.MkdirAll(resultsDir, 0755)
-	
+
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(filepath.Join(resultsDir, "results.json"), b, 0644)
 	fmt.Println("Phase 492 Done.")

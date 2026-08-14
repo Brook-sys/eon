@@ -50,30 +50,30 @@ Text: The plan started on 2025-01-01 (Source: SYS-A), but the actual primary exe
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		start := time.Now()
-		
+
 		req := port.CompletionRequest{
 			Prompt:          ambiguousPrompt,
 			MaxOutputTokens: 64,
 		}
-		
+
 		// If Qwen, disable reasoning effort so it emits directly.
 		if strings.Contains(m.model, "qwen") {
 			req.ReasoningEffort = "none"
 		}
-		
+
 		resp, err := prov.Complete(ctx, req)
 		latency := time.Since(start)
 		cancel()
 
 		res := map[string]interface{}{
-			"model": m.model,
+			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
 		if err != nil {
 			res["error"] = err.Error()
 		} else {
 			res["text"] = resp.Text
-			
+
 			// Expected primary execution values: DATE: 2025-05-12, SOURCE: SYS-B
 			res["semantic_date_correct"] = strings.Contains(resp.Text, "2025-05-12")
 			res["semantic_source_correct"] = strings.Contains(resp.Text, "SYS-B")
@@ -85,7 +85,7 @@ Text: The plan started on 2025-01-01 (Source: SYS-A), but the actual primary exe
 
 	resultsDir := filepath.Join("results", "phase493_adv_ambiguity")
 	os.MkdirAll(resultsDir, 0755)
-	
+
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(filepath.Join(resultsDir, "results.json"), b, 0644)
 	fmt.Println("Phase 493 Done.")

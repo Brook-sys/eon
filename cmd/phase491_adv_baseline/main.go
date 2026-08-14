@@ -28,10 +28,10 @@ func main() {
 	fmt.Println("Starting phase491_adv_baseline sweep...")
 
 	models := []struct {
-		provider string
-		model    string
-		key      string
-		baseURL  string
+		provider  string
+		model     string
+		key       string
+		baseURL   string
 		reasoning string
 	}{
 		{"groq", "llama-3.3-70b-versatile", groqKey, "https://api.groq.com/openai/v1", ""},
@@ -64,8 +64,8 @@ func main() {
 		cancel()
 
 		res := map[string]interface{}{
-			"provider": m.provider,
-			"model":    m.model,
+			"provider":   m.provider,
+			"model":      m.model,
 			"latency_ms": latency.Milliseconds(),
 		}
 		if err != nil {
@@ -82,7 +82,7 @@ func main() {
 
 	resultsDir := filepath.Join("results", "phase491_adv_baseline")
 	os.MkdirAll(resultsDir, 0755)
-	
+
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(filepath.Join(resultsDir, "results.json"), b, 0644)
 	fmt.Println("Done.")

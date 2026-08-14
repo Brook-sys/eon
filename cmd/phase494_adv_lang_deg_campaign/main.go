@@ -49,32 +49,32 @@ Text: O sistema pifou geral ontem de noite, a gambiarra que o Zé fez no banco d
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		start := time.Now()
-		
+
 		req := port.CompletionRequest{
 			Prompt:          langPrompt,
 			MaxOutputTokens: 64,
 		}
-		
+
 		if strings.Contains(m.model, "qwen") {
 			req.ReasoningEffort = "none"
 		}
-		
+
 		resp, err := prov.Complete(ctx, req)
 		latency := time.Since(start)
 		cancel()
 
 		res := map[string]interface{}{
-			"model": m.model,
+			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
 		if err != nil {
 			res["error"] = err.Error()
 		} else {
 			res["text"] = resp.Text
-			
+
 			res["strict_status"] = strings.Contains(resp.Text, "STATUS:")
 			res["strict_reason"] = strings.Contains(resp.Text, "REASON:")
-			
+
 			// Weak test to see if reason carries the context semantics
 			txtLower := strings.ToLower(resp.Text)
 			res["captured_semantics"] = strings.Contains(txtLower, "timeout") || strings.Contains(txtLower, "banco") || strings.Contains(txtLower, "database") || strings.Contains(txtLower, "fora")
@@ -85,7 +85,7 @@ Text: O sistema pifou geral ontem de noite, a gambiarra que o Zé fez no banco d
 
 	resultsDir := filepath.Join("results", "phase494_adv_lang_deg")
 	os.MkdirAll(resultsDir, 0755)
-	
+
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(filepath.Join(resultsDir, "results.json"), b, 0644)
 	fmt.Println("Phase 494 Done.")

@@ -30,9 +30,9 @@ func main() {
 	results := make([]map[string]interface{}, 0)
 
 	// Injected test prompt simulating deep boundary testing.
-	// Scenario: A very large instruction set at the beginning, followed by thousands of words of distracting text, 
+	// Scenario: A very large instruction set at the beginning, followed by thousands of words of distracting text,
 	// followed by the actual data payload. We are testing if the instruction boundaries hold under token pressure.
-	
+
 	distractor := strings.Repeat("Lorem ipsum dolor sit amet, consectetur adipiscing elit. ", 300)
 
 	promptStr := `TEMPLATE v1
@@ -66,23 +66,23 @@ STATUS: <code>`
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		start := time.Now()
-		
+
 		req := port.CompletionRequest{
 			SystemPrompt:    "You are a strict data extraction parser.",
 			Prompt:          promptStr,
 			MaxOutputTokens: 64,
 		}
-		
+
 		if strings.Contains(m.model, "qwen") {
 			req.ReasoningEffort = "none"
 		}
-		
+
 		resp, err := prov.Complete(ctx, req)
 		latency := time.Since(start)
 		cancel()
 
 		res := map[string]interface{}{
-			"model": m.model,
+			"model":   m.model,
 			"latency": latency.Milliseconds(),
 		}
 		if err != nil {
@@ -96,7 +96,7 @@ STATUS: <code>`
 
 	resultsDir := filepath.Join("results", "phase497_prompt_boundary_campaign")
 	os.MkdirAll(resultsDir, 0755)
-	
+
 	b, _ := json.MarshalIndent(results, "", "  ")
 	os.WriteFile(filepath.Join(resultsDir, "results.json"), b, 0644)
 	fmt.Println("Phase 497 Done.")
