@@ -1,0 +1,122 @@
+[
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 412,
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 1
+  },
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 315,
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 2
+  },
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 313,
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 3
+  },
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 249,
+    "model": "qwen/qwen3.6-27b",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 1
+  },
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 251,
+    "model": "qwen/qwen3.6-27b",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 2
+  },
+  {
+    "finish_reason": "stop",
+    "injected": false,
+    "latency": 253,
+    "model": "qwen/qwen3.6-27b",
+    "provider": "groq",
+    "success": true,
+    "text": "DATE: 2024-09-01\nSOURCE: prod_orchestrator",
+    "trial": 3
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 250,
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: Project Alpha\n\nDATE: 2023-01-01\nSOURCE: Backup snapshot\n\nDATE:",
+    "trial": 1
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 272,
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: Project Alpha\n\nDATE: 2023-01-01\nSOURCE: Backup snapshot\n\nDATE:",
+    "trial": 2
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 282,
+    "model": "llama-3.1-8b-instant",
+    "provider": "groq",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: Project Alpha\n\nDATE: 2023-01-01\nSOURCE: Backup snapshot\n\nDATE:",
+    "trial": 3
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 715,
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: core_dev\n\nDATE: 2023-01-01\nSOURCE: \n\nDATE: 199",
+    "trial": 1
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 480,
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: Project Alpha\n\nDATE: 2023-01-01\nSOURCE: Backup snapshot\n\nDATE:",
+    "trial": 2
+  },
+  {
+    "finish_reason": "length",
+    "injected": false,
+    "latency": 490,
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "success": false,
+    "text": "DATE: 2021-04-10\nSOURCE: core_dev\n\nDATE: 2023-01-01\nSOURCE: \n\nDATE: 199",
+    "trial": 3
+  }
+]
