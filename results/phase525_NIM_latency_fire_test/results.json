@@ -1,0 +1,23 @@
+[
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "latency_ms": 641,
+    "status": 200,
+    "tokens": 2
+  },
+  {
+    "model": "nvidia/nemotron-4-340b-instruct",
+    "latency_ms": 164,
+    "error": "openai-compatible provider: HTTP (status 404)"
+  },
+  {
+    "model": "meta/llama-3.3-70b-instruct",
+    "latency_ms": 30002,
+    "error": "openai-compatible provider: TRANSPORT"
+  },
+  {
+    "model": "mistralai/mixtral-8x22b-instruct-v0.1",
+    "latency_ms": 122,
+    "error": "openai-compatible provider: HTTP (status 410)"
+  }
+]

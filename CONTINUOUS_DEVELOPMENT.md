@@ -9039,3 +9039,17 @@ Decision: The `UntrustedDataBounding` directive is highly effective when paired 
 - Integrating Qwen seamlessly requires either `reasoning_effort: "none"` or dynamically scaled max output tokens provided through `ModelExecutor` parameter translation (which we disabled for these pure API connection tests to expose the raw baseline).
 
 Decision: The integration failures for Qwen on Groq during cross-provider tests are model-alias mapping issues (`qwen-2.5-32b` vs `qwen/qwen3.6-27b`) rather than prompt pipeline errors. The prompt compiler's budget guard auto-suppression remains essential for Qwen models.
+
+## Phase 525 — Large NIM model latency baseline fire test (2026-08-14 06:06 -03)
+
+**Objective and implementation.** We executed `cmd/phase525_NIM_latency_fire_test` to verify cross-provider coverage requirements and sample NVIDIA NIM API availability. The campaign probed latency across four large NIM deployments directly: `meta/llama-3.1-8b-instruct`, `nvidia/nemotron-4-340b-instruct`, `meta/llama-3.3-70b-instruct`, and `mistralai/mixtral-8x22b-instruct-v0.1`.
+
+**Observed evidence and decision.**
+- `meta/llama-3.1-8b-instruct` successfully completed with a latency of 617ms - 641ms.
+- `nvidia/nemotron-4-340b-instruct` returned an HTTP 404 (Not Found).
+- `meta/llama-3.3-70b-instruct` returned a TRANSPORT timeout (after 30 seconds).
+- `mistralai/mixtral-8x22b-instruct-v0.1` returned an HTTP 410 (Gone).
+
+Decision: NIM remains viable for `meta/llama-3.1-8b-instruct` as a fallback or cross-provider control. However, many previously accessible deployments are either currently timing out (`meta/llama-3.3-70b-instruct`) or have been deprecated/removed from the endpoint (`mistralai/mixtral-8x22b-instruct-v0.1`, `nvidia/nemotron-4-340b-instruct`). We will continue to prioritize Groq for the main model rotation due to the currently low availability of these high-parameter NIM models.
+
+**Deterministic verification.** Campaign results recorded in `results/phase525_NIM_latency_fire_test/results.json`.
