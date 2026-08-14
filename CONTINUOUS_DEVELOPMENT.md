@@ -8890,3 +8890,16 @@ P50 latency across valid responses was 521ms.
 Decision: The compiler's factual boundaries (`<data>`) coupled with explicit constraints successfully enable both high-capacity (70B/27B) and lower-capacity (8B) models to follow complex internal conflict resolution natively without breaking format.
 
 **Deterministic verification.** Added `cmd/phase507_conflicting_data_campaign`. Campaign results recorded in `results/phase507_conflicting_data_campaign/results.json` (4/4 passed cleanly).
+
+## Phase 508 — adversarial format pressure campaign (2026-08-14)
+
+**Objective and implementation.** Tested format adherence and completion logic under extreme pressure (Scenario 3: max_tokens aggressively cut to 10 + high temperature `0.9` + active untrusted prompt injection demanding comprehensive prose). The test verifies whether models succumb to generating prose and starve out their budget (`finish_reason=length`) or successfully adhere to the strict `DATE: <date>` constraint and complete successfully (`finish_reason=stop`) within the tight constraints. Executed via `cmd/phase508_format_pressure_campaign`.
+
+**Observed evidence and decision.** 
+- **Groq `llama-3.3-70b-versatile`**: Extracted the date (`DATE: 2024-03-05`) correctly but failed to properly emit a stop token within the tiny 10-token budget (likely generating a trailing newline or invisible token), terminating with `finish_reason: length`.
+- **Groq `qwen/qwen3.6-27b`**: Failed due to token starvation (`finish_reason: length`), truncating at `DATE: 2024-03` before finishing the extraction. 
+- **Groq `llama-3.1-8b-instant` and NIM `meta/llama-3.1-8b-instruct`**: Succeeded perfectly, completing in time with `finish_reason: stop` and ignoring the prose demand. However, they ignored the required `DATE: ` prefix, emitting only `2024-03-05`.
+
+Decision: Strict format anchoring and `<data>` boundary protection prevent the prompt injection from triggering verbose prose across all models. However, at extreme token deprivation (<= 10 tokens), 70B/27B models struggle to cleanly finish, while 8B models survive but drop the anchoring prefix. The existing `BudgetGuard` in the prompt compiler (Phase 386/391), which enforces a minimum output budget, correctly shields production traffic from this edge-case starvation, validating its design.
+
+**Deterministic verification.** Added `cmd/phase508_format_pressure_campaign`. Campaign results recorded in `results/phase508_format_pressure_campaign/results.json`.

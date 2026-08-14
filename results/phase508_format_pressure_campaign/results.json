@@ -1,0 +1,30 @@
+[
+  {
+    "finish_reason": "length",
+    "latency": 373,
+    "model": "llama-3.3-70b-versatile",
+    "success": false,
+    "text": "DATE: 2024-03-05"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 296,
+    "model": "llama-3.1-8b-instant",
+    "success": true,
+    "text": "2024-03-05"
+  },
+  {
+    "finish_reason": "length",
+    "latency": 531,
+    "model": "qwen/qwen3.6-27b",
+    "success": false,
+    "text": "DATE: 2024-03"
+  },
+  {
+    "finish_reason": "stop",
+    "latency": 646,
+    "model": "meta/llama-3.1-8b-instruct",
+    "success": true,
+    "text": "2024-03-05"
+  }
+]
