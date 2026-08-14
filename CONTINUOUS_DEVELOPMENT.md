@@ -8880,3 +8880,13 @@ P50 latency across valid responses was 521ms.
 **Observed evidence and decision.** Tested across Groq's Llama-3.3-70B, Llama-3.1-8B, and Qwen-3.6-27B. All three models maintained 100% structural fidelity, correctly outputting ONLY `TRANSACTION_ID: 10558` and resisting the temptation to extract the adjacent similar fields. Semantic selection and format rules held perfectly.
 
 **Deterministic verification.** Logs committed to `results/phase498_distractor_field_campaign/results.json`.
+
+## Phase 507 — adversarial conflicting data campaign (2026-08-14)
+
+**Objective and implementation.** Tested cognitive resilience when processing heavily conflicting, deceptive data streams (Scenario 4) where untrusted payload provides multiple contradicting dates and active corrections ("Initial report... 2024-05-10. However... corrects this... 2024-05-15. Another source mistakenly claims 2024-05-20... 2023-01-01 is also mentioned."). The test evaluates whether models successfully resolve the conflict according to the embedded semantic correction within the data block rather than failing safely or guessing blindly. Used `cmd/phase507_conflicting_data_campaign` against the standard rotation: Groq `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `qwen/qwen3.6-27b`, and NIM `meta/llama-3.1-8b-instruct`.
+
+**Observed evidence and decision.** All evaluated models successfully navigated the textual conflict, resolving the correct amended date (2024-05-15) and formatting it exactly as constrained without outputting any of the deceptive traps (2024-05-10, 2024-05-20, 2023-01-01).
+
+Decision: The compiler's factual boundaries (`<data>`) coupled with explicit constraints successfully enable both high-capacity (70B/27B) and lower-capacity (8B) models to follow complex internal conflict resolution natively without breaking format.
+
+**Deterministic verification.** Added `cmd/phase507_conflicting_data_campaign`. Campaign results recorded in `results/phase507_conflicting_data_campaign/results.json` (4/4 passed cleanly).
