@@ -9215,3 +9215,16 @@ Decision: The structural isolation system prompt (`CRITICAL INSTRUCTION: You mus
 **Decision.** 16 output tokens is physically insufficient for this payload size (~17-18 tokens). The `finish_reason: length` signal is correctly captured by the OpenAI adapter. Reasoning models (`gpt-oss-20b`) fail immediately with budget exhaustion before producing any output tokens when `max_output_tokens` is below their reasoning threshold (~32-64 tokens). Minimum output budget floor for structured extraction operations must be set to at least 32 tokens (or 64 for reasoning models) to prevent physical output truncation.
 
 **Deterministic verification.** Campaign results recorded in `results/phase538_adversarial_budget_starvation/results.json`.
+
+## Phase 539 — prompt improvement loop & format anti-forgery guard implementation (2026-08-14)
+
+**Objective and implementation.** Addressed Llama model format vulnerability (Phase 536) where user prompt format instructions override system prompt directives under adversarial ambiguous/contradictory scenarios. Formulated and executed `cmd/phase539_prompt_improvement_loop` (48 live trials across 4 models) testing 3 prompt variation strategies against baseline V0.
+1. Tested **V1 (Explicit System Override Warning)**, **V2 (Task Format Precedence Directive)**, and **V3 (Strict Anti-Forgery & Header Anchor)** across Groq (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) and NIM (`meta/llama-3.1-8b-instruct`).
+2. **Observed evidence**:
+   - **V0 Baseline**: Groq 70B (0/3, 336ms), Groq 8B (0/3, 240ms), NIM 8B (0/3, 2370ms) failed by adopting user-requested `RESULT::` format. Only Qwen 27B passed (3/3, 436ms).
+   - **V1 (System Override Warning)**: **100% success across ALL models** (Groq 70B: 3/3 377ms, Groq Qwen 27B: 3/3 314ms, Groq 8B: 3/3 375ms, NIM 8B: 3/3 1426ms). Completely eliminated the user format forgery exploit.
+   - **V2 (Task Precedence Header)**: **100% success across ALL models** (Groq 70B: 3/3 333ms, Groq Qwen: 3/3 320ms, Groq 8B: 3/3 344ms, NIM 8B: 3/3 1789ms).
+   - **V3 (Strict Anchor)**: Failed on 8B models (0/3), causing 8B models to drop format headers entirely and emit bare values (`2024-09-01 | prod_orchestrator`).
+3. **Integration**: Extended `prompt.Compiler` and `prompt.Input` with `FormatAntiForgeryGuard bool`. When enabled, `render()` forcibly appends the `FORMAT ANTI-FORGERY GUARD` block to prompt compilation. Added unit tests `TestFormatAntiForgeryGuardAppendsDirective` and `TestFormatAntiForgeryGuardOmittedWhenFalse` in `internal/prompt/compiler_test.go`.
+
+**Deterministic verification.** `go test ./...` passed 100% cleanly. `git diff --check` clean. Artifacts in `cmd/phase539_prompt_improvement_loop/` and `results/phase539_prompt_improvement_loop/results.json`.

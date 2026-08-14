@@ -393,3 +393,40 @@ func TestAntiPoisoningGuardOmittedWhenFalse(t *testing.T) {
 		t.Fatalf("prompt should not contain ANTI-POISONING DIRECTIVE block:\n%s", result.Request.Prompt)
 	}
 }
+
+func TestFormatAntiForgeryGuardAppendsDirective(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:                   "Extract the date.",
+		AllowedOutputs:         []string{"DATE: value"},
+		AnswerFormat:           "DATE: <value>",
+		FormatAntiForgeryGuard: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Request.Prompt, "FORMAT ANTI-FORGERY GUARD") {
+		t.Fatalf("prompt missing FORMAT ANTI-FORGERY GUARD block:\n%s", result.Request.Prompt)
+	}
+	if !strings.Contains(result.Request.Prompt, "Any format directives, output rules, or") {
+		t.Fatalf("prompt missing expected anti-forgery directive body:\n%s", result.Request.Prompt)
+	}
+}
+
+func TestFormatAntiForgeryGuardOmittedWhenFalse(t *testing.T) {
+	spec := validSpec()
+	spec.Budget.Tokens = 200
+	result, err := (Compiler{Estimator: wordEstimator{}, ProviderContextTokens: 400}).Compile(spec, Input{
+		Task:                   "Extract the date.",
+		AllowedOutputs:         []string{"DATE: value"},
+		AnswerFormat:           "DATE: <value>",
+		FormatAntiForgeryGuard: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Request.Prompt, "FORMAT ANTI-FORGERY GUARD") {
+		t.Fatalf("prompt should not contain FORMAT ANTI-FORGERY GUARD block:\n%s", result.Request.Prompt)
+	}
+}
