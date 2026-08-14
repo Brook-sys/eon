@@ -8729,3 +8729,12 @@ P50 latency across valid responses was 521ms.
 **Deterministic verification.** 
 - All 6 attempted calls were 100% exact-match correct, utilizing no positional fallbacks and generating valid traces.
 - Validated bounded execution JSON artifacts in `results/sweeps/massive-fire-sweep-v1/hb-test-nim-*`.
+
+## Phase 493: Dashboard Proxy Compatibility and UI State Wipe Fix
+**Status:** Concluído
+- **Problema:** A interface falhava em exibir a lista de provedores salvos. O log exibia erros HTTP 404 (`route not registered`) mesmo para rotas válidas no backend, e a listagem da UI ficava vazia.
+- **Causa:** O usuário estava acessando a UI através do gateway OpenClaw (`/__openclaw__/proxy/8080/dash/models`). As chamadas `fetch` na UI usavam URLs absolutas (`/dash/api/...`), causando requisições diretas à raiz do gateway (que rejeitava com 404). Ao receber 404, a rotina `refresh()` agressivamente limpava o estado de provedores locais, ocultando-os.
+- **Solução:**
+  - Foi implementada uma variável dinâmica `apiBase` no `models.templ` (ex: `window.location.pathname.split('/dash/')[0] + '/dash/api'`) que ajusta os prefixos de rota adequando as chamadas `fetch` a qualquer ambiente com proxy.
+  - Testes e binários correspondentes de Go gerados via `templ generate` e confirmados com sucesso.
+- **Descoberta Crítica (Rebuild do Executor):** O log assíncrono `model executor rebuild failed: missing api key mapping for provider` (ou `resolve model credential: file does not exist`) não é um bug de backend, mas uma consequência natural do servidor ter sido iniciado sem que o arquivo `.provider-secrets.env` fosse previamente carregado (sourced). Se as variáveis de ambiente necessárias estiverem ausentes, o rebuild falha.
