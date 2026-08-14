@@ -1,0 +1,23 @@
+[
+  {
+    "finish_reason": "stop",
+    "latency_ms": 357,
+    "model": "llama-3.3-70b-versatile",
+    "provider": "groq",
+    "text": "READY"
+  },
+  {
+    "finish_reason": "stop",
+    "latency_ms": 205,
+    "model": "qwen/qwen3.6-27b",
+    "provider": "groq",
+    "text": "READY"
+  },
+  {
+    "finish_reason": "stop",
+    "latency_ms": 567,
+    "model": "meta/llama-3.1-8b-instruct",
+    "provider": "nim",
+    "text": "READY"
+  }
+]
