@@ -1,0 +1,17 @@
+[
+  {
+    "latency": 622,
+    "model": "llama-3.3-70b-versatile",
+    "text": "STATUS: 502"
+  },
+  {
+    "latency": 469,
+    "model": "llama-3.1-8b-instant",
+    "text": "STATUS: 502"
+  },
+  {
+    "latency": 521,
+    "model": "qwen/qwen3.6-27b",
+    "text": "STATUS: 502"
+  }
+]

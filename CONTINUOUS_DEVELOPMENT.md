@@ -8800,3 +8800,13 @@ P50 latency across valid responses was 521ms.
 **Resolution (Phase 496 V2).** Implemented `UntrustedDataBounding` in `internal/prompt/compiler.go`. When true, this wraps all facts in `<data>...</data>` tags and injects a `SystemPrompt` explicitly forbidding instruction obedience inside those tags. Live tests proved Llama-3 8B and 70B successfully resisted the injection, emitting the correct date and source without hallucinations (`DATE: 2024-01-01`). Tested across Qwen 27B, Llama 8B, Llama 70B (all passed 100%).
 
 **Deterministic verification.** Logs and V2 fixes committed to `results/phase496_data_bounding_campaign/results_v2.json`. Code successfully committed and pushed to `main`.
+
+## Phase 497 — Prompt Boundary Context Starvation (2026-08-14)
+
+**Objective.** Verify if the instruction boundary and strict formatting rules hold when subjected to high token pressure and large conversational distractors preceding the target data.
+
+**Live hypothesis and bounds.** A target extraction task ("STATUS: 502") buried under 300 repetitions of Lorem Ipsum padding, testing if attention degradation causes models to forget the strict schema requested at the top of the prompt. Limit output budget to 64 tokens.
+
+**Observed evidence and decision.** Tested across Llama-3.3-70B, Llama-3.1-8B, and Qwen-3.6-27B on Groq. All three models successfully extracted `STATUS: 502` exactly matching the requested boundary format without hallucinating filler text. This verifies the structural anchoring remains resilient even across thousands of tokens of distractor context.
+
+**Deterministic verification.** Logs committed to `results/phase497_prompt_boundary_campaign/results.json`. Script pushed to `main`.
