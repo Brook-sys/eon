@@ -8748,3 +8748,13 @@ P50 latency across valid responses was 521ms.
 **Observed evidence and decision.** Qwen cleanly emitted `READY` in 205ms without internal reasoning when `ReasoningEffort: "none"` was supplied. Without this, it exhausts the 16 max_tokens limits immediately with thinking start tags. Both other standard models succeeded natively. This confirms the baseline format control across both Groq and NVIDIA NIM. 
 
 **Deterministic verification.** Campaign pushed and serialized into `results/phase491_adv_baseline`. Commit successful.
+
+## Phase 492 — Adversarial CoT Anti-Poisoning Anchor Validation (2026-08-14)
+
+**Objective.** Verify if the models fall into format hallucination when explicit few-shot examples contradict the structural rule constraints (e.g. `DATE: <date>` vs `date => 2024-01-01`).
+
+**Live hypothesis and bounds.** A 64-token budget against 3 models: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, and NIM `meta/llama-3.1-8b-instruct`. Expected outcome is either following the poison structure or holding the line on the hardcoded anchor format. 
+
+**Observed evidence and decision.** All 3 endpoints held the line entirely. They emitted strict `DATE:` and `SOURCE:` formats, ignoring the `=>` poison in the few-shot section. This reinforces that prefix anchoring in prompts overrides bad historical context for the Llama-3 family.
+
+**Deterministic verification.** Logs committed to `results/phase492_anti_poisoning`.
