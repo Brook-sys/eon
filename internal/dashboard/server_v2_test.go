@@ -186,7 +186,7 @@ func TestV2RoutesServeOverviewAssetsAndAPI(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK ||
 		!strings.Contains(string(b), "modelsState") ||
-		!strings.Contains(string(b), "/dash/api/model-bindings") {
+		!strings.Contains(string(b), "apiBase + '/model-bindings'") {
 		t.Fatalf("/dash/models status=%d missing posture markers", resp.StatusCode)
 	}
 

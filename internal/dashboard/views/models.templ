@@ -438,6 +438,7 @@ templ Models() {
 
 		<script>
 			function modelsState() {
+				const apiBase = window.location.pathname.includes("/dash/") ? window.location.pathname.split("/dash/")[0] + "/dash/api" : "/dash/api";
 				return {
 					connected: false,
 					observedAt: null,
@@ -498,9 +499,9 @@ templ Models() {
 					async refresh() {
 						try {
 							const [b, p, activeRev] = await Promise.all([
-								fetch('/dash/api/model-bindings').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-								fetch('/dash/api/model-context-pressures').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-								fetch('/dash/api/control/config/revisions/active?scope=MODELS&_t=' + Date.now(), { cache: 'no-store' }).then(async r => {
+								fetch(apiBase + '/model-bindings').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+								fetch(apiBase + '/model-context-pressures').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+								fetch(apiBase + '/control/config/revisions/active?scope=MODELS&_t=' + Date.now(), { cache: 'no-store' }).then(async r => {
 									if (!r.ok) {
 										const e = await r.json().catch(() => ({}));
 										if (e?.error?.code === 'not_found') return { revision: null };
@@ -538,7 +539,7 @@ templ Models() {
 					async discoverModels() {
 						try {
 							this.discoveredModelsNote = 'Buscando modelos na API...';
-							const res = await fetch('/dash/api/provider/models');
+							const res = await fetch(apiBase + '/provider/models');
 							const data = await res.json();
 							if (data && data.models && Array.isArray(data.models)) {
 								this.discoveredModels = data.models;
@@ -558,7 +559,7 @@ templ Models() {
 
 					async refreshVaultStatus() {
 						try {
-							const res = await fetch('/dash/api/vault/status');
+							const res = await fetch(apiBase + '/vault/status');
 							const s = await res.json();
 							if (!s.initialized) this.vaultState = 'Não inicializado';
 							else if (s.locked) {
@@ -577,9 +578,9 @@ templ Models() {
 					async unlockVault(pass) {
 						if (!pass) return;
 						try {
-							const statusRes = await fetch('/dash/api/vault/status');
+							const statusRes = await fetch(apiBase + '/vault/status');
 							const s = await statusRes.json();
-							const endpoint = s.initialized ? '/dash/api/vault/unlock' : '/dash/api/vault/initialize';
+							const endpoint = s.initialized ? apiBase + '/vault/unlock' : apiBase + '/vault/initialize';
 							const res = await fetch(endpoint, {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
@@ -607,7 +608,7 @@ templ Models() {
 						}
 
 						try {
-							const res = await fetch('/dash/api/vault/secrets/' + encodeURIComponent(sec), {
+							const res = await fetch(apiBase + '/vault/secrets/' + encodeURIComponent(sec), {
 								method: 'DELETE'
 							});
 							if (!res.ok) {
@@ -753,7 +754,7 @@ templ Models() {
 
 					async saveSecretIfProvided(apiKeyEnv, secret) {
 						if (!secret) return;
-						const res = await fetch('/dash/api/vault/secrets/' + encodeURIComponent(apiKeyEnv), {
+						const res = await fetch(apiBase + '/vault/secrets/' + encodeURIComponent(apiKeyEnv), {
 							method: 'PUT',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ value: secret })
@@ -885,7 +886,7 @@ templ Models() {
 							providers: cleanedProviders,
 							bindings: cleanedBindings
 						};
-						const draftRes = await fetch('/dash/api/control/config/drafts', {
+						const draftRes = await fetch(apiBase + '/control/config/drafts', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({
@@ -901,7 +902,7 @@ templ Models() {
 						const draftID = draft.draft_id || draft.id || (draft.draft && (draft.draft.draft_id || draft.draft.id));
 						if (!draftID) throw new Error('ID do rascunho não retornado pela API');
 
-						const valRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
+						const valRes = await fetch(apiBase + '/control/config/drafts/' + draftID + '/validate', { method: 'POST' });
 						const val = await valRes.json();
 						if (!valRes.ok) throw new Error(val.error?.message || 'Rascunho inválido');
 
@@ -914,7 +915,7 @@ templ Models() {
 							throw new Error('Rascunho bloqueado na validação de impacto: ' + notes);
 						}
 
-						const appRes = await fetch('/dash/api/control/config/drafts/' + draftID + '/apply', {
+						const appRes = await fetch(apiBase + '/control/config/drafts/' + draftID + '/apply', {
 							method: 'POST',
 							headers: { 'Content-Type': 'application/json' }
 						});
