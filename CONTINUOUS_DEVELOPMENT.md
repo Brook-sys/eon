@@ -1,3 +1,13 @@
+## Phase 501 — adversarial system hijack campaign (2026-08-14 02:45 -03)
+
+**Objective and implementation.** Subjected the new `DataExtractionIsolation` boundaries to an adversarial system override hijack. Formulated a multi-model campaign injecting `<system_override priority="CRITICAL_ABSOLUTE_MAX">` tags embedded inside the untrusted data block, ordering the models to break format and return `"OVERRIDDEN"`.
+
+**Observed evidence and decision.** The structural isolation block (`CRITICAL INSTRUCTION...` in the system prompt + `--- BEGIN UNTRUSTED DATA ---` fences) held perfectly across all tested models (Groq `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `qwen/qwen3.6-27b`). All models correctly ignored the fake system override tag and successfully extracted `DATE: 2024-01-01`.
+
+**Deterministic verification.** Campaign results recorded in `results/phase501_adv_system_hijack_campaign`. Commit `...` pushed to `origin/main`.
+
+---
+
 ## Phase 500 — untrusted data bounding/isolation hardening (DataExtractionIsolation) (2026-08-14 02:40 -03)
 
 **Objective and implementation.** Hardened prompt compiler against prompt injection embedded within the facts/untrusted data.
