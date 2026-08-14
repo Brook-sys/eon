@@ -9053,3 +9053,16 @@ Decision: The integration failures for Qwen on Groq during cross-provider tests 
 Decision: NIM remains viable for `meta/llama-3.1-8b-instruct` as a fallback or cross-provider control. However, many previously accessible deployments are either currently timing out (`meta/llama-3.3-70b-instruct`) or have been deprecated/removed from the endpoint (`mistralai/mixtral-8x22b-instruct-v0.1`, `nvidia/nemotron-4-340b-instruct`). We will continue to prioritize Groq for the main model rotation due to the currently low availability of these high-parameter NIM models.
 
 **Deterministic verification.** Campaign results recorded in `results/phase525_NIM_latency_fire_test/results.json`.
+
+## 2026-08-14 - Fix Dashboard Models & LLMs Empty List & Infinite Loading
+- **Issue**: "Nenhuma modificação detectada" toast did not close the form or reset the loading state. The provider list was not rendering despite the backend correctly storing and returning the providers array.
+- **Root Cause**:
+  - The infinite loader occurred because the form catch block failed to reset `this.formMsg` on a no-op draft result (handled as `result.reason === 'no-op'`).
+  - The empty list rendering was caused by a JavaScript exception inside Alpine's `x-for` loop: `p.id.substring(0,2)` threw `Cannot read properties of undefined` if an ID happened to be empty or unassigned dynamically, breaking the entire `x-for` directive in AlpineJS v3.
+  - AlpineJS v3 reactivity proxy dropped updates when `this.cfgPayload` was assigned directly from the backend JSON response rather than deep-cloned or explicitly reassigned.
+- **Fix**:
+  - Re-wrote `this.cfgPayload = { providers: [...(rev.models?.providers || [])], bindings: [...(rev.models?.bindings || [])] };` in `refresh()` to enforce a new reactive object proxy.
+  - Safe navigation for substring: `x-text="(p.id || '').substring(0,2)"`.
+  - Added specific message handler `else if (result && result.reason === 'no-op') { this.formMsg = 'Nenhuma modificação detectada. O form não será fechado.'; }` inside `submitProviderForm`.
+  - Fixed `b.provider` to `b.provider_ref` inside the bindings table loop.
+- **Validation**: Generated new `.go` files via `templ generate` and committed all changes directly to the `main` branch. CLI test successfully fetched 5 providers from the local instance showing the backend proxy is flawless.
