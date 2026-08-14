@@ -4,6 +4,7 @@ package prompt
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -11,6 +12,14 @@ import (
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
 )
+
+var xmlEscapeRx = regexp.MustCompile(`(?i)</?data\b[^>]*>`)
+
+// sanitizeUntrustedData removes adversarial attempts to escape the <data> tags
+// by matching variations of the tag (case-insensitive, with attributes) and replacing them.
+func sanitizeUntrustedData(text string) string {
+	return xmlEscapeRx.ReplaceAllString(text, "[REDACTED_TAG]")
+}
 
 // TokenEstimator is injected because OpenAI-compatible providers do not share
 // one tokenizer. Implementations must be deterministic for a given string.
@@ -273,7 +282,8 @@ func render(version uint64, input Input, facts []Fact, formatAnchored bool) stri
 		b.WriteString("\nFACTS\n")
 		for index, fact := range facts {
 			if input.UntrustedDataBounding {
-				fmt.Fprintf(&b, "F%d [%s]:\n<data>\n%s\n</data>\n", index+1, fact.ID, strings.TrimSpace(fact.Text))
+				sanitized := sanitizeUntrustedData(fact.Text)
+				fmt.Fprintf(&b, "F%d [%s]:\n<data>\n%s\n</data>\n", index+1, fact.ID, strings.TrimSpace(sanitized))
 			} else {
 				fmt.Fprintf(&b, "F%d [%s]: %s\n", index+1, fact.ID, strings.TrimSpace(fact.Text))
 			}
