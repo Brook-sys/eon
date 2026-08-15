@@ -18,6 +18,7 @@ import (
 
 	"motor-autonomo/internal/domain"
 	"motor-autonomo/internal/port"
+	"motor-autonomo/internal/retry"
 )
 
 const (
@@ -40,6 +41,10 @@ type Config struct {
 	MaxResponseBytes int64
 	Timeout          time.Duration
 	Client           *http.Client
+	// Retry configures bounded retry with exponential backoff for retryable
+	// provider errors (429, 5xx). When nil, retries are disabled (backward
+	// compatible). When provided, MaxAttempts >= 1 enables retry.
+	Retry *RetryConfig
 }
 
 type Provider struct {
@@ -63,6 +68,10 @@ type Provider struct {
 	hasProbe     bool
 	cachedModels []string
 	modelsTTL    time.Time
+	// retry configuration for bounded retry on 429/5xx
+	retryPolicy  *retry.Policy
+	retryJitter  retry.JitterSource
+	retrySleeper retry.Sleeper
 }
 
 // Option configures optional non-secret provider metadata.
@@ -249,6 +258,13 @@ func New(config Config, opts ...Option) (*Provider, error) {
 	if len(p.allowedModels) == 0 {
 		p.allowedModels = []string{p.model}
 	}
+	// Initialize bounded retry configuration if provided. When Retry is nil,
+	// retries are disabled (backward compatible).
+	if config.Retry != nil {
+		if err := p.initRetry(config.Retry); err != nil {
+			return nil, err
+		}
+	}
 	return p, nil
 }
 
@@ -419,7 +435,7 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	if p.apiKey != "" {
 		httpRequest.Header.Set("Authorization", "Bearer "+p.apiKey)
 	}
-	response, err := p.client.Do(httpRequest)
+	response, err := p.doWithRetry(ctx, httpRequest, request, tools)
 	if err != nil {
 		return port.CompletionResult{}, &Error{Kind: ErrorTransport, Retryable: true}
 	}
@@ -768,6 +784,127 @@ func classifyProbeError(err error) string {
 		return string(providerError.Kind)
 	}
 	return "unclassified"
+}
+
+// doWithRetry wraps the HTTP request with bounded retry for retryable provider
+// errors (429, 5xx, transport). When retry is not configured, it performs a
+// single attempt (backward compatible). On success, returns the open
+// *http.Response for the caller to read and close. On retryable exhaustion,
+// returns the last error joined with retry.ErrBudgetExhausted.
+func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, request port.CompletionRequest, tools []chatTool) (*http.Response, error) {
+	if p.retryPolicy == nil {
+		return p.client.Do(httpRequest)
+	}
+
+	// Re-build the chatRequest so we can re-serialize the payload on each
+	// attempt (http.Request.Body is consumed after the first Do).
+	messages := make([]chatMessage, 0, 3)
+	if strings.TrimSpace(request.SystemPrompt) != "" {
+		messages = append(messages, chatMessage{Role: "system", Content: request.SystemPrompt})
+	}
+	messages = append(messages, chatMessage{Role: "user", Content: request.Prompt})
+	if prefill := strings.TrimSpace(request.PrefillAssistant); prefill != "" {
+		messages = append(messages, chatMessage{Role: "assistant", Content: prefill})
+	}
+	chatReq := chatRequest{
+		Model:            p.model,
+		Messages:         messages,
+		Temperature:      request.Temperature,
+		Tools:            tools,
+		ReasoningEffort:  strings.TrimSpace(request.ReasoningEffort),
+		ReasoningFormat:  strings.TrimSpace(request.ReasoningFormat),
+		Seed:             request.Seed,
+		Stop:             request.Stop,
+	}
+	if p.maxOutputField == MaxOutputTokensCompletion {
+		chatReq.MaxCompletionTokens = request.MaxOutputTokens
+	} else {
+		chatReq.MaxTokens = request.MaxOutputTokens
+	}
+	switch request.ResponseFormat {
+	case domain.ResponseFormatJSONObject:
+		chatReq.ResponseFormat = &responseFormat{Type: "json_object"}
+	}
+
+	var successResp *http.Response
+
+	classify := func(err error) (string, bool) {
+		var providerErr *Error
+		if errors.As(err, &providerErr) {
+			if providerErr.StatusCode == http.StatusTooManyRequests || providerErr.StatusCode >= 500 {
+				return fmt.Sprintf("http_%d", providerErr.StatusCode), true
+			}
+			if providerErr.StatusCode == 0 && providerErr.Kind == ErrorTransport {
+				return "transport", true
+			}
+			return string(providerErr.Kind), false
+		}
+		return "unclassified", false
+	}
+
+	_, err := retry.Do(ctx, *p.retryPolicy, p.retrySleeper, p.retryJitter, classify, func(ctx context.Context, _ int) error {
+		payload, marshalErr := json.Marshal(chatReq)
+		if marshalErr != nil {
+			return &Error{Kind: ErrorInvalidRequest}
+		}
+		req, newReqErr := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint, bytes.NewReader(payload))
+		if newReqErr != nil {
+			return &Error{Kind: ErrorInvalidRequest}
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", adapterUserAgent)
+		if p.apiKey != "" {
+			req.Header.Set("Authorization", "Bearer "+p.apiKey)
+		}
+		resp, doErr := p.client.Do(req)
+		if doErr != nil {
+			return &Error{Kind: ErrorTransport, Retryable: true}
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, p.maxResponseBytes+1))
+			resp.Body.Close()
+			return &Error{
+				Kind:       ErrorHTTP,
+				StatusCode: resp.StatusCode,
+				Retryable:  resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500,
+				RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"), time.Now()),
+				RateLimit:  parseRateLimitMetadata(resp.Header),
+			}
+		}
+		successResp = resp
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return successResp, nil
+}
+
+func (p *Provider) initRetry(cfg *RetryConfig) error {
+	if cfg.MaxAttempts < 1 {
+		return errors.New("retry max attempts must be >= 1")
+	}
+	if cfg.MaxAttempts > 1 {
+		if cfg.BaseDelay <= 0 {
+			return errors.New("retry base delay must be positive when max attempts > 1")
+		}
+		if cfg.MaxDelay < cfg.BaseDelay {
+			return errors.New("retry max delay must be >= base delay")
+		}
+	}
+
+	p.retryPolicy = &retry.Policy{
+		MaxAttempts: cfg.MaxAttempts,
+		BaseDelay:   cfg.BaseDelay,
+		MaxDelay:    cfg.MaxDelay,
+		MaxJitter:   cfg.MaxJitter,
+	}
+
+	if cfg.MaxJitter > 0 {
+		p.retryJitter = cryptoJitterSource{}
+	}
+	p.retrySleeper = retry.SystemSleeper{}
+	return nil
 }
 
 // Ensure Provider satisfies the capability reporter surface used by inspect.

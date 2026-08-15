@@ -10,3 +10,5 @@ tools/dashboard-assets/tailwindcss
 phase5*_format_pressure_combined_guards
 /phase543_concurrent_stress
 /cmd/phase543_concurrent_stress/phase543_concurrent_stress
+/phase544_retry_backoff_fire_test
+/cmd/phase544_retry_backoff_fire_test/phase544_retry_backoff_fire_test
