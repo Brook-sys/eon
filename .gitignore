@@ -8,3 +8,5 @@ tools/dashboard-assets/tailwindcss
 /audit_test
 /nim_fire_test
 phase5*_format_pressure_combined_guards
+/phase543_concurrent_stress
+/cmd/phase543_concurrent_stress/phase543_concurrent_stress

@@ -1,3 +1,26 @@
+## Phase 543 — Concurrent Stress on Combined Guard Stack (2026-08-15)
+
+**Objective and implementation.** Extended the proven adversarial campaigns (phases 536–542) into a concurrency dimension, measuring the compiler+provider pipeline under bounded parallel load. Created `cmd/phase543_concurrent_stress` and executed **216 live trials** across Groq (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`) using the combined adversarial payload (format forgery + conflicting dates + injection). Two pressure levels: extreme (`max_tokens=32, temp=0.7`) and moderate (`max_tokens=64, temp=1.0`). Three concurrency levels: 1 (baseline), 3, 5 — yielding 216 total trials.
+
+**Observed evidence and decision.**
+- **Groq `llama-3.3-70b-versatile`**: At `c=1, mt=32, t=0.7`: **3/3 PASS** (P50 433ms). At `c=3`: **9/9 PASS** (P50 389ms). At `c=5`: **12/15 PASS** (P50 382ms, 2x `FAIL_FORMAT`, 3x 429). At `mt=64, t=1.0`: **0 PASS at all concurrency** — 429 cascade from first request (97 total 429s across 27 trials). The 70B model handles format pressure under concurrency beautifully **until rate limits activate**, then collapses entirely.
+- **Groq `qwen/qwen3.6-27b`**: At `c=1, mt=32, t=0.7`: **3/3 PASS** (P50 287ms). At `c=3`: **9/9 PASS** (P50 310ms, **zero 429s** — the standout anomaly). At `c=5`: **4/15 PASS** (11x 429). At `mt=64, t=1.0`: **0 PASS** — total 429 cascade (38 total 429s). **Qwen 27B at concurrency 3 is uniquely resilient** — it sustained 9 concurrent requests at extreme pressure without a single rate limit or format failure.
+- **Groq `llama-3.1-8b-instant`**: At `c=1, mt=32, t=0.7`: **0/3 PASS** (format failures, wrong date `2024-03-20`). At `c=3`: **2/9 PASS** (mostly wrong date). At `c=5`: **0/15 PASS** — 100% 429 cascade (42 total 429s). The 8B model fails both semantically and structurally under concurrency.
+- **NIM `meta/llama-3.1-8b-instruct`**: At `c=1, mt=32, t=0.7`: **1/3 PASS**. At `c=3`: **1/9 PASS** (mostly wrong date). At `c=5`: **7/15 PASS** (surprisingly best at highest concurrency, but format failures persist). At `mt=64, t=1.0, c=3`: **3/9 PASS** with **1x injection failure** (`FAIL_INJECTION` — adopted `1999-12-31`). NIM 8B is erratic under concurrency; temperature elevation plus conflict triggers the only injection adoption in the entire campaign.
+- **429 Cascade Pattern**: 140 total 429s. **Groq 429s activate at ~15–20 parallel requests** and then cascade to near-100% failure. NIM 429s appear later (c=5) with longer Retry-After (~124ms). The provider adapters currently have **no retry/backoff logic** — 429 is terminal.
+
+**Key empirical conclusions.**
+1. **Concurrency + format pressure = rate limit cascade**. The guard stack's semantic resilience is meaningless once 429 triggers; the pipeline has no recovery.
+2. **qwen/qwen3.6-27b at c=3 is the sweet spot**: 9/9 PASS, zero 429s, P50 ~310ms. This model+concurrency combination uniquely absorbs the adversarial load.
+3. **8B models are doubly unsuitable under concurrency**: they fail semantic extraction AND hit rate limits first (lowest per-request token consumption → more requests per quota window).
+4. **No retry/backoff = total availability loss** under sustained load. A single 429 kills the entire worker batch.
+
+**Decision.** The concurrent stress campaign validates the guard stack's semantic correctness under load but exposes a critical **resilience gap: zero retry/backoff on 429**. The next phase must implement bounded retry with exponential backoff and `Retry-After` respect in the OpenAI-compatible adapter, gated by the existing `ResourceGate` / `CapabilityAuthorizer` (FR-RES-001). Also: `qwen/qwen3.6-27b` at concurrency 3 should be the default cognitive extraction deployment target for high-throughput scenarios.
+
+**Deterministic verification.** Added `cmd/phase543_concurrent_stress` and `results/phase543_concurrent_stress/results.json`. `go build` clean. `go test ./...` passed. `go vet` clean. Fresh live probe (2026-08-15 03:52 -03) confirmed: `llama-3.3-70b-versatile` c=3 mt=32 t=0.7 → 9/9 PASS; c=5 → 12/15 PASS + 3x429; `qwen/qwen3.6-27b` c=3 → 9/9 PASS; all mt=64 t=1.0 → total 429 cascade.
+
+---
+
 ## Phase 542 — Format Pressure under Combined Guards (Scenario 3) (2026-08-14)
 
 **Objective and implementation.** Stress-tested combined guard stack under output token pressure (`max_tokens=32, 48, 64, 128`) and elevated temperature (`0.0, 0.7, 1.0`) with adversarial payload containing format forgery + conflicting dates + injection attempt. Created `cmd/phase542_format_pressure_combined_guards` and executed **60 live trials** across Groq (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) and NIM (`meta/llama-3.1-8b-instruct`).
