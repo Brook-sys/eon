@@ -49,6 +49,10 @@ type Config struct {
 	// simultaneous outbound requests and prevent rate-limit cascades.
 	// When nil or MaxConcurrent <= 0, the semaphore is disabled.
 	Semaphore *SemaphoreConfig
+	// RateLimiter configures a token bucket rate limiter for provider-level
+	// RPM/TPM enforcement over time. When nil or both RPM and TPM are zero,
+	// the rate limiter is disabled.
+	RateLimiter *RateLimiterConfig
 }
 
 type Provider struct {
@@ -79,6 +83,9 @@ type Provider struct {
 	// semaphore limits concurrent outbound requests
 	sem *semaphore
 	semAcquireTimeout time.Duration
+	// rate limiter for RPM/TPM enforcement over time
+	rateLimiter  *tokenBucket
+	rateTimeout  time.Duration
 }
 
 // Option configures optional non-secret provider metadata.
@@ -278,6 +285,11 @@ func New(config Config, opts ...Option) (*Provider, error) {
 		p.semAcquireTimeout = config.Semaphore.AcquireTimeout
 	} else {
 		p.sem = newSemaphore(0)
+	}
+	// Initialize token bucket rate limiter.
+	p.rateLimiter = newTokenBucket(config.RateLimiter)
+	if config.RateLimiter != nil {
+		p.rateTimeout = config.RateLimiter.AcquireTimeout
 	}
 	return p, nil
 }
@@ -824,8 +836,29 @@ func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, r
 	}
 	defer p.semRelease()
 
+	// Estimate token count for rate limiting (use max output as conservative proxy).
+	estimatedTokens := request.MaxOutputTokens
+	if estimatedTokens <= 0 {
+		estimatedTokens = 1
+	}
+
+	// Acquire rate limiter tokens before the first attempt.
+	rateTimeout := p.rateTimeout
+	if rateTimeout <= 0 {
+		rateTimeout = 10 * time.Second
+	}
+	if p.rateLimiter != nil {
+		if err := p.rateLimiter.Acquire(ctx, estimatedTokens, rateTimeout); err != nil {
+			return nil, err
+		}
+	}
+
 	if p.retryPolicy == nil {
-		return p.client.Do(httpRequest)
+		resp, err := p.client.Do(httpRequest)
+		if err != nil && p.rateLimiter != nil {
+			p.rateLimiter.Return(estimatedTokens)
+		}
+		return resp, err
 	}
 
 	// Re-build the chatRequest so we can re-serialize the payload on each
@@ -874,7 +907,15 @@ func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, r
 		return "unclassified", false
 	}
 
-	_, err := retry.Do(ctx, *p.retryPolicy, p.retrySleeper, p.retryJitter, classify, func(ctx context.Context, _ int) error {
+	_, err := retry.Do(ctx, *p.retryPolicy, p.retrySleeper, p.retryJitter, classify, func(ctx context.Context, attempt int) error {
+		// On retry (attempt > 0), re-acquire rate limiter tokens since previous attempt failed
+		if attempt > 0 {
+			if p.rateLimiter != nil {
+				if err := p.rateLimiter.Acquire(ctx, estimatedTokens, rateTimeout); err != nil {
+					return err
+				}
+			}
+		}
 		payload, marshalErr := json.Marshal(chatReq)
 		if marshalErr != nil {
 			return &Error{Kind: ErrorInvalidRequest}
@@ -895,18 +936,27 @@ func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, r
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, p.maxResponseBytes+1))
 			resp.Body.Close()
-			return &Error{
+			err := &Error{
 				Kind:       ErrorHTTP,
 				StatusCode: resp.StatusCode,
 				Retryable:  resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500,
 				RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"), time.Now()),
 				RateLimit:  parseRateLimitMetadata(resp.Header),
 			}
+			// Return tokens to rate limiter on retryable error so they can be reused
+			if err.Retryable && p.rateLimiter != nil {
+				p.rateLimiter.Return(estimatedTokens)
+			}
+			return err
 		}
 		successResp = resp
 		return nil
 	})
 	if err != nil {
+		// On error, return tokens to rate limiter
+		if p.rateLimiter != nil {
+			p.rateLimiter.Return(estimatedTokens)
+		}
 		return nil, err
 	}
 	return successResp, nil
