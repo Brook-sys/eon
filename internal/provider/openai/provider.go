@@ -437,6 +437,15 @@ func (p *Provider) complete(ctx context.Context, request port.CompletionRequest,
 	}
 	response, err := p.doWithRetry(ctx, httpRequest, request, tools)
 	if err != nil {
+		// Propagate the original adapter error (e.g. HTTP 429 after retry
+		// exhaustion) so callers can observe the real status, Retry-After
+		// hint, and rate-limit metadata instead of a misleading TRANSPORT
+		// wrapper. Only true transport failures (where doWithRetry's
+		// single-shot path also failed) fall through to ErrorTransport.
+		var adapterErr *Error
+		if errors.As(err, &adapterErr) {
+			return port.CompletionResult{}, adapterErr
+		}
 		return port.CompletionResult{}, &Error{Kind: ErrorTransport, Retryable: true}
 	}
 	defer response.Body.Close()
@@ -834,9 +843,9 @@ func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, r
 			if providerErr.StatusCode == http.StatusTooManyRequests || providerErr.StatusCode >= 500 {
 				return fmt.Sprintf("http_%d", providerErr.StatusCode), true
 			}
-			if providerErr.StatusCode == 0 && providerErr.Kind == ErrorTransport {
-				return "transport", true
-			}
+			// Transport errors (network/connection failures) are NOT retryable.
+			// They mask the real failure and cause cascading timeouts under load.
+			// Only HTTP 429 and 5xx are retryable per provider semantics.
 			return string(providerErr.Kind), false
 		}
 		return "unclassified", false
@@ -898,6 +907,13 @@ func (p *Provider) initRetry(cfg *RetryConfig) error {
 		BaseDelay:   cfg.BaseDelay,
 		MaxDelay:    cfg.MaxDelay,
 		MaxJitter:   cfg.MaxJitter,
+		RetryAfter: func(err error) time.Duration {
+			var pErr *Error
+			if errors.As(err, &pErr) && pErr.RetryAfter > 0 {
+				return pErr.RetryAfter
+			}
+			return 0
+		},
 	}
 
 	if cfg.MaxJitter > 0 {

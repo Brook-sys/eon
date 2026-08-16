@@ -22,11 +22,22 @@ type JitterSource interface {
 
 type Classifier func(error) (class string, retryable bool)
 
+// RetryAfterExtractor extracts a provider-declared minimum retry delay from
+// the error (e.g. from an HTTP Retry-After header). When the extractor returns
+// a positive duration, the actual delay becomes max(exponential_backoff,
+// retry_after), preventing thundering-herd retries when many concurrent
+// workers hit the same 429 rate-limit window.
+type RetryAfterExtractor func(error) time.Duration
+
 type Policy struct {
 	MaxAttempts int
 	BaseDelay   time.Duration
 	MaxDelay    time.Duration
 	MaxJitter   time.Duration
+	// RetryAfter, when non-nil, is consulted on each retryable error to
+	// obtain a provider-declared minimum delay. The actual sleep duration
+	// is max(exponential_backoff+jitter, retry_after).
+	RetryAfter RetryAfterExtractor
 }
 
 type Report struct {
@@ -85,6 +96,13 @@ func Do(ctx context.Context, policy Policy, sleeper Sleeper, jitter JitterSource
 		delay, err := delayFor(policy, attempt, jitter)
 		if err != nil {
 			return report, fmt.Errorf("retry jitter: %w", err)
+		}
+		// If the policy declares a RetryAfter extractor, consult it and
+		// ensure we wait at least as long as the provider demands.
+		if policy.RetryAfter != nil {
+			if ra := policy.RetryAfter(err); ra > delay {
+				delay = ra
+			}
 		}
 		report.Retries++
 		report.SleepTotal += delay

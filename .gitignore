@@ -12,3 +12,4 @@ phase5*_format_pressure_combined_guards
 /cmd/phase543_concurrent_stress/phase543_concurrent_stress
 /phase544_retry_backoff_fire_test
 /cmd/phase544_retry_backoff_fire_test/phase544_retry_backoff_fire_test
+phase545_retry_stress_429_live
