@@ -45,6 +45,10 @@ type Config struct {
 	// provider errors (429, 5xx). When nil, retries are disabled (backward
 	// compatible). When provided, MaxAttempts >= 1 enables retry.
 	Retry *RetryConfig
+	// Semaphore configures a provider-level concurrency semaphore to limit
+	// simultaneous outbound requests and prevent rate-limit cascades.
+	// When nil or MaxConcurrent <= 0, the semaphore is disabled.
+	Semaphore *SemaphoreConfig
 }
 
 type Provider struct {
@@ -72,6 +76,9 @@ type Provider struct {
 	retryPolicy  *retry.Policy
 	retryJitter  retry.JitterSource
 	retrySleeper retry.Sleeper
+	// semaphore limits concurrent outbound requests
+	sem *semaphore
+	semAcquireTimeout time.Duration
 }
 
 // Option configures optional non-secret provider metadata.
@@ -264,6 +271,13 @@ func New(config Config, opts ...Option) (*Provider, error) {
 		if err := p.initRetry(config.Retry); err != nil {
 			return nil, err
 		}
+	}
+	// Initialize provider-level concurrency semaphore.
+	if config.Semaphore != nil {
+		p.sem = newSemaphore(config.Semaphore.MaxConcurrent)
+		p.semAcquireTimeout = config.Semaphore.AcquireTimeout
+	} else {
+		p.sem = newSemaphore(0)
 	}
 	return p, nil
 }
@@ -800,7 +814,16 @@ func classifyProbeError(err error) string {
 // single attempt (backward compatible). On success, returns the open
 // *http.Response for the caller to read and close. On retryable exhaustion,
 // returns the last error joined with retry.ErrBudgetExhausted.
+// The provider-level semaphore (if configured) is acquired once per call and
+// released after the attempt(s) complete, gating concurrent outbound requests.
 func (p *Provider) doWithRetry(ctx context.Context, httpRequest *http.Request, request port.CompletionRequest, tools []chatTool) (*http.Response, error) {
+	// Acquire semaphore slot for the duration of this complete call (all retries).
+	semTimeout := p.semAcquireTimeout
+	if err := p.semAcquire(ctx, semTimeout); err != nil {
+		return nil, err
+	}
+	defer p.semRelease()
+
 	if p.retryPolicy == nil {
 		return p.client.Do(httpRequest)
 	}
@@ -921,6 +944,27 @@ func (p *Provider) initRetry(cfg *RetryConfig) error {
 	}
 	p.retrySleeper = retry.SystemSleeper{}
 	return nil
+}
+
+// semAcquire acquires the provider semaphore if configured.
+// Returns ErrSemaphoreTimeout if AcquireTimeout is configured and expires.
+func (p *Provider) semAcquire(ctx context.Context, timeout time.Duration) error {
+	if p.sem == nil || p.sem.ch == nil {
+		return nil
+	}
+	// Use provided timeout, falling back to stored config.
+	if timeout <= 0 {
+		timeout = p.semAcquireTimeout
+	}
+	return p.sem.Acquire(ctx, timeout)
+}
+
+// semRelease releases the provider semaphore if configured.
+func (p *Provider) semRelease() {
+	if p.sem == nil || p.sem.ch == nil {
+		return
+	}
+	p.sem.Release()
 }
 
 // Ensure Provider satisfies the capability reporter surface used by inspect.
