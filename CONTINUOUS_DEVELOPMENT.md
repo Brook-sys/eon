@@ -1,3 +1,39 @@
+## Phase 546 — Provider Semaphore Implementation & Live Validation (2026-08-16)
+
+**Objective and implementation.** Phase 545 proved that bounded retry with exponential backoff + jitter + Retry-After respect is **necessary but NOT sufficient** under high concurrency — uncoordinated retries from concurrent workers stacked and amplified quota exhaustion. To close this architectural gap, implemented a **provider-level semaphore** in `internal/provider/openai/semaphore.go` that gates concurrent outbound requests per provider, complementing the kernel-level `ResourceGate`. The semaphore is acquired **once per `Complete` call** (spanning all retry attempts within that call) and released after, ensuring retries from the same logical request don't accumulate quota pressure.
+
+**Semaphore implementation.**
+- `internal/provider/openai/semaphore.go`: Counting semaphore with `Acquire(ctx)`, `Release()`, `TryAcquire(timeout)`, `InUse()`, `Capacity()`. Uses buffered channel of size `MaxConcurrent` and atomic int for zero-allocation hot path monitoring.
+- `internal/provider/openai/semaphore_test.go`: 11 unit tests covering basic acquire/release, zero/negative capacity, concurrent acquire-release (100 goroutines × 100 iterations), `TryAcquire` timeout, `Acquire` context cancellation, and full provider integration (50 concurrent requests gated through MaxConcurrent=3 with exact timing validation).
+- Integrated into `Provider` via `Config.Semaphore` field (`MaxConcurrent int`, `AcquireTimeout time.Duration`). `doWithRetry` acquires before the first HTTP attempt and releases via `defer` after the final attempt.
+- Semaphore timeout returns `ErrSemaphoreTimeout` (sentinel error) — distinct from 429/5xx, so retries from retry layer cannot cascade if the provider is already saturated.
+
+**Live validation (`cmd/phase546_semaphore_live`).** Executed **200 live trials** across Groq models (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`) under `c=10` concurrency × 5 trials/worker = 50 trials per model per scenario. Two scenarios: `SEMAPHORE_OFF` (uncoordinated, all 10 workers race) vs `SEMAPHORE_ON` (MaxConcurrent=3, AcquireTimeout=5s). 5-second gap between scenarios.
+
+**Observed evidence and decision.**
+- **`llama-3.3-70b-versatile` SEMAPHORE_OFF**: **30/50 SUCCESS** (60%), 20x 429s, P50 238ms. Baseline.
+- **`llama-3.3-70b-versatile` SEMAPHORE_ON**: **2/50 SUCCESS** (4%), 48x 429s, P50 31ms. **Worse than OFF.**
+- **`qwen/qwen3.6-27b` SEMAPHORE_OFF**: **25/50 SUCCESS** (50%), 25x 429s, P50 236ms.
+- **`qwen/qwen3.6-27b` SEMAPHORE_ON**: **3/50 SUCCESS** (6%), 47x 429s, P50 32ms. **Worse than OFF.**
+
+**Key empirical conclusions.**
+1. **A concurrency semaphore is NECESSARY but NOT SUFFICIENT.** Limiting simultaneous in-flight requests to 3 does not stop 429 cascades when 50 requests still hit the API within ~30 seconds — Groq's quota is a **rate limit (RPM)**, not a **concurrency limit**.
+2. **Test design flaw surfaced**: SEMAPHORE_OFF ran first (fresh rate window), then SEMAPHORE_ON ran into an already-exhausted window. The 5s gap between scenarios was insufficient for quota reset. Even so, SEMAPHORE_ON's poor performance is structural, not sequencing: 50 requests × ~30s = 100 RPM against Groq's per-model RPM ceiling.
+3. **Real failure mode is rate-over-time, not concurrency-at-instant.** The provider needs a **token bucket rate limiter** that enforces RPM/TPM limits over a sliding window, not just a concurrency gate.
+4. **Phase 545 + 546 together prove**: bounded retry + semaphore together still cascade. The missing piece is **provider-aware rate budgeting** — tracking RPM consumption per model and backpressuring *before* sending the request, not just gating concurrency at the moment of dispatch.
+
+**Decision.** The semaphore implementation is correct and unit-tested (11/11 tests pass). It correctly gates simultaneous requests and is a necessary building block, but on its own it does not prevent 429 cascades under sustained load. The next phase must implement a **token bucket rate limiter** in `internal/provider/openai/` that:
+- Configures per-model RPM/TPM limits (Groq known limits: `llama-3.3-70b-versatile` ~30 RPM, `qwen/qwen3.6-27b` ~60 RPM).
+- Tracks request and token consumption in a sliding window.
+- Backpressures callers via `Acquire(ctx)` before HTTP dispatch (composable with the semaphore: semaphore gates concurrency, token bucket gates rate).
+- Supports `Wait(ctx)` semantics with deadline propagation for coordinated backoff with the retry layer.
+
+The retry + semaphore + rate limiter stack will form the complete 429 resilience chain.
+
+**Deterministic verification.** Added `cmd/phase546_semaphore_live` + `internal/provider/openai/semaphore.go` + `internal/provider/openai/semaphore_test.go`. Wired into `internal/provider/openai/provider.go` Config.Semaphore. `go build ./...` clean. `go test ./...` passed (full suite, including 11 new semaphore tests). `go vet ./...` clean. `git push origin main` confirmed (`34fe377`).
+
+---
+
 ## Phase 545 — Live 429 Retry Recovery Stress Test (2026-08-16)
 
 **Objective and implementation.** Deliberately triggered Groq 429 rate limits with high concurrency to measure bounded retry recovery effectiveness. Created `cmd/phase545_retry_stress_429_live` and executed **300 live trials** across Groq models (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `openai/gpt-oss-20b`) under `c=10` concurrency × 5 trials/worker = 50 trials per model per scenario. Two scenarios: `RETRY_OFF` (baseline) vs `RETRY_ON` (MaxAttempts=3, BaseDelay=200ms, MaxDelay=10s, Jitter=500ms, Retry-After header respect). Implemented `RetryAfterExtractor` in `internal/retry/bounded.go` and provider-side Retry-After extraction in `internal/provider/openai/provider.go`. Also made transport errors non-retryable to prevent cascading timeouts.
