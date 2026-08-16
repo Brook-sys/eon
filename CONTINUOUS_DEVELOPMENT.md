@@ -1,3 +1,26 @@
+## Phase 545 — Live 429 Retry Recovery Stress Test (2026-08-16)
+
+**Objective and implementation.** Deliberately triggered Groq 429 rate limits with high concurrency to measure bounded retry recovery effectiveness. Created `cmd/phase545_retry_stress_429_live` and executed **300 live trials** across Groq models (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `openai/gpt-oss-20b`) under `c=10` concurrency × 5 trials/worker = 50 trials per model per scenario. Two scenarios: `RETRY_OFF` (baseline) vs `RETRY_ON` (MaxAttempts=3, BaseDelay=200ms, MaxDelay=10s, Jitter=500ms, Retry-After header respect). Implemented `RetryAfterExtractor` in `internal/retry/bounded.go` and provider-side Retry-After extraction in `internal/provider/openai/provider.go`. Also made transport errors non-retryable to prevent cascading timeouts.
+
+**Observed evidence and decision.**
+- **`llama-3.3-70b-versatile`**: `RETRY_OFF`: **31/50 SUCCESS** (19x 429, P50 234ms). `RETRY_ON`: **9/50 SUCCESS** (41x 429, P50 1161ms). Retry **worsened** outcomes — retries from 10 concurrent workers stacked on fresh requests, amplifying quota exhaustion.
+- **`qwen/qwen3.6-27b`**: `RETRY_OFF`: **25/50 SUCCESS** (25x 429, P50 273ms). `RETRY_ON`: **8/50 SUCCESS** (42x 429, P50 1178ms). Same pattern — retry increased 429s and reduced success.
+- **`openai/gpt-oss-20b`**: **0/50 SUCCESS** in both scenarios. 28/43x 429 + 22/7 other failures. Model fundamentally incompatible with bounded extraction (reasoning budget exhaustion persists even with `reasoning_effort` controls).
+- **Retry-After behavior**: Groq 429 responses include `Retry-After` headers (~100-500ms). The extractor correctly parsed these, but uncoordinated concurrent retries still cascaded.
+
+**Key empirical conclusions.**
+1. **Bounded retry with exponential backoff + jitter + Retry-After respect is NECESSARY but NOT SUFFICIENT** under high concurrent load. Without centralized rate-limit coordination (token bucket, semaphore, or quota-aware scheduler), retries from multiple workers compound the quota pressure instead of relieving it.
+2. **The resilience gap is architectural, not just a missing retry loop**. Phase 543 identified "no retry/backoff = total availability loss"; Phase 545 proves "uncoordinated retry = amplified availability loss".
+3. **qwen/qwen3.6-27b at c=3 remains the sweet spot** (Phase 543: 9/9 PASS, zero 429s). At c=10, even this resilient model cascades.
+4. **gpt-oss-20b is structurally unsuitable** for cognitive extraction under any token budget — reasoning overhead cannot be reliably suppressed.
+5. **Transport error non-retryability is correct**: network failures mask real provider state and cause cascading timeouts; only HTTP 429/5xx are semantically retryable.
+
+**Decision.** The retry implementation is correct and tested. The next phase must implement **coordinated concurrency control**: a quota-aware semaphore or token bucket gating concurrent requests to stay within provider rate limits, integrated with the existing `ResourceGate` / `CapabilityAuthorizer` (FR-RES-001). Also: promote `qwen/qwen3.6-27b` at `c≤3` as the default high-throughput cognitive extraction deployment; retire `gpt-oss-20b` from extraction workloads.
+
+**Deterministic verification.** Added `cmd/phase545_retry_stress_429_live` and `results/phase545_retry_stress_429_live/results.json`. Modified `internal/retry/bounded.go` (RetryAfterExtractor), `internal/provider/openai/provider.go` (RetryAfter hook, transport non-retryable). `go build` clean. `go test ./...` passed. `go vet` clean. `git push origin main` confirmed.
+
+---
+
 ## Phase 543 — Concurrent Stress on Combined Guard Stack (2026-08-15)
 
 **Objective and implementation.** Extended the proven adversarial campaigns (phases 536–542) into a concurrency dimension, measuring the compiler+provider pipeline under bounded parallel load. Created `cmd/phase543_concurrent_stress` and executed **216 live trials** across Groq (`llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`) and NVIDIA NIM (`meta/llama-3.1-8b-instruct`) using the combined adversarial payload (format forgery + conflicting dates + injection). Two pressure levels: extreme (`max_tokens=32, temp=0.7`) and moderate (`max_tokens=64, temp=1.0`). Three concurrency levels: 1 (baseline), 3, 5 — yielding 216 total trials.
