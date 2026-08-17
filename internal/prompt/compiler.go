@@ -106,6 +106,17 @@ type Input struct {
 	// dates or sources) in a separate CONFLICT: YES | <explanation> line.
 	// Phase 540 candidate for Scenario 4 (Conflicting Content) surfacing.
 	ConflictDetectionGuard bool
+	// ReasoningEffort is an optional explicit request to the provider to control
+	// internal reasoning token consumption. When non-empty, it is propagated to
+	// the CompletionRequest.ReasoningEffort field. Known reasoning models
+	// (e.g. qwen3.6-27b, gpt-oss-20b/120b, deepseek-r1) should set this to
+	// "none" to disable thinking and stay within small output budgets.
+	// Phase 549 live evidence: under c=10 concurrent load on Groq, the
+	// compiler's BudgetGuard does NOT automatically suppress reasoning for
+	// models like qwen3.6-27b when max_output_tokens >= 64, but the model
+	// still emits thinking blocks under load that consume the full budget.
+	// Explicit caller-supplied ReasoningEffort is required.
+	ReasoningEffort string
 }
 
 // FormatAnchoringMode defines format anchoring behavior in prompt compilation.
@@ -236,7 +247,9 @@ func (c Compiler) Compile(spec domain.OperationSpec, input Input) (Result, error
 		Temperature:      0,
 		PrefillAssistant: strings.TrimSpace(input.PrefillAssistant),
 	}
-	if reasoningSuppressed {
+	if input.ReasoningEffort != "" {
+		req.ReasoningEffort = input.ReasoningEffort
+	} else if reasoningSuppressed {
 		req.ReasoningEffort = "none"
 	}
 	if input.UntrustedDataBounding {
