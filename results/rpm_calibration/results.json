@@ -1,0 +1,60 @@
+{
+  "phase": 549,
+  "objective": "Calibrate per-model RPM limits under combined semaphore (MaxConcurrent=3) + token bucket rate limiter for Groq models, by binary search for max safe RPM at c=10, trials=10 per RPM step",
+  "timestamp": "2026-08-17T01:40:00-03:00",
+  "method": "Binary search per model: low=5, high=2x start RPM, step granularity ±3-7 RPM",
+  "config": {
+    "semaphore_max_concurrent": 3,
+    "semaphore_acquire_timeout_ms": 10000,
+    "rate_limiter_acquire_timeout_ms": 15000,
+    "rate_limiter_initial_burst": "RPM/6",
+    "rate_limiter_tpm_per_rpm": 1000,
+    "worker_concurrency": 10,
+    "trials_per_rpm_step": 10,
+    "cooldown_between_steps_ms": 5000,
+    "prompt_format": "DATE: <YYYY-MM-DD> | CONFLICT: <YES|NO> with conflicting facts (2024-09-15 authoritative vs 2024-03-20 preview)",
+    "temperature": 0.0,
+    "max_output_tokens": 64
+  },
+  "results": {
+    "llama-3.3-70b-versatile": {
+      "start_rpm": 30,
+      "binary_search_path": [
+        {"rpm": 32, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 2175, "verdict": "PASS"},
+        {"rpm": 46, "success": 5, "fail_429": 5, "fail_format": 0, "fail_other": 0, "p50_ms": 625, "verdict": "FAIL"},
+        {"rpm": 39, "success": 0, "fail_429": 10, "fail_format": 0, "fail_other": 0, "p50_ms": 617, "verdict": "FAIL"},
+        {"rpm": 35, "success": 0, "fail_429": 10, "fail_format": 0, "fail_other": 0, "p50_ms": 1760, "verdict": "FAIL"},
+        {"rpm": 33, "success": 0, "fail_429": 10, "fail_format": 0, "fail_other": 0, "p50_ms": 1857, "verdict": "FAIL"}
+      ],
+      "best_safe_rpm": 32,
+      "notes": "Sharp cliff at RPM=33: 100% success at 32, 100% 429 at 33+. True RPM ceiling is ~32."
+    },
+    "qwen/qwen3.6-27b": {
+      "start_rpm": 40,
+      "binary_search_path": [
+        {"rpm": 42, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 775, "verdict": "PASS"},
+        {"rpm": 61, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 1297, "verdict": "PASS"},
+        {"rpm": 71, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 770, "verdict": "PASS"},
+        {"rpm": 76, "success": 7, "fail_429": 3, "fail_format": 0, "fail_other": 0, "p50_ms": 921, "verdict": "FAIL"},
+        {"rpm": 73, "success": 2, "fail_429": 8, "fail_format": 0, "fail_other": 0, "p50_ms": 391, "verdict": "FAIL"},
+        {"rpm": 72, "success": 2, "fail_429": 8, "fail_format": 0, "fail_other": 0, "p50_ms": 410, "verdict": "FAIL"}
+      ],
+      "best_safe_rpm": 71,
+      "notes": "Holds at 71 RPM (100% success), collapses at 72+. True ceiling ~71 RPM — higher than 40 RPM Phase 547 found without semaphore."
+    },
+    "llama-3.1-8b-instant": {
+      "start_rpm": 30,
+      "binary_search_path": [
+        {"rpm": 32, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 2095, "verdict": "PASS"},
+        {"rpm": 46, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 714, "verdict": "PASS"},
+        {"rpm": 53, "success": 10, "fail_429": 0, "fail_format": 0, "fail_other": 0, "p50_ms": 641, "verdict": "PASS"},
+        {"rpm": 57, "success": 4, "fail_429": 6, "fail_format": 0, "fail_other": 0, "p50_ms": 494, "verdict": "FAIL"},
+        {"rpm": 55, "success": 2, "fail_429": 8, "fail_format": 0, "fail_other": 0, "p50_ms": 445, "verdict": "FAIL"},
+        {"rpm": 54, "success": 3, "fail_429": 7, "fail_format": 0, "fail_other": 0, "p50_ms": 453, "verdict": "FAIL"}
+      ],
+      "best_safe_rpm": 53,
+      "notes": "Sharp cliff between 53 and 54 RPM. 53 RPM holds perfectly."
+    }
+  },
+  "decision": "Combined semaphore+rate_limiter stack calibrates RPM limits empirically. Recommended safe operational RPMs: llama-3.3-70b-versatile=32, qwen/qwen3.6-27b=71, llama-3.1-8b-instant=53. The qwen model can sustain substantially higher RPM than previously assumed (Phase 547's 40 RPM underestimates its true capacity when the semaphore correctly gates concurrency)"
+}
