@@ -1,0 +1,33 @@
+{
+  "phase": "549",
+  "test": "test_qwen_no_explicit_reasoning",
+  "timestamp": "2026-08-17T05:23:00-03:00",
+  "description": "qwen/qwen3.6-27b concurrent c=10 WITHOUT explicit ReasoningEffort",
+  "model": "qwen/qwen3.6-27b",
+  "config": {
+    "rpm": 40,
+    "tpm": 40000,
+    "semaphore_max_concurrent": 3,
+    "semaphore_acquire_timeout_s": 10,
+    "rate_limiter_acquire_timeout_s": 15,
+    "initial_burst": 6,
+    "temperature": 0.0,
+    "max_output_tokens": 64,
+    "reasoning_effort": "",
+    "format_anti_forgery_guard": false
+  },
+  "compiler_auto_reasoning_effort": "",
+  "compiler_reasoning_effort_suppressed": false,
+  "concurrency": 10,
+  "results": {
+    "success": 0,
+    "fail_429": 0,
+    "fail_format": 10,
+    "fail_other": 0,
+    "p50_latency_ms": 1068,
+    "p90_latency_ms": 6328,
+    "p99_latency_ms": 6328,
+    "wall_time_s": 6.329
+  },
+  "key_finding": "Without explicit ReasoningEffort=none, qwen/qwen3.6-27b emits thinking tokens in 100% of trials (output contains 'Here's a thinking process:') — format compliance completely broken"
+}

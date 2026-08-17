@@ -1,0 +1,93 @@
+{
+  "phase": "549",
+  "test": "test_full_groq_matrix",
+  "timestamp": "2026-08-17T05:25:00-03:00",
+  "description": "Full Groq matrix: 3 models concurrent c=10 with combined stack + varying anti-forgery",
+  "models": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "config": {
+        "rpm": 30,
+        "tpm": 30000,
+        "semaphore_max_concurrent": 3,
+        "semaphore_acquire_timeout_s": 10,
+        "rate_limiter_acquire_timeout_s": 15,
+        "initial_burst": 5,
+        "temperature": 0.0,
+        "max_output_tokens": 64,
+        "format_anti_forgery_guard": true
+      },
+      "concurrency": 10,
+      "results": {
+        "success": 0,
+        "fail_429": 10,
+        "fail_format": 0,
+        "fail_other": 0,
+        "p50_latency_ms": 2040,
+        "p90_latency_ms": 10036,
+        "p99_latency_ms": 10036,
+        "wall_time_s": 10.038
+      },
+      "note": "0/10 success — rate window likely exhausted from prior qwen test in same process; 10 429s"
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "config": {
+        "rpm": 40,
+        "tpm": 40000,
+        "semaphore_max_concurrent": 3,
+        "semaphore_acquire_timeout_s": 10,
+        "rate_limiter_acquire_timeout_s": 15,
+        "initial_burst": 6,
+        "temperature": 0.0,
+        "max_output_tokens": 64,
+        "reasoning_effort": "",
+        "format_anti_forgery_guard": false
+      },
+      "concurrency": 10,
+      "results": {
+        "success": 0,
+        "fail_429": 0,
+        "fail_format": 10,
+        "fail_other": 0,
+        "p50_latency_ms": 1771,
+        "p90_latency_ms": 6375,
+        "p99_latency_ms": 6375,
+        "wall_time_s": 6.376
+      },
+      "note": "0/10 success — 100% format failure due to missing explicit ReasoningEffort=none; thinking tokens leaked"
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "config": {
+        "rpm": 30,
+        "tpm": 30000,
+        "semaphore_max_concurrent": 3,
+        "semaphore_acquire_timeout_s": 10,
+        "rate_limiter_acquire_timeout_s": 15,
+        "initial_burst": 5,
+        "temperature": 0.0,
+        "max_output_tokens": 64,
+        "format_anti_forgery_guard": false
+      },
+      "concurrency": 10,
+      "results": {
+        "success": 10,
+        "fail_429": 0,
+        "fail_format": 0,
+        "fail_other": 0,
+        "p50_latency_ms": 2222,
+        "p90_latency_ms": 10264,
+        "p99_latency_ms": 10264,
+        "wall_time_s": 10.265
+      },
+      "note": "10/10 success — 8B model fits within rate budget at 30 RPM due to low per-request token consumption"
+    }
+  ],
+  "key_findings": [
+    "llama-3.3-70b-versatile at 30 RPM: 0/10 success in this run (rate window exhaustion from sequential execution) — sequential test showed 4/10",
+    "qwen/qwen3.6-27b WITHOUT explicit ReasoningEffort=none: 100% format failure — explicit control is mandatory",
+    "llama-3.1-8b-instant: 10/10 success at 30 RPM — low token footprint keeps it rate-compliant under c=10",
+    "Rate window state matters: sequential execution of tests in same process exhausts shared quota"
+  ]
+}

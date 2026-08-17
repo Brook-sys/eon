@@ -15,3 +15,4 @@ phase5*_format_pressure_combined_guards
 phase545_retry_stress_429_live
 /phase546_semaphore_live
 /cmd/phase546_semaphore_live/phase546_semaphore_live
+test_combined_stack_concurrent

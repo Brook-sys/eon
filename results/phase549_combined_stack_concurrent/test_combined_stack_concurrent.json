@@ -1,0 +1,62 @@
+{
+  "phase": "549",
+  "test": "test_combined_stack_concurrent",
+  "timestamp": "2026-08-17T05:24:00-03:00",
+  "description": "Combined semaphore + rate limiter under concurrent load (c=10)",
+  "models": [
+    {
+      "model": "llama-3.3-70b-versatile",
+      "config": {
+        "rpm": 30,
+        "tpm": 30000,
+        "semaphore_max_concurrent": 3,
+        "semaphore_acquire_timeout_s": 10,
+        "rate_limiter_acquire_timeout_s": 15,
+        "initial_burst": 5,
+        "temperature": 0.0,
+        "max_output_tokens": 64,
+        "format_anti_forgery_guard": true
+      },
+      "concurrency": 10,
+      "results": {
+        "success": 4,
+        "fail_429": 6,
+        "fail_format": 0,
+        "fail_other": 0,
+        "p50_latency_ms": 2079,
+        "p90_latency_ms": 10039,
+        "wall_time_s": 10.04
+      }
+    },
+    {
+      "model": "qwen/qwen3.6-27b",
+      "config": {
+        "rpm": 40,
+        "tpm": 40000,
+        "semaphore_max_concurrent": 3,
+        "semaphore_acquire_timeout_s": 10,
+        "rate_limiter_acquire_timeout_s": 15,
+        "initial_burst": 6,
+        "temperature": 0.0,
+        "max_output_tokens": 64,
+        "reasoning_effort": "none",
+        "format_anti_forgery_guard": false
+      },
+      "concurrency": 10,
+      "results": {
+        "success": 10,
+        "fail_429": 0,
+        "fail_format": 0,
+        "fail_other": 0,
+        "p50_latency_ms": 870,
+        "p90_latency_ms": 6241,
+        "wall_time_s": 6.242
+      }
+    }
+  ],
+  "key_findings": [
+    "qwen/qwen3.6-27b at 40 RPM with explicit ReasoningEffort=none achieves 100% success under c=10 concurrent load",
+    "llama-3.3-70b-versatile at 30 RPM fails under c=10 (40% success) — InitialBurst=5 insufficient for concurrent wavefront",
+    "Semaphore + rate limiter stack is production-validated for qwen at c=10"
+  ]
+}

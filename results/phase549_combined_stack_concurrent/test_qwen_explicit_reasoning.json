@@ -1,0 +1,33 @@
+{
+  "phase": "549",
+  "test": "test_qwen_explicit_reasoning",
+  "timestamp": "2026-08-17T05:21:00-03:00",
+  "description": "qwen/qwen3.6-27b concurrent c=10 with EXPLICIT ReasoningEffort=none",
+  "model": "qwen/qwen3.6-27b",
+  "config": {
+    "rpm": 40,
+    "tpm": 40000,
+    "semaphore_max_concurrent": 3,
+    "semaphore_acquire_timeout_s": 10,
+    "rate_limiter_acquire_timeout_s": 15,
+    "initial_burst": 6,
+    "temperature": 0.0,
+    "max_output_tokens": 64,
+    "reasoning_effort": "none",
+    "format_anti_forgery_guard": false
+  },
+  "compiler_auto_reasoning_effort": "",
+  "compiler_reasoning_effort_suppressed": false,
+  "concurrency": 10,
+  "results": {
+    "success": 10,
+    "fail_429": 0,
+    "fail_format": 0,
+    "fail_other": 0,
+    "p50_latency_ms": 1134,
+    "p90_latency_ms": 6387,
+    "p99_latency_ms": 6387,
+    "wall_time_s": 6.388
+  },
+  "key_finding": "Explicit ReasoningEffort=none is MANDATORY for qwen/qwen3.6-27b on Groq — 100% format compliance achieved"
+}
