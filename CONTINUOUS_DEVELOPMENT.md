@@ -9579,3 +9579,40 @@ All tests: Temperature=0.0, MaxOutputTokens=64, Semaphore MaxConcurrent=3, RateL
 - Live validation: **50 trials total** — qwen 20/20 success, llama-70b 5/20 (15x 429), llama-8b 20/20 success, NIM 8B 5/5 success, NIM 70B 0/5 transport failures.
 - Results persisted in `results/phase549_combined_stack_concurrent/` and `results/phase550_cross_provider/`.
 
+
+---
+
+## Phase 549 — RPM Calibration Campaign for Groq Models (2026-08-17)
+
+**Objective and implementation.** Phase 548 validated the combined semaphore + rate limiter stack for sequential load. This phase calibrates **per-model RPM limits empirically** via binary search under concurrent load (c=10, semaphore MaxConcurrent=3, rate limiter with RPM/TPM). Created `cmd/rpm_calibration` and executed live trials across three Groq models: `llama-3.3-70b-versatile`, `qwen/qwen3.6-27b`, `llama-3.1-8b-instant`.
+
+**Calibration methodology.** Binary search per model: low=5 RPM, high=2× start RPM, step granularity ±3-7 RPM. Success criteria: ≥90% success rate, zero 429s, zero format failures. 10 trials per RPM step, 5s cooldown between steps. Prompt: adversarial format with conflicting facts (authoritative 2024-09-15 vs preview 2024-03-20), Temperature=0.0, MaxOutputTokens=64.
+
+**Observed evidence and decision.**
+
+| Model | Start RPM | Binary Search Path (RPM → verdict) | Best Safe RPM |
+|-------|-----------|------------------------------------|---------------|
+| llama-3.3-70b-versatile | 30 | 32→PASS, 46→FAIL, 39→FAIL, 35→FAIL, 33→FAIL | **32** |
+| qwen/qwen3.6-27b | 40 | 42→PASS, 61→PASS, 71→PASS, 76→FAIL, 73→FAIL, 72→FAIL | **71** |
+| llama-3.1-8b-instant | 30 | 32→PASS, 46→PASS, 53→PASS, 57→FAIL, 55→FAIL, 54→FAIL | **53** |
+
+**Key empirical conclusions.**
+1. **Sharp RPM cliffs**: All three models show binary transitions — 100% success at best safe RPM, 100% 429 cascade at +1 RPM. Groq's enforcement is precise.
+2. **qwen/qwen3.6-27b sustains 71 RPM** — substantially higher than Phase 547's 40 RPM estimate (rate limiter alone) and Phase 548's 40 RPM (combined sequential). The semaphore correctly gating concurrency enables higher sustainable RPM because rate limiter tokens aren't wasted on concurrent retries.
+3. **llama-3.3-70b-versatile ceiling is 32 RPM** — consistent with Phase 547/548's 30 RPM sequential finding. The 70B model has tighter per-model rate limits.
+4. **llama-3.1-8b-instant ceiling is 53 RPM** — higher than 70B model, likely due to lower token consumption per request (smaller model = fewer completion tokens per call).
+5. **Combined stack enables empirical calibration** — no static assumptions needed. Binary search finds the true operational ceiling per model under real Groq enforcement.
+
+**Decision.** Use calibrated RPMs for production configuration:
+- `llama-3.3-70b-versatile`: 32 RPM, TPM 32,000, InitialBurst=5, Semaphore=3
+- `qwen/qwen3.6-27b`: 71 RPM, TPM 71,000, InitialBurst=11, Semaphore=3
+- `llama-3.1-8b-instant`: 53 RPM, TPM 53,000, InitialBurst=8, Semaphore=3
+
+Next steps:
+- Add **observability hooks**: log rate limiter state (tokens available, wait time, semaphore queue depth) per request
+- Implement **per-model RPM calibration as a reusable command** for periodic re-calibration (Groq limits may change)
+- Extend calibration to **NVIDIA NIM models** with their own rate limit profiles
+- Test **burst tolerance**: verify InitialBurst configuration handles traffic spikes without 429s
+
+**Deterministic verification.** Added `cmd/rpm_calibration/main.go` + `results/rpm_calibration/results.json`. `go build ./...` clean. `go test ./...` passed (full suite). `go vet ./...` clean. `git push origin main` confirmed (`442aa32`).
+
