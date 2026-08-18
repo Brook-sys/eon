@@ -268,6 +268,38 @@ func (tb *tokenBucket) InUse() (requests int, tokens int) {
 	return tb.reqConsumed, tb.tokConsumed
 }
 
+// RateLimiterSnapshot captures the current state of the rate limiter for observability.
+type RateLimiterSnapshot struct {
+	RequestCapacity   int
+	RequestTokens     float64
+	RequestRefillRate float64
+	RequestConsumed   int
+	TokenCapacity     int
+	TokenTokens       float64
+	TokenRefillRate   float64
+	TokenConsumed     int
+}
+
+// Snapshot returns the current state of the rate limiter.
+func (tb *tokenBucket) Snapshot() RateLimiterSnapshot {
+	if tb == nil {
+		return RateLimiterSnapshot{}
+	}
+	tb.mu.Lock()
+	defer tb.mu.Unlock()
+	tb.refillLocked()
+	return RateLimiterSnapshot{
+		RequestCapacity:   tb.reqCapacity,
+		RequestTokens:     tb.reqTokens,
+		RequestRefillRate: tb.reqRefillRate,
+		RequestConsumed:   tb.reqConsumed,
+		TokenCapacity:     tb.tokCapacity,
+		TokenTokens:       tb.tokTokens,
+		TokenRefillRate:   tb.tokRefillRate,
+		TokenConsumed:     tb.tokConsumed,
+	}
+}
+
 // Capacity returns the configured limits.
 func (tb *tokenBucket) Capacity() (requests int, tokens int) {
 	if tb == nil {

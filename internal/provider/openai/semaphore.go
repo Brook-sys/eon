@@ -72,6 +72,29 @@ func (s *semaphore) Release() {
 	}
 }
 
+// SemaphoreSnapshot captures the current state of the semaphore for observability.
+type SemaphoreSnapshot struct {
+	Capacity     int
+	InUse        int
+	Available    int
+	WaitQueueLen int // approximate, since Go channels don't expose queue length
+}
+
+// Snapshot returns the current state of the semaphore.
+func (s *semaphore) Snapshot() SemaphoreSnapshot {
+	if s.ch == nil {
+		return SemaphoreSnapshot{Capacity: 0, InUse: 0, Available: 0, WaitQueueLen: 0}
+	}
+	capacity := cap(s.ch)
+	inUse := len(s.ch)
+	return SemaphoreSnapshot{
+		Capacity:  capacity,
+		InUse:     inUse,
+		Available: capacity - inUse,
+		WaitQueueLen: 0, // Go channels don't expose waiting goroutines count
+	}
+}
+
 // ErrSemaphoreTimeout is returned when AcquireTimeout expires.
 var ErrSemaphoreTimeout = errors.New("semaphore acquire timeout")
 

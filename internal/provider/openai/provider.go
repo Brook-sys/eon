@@ -1017,6 +1017,22 @@ func (p *Provider) semRelease() {
 	p.sem.Release()
 }
 
+// SemaphoreSnapshot returns the current semaphore state for observability.
+func (p *Provider) SemaphoreSnapshot() SemaphoreSnapshot {
+	if p.sem == nil {
+		return SemaphoreSnapshot{Capacity: 0, InUse: 0, Available: 0, WaitQueueLen: 0}
+	}
+	return p.sem.Snapshot()
+}
+
+// RateLimiterSnapshot returns the current rate limiter state for observability.
+func (p *Provider) RateLimiterSnapshot() RateLimiterSnapshot {
+	if p.rateLimiter == nil {
+		return RateLimiterSnapshot{}
+	}
+	return p.rateLimiter.Snapshot()
+}
+
 // Ensure Provider satisfies the capability reporter surface used by inspect.
 var (
 	_ port.ModelProvider           = (*Provider)(nil)

@@ -40,6 +40,64 @@ func TestSemaphoreBasicAcquireRelease(t *testing.T) {
 	s.Release()
 }
 
+func TestSemaphoreSnapshotReflectsState(t *testing.T) {
+	s := newSemaphore(5)
+	
+	// Initial state: all available
+	snap := s.Snapshot()
+	if snap.Capacity != 5 {
+		t.Fatalf("expected capacity 5, got %d", snap.Capacity)
+	}
+	if snap.InUse != 0 {
+		t.Fatalf("expected 0 in use, got %d", snap.InUse)
+	}
+	if snap.Available != 5 {
+		t.Fatalf("expected 5 available, got %d", snap.Available)
+	}
+	
+	// Acquire 3, check state
+	for i := 0; i < 3; i++ {
+		if err := s.Acquire(context.Background(), 0); err != nil {
+			t.Fatalf("acquire %d failed: %v", i, err)
+		}
+	}
+	snap = s.Snapshot()
+	if snap.Capacity != 5 {
+		t.Fatalf("expected capacity 5, got %d", snap.Capacity)
+	}
+	if snap.InUse != 3 {
+		t.Fatalf("expected 3 in use, got %d", snap.InUse)
+	}
+	if snap.Available != 2 {
+		t.Fatalf("expected 2 available, got %d", snap.Available)
+	}
+	
+	// Release 2, check state
+	s.Release()
+	s.Release()
+	snap = s.Snapshot()
+	if snap.InUse != 1 {
+		t.Fatalf("expected 1 in use after releases, got %d", snap.InUse)
+	}
+	if snap.Available != 4 {
+		t.Fatalf("expected 4 available after releases, got %d", snap.Available)
+	}
+}
+
+func TestSemaphoreSnapshotNilChannel(t *testing.T) {
+	s := newSemaphore(0)
+	snap := s.Snapshot()
+	if snap.Capacity != 0 {
+		t.Fatalf("expected capacity 0, got %d", snap.Capacity)
+	}
+	if snap.InUse != 0 {
+		t.Fatalf("expected 0 in use, got %d", snap.InUse)
+	}
+	if snap.Available != 0 {
+		t.Fatalf("expected 0 available, got %d", snap.Available)
+	}
+}
+
 func TestSemaphoreZeroCapacityNoOp(t *testing.T) {
 	s := newSemaphore(0)
 	if err := s.Acquire(context.Background(), 0); err != nil {

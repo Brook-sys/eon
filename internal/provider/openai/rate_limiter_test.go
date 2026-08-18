@@ -328,3 +328,102 @@ func TestRateLimiterTokensOnly(t *testing.T) {
 		t.Fatalf("expected timeout, got: %v", err)
 	}
 }
+
+func TestRateLimiterSnapshotReflectsState(t *testing.T) {
+	cfg := &RateLimiterConfig{
+		RequestsPerMinute: 60,
+		TokensPerMinute:   6000,
+		InitialBurst:      100, // enough for our test acquires
+	}
+	tb := newTokenBucket(cfg)
+
+	// Initial snapshot after creation
+	snap := tb.Snapshot()
+	if snap.RequestCapacity != 60 {
+		t.Fatalf("expected request capacity 60, got %d", snap.RequestCapacity)
+	}
+	if snap.TokenCapacity != 6000 {
+		t.Fatalf("expected token capacity 6000, got %d", snap.TokenCapacity)
+	}
+	if snap.RequestConsumed != 0 {
+		t.Fatalf("expected 0 requests consumed, got %d", snap.RequestConsumed)
+	}
+	if snap.TokenConsumed != 0 {
+		t.Fatalf("expected 0 tokens consumed, got %d", snap.TokenConsumed)
+	}
+	// InitialBurst=100 caps request tokens to min(100, RPM=60) = 60
+	if snap.RequestTokens < 59.0 {
+		t.Fatalf("expected ~60 request tokens available, got %f", snap.RequestTokens)
+	}
+	// InitialBurst=100 caps token tokens to min(100, TPM=6000) = 100
+	if snap.TokenTokens < 99.0 {
+		t.Fatalf("expected ~100 token tokens available, got %f", snap.TokenTokens)
+	}
+
+	// Acquire 3 request-tokens with 10 estimated tokens each
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		if err := tb.Acquire(ctx, 10, 0); err != nil {
+			t.Fatalf("acquire %d failed: %v", i, err)
+		}
+	}
+
+	snap = tb.Snapshot()
+	if snap.RequestConsumed != 3 {
+		t.Fatalf("expected 3 requests consumed, got %d", snap.RequestConsumed)
+	}
+	if snap.TokenConsumed != 30 {
+		t.Fatalf("expected 30 tokens consumed, got %d", snap.TokenConsumed)
+	}
+	if snap.RequestTokens > 58.0 {
+		t.Fatalf("expected <=58 request tokens after 3 acquires, got %f", snap.RequestTokens)
+	}
+	if snap.TokenTokens > 71.0 {
+		t.Fatalf("expected <=71 token tokens after 3 acquires, got %f", snap.TokenTokens)
+	}
+
+	// Return(1) returns 1 request-slot and 1 token
+	tb.Return(1)
+	snap = tb.Snapshot()
+	if snap.RequestConsumed != 2 {
+		t.Fatalf("expected 2 requests consumed after return, got %d", snap.RequestConsumed)
+	}
+	if snap.TokenConsumed != 29 {
+		t.Fatalf("expected 29 tokens consumed after return(1), got %d", snap.TokenConsumed)
+	}
+}
+
+func TestRateLimiterSnapshotNil(t *testing.T) {
+	var tb *tokenBucket
+	snap := tb.Snapshot()
+	if snap.RequestCapacity != 0 || snap.TokenCapacity != 0 {
+		t.Fatalf("expected zero capacities for nil rate limiter")
+	}
+	if snap.RequestConsumed != 0 || snap.TokenConsumed != 0 {
+		t.Fatalf("expected zero consumed for nil rate limiter")
+	}
+}
+
+func TestRateLimiterSnapshotRefillRate(t *testing.T) {
+	cfg := &RateLimiterConfig{
+		RequestsPerMinute: 60,
+		TokensPerMinute:   6000,
+		InitialBurst:      60,
+	}
+	tb := newTokenBucket(cfg)
+
+	snap := tb.Snapshot()
+	// RefillRate is in tokens/nanosecond: 60 RPM = 1/s = 1e-9/ns
+	// We just verify it's positive and non-zero
+	if snap.RequestRefillRate <= 0 {
+		t.Fatalf("expected positive request refill rate, got %e", snap.RequestRefillRate)
+	}
+	if snap.TokenRefillRate <= 0 {
+		t.Fatalf("expected positive token refill rate, got %e", snap.TokenRefillRate)
+	}
+	// Verify relative: token refill should be ~100x request refill (6000/60)
+	ratio := snap.TokenRefillRate / snap.RequestRefillRate
+	if ratio < 95.0 || ratio > 105.0 {
+		t.Fatalf("expected token/request refill ratio ~100, got %f", ratio)
+	}
+}
