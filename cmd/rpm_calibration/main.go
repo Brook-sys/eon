@@ -65,19 +65,19 @@ func main() {
 	compiledReq.MaxOutputTokens = 64
 	compiledReq.Temperature = 0.0
 
-	// Models to calibrate
+	// Models to calibrate - only models that exist on Groq
 	models := []struct {
 		name      string
 		reasoning string
 		startRPM  int
 	}{
-		{"llama-3.3-70b-versatile", "", 30},
-		{"qwen/qwen3.6-27b", "none", 40},
-		{"llama-3.1-8b-instant", "", 30},
+		{"qwen/qwen3.6-27b", "none", 60},
+		{"openai/gpt-oss-20b", "", 30},
+		{"groq/compound", "", 30},
 	}
 
 	concurrency := 10 // c=10 stress test
-	attemptsPerRPM := 10
+	attemptsPerRPM := 15
 
 	fmt.Printf("=== RPM CALIBRATION CAMPAIGN ===\n")
 	fmt.Printf("Concurrency: %d, Attempts per RPM: %d\n\n", concurrency, attemptsPerRPM)

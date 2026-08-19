@@ -65,15 +65,17 @@ func main() {
 	compiledReq.MaxOutputTokens = 64
 	compiledReq.Temperature = 0.0
 
-	// Models to test with their Groq RPM quotas
+	// Models to test with their Groq RPM quotas - only currently available models
 	models := []struct {
 		name      string
 		rpm       int
 		tpm       int
 		reasoning string
 	}{
-		{"llama-3.3-70b-versatile", 30, 30000, ""},
-		{"qwen/qwen3.6-27b", 40, 40000, "none"},
+		{"qwen/qwen3.6-27b", 71, 71000, "none"},
+		{"openai/gpt-oss-20b", 30, 30000, ""},
+		{"groq/compound", 30, 30000, ""},
+		{"openai/gpt-oss-120b", 20, 20000, ""},
 	}
 
 	concurrency := 10 // The critical test: 10 parallel goroutines racing for 30 RPM
