@@ -15,10 +15,13 @@
 1. Confirmar estado: health verde, heartbeat avançando.
 2. `docker exec <container> kill -9 <pid do core>` (core NÃO é PID 1).
 3. **Esperado**: supervisor detecta, reinicia core com backoff; heartbeat retoma; zero downtime do container; `restarts` do core +1; evento em `incidents.log`.
+   - Verificado no primeiro deploy: reviveu em ~2s (pid 21 → 415), `core_restarts` 0→1, heartbeat retomou. `incidents.log` fica vazio — só anomalias de exit-0-sem-pedido geram linha; morte por sinal conta no `core_restarts` (by design).
 
 ### D2 — Matar o supervisor (o container inteiro morre)
-1. `docker kill <container eon>` (equivale a matar o PID 1).
-2. **Esperado**: docker `restart=unless-stopped` traz o container de volta; supervisor re-spawna o core; health volta a verde em <60s; supervisor NUNCA dependeu do core para subir.
+> Corrigido empiricamente no primeiro deploy (2026-10-13). Três variantes com resultados DIFERENTES — todas lei do Docker/kernel, todas verificadas:
+1. **`kill -9 1` de DENTRO (exec): NO-OP.** O kernel blinda o PID 1 contra sinais fatais vindos do próprio namespace — o supervisor é imortal dentro do próprio container. Não serve de drill.
+2. **`docker kill` (API/Portainer): parada manual RESPEITADA.** O restart policy `unless-stopped` não traz de volta o que o operador parou de fora — é interferibilidade funcionando, não falha de continuidade. Traga de volta com `docker start` (Portainer: container → Start).
+3. **`kill -15 1` de DENTRO (exec): o drill certo.** Supervisor trata SIGTERM → shutdown limpo (exit 0, zero órfãos) → Docker reinicia automaticamente (restarts +1, boot novo) → health verde. **Esperado**: recuperação total sem intervenção; `restarts` do container +1; novo `boot` no health.json; zero crash_loops.
 
 ### D3 — Crash-loop do binário promovido
 1. Corromper o artefato `vN` atual (ex.: truncar o binário em `/data/artifacts/eon/vN/eon`).
