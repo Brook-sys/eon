@@ -95,6 +95,10 @@ A lei É o `tools/boundary/rules.json` (CI + skill `eon-verify` + teste do próp
 
 SQLite real: tabelas por agregado + `events` (append-only) + `outbox`. WAL; transação por ChangeSet; migrações versionadas embutidas. Contratos de storage **estreitos por repositório**. Contract suites + crash-replay como padrão de teste.
 
+## Modelo (M2 — catálogo multi-provedor, ADR-0015)
+
+N bindings simultâneos (nome, base_url, key, perfil de dialeto) — Groq, router local, Ollama ao mesmo tempo; discovery via `GET /v1/models` por binding no boot; seleção por **capacidade medida** (probes D27) — nome de modelo é string opaca, nunca escolha por marca; churn (modelo sumiu) é classe de erro D29 → re-discovery + próximo candidato, nunca parada; cache de calibração por (binding, modelo, versão-perfil); serialidade intacta (D10 — catálogo é alcance, não paralelismo). Zero nome de modelo hardcoded em código/config default. Implementação no M2 (ordem D46 intacta); M1 segue com provider fake.
+
 ## Git — a casa é a branch `v2` deste repo (D11)
 
 - Boot: clone do origin (branch `v2`) para volume `/data/repo`; identidade `eon <eon@autonomo>`.

@@ -24,3 +24,4 @@
 | [0012](ADR-0012.md) | Operador zero-obrigatório; PendingDemands; CLI primeiro | D14, D15 |
 | [0013](ADR-0013.md) | Missões e frentes: 3 frentes intercaladas, F1 estuda o domínio | D13, D20, D21, D23 |
 | [0014](ADR-0014.md) | Deploy e continuidade via Portainer; watchdog sidecar | D40, D47, D49–D55 |
+| [0015](ADR-0015.md) | Catálogo multi-provedor/multi-modelo com discovery e seleção por capacidade | operador 2026-10-13; estende D05, D10, D27, D29 |
