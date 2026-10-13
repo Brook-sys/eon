@@ -42,18 +42,22 @@ jobs:
       - run: go run ./tools/boundary
 
   sandbox:
-    # Nível `basic` provado em CI: container root (chroot ok) + seccomp
-    # padrão do Docker bloqueando clone(CLONE_NEWUSER) → Detect() = basic,
-    # e os testes do worker rodam o caminho chroot+seccomp DE VERDADE.
+    # Nível `basic` provado em CI: container alpine ROOT via docker run (o
+    # runner fica em ubuntu; o suite roda DENTRO do golang:1.25-alpine —
+    # mesmo ambiente do stage de build da casca). Root dá chroot; seccomp
+    # padrão do Docker bloqueia clone(CLONE_NEWUSER) → Detect() = basic e
+    # os testes do worker roram o caminho chroot+seccomp DE VERDADE.
     runs-on: ubuntu-latest
-    container: golang:1.25-alpine
     steps:
-      - run: apk add --no-cache git
       - uses: actions/checkout@v5
-      - name: Evidência do nível detectado
-        run: CGO_ENABLED=0 go run ./cmd/eon sandbox
-      - name: Prova: rede bloqueada + timeout/kill + recusas (nível basic)
-        run: CGO_ENABLED=0 go test ./internal/sandbox/... ./internal/worker/... -count=1 -v
+      - name: Evidência do nível detectado no ambiente-alvo
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src golang:1.25-alpine \
+            sh -c "CGO_ENABLED=0 go run ./cmd/eon sandbox"
+      - name: Prova completa do suite no alpine root (nível basic)
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src golang:1.25-alpine \
+            sh -c "CGO_ENABLED=0 go test ./... -count=1 -v"
 
   anti-garbage:
     # Constituição Art. 2 como mecânica: nada de binários, results/, clones.
