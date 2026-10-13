@@ -55,7 +55,7 @@ Estático (CGO off, SQLite puro-Go quando chegar), imagem Alpine final pequena +
 | `basic` | **chroot** (cap default do Docker) + **seccomp** bloqueando rede (BPF hand-rolled, sem privilégio) + rlimits (CPU/AS/fsize/nofile) + timeout/kill | qualquer container Docker padrão (o caso-alvo: Alpine via GHCR) | build/teste offline (deps vendorizadas) |
 | `none` | exec recusado (fail-closed) | ambientes paranoicos | F3-de-código pendente; resto vivo |
 
-Princípios: sem rede no worker; zero segredos no ambiente do worker; filesystem = scratch com só o binário do job; detecção de nível no boot **por probe que PROVA** (o probe de seccomp instala o filtro real e discar TEM que falhar com EPERM); toda job é auditável (comando, timeout, resultado em `jobs/<id>/result.json`). NPROC fica fora no M0 (semântica per-uid em host compartilhado) — revisitado no M5.
+Princípios: sem rede no worker; zero segredos no ambiente do worker; filesystem = scratch com só o binário do job; detecção de nível no boot **por probes que PROVAM o que o nível usa** — o probe de `full` replica a cadeia do child dentro do userns (chroot → seccomp → discar TEM que falhar), o de `basic` prova chroot direto + filtro seccomp real com discagem EPERM; o clone userns sozinho é telemetria, nunca nível (incidente do primeiro CI: runner que deixa o clone passar e nega o chroot teria feito o probe mentir "full"). Toda job é auditável (comando, timeout, resultado em `jobs/<id>/result.json`). NPROC fica fora no M0 (semântica per-uid em host compartilhado) — revisitado no M5.
 
 ## Layout de módulos (branch v2)
 

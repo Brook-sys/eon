@@ -26,15 +26,15 @@ func TestDetectConsistency(t *testing.T) {
 
 	switch lvl {
 	case LevelFull:
-		if !rep.UserNS {
-			t.Fatalf("full exige userns, report diz: %+v", rep)
+		if !rep.Full || !rep.UserNS {
+			t.Fatalf("full exige a cadeia provada dentro do userns, report diz: %+v", rep)
 		}
 	case LevelBasic:
 		if !rep.Chroot || !rep.Seccomp {
 			t.Fatalf("basic exige chroot+seccomp provados, report diz: %+v", rep)
 		}
 	case LevelNone:
-		if rep.UserNS || (rep.Chroot && rep.Seccomp) {
+		if rep.Full || (rep.Chroot && rep.Seccomp) {
 			t.Fatalf("none contradiz os probes, report diz: %+v", rep)
 		}
 	default:

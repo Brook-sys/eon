@@ -13,6 +13,7 @@ package sandbox
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -51,29 +52,36 @@ func (l Level) String() string {
 }
 
 // Report detalha o que foi provado no boot (vai para logs/telemetria).
+// UserNS = o clone com namespaces passou (TELEMETRIA — não basta para full).
+// Full = a cadeia inteira provada DENTRO do userns: chroot + seccomp + saída
+// de rede negada. Incidente do primeiro CI: o runner do GitHub deixa o
+// clone+maps passarem e nega o chroot dentro do userns — um probe que só
+// provasse o clone reportaria "full" e o worker morreria no primeiro job.
 type Report struct {
 	UserNS  bool   `json:"userns"`
+	Full    bool   `json:"full_proven"`
 	Chroot  bool   `json:"chroot"`
 	Seccomp bool   `json:"seccomp_net_proven"`
 	Level   string `json:"level"`
 }
 
 // Detect determina o nível disponível — cada probe é um subprocesso que
-// PROVA a capacidade (o probe de seccomp instala o filtro real e tenta
-// discar: rede bloqueada comprovada, não assumida).
+// PROVA a capacidade que o nível realmente usa (D09: nível nunca é assumido):
 //
-//	Full  := userns (netns isola a rede por construção; chroot ganho no userns)
+//	Full  := cadeia inteira provada dentro do userns: chroot + seccomp +
+//	         saída de rede negada (netns isola por construção)
 //	Basic := chroot direto + seccomp provado
 //	None  := todo o resto — exec recusado, fail-closed
 func Detect() (Level, Report) {
 	detectOnce.Do(func() {
 		rep := Report{
 			UserNS:  probeUserNS(),
+			Full:    probeFullChain(),
 			Chroot:  probeChroot(),
 			Seccomp: probeSeccompNet(),
 		}
 		switch {
-		case rep.UserNS:
+		case rep.Full:
 			detectedLevel, detectedReport = LevelFull, rep
 		case rep.Chroot && rep.Seccomp:
 			detectedLevel, detectedReport = LevelBasic, rep
@@ -126,6 +134,36 @@ func ProbeMain() int {
 			return 0
 		}
 		return 1
+	case probeFullKind:
+		// A cadeia inteira do nível full, DENTRO do userns — o que o
+		// worker-child vai fazer de verdade. Caps capturadas ANTES do
+		// chroot (depois, /proc não existe no scratch).
+		status := procStatusCaps()
+		dir := os.Getenv(probeDirEnv)
+		if err := syscall.Chroot(dir); err != nil {
+			fmt.Fprintf(os.Stderr, "sandbox-probe full-chain: chroot: %v\n%s", err, status)
+			return 1
+		}
+		if err := syscall.Chdir("/"); err != nil {
+			fmt.Fprintf(os.Stderr, "sandbox-probe full-chain: chdir: %v\n", err)
+			return 1
+		}
+		prog, err := BlockNetworkFilter()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "sandbox-probe full-chain: filtro: %v\n", err)
+			return 1
+		}
+		if err := InstallSeccomp(prog); err != nil {
+			fmt.Fprintf(os.Stderr, "sandbox-probe full-chain: seccomp: %v\n%s", err, status)
+			return 1
+		}
+		// Rede no nível full: EPERM do filtro OU netns sem interfaces —
+		// discar TEM que falhar; sucesso = sandbox furado, probe reprova.
+		if _, err := net.DialTimeout("tcp", "127.0.0.1:1", 2*time.Second); err == nil {
+			fmt.Fprintln(os.Stderr, "sandbox-probe full-chain: rede acessível dentro do sandbox — reprova")
+			return 1
+		}
+		return 0
 	}
 	return 2
 }
@@ -134,6 +172,7 @@ const (
 	probeKindEnv     = "EON_SANDBOX_PROBE"
 	probeDirEnv      = "EON_SANDBOX_PROBE_DIR"
 	probeUserNSKind  = "userns"
+	probeFullKind    = "full-chain"
 	probeChrootKind  = "chroot"
 	probeSeccompKind = "seccomp-net"
 )
@@ -154,10 +193,13 @@ func probeRun(kind string, extraEnv []string, attr *syscall.SysProcAttr) bool {
 	return cmd.Run() == nil
 }
 
-func probeUserNS() bool {
-	// clone com CLONE_NEWUSER não tem a restrição single-thread do unshare —
-	// o filho ganha caps no novo userns (é assim que rootless containers fazem).
-	return probeRun(probeUserNSKind, nil, &syscall.SysProcAttr{
+// usernsAttr é o spawn do nível full: userns dá as caps ao child dentro do
+// novo namespace; NEWNS dá um mount namespace próprio; NEWNET isola a rede
+// por construção. HostID → ContainerID 0: o child é root NO seu namespace.
+func usernsAttr() *syscall.SysProcAttr {
+	return &syscall.SysProcAttr{
+		// clone com CLONE_NEWUSER não tem a restrição single-thread do
+		// unshare — o filho ganha caps no novo userns (rootless pattern).
 		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET,
 		UidMappings: []syscall.SysProcIDMap{{
 			ContainerID: 0, HostID: os.Getuid(), Size: 1,
@@ -166,7 +208,45 @@ func probeUserNS() bool {
 			ContainerID: 0, HostID: os.Getgid(), Size: 1,
 		}},
 		GidMappingsEnableSetgroups: false,
-	})
+	}
+}
+
+// probeUserNS prova SÓ o clone com namespaces (telemetria do report —
+// sozinho não autoriza nível nenhum: ver probeFullChain).
+func probeUserNS() bool {
+	return probeRun(probeUserNSKind, nil, usernsAttr())
+}
+
+// probeFullChain prova a CADEIA que o worker-child executa no nível full,
+// dentro do userns: chroot no scratch → seccomp → saída de rede negada.
+// Um clone bem-sucedido não basta (D09: provar o que se usa, não um
+// correlato) — foi exatamente assim que o primeiro CI pegou o runner do
+// GitHub: clone+maps passam, chroot dentro do userns é negado (EPERM).
+func probeFullChain() bool {
+	dir, err := os.MkdirTemp("", "eon-full-probe")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(dir)
+	return probeRun(probeFullKind, []string{probeDirEnv + "=" + dir}, usernsAttr())
+}
+
+// procStatusCaps captura as linhas de caps/seccomp/apparmor do processo —
+// diagnóstico de ops: quando um host deixa o clone passar e nega o chroot,
+// o motivo aparece aqui no stderr do probe.
+func procStatusCaps() string {
+	b, err := os.ReadFile("/proc/self/status")
+	if err != nil {
+		return ""
+	}
+	var sb strings.Builder
+	for _, line := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(line, "Cap") || strings.HasPrefix(line, "Seccomp") ||
+			strings.HasPrefix(line, "NoNewPrivs") || strings.HasPrefix(line, "apparmor") {
+			sb.WriteString(line + "\n")
+		}
+	}
+	return sb.String()
 }
 
 func probeChroot() bool {

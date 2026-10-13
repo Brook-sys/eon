@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Diagnóstico de sandbox no runner (nível honesto por probes)
+        run: CGO_ENABLED=0 go run ./cmd/eon sandbox
       - run: CGO_ENABLED=0 go build ./...
       - run: CGO_ENABLED=0 go test ./... -count=1
       - run: go vet ./...
