@@ -1,0 +1,93 @@
+# CI — o gate como juiz único (Constituição Art. 1, D39).
+#
+# Uma lei, dois executores: estes steps são O MESMO gate da skill eon-verify
+# e do pipeline F3. Verificação declarada sem este CI verde não vale nada.
+#
+# Jobs:
+#   gate       — build/test/vet/fmt/boundary no ubuntu (sandbox-dependentes
+#                pulam com skip explícito quando o ambiente dá nível none)
+#   sandbox    — o MESMO gate de sandbox/worker num container alpine root:
+#                PROVA o nível `basic` (chroot+seccomp) — o ambiente-alvo de
+#                deploy (D09/ADR-0011). O homelab prova `full` localmente.
+#   anti-garbage — as proibições da Constituição Art. 2 como mecânica.
+#   diff-cap   — teto de diff por PR (D45), só em pull_request.
+
+name: CI
+
+on:
+  push:
+    branches: [v2]
+  pull_request:
+    branches: [v2]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: CGO_ENABLED=0 go build ./...
+      - run: CGO_ENABLED=0 go test ./... -count=1
+      - run: go vet ./...
+      - name: gofmt (saída vazia é lei)
+        run: |
+          fmt="$(gofmt -l .)"
+          if [ -n "$fmt" ]; then
+            echo "gofmt reprovou — formatar e re-rodar o gate:"
+            echo "$fmt"
+            exit 1
+          fi
+      - run: go run ./tools/boundary
+
+  sandbox:
+    # Nível `basic` provado em CI: container root (chroot ok) + seccomp
+    # padrão do Docker bloqueando clone(CLONE_NEWUSER) → Detect() = basic,
+    # e os testes do worker rodam o caminho chroot+seccomp DE VERDADE.
+    runs-on: ubuntu-latest
+    container: golang:1.25-alpine
+    steps:
+      - run: apk add --no-cache git
+      - uses: actions/checkout@v5
+      - name: Evidência do nível detectado
+        run: CGO_ENABLED=0 go run ./cmd/eon sandbox
+      - name: Prova: rede bloqueada + timeout/kill + recusas (nível basic)
+        run: CGO_ENABLED=0 go test ./internal/sandbox/... ./internal/worker/... -count=1 -v
+
+  anti-garbage:
+    # Constituição Art. 2 como mecânica: nada de binários, results/, clones.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Proibições absolutas (autópsia da v1)
+        run: |
+          fail=0
+          bad="$(git ls-files | grep -E '\.(exe|dll|so|dylib|a|o|bin|prof|test)$' || true)"
+          if [ -n "$bad" ]; then echo "binários/artefatos commitados (Art. 2.1):"; echo "$bad"; fail=1; fi
+          if git ls-files | grep -qE '^results/'; then echo "results/ commitado (Art. 2.1)"; fail=1; fi
+          if git ls-files | grep -qE 'cmd/phase'; then echo "clone de experimento cmd/phase* (Art. 2.2)"; fail=1; fi
+          big="$(git ls-files -z | xargs -0 du -b 2>/dev/null | sort -rn | awk '$1 > 2000000 {print $2" ("$1" bytes)"}')"
+          if [ -n "$big" ]; then echo "arquivos >2MB commitados (Art. 2.1):"; echo "$big"; fail=1; fi
+          exit $fail
+
+  diff-cap:
+    # D45: >500 linhas de diff em código não-gerado reprova o PR — quebre em
+    # passos menores. Markdown não conta (docs ≠ código), mas o hábito é o
+    # mesmo para docs: entregas pequenas.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Teto de diff (>500 linhas reprova)
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          total="$(git diff --numstat "origin/${{ github.base_ref }}...HEAD" \
+            | awk '$3 !~ /\.(md|markdown)$/ {s += $1 + $2} END {print s + 0}')"
+          echo "diff de código no PR: $total linhas (teto 500, D45)"
+          if [ "$total" -gt 500 ]; then
+            echo "REPROVOU: quebre a entrega em passos menores (Constituição Art. 4, D45)"
+            exit 1
+          fi
