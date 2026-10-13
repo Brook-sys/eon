@@ -1,0 +1,59 @@
+# Stack EON — deploy via Portainer (D49–D55, ADR-0014).
+#
+# Fluxo e verificação FORA-DE-BANDA: docs/runbooks/deploy-via-portainer.md.
+# O stack `eon` (id 52, ambiente local id 3) reaproveita volume eon-data
+# existente da era v1 (D49) — NUNCA remova o volume.
+#
+# Regras da casca:
+# - Imagem com tag IMUTÁVEL shell-vN (D54); deploy = repontar + Update com
+#   re-pull; rollback = repontar para shell-v(N-1).
+# - docker.sock SOMENTE no sidecar watchdog, read-only (D52). O container
+#   eon nunca o enxerga.
+# - Segredos entram como env vars do stack, mascaradas pelo Portainer (D49).
+#   Sem valor definido o autômato degrada e segue vivo (fail-safe) — nada
+#   de bloquear o update do stack por segredo ausente.
+
+services:
+  eon:
+    image: ghcr.io/brook-sys/eon:shell-v0
+    restart: unless-stopped
+    ports:
+      # D55: dashboard publicado pelo operador (homelab, rede de confiança).
+      # O listener chega no M5; o mapping fica reservado desde já.
+      - "8089:8080"
+    environment:
+      - EON_DATA=/data
+      # Segredos do stack Portainer (nunca no repo, nunca em flag):
+      - EON_MODEL_KEY=${EON_MODEL_KEY}
+      - EON_GIT_TOKEN=${EON_GIT_TOKEN}
+    volumes:
+      - eon-data:/data
+    labels:
+      # Autoheal label-scoped (D52): só o que carrega este label é reiniciado.
+      - autoheal=true
+    healthcheck:
+      test: ["CMD", "eon", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    mem_limit: 1g
+    cpus: 1.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Watchdog externo imune ao autômato (D40/D52): reinicia o eon se unhealthy.
+  eon-watchdog:
+    image: willfarrell/autoheal:latest
+    restart: unless-stopped
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=autoheal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Endurecimento (M5, não-bloqueante): pinar digest da imagem do sidecar.
+
+volumes:
+  eon-data:
