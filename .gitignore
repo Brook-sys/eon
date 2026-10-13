@@ -1,0 +1,8 @@
+# EON v2 — nada de artefato no git (Constituição Art. 2.1)
+/data/
+/bin/
+/dist/
+*.test
+*.out
+*.log
+.env
