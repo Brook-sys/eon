@@ -1,0 +1,76 @@
+// store.go — a Store concreta: abre no modo EON (driver.go), migra e
+// expõe os repositórios estreitos. Ninguém acima de storage conhece SQL
+// (ADR-0002: storage implementa port).
+package storage
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+
+	"github.com/brook-sys/eon/internal/port"
+)
+
+// unit: um ChangeSet aberto — 1 transação SQLite (D03). Sealed: só
+// storage constrói units, só storage extrai o tx deles.
+type unit struct{ tx *sql.Tx }
+
+func (u *unit) Commit() error   { return u.tx.Commit() }
+func (u *unit) Rollback() error { return u.tx.Rollback() }
+
+func txOf(u port.Unit) (*sql.Tx, error) {
+	t, ok := u.(*unit)
+	if !ok {
+		return nil, fmt.Errorf("storage: unit estranho (%T) — só storage abre units", u)
+	}
+	return t.tx, nil
+}
+
+// Store implementa port.Store.
+type Store struct {
+	db       *sql.DB
+	missions missionRepo
+	tasks    taskRepo
+	steps    stepRepo
+	events   eventLog
+	outbox   outboxRepo
+	kv       kvRepo
+}
+
+// NewStore: boot honesto — abre (WAL+FK verificados), migra (cadeia
+// embutida) e devolve. Qualquer coisa fora da lei é erro alto, na hora.
+func NewStore(path string) (*Store, error) {
+	db, err := Open(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := Migrate(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &Store{
+		db:       db,
+		missions: missionRepo{db},
+		tasks:    taskRepo{db},
+		steps:    stepRepo{db},
+		events:   eventLog{db},
+		outbox:   outboxRepo{db},
+		kv:       kvRepo{db},
+	}, nil
+}
+
+func (s *Store) Begin(ctx context.Context) (port.Unit, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &unit{tx: tx}, nil
+}
+
+func (s *Store) Missions() port.MissionRepo { return s.missions }
+func (s *Store) Tasks() port.TaskRepo       { return s.tasks }
+func (s *Store) Steps() port.StepRepo       { return s.steps }
+func (s *Store) Events() port.EventLog      { return s.events }
+func (s *Store) Outbox() port.OutboxRepo    { return s.outbox }
+func (s *Store) KV() port.KVRepo            { return s.kv }
+func (s *Store) Close() error               { return s.db.Close() }
