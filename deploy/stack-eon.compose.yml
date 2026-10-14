@@ -15,7 +15,7 @@
 
 services:
   eon:
-    image: ghcr.io/brook-sys/eon:shell-v0
+    image: ghcr.io/brook-sys/eon:shell-v1
     restart: unless-stopped
     ports:
       # D55: dashboard publicado pelo operador (homelab, rede de confiança).
@@ -23,6 +23,11 @@ services:
       - "8089:8080"
     environment:
       - EON_DATA=/data
+      # M1 (bateria de produção): cota fake FINITA — morre no meio da
+      # missão-stub de 1000+ ciclos e a F2 determinística vira full-time
+      # (D12) — o regime de degradação provado EM PRODUÇÃO, não só em
+      # teste. M2 troca o fake pelo adapter real (ADR-0015).
+      - EON_FAKE_QUOTA=1600
       # Segredos do stack Portainer (nunca no repo, nunca em flag):
       - EON_MODEL_KEY=${EON_MODEL_KEY}
       - EON_GIT_TOKEN=${EON_GIT_TOKEN}

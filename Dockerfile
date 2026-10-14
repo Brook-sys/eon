@@ -13,8 +13,13 @@ FROM golang:1.25-alpine AS build
 ENV CGO_ENABLED=0 GOFLAGS=-trimpath
 WORKDIR /src
 
-# O módulo tem ZERO dependências externas (D19): não há `go mod download`.
-COPY go.mod ./
+# Dependências pinadas (D19): modernc.org/sqlite v1.59.0 é a ÚNICA externa
+# (ADR-0016, storage puro-Go). go.sum é o lock; download no build da
+# casca (runner com rede) — build offline via vendor/ fica no M4, quando
+# os jobs F3 existirem para prová-lo.
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY cmd ./cmd
 COPY internal ./internal
 COPY tools ./tools
