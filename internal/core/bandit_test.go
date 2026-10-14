@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"io"
 	"log"
 	"testing"
@@ -33,7 +32,7 @@ func (k *fakeKV) Set(_ port.Unit, key string, v []byte) error {
 func (k *fakeKV) Get(key string) ([]byte, error) {
 	v, ok := k.m[key]
 	if !ok {
-		return nil, errors.New("ausente")
+		return nil, port.ErrNotFound
 	}
 	return append([]byte(nil), v...), nil
 }
