@@ -30,7 +30,7 @@ docker (restart=unless-stopped, healthcheck)            ← casca externa
 
 ```
 eon supervisor   # L1 — PID 1 no container; mantém o core vivo
-eon core         # L2 — loop multiciclo (M0: boot + heartbeat; M1: loop + SQLite)
+eon core         # L2 — kernel multiciclo sobre SQLite canônico (M1)
 eon worker       # L3 — JobSpec JSON no stdin, JobResult JSON no stdout
 eon health       # healthcheck (D53) — lê <data>/supervisor/health.json
 eon sandbox      # reporta o nível de sandbox detectado (debug/ops)
@@ -41,7 +41,7 @@ Estático (CGO off, SQLite puro-Go quando chegar), imagem Alpine final pequena +
 
 ### Contratos de processo (M0: implementado)
 
-- **Data dir**: `--data DIR` (default `$EON_DATA` ou `/data`). Layout: `supervisor/` (health.json, core.log, incidents.log), `core/` (boot.json, heartbeat.json), `jobs/<id>/` (root/, stdout, stderr, result.json), `artifacts/eon/vN/` (binários promovidos).
+- **Data dir**: `--data DIR` (default `$EON_DATA` ou `/data`). Layout: `supervisor/` (health.json, core.log, incidents.log), `core/` (boot.json, heartbeat.json, eon.db), `jobs/<id>/` (root/, stdout, stderr, result.json), `artifacts/eon/vN/` (binários promovidos).
 - **Boot**: `cmd/eon` detecta o sandbox (raiz de composição) e injeta no supervisor via config e no core via `EON_SANDBOX_LEVEL` — supervisor (stdlib-only) e core (sem infra) nunca detectam sozinhos.
 - **Binário promovido (D41)**: supervisor dá boot no MAIS NOVO artefato `artifacts/eon/vN/eon` com SHA-256 válido (`eon.sha256`); sem artefatos → a casca. Crash-loop → demote para o inferior válido → casca → mantém vivo no teto de backoff (nunca para).
 - **Health (D53)**: `health.json` atômico a cada 10s; `eon health` reprova se supervisor morto, heartbeat >60s, ou core morto.
@@ -94,6 +94,19 @@ A lei É o `tools/boundary/rules.json` (CI + skill `eon-verify` + teste do próp
 ## Persistência (M1 — detalhe em docs/plan/05)
 
 SQLite real: tabelas por agregado + `events` (append-only) + `outbox`. WAL; transação por ChangeSet; migrações versionadas embutidas. Contratos de storage **estreitos por repositório**. Contract suites + crash-replay como padrão de teste.
+
+## O kernel (M1 — implementado)
+
+O loop multiciclo (docs/plan/03-LOOP.md) como está: **serial, um ciclo por vez, sem goroutine própria** (D10).
+
+- **Ciclo**: revive THROTTLED da frente (retry com espera local) → bandit UCB1 descontado escolhe a frente (D26: janela 20, γ=0.9, piso de justiça K=20, zero RNG) → trabalha a READY mais antiga OU repõe a fila vazia.
+- **Transações curtas**: claim (READY→RUNNING) commita ANTES da chamada de modelo; o microturn roda SEM transação aberta; o desfecho (step + transições + filho + event `kernel.cycle` + recompensa do bandit + contador de ciclos) é UM changeset (D03). Crash no meio deixa no máximo uma RUNNING órfã — reconciliada no boot por REPLANNING→READY.
+- **Verificação determinística** (invariante 2): o reply do fake tem formato `^fake:[0-9a-f]{16}$`; a F2 determinística produz `^refl:<ciclo>:<16 hex>$` — código decide, não opinião.
+- **Frentes M1**: F1/F3 = microturns de modelo (provider fake determinístico, D39); F2 = capability local sem gastar modelo — a cota esgota e a F2 vira full-time (D12), o loop nunca para.
+- **Fila vazia (C4)**: trabalho esperando (READY com `not_before` futuro, THROTTLED) não é fila vazia; fila de verdade vazia → replenishment (stub com contador por frente no kv_meta); replenisher quebrado → event `kernel.continuity_blocked` — nunca idle silencioso.
+- **Desfechos**: sucesso → SUCCEEDED + candidato-filho de expansão (proveniência `derived_from`); falha/verify-reprovado → FAILED + filho de reposição (invariante 3); cota → THROTTLED; transitório → REPLANNING→READY com backoff.
+- **Outbox**: drenado a cada ciclo — marca done + event no mesmo changeset (o efeito real, git push, chega no M3).
+- **Knobs operacionais**: `EON_FAKE_QUOTA` (tokens fake), `EON_CYCLE_INTERVAL_MS` (cadência; default 5s) — env, não flags: são do deploy, não da CLI.
 
 ## Modelo (M2 — catálogo multi-provedor, ADR-0015)
 

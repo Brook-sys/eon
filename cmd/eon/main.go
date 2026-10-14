@@ -15,13 +15,18 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strconv"
+	"time"
 
 	"github.com/brook-sys/eon/internal/core"
 	"github.com/brook-sys/eon/internal/domain"
 	"github.com/brook-sys/eon/internal/sandbox"
+	"github.com/brook-sys/eon/internal/storage"
 	"github.com/brook-sys/eon/internal/supervisor"
 	"github.com/brook-sys/eon/internal/worker"
 )
@@ -51,7 +56,7 @@ func main() {
 	case "supervisor":
 		os.Exit(supervisorCmd())
 	case "core":
-		os.Exit(core.Main(os.Args[2:]))
+		os.Exit(coreCmd(os.Args[2:]))
 	case "worker":
 		os.Exit(worker.Main(os.Args[2:]))
 	case "health":
@@ -83,6 +88,65 @@ func supervisorCmd() int {
 func sandboxCmd() int {
 	lvl, rep := sandbox.Detect()
 	fmt.Printf("level=%s\n%s\n", lvl, sandbox.ReportJSON(rep))
+	return 0
+}
+
+// coreCmd monta o mundo do core (ADR-0002: storage é a ÚNICA camada que
+// conhece SQLite; este é o único lugar onde core e storage se encontram):
+// abre a store no DB canônico, injeta os repositórios estreitos + o
+// provider fake do M1 nas Deps do kernel e entrega ao core.Main.
+func coreCmd(args []string) int {
+	fs := flag.NewFlagSet("core", flag.ContinueOnError)
+	dataDir := fs.String("data", os.Getenv("EON_DATA"), "diretório de dados")
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	if *dataDir == "" {
+		*dataDir = "/data"
+	}
+
+	store, err := storage.NewStore(filepath.Join(*dataDir, "core", "eon.db"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "eon core: storage: %v\n", err)
+		return 1
+	}
+	defer store.Close()
+
+	deps := core.Deps{
+		Begin:         store.Begin,
+		Missions:      store.Missions(),
+		Tasks:         store.Tasks(),
+		Steps:         store.Steps(),
+		Events:        store.Events(),
+		Outbox:        store.Outbox(),
+		KV:            store.KV(),
+		Provider:      core.NewFakeProvider(fakeQuotaFromEnv()),
+		CycleInterval: cycleIntervalFromEnv(),
+	}
+	return core.Main(*dataDir, deps)
+}
+
+// fakeQuotaFromEnv: orçamento fake do provider M1 (D39). Padrão alto —
+// o soak de esgotamento usa valor explícito; produção de verdade calibra
+// por ADR quando os números forem reais.
+func fakeQuotaFromEnv() int {
+	if v := os.Getenv("EON_FAKE_QUOTA"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return 1_000_000
+}
+
+// cycleIntervalFromEnv: cadência de ciclo (0 → default do kernel).
+// ENV, não flag: knobs operacionais são do supervisor/deploy, não da CLI.
+func cycleIntervalFromEnv() time.Duration {
+	if v := os.Getenv("EON_CYCLE_INTERVAL_MS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return time.Duration(n) * time.Millisecond
+		}
+	}
 	return 0
 }
 
