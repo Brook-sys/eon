@@ -539,3 +539,99 @@ func TestKernelBootstrapIdempotent(t *testing.T) {
 		t.Fatalf("missão criada %d vezes — boot não é idempotente", created)
 	}
 }
+
+// frontSequence: a sequência de frentes escolhidas, na ordem dos ciclos —
+// extraída do event log (a auditoria é o canal, não a memória).
+func frontSequence(t *testing.T, s *storage.Store) []string {
+	t.Helper()
+	var out []string
+	for _, e := range allEvents(t, s) {
+		if e.Type != domain.EventKernelCycle {
+			continue
+		}
+		var p struct {
+			Front string `json:"front"`
+		}
+		if err := json.Unmarshal(e.Payload, &p); err != nil {
+			t.Fatalf("payload kernel.cycle ilegível: %v", err)
+		}
+		out = append(out, p.Front)
+	}
+	return out
+}
+
+// TestKernelSoak1000 (aceite M1, docs/plan/10): 1.200 ciclos sem
+// intervenção com cota morta no comecinho — o loop inteiro sobrevive,
+// cada ciclo deixa exatamente UM kernel.cycle no log, nada pendura em
+// estados vivos e a F2 segue produzindo até o fim (D12).
+func TestKernelSoak1000(t *testing.T) {
+	const quota = 16 * 10 // cota morre depois de 10 microturns de modelo
+	const cycles = 1200
+	k, store, provider := newKernelEnv(t, quota)
+	driveCycles(t, k, cycles)
+
+	if got := k.CycleCount(); got != cycles {
+		t.Fatalf("contador: %d, queria %d", got, cycles)
+	}
+	if provider.QuotaLeft() != 0 || provider.Calls() != quota/16 {
+		t.Fatalf("cota: calls=%d left=%d — a morte deveria ser exata", provider.Calls(), provider.QuotaLeft())
+	}
+
+	// UM event kernel.cycle por ciclo — o log é a verdade do loop
+	var cycleEvents int64
+	for _, e := range allEvents(t, store) {
+		if e.Type == domain.EventKernelCycle {
+			cycleEvents++
+		}
+	}
+	if cycleEvents != cycles {
+		t.Fatalf("%d events kernel.cycle para %d ciclos", cycleEvents, cycles)
+	}
+
+	// nada pendurado: sem RUNNING/VERIFYING órfãs num fim de ciclo limpo
+	for _, front := range domain.Fronts {
+		for _, status := range []domain.TaskStatus{domain.TaskRunning, domain.TaskVerifying} {
+			alive, err := store.Tasks().ListByStatus(front, status, 10)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(alive) != 0 {
+				t.Fatalf("frente %s com %d tasks em %s no fim do soak", front, len(alive), status)
+			}
+		}
+	}
+
+	// a F2 segue produzindo com a cota morta há mais de mil ciclos — e o
+	// crescimento não parou no comecinho: a última succeedida é mais
+	// recente que a primeira (ListByStatus ordena por created_at ASC)
+	done, err := store.Tasks().ListByStatus(domain.FrontThoughts, domain.TaskSucceeded, 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(done) < 50 {
+		t.Fatalf("F2 produziu %d em %d ciclos com cota morta — a lifeline falhou", len(done), cycles)
+	}
+	if !done[len(done)-1].CreatedAt.After(done[0].CreatedAt) {
+		t.Fatal("a F2 parou de produzir no comecinho do soak")
+	}
+}
+
+// TestKernelPicksDeterministic (D26): mesma sequência de recompensas →
+// mesmos picks. Dois soaks independentes, mesma cota: as frentes
+// escolhidas são IDÊNTICAS ciclo a ciclo — zero RNG, auditável de fora.
+func TestKernelPicksDeterministic(t *testing.T) {
+	run := func() []string {
+		k, store, _ := newKernelEnv(t, 16*10)
+		driveCycles(t, k, 300)
+		return frontSequence(t, store)
+	}
+	a, b := run(), run()
+	if len(a) != 300 || len(b) != 300 {
+		t.Fatalf("soak curto: %d/%d ciclos", len(a), len(b))
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			t.Fatalf("pick %d divergiu: %q vs %q — RNG escondido no scheduler", i+1, a[i], b[i])
+		}
+	}
+}
