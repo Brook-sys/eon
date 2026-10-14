@@ -166,3 +166,61 @@ func TestStdlibHeuristic(t *testing.T) {
 		}
 	}
 }
+
+// TestExternalNeedsBothKeys (ADR-0016): dependência externa exige DUAS
+// chaves — registro global (allowed_external, D19) E declaração na
+// allowlist do PACOTE importador. Uma chave só é violação.
+func TestExternalNeedsBothKeys(t *testing.T) {
+	root := t.TempDir()
+	rules := &Rules{
+		Module:          "example.com/fixture",
+		MaxFileLines:    100,
+		AllowedExternal: []string{"modernc.org/sqlite"},
+		Packages: map[string]Rule{
+			"internal/storage": {Imports: []string{"STDLIB", "modernc.org/sqlite"}, MaxLines: 100},
+			"internal/a":       {Imports: []string{"STDLIB"}, MaxLines: 100},
+		},
+	}
+	// storage: as duas chaves → permitido
+	writeFile(t, filepath.Join(root, "internal", "storage", "s.go"),
+		"package storage\n\nimport _ \"modernc.org/sqlite\"\n")
+	// a: registro global NÃO basta — falta a chave local
+	writeFile(t, filepath.Join(root, "internal", "a", "a.go"),
+		"package a\n\nimport _ \"modernc.org/sqlite\"\n")
+
+	violations, _, err := Check(root, rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasViolation(violations, "fora da allowlist do PACOTE") {
+		t.Errorf("chave global sem a local deveria violar (ADR-0016): %v", violations)
+	}
+	for _, v := range violations {
+		if strings.Contains(v, "internal/storage") {
+			t.Errorf("storage com as duas chaves não deveria violar: %s", v)
+		}
+	}
+}
+
+// TestExternalLocalKeyWithoutGlobal: a chave local sem a global reprova —
+// colocar a externa na allowlist do pacote não substitui o ADR (D19).
+func TestExternalLocalKeyWithoutGlobal(t *testing.T) {
+	root := t.TempDir()
+	rules := &Rules{
+		Module:       "example.com/fixture",
+		MaxFileLines: 100,
+		Packages: map[string]Rule{
+			"internal/a": {Imports: []string{"STDLIB", "modernc.org/sqlite"}, MaxLines: 100},
+		},
+	}
+	writeFile(t, filepath.Join(root, "internal", "a", "a.go"),
+		"package a\n\nimport _ \"modernc.org/sqlite\"\n")
+
+	violations, _, err := Check(root, rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasViolation(violations, "ausente de allowed_external (D19") {
+		t.Errorf("chave local sem a global deveria violar (D19): %v", violations)
+	}
+}

@@ -5,5 +5,7 @@
 // Lei (ADR-0002): storage implementa port — não conhece ninguém acima;
 // contratos estreitos por repositório.
 //
-// M0: vazio por desenho (M1 — schema SQL é tarefa do M1, docs/plan/README).
+// M1 (ADR-0016): driver modernc.org/sqlite (puro-Go, CGO off, FTS5 provado
+// por teste) — storage é o ÚNICO importador; schema e repositórios chegam
+// nos passos seguintes do M1 (docs/plan/05).
 package storage

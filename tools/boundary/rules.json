@@ -1,8 +1,19 @@
 {
-  "$comment": "Fronteiras de import (D32/ADR-0002, docs/ARCHITECTURE.md). Allowlist = teto: importar menos é sempre permitido. STDLIB = pacotes da stdlib. '*' = tudo (só cmd/eon, a raiz de composição). Pacote interno não registrado aqui = violação. Dependência externa = violação a menos que esteja em allowed_external (D19: dependência é decisão deliberada com ADR). max_lines conta só código de produção (_test.go segue as MESMAS regras de import).",
+  "$comment": "Fronteiras de import (D32/ADR-0002, docs/ARCHITECTURE.md). Allowlist = teto: importar menos é sempre permitido. STDLIB = pacotes da stdlib. '*' = tudo (só cmd/eon, a raiz de composição). Pacote interno não registrado aqui = violação. Dependência externa exige DUAS chaves (ADR-0016): registro em allowed_external (D19: dependência é decisão deliberada com ADR) E declaração na allowlist do próprio pacote — registro global sozinho nunca autoriza import. max_lines conta só código de produção (_test.go segue as MESMAS regras de import).",
   "module": "github.com/brook-sys/eon",
   "max_file_lines": 1500,
-  "allowed_external": [],
+  "allowed_external": [
+    "modernc.org/sqlite",
+    "modernc.org/libc",
+    "modernc.org/mathutil",
+    "modernc.org/memory",
+    "golang.org/x/sys",
+    "github.com/dustin/go-humanize",
+    "github.com/google/uuid",
+    "github.com/mattn/go-isatty",
+    "github.com/ncruces/go-strftime",
+    "github.com/remyoudompheng/bigfft"
+  ],
   "packages": {
     "cmd/eon": { "imports": ["*"], "max_lines": 1000 },
 
@@ -23,7 +34,7 @@
     "internal/capabilities/git": { "imports": ["STDLIB", "internal/domain", "internal/port"], "max_lines": 3000 },
     "internal/capabilities/exec": { "imports": ["STDLIB", "internal/domain", "internal/port"], "max_lines": 3000 },
 
-    "internal/storage": { "imports": ["STDLIB", "internal/domain", "internal/port"], "max_lines": 8000 },
+    "internal/storage": { "imports": ["STDLIB", "internal/domain", "internal/port", "modernc.org/sqlite"], "max_lines": 8000 },
 
     "internal/supervisor": { "imports": ["STDLIB", "internal/statefile"], "max_lines": 4000 },
     "internal/sandbox": { "imports": ["STDLIB", "internal/domain"], "max_lines": 4000 },

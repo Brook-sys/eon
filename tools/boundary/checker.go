@@ -128,7 +128,19 @@ func Check(root string, rules *Rules) ([]string, Stats, error) {
 }
 
 // checkImport devolve "" se permitido, senão o motivo.
+//
+// Externa (ADR-0016) exige DUAS chaves: registro global em allowed_external
+// (D19: dependência é ADR) E declaração na allowlist do PACOTE importador
+// (storage é o único importador do driver SQLite, por exemplo). Uma chave só
+// é violação — o mesmo import nunca "escapa" por registro global genérico.
 func checkImport(ipath string, rule Rule, rules *Rules) string {
+	registeredGlobally := false
+	for _, g := range rules.AllowedExternal {
+		if ipath == g || strings.HasPrefix(ipath, g+"/") {
+			registeredGlobally = true
+			break
+		}
+	}
 	for _, allow := range rule.Imports {
 		if allow == "*" {
 			return ""
@@ -139,6 +151,16 @@ func checkImport(ipath string, rule Rule, rules *Rules) string {
 		if isModulePath(ipath, rules.Module, allow) {
 			return ""
 		}
+		// Entrada externa na allowlist do pacote: só vale registrada no
+		// ADR (allowed_external). As duas chaves, nunca uma.
+		if !isStdlib(allow) && allow != rules.Module && !strings.HasPrefix(allow, rules.Module+"/") {
+			if ipath == allow || strings.HasPrefix(ipath, allow+"/") {
+				if registeredGlobally {
+					return ""
+				}
+				return "externa na allowlist do pacote mas ausente de allowed_external (D19: registro é ADR)"
+			}
+		}
 	}
 	// Classifica para a mensagem.
 	if isStdlib(ipath) {
@@ -147,11 +169,8 @@ func checkImport(ipath string, rule Rule, rules *Rules) string {
 	if strings.HasPrefix(ipath, rules.Module+"/") || ipath == rules.Module {
 		return "não está na allowlist do pacote (fronteiras de import, ADR-0002)"
 	}
-	// Externa: só entra com registro deliberado.
-	for _, allow := range rules.AllowedExternal {
-		if isModulePath(ipath, allow, allow) || ipath == allow {
-			return ""
-		}
+	if registeredGlobally {
+		return "registrada em allowed_external mas fora da allowlist do PACOTE (ADR-0016: o importador é declarado)"
 	}
 	return "dependência externa não registrada em allowed_external (D19: dependência é ADR, não acidente)"
 }
