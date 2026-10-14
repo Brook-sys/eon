@@ -17,11 +17,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/brook-sys/eon/internal/core"
+	"github.com/brook-sys/eon/internal/ctl"
 	"github.com/brook-sys/eon/internal/domain"
 	"github.com/brook-sys/eon/internal/port"
 	"github.com/brook-sys/eon/internal/statefile"
@@ -129,9 +132,11 @@ func TestCoreProcessContract(t *testing.T) {
 
 // newKernelEnv: storage real + kernel com provider fake. Sem fakes de
 // repositório aqui — o alvo do teste É o casamento kernel×SQLite.
-func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.FakeProvider) {
+// Devolve o path do banco: a ctl lê o MESMO arquivo pela frente (WAL).
+func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.FakeProvider, string) {
 	t.Helper()
-	store, err := storage.NewStore(filepath.Join(t.TempDir(), "eon.db"))
+	dbPath := filepath.Join(t.TempDir(), "core", "eon.db")
+	store, err := storage.NewStore(dbPath)
 	if err != nil {
 		t.Fatalf("storage: %v", err)
 	}
@@ -152,7 +157,7 @@ func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.
 	if err := k.Bootstrap(context.Background()); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
-	return k, store, provider
+	return k, store, provider, dbPath
 }
 
 func driveCycles(t *testing.T, k *core.Kernel, n int) {
@@ -220,7 +225,7 @@ func allTasksOfFront(t *testing.T, s *storage.Store, front string) []domain.Task
 // frente — replenish → claim → microturn → verify → SUCCEEDED + filho —
 // com a máquina de estados e o event log íntegros.
 func TestKernelTaskLifecycle(t *testing.T) {
-	k, store, _ := newKernelEnv(t, 1_000_000)
+	k, store, _, _ := newKernelEnv(t, 1_000_000)
 	driveCycles(t, k, 60)
 
 	for _, front := range domain.Fronts {
@@ -288,7 +293,7 @@ func TestKernelTaskLifecycle(t *testing.T) {
 // derruba ciclos.
 func TestKernelQuotaExhaustionF2Survives(t *testing.T) {
 	const quota = 16 * 10 // 10 microturns de modelo
-	k, store, provider := newKernelEnv(t, quota)
+	k, store, provider, _ := newKernelEnv(t, quota)
 	driveCycles(t, k, 400)
 
 	if provider.QuotaLeft() != 0 {
@@ -384,7 +389,7 @@ func TestKernelContinuityBlocked(t *testing.T) {
 // TestKernelReconcileOrphans (aceite M1): RUNNING órfã de crash volta
 // por REPLANNING→READY no boot — sem perda, sem duplicação, com events.
 func TestKernelReconcileOrphans(t *testing.T) {
-	_, store, _ := newKernelEnv(t, 1_000_000)
+	_, store, _, _ := newKernelEnv(t, 1_000_000)
 	ctx := context.Background()
 
 	// simula crash-in-flight: task parada em RUNNING sem executor
@@ -443,7 +448,7 @@ func TestKernelReconcileOrphans(t *testing.T) {
 // TestKernelDrainOutbox: o mecanismo transactional outbox — marca done +
 // event no mesmo changeset.
 func TestKernelDrainOutbox(t *testing.T) {
-	k, store, _ := newKernelEnv(t, 1_000_000)
+	k, store, _, _ := newKernelEnv(t, 1_000_000)
 	ctx := context.Background()
 
 	u, err := store.Begin(ctx)
@@ -522,7 +527,7 @@ func TestKernelCycleCounterPersists(t *testing.T) {
 // TestKernelBootstrapIdempotent: dois boots não duplicam missão nem
 // reconciliam o que não precisa.
 func TestKernelBootstrapIdempotent(t *testing.T) {
-	k, store, _ := newKernelEnv(t, 1_000_000)
+	k, store, _, _ := newKernelEnv(t, 1_000_000)
 	if err := k.Bootstrap(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -567,7 +572,7 @@ func frontSequence(t *testing.T, s *storage.Store) []string {
 func TestKernelSoak1000(t *testing.T) {
 	const quota = 16 * 10 // cota morre depois de 10 microturns de modelo
 	const cycles = 1200
-	k, store, provider := newKernelEnv(t, quota)
+	k, store, provider, _ := newKernelEnv(t, quota)
 	driveCycles(t, k, cycles)
 
 	if got := k.CycleCount(); got != cycles {
@@ -621,7 +626,7 @@ func TestKernelSoak1000(t *testing.T) {
 // escolhidas são IDÊNTICAS ciclo a ciclo — zero RNG, auditável de fora.
 func TestKernelPicksDeterministic(t *testing.T) {
 	run := func() []string {
-		k, store, _ := newKernelEnv(t, 16*10)
+		k, store, _, _ := newKernelEnv(t, 16*10)
 		driveCycles(t, k, 300)
 		return frontSequence(t, store)
 	}
@@ -633,5 +638,67 @@ func TestKernelPicksDeterministic(t *testing.T) {
 		if a[i] != b[i] {
 			t.Fatalf("pick %d divergiu: %q vs %q — RNG escondido no scheduler", i+1, a[i], b[i])
 		}
+	}
+}
+
+// TestCtlSeesLiveKernel (aceite M1: "eonctl mostra timeline completa"):
+// kernel vivo escrevendo, ctl lendo o MESMO banco pela frente — WAL, duas
+// conexões, zero bloqueio. Timeline completa = cada event do log aparece,
+// do mais novo para o mais antigo.
+func TestCtlSeesLiveKernel(t *testing.T) {
+	k, store, _, dbPath := newKernelEnv(t, 1_000_000)
+	driveCycles(t, k, 40)
+
+	firstField := func(s string) string {
+		if f := strings.Fields(s); len(f) > 0 {
+			return f[0]
+		}
+		return ""
+	}
+
+	var buf bytes.Buffer
+	if err := ctl.Inspect(&buf, dbPath); err != nil {
+		t.Fatalf("inspect com kernel vivo: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "m-stub") || !strings.Contains(out, "cycles:   40") {
+		t.Fatalf("inspect não vê o loop:\n%s", out)
+	}
+	if !strings.Contains(out, "outcome=") {
+		t.Fatalf("inspect sem último desfecho:\n%s", out)
+	}
+
+	// timeline COMPLETA: nº de linhas de dados == nº de events
+	events := allEvents(t, store)
+	buf.Reset()
+	if err := ctl.Timeline(&buf, dbPath, 0, 0, ""); err != nil {
+		t.Fatalf("timeline: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != len(events)+1 {
+		t.Fatalf("timeline: %d linhas para %d events", len(lines)-1, len(events))
+	}
+	// mais novo primeiro: a primeira linha de dados carrega o MAIOR seq
+	maxSeq := events[len(events)-1].Seq
+	if firstField(lines[1]) != strconv.FormatInt(maxSeq, 10) {
+		t.Fatalf("timeline não é mais-novo-primeiro: %q", lines[1])
+	}
+
+	// filtro por task: só events daquele agregado, nada vaza
+	first := "t-p-00001"
+	buf.Reset()
+	if err := ctl.Timeline(&buf, dbPath, 0, 0, first); err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n")[1:] {
+		if !strings.Contains(line, "task/"+first) {
+			t.Fatalf("--task vazou: %q", line)
+		}
+	}
+
+	// e o exit code da CLI é 0 quando o mundo está de pé
+	buf.Reset()
+	if code := ctl.Run([]string{"inspect", "--data", filepath.Dir(filepath.Dir(dbPath))}, &buf); code != 0 {
+		t.Fatalf("ctl inspect: code=%d, saida=%s", code, buf.String())
 	}
 }

@@ -36,6 +36,8 @@
 
     "internal/storage": { "imports": ["STDLIB", "internal/domain", "internal/port", "modernc.org/sqlite"], "max_lines": 8000 },
 
+    "internal/ctl": { "imports": ["STDLIB", "internal/domain", "internal/storage"], "max_lines": 2000 },
+
     "internal/supervisor": { "imports": ["STDLIB", "internal/statefile"], "max_lines": 4000 },
     "internal/sandbox": { "imports": ["STDLIB", "internal/domain"], "max_lines": 4000 },
     "internal/worker": { "imports": ["STDLIB", "internal/domain", "internal/sandbox", "internal/statefile"], "max_lines": 4000 },

@@ -31,6 +31,7 @@ docker (restart=unless-stopped, healthcheck)            ← casca externa
 ```
 eon supervisor   # L1 — PID 1 no container; mantém o core vivo
 eon core         # L2 — kernel multiciclo sobre SQLite canônico (M1)
+eon ctl          # eonctl: janela do operador (inspect, timeline) — read-only (D15)
 eon worker       # L3 — JobSpec JSON no stdin, JobResult JSON no stdout
 eon health       # healthcheck (D53) — lê <data>/supervisor/health.json
 eon sandbox      # reporta o nível de sandbox detectado (debug/ops)
@@ -60,11 +61,12 @@ Princípios: sem rede no worker; zero segredos no ambiente do worker; filesystem
 ## Layout de módulos (branch v2)
 
 ```
-cmd/eon/                 entrypoint único (supervisor|core|worker|health|sandbox|version)
+cmd/eon/                 entrypoint único (supervisor|core|ctl|worker|health|sandbox|version)
 internal/domain/         contratos mínimos, puros           [só stdlib]
 internal/statefile/      util de estado atômico (exceção folha documentada)
 internal/port/           interfaces estreitas por repositório/capability (M1+)
 internal/core/           loop multiciclo, scheduler, estados  [importa domain+port+statefile; NUNCA frentes]
+internal/ctl/            eonctl: leitor read-only do banco (inspect, timeline)  [domain+storage; NUNCA core]
 internal/fronts/{project,thoughts,self}/   implementações WorkFront (M3+)
 internal/cognition/      calibração, ladder de formatos, parsers, context compiler (M2+)
 internal/capabilities/{model,web,file,git,exec}/   (M2+)

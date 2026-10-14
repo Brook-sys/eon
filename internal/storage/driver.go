@@ -29,6 +29,16 @@ func dsn(path string) string {
 		"&_pragma=synchronous(NORMAL)"
 }
 
+// dsnRO: leitor (eonctl, D15) — mode=ro no URI do SQLite: o DRIVER recusa
+// escrita, não é gentileza do chamador. busy_timeout para conviver com
+// o kernel commitando; sem journal/synchronous — definir journal_mode
+// precisa de escrita, e leitor não escreve.
+func dsnRO(path string) string {
+	return "file:" + filepath.ToSlash(path) +
+		"?mode=ro" +
+		"&_pragma=busy_timeout(5000)"
+}
+
 // Open abre (criando se ausente) o banco canônico no modo EON. Boot
 // honesto: os dois pragmas que são LEI (WAL, foreign_keys) são verificados
 // na hora — falha de boot é barulhenta, nunca silenciosa.
@@ -60,6 +70,21 @@ func Open(path string) (*sql.DB, error) {
 	if fk != 1 {
 		db.Close()
 		return nil, fmt.Errorf("storage: foreign_keys=%d, queria 1 (D03)", fk)
+	}
+	return db, nil
+}
+
+// OpenReadonly: abre EXISTENTE para leitura (eonctl, D15). Banco ausente
+// é erro honesto — leitor não cria mundo. sql.Open é lazy: o Ping força
+// a conexão para o mode=ro falhar AQUI, não no primeiro SELECT.
+func OpenReadonly(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", dsnRO(path))
+	if err != nil {
+		return nil, fmt.Errorf("storage: abrir ro %s: %w", path, err)
+	}
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("storage: conectar ro %s: %w", path, err)
 	}
 	return db, nil
 }

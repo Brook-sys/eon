@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/brook-sys/eon/internal/core"
+	"github.com/brook-sys/eon/internal/ctl"
 	"github.com/brook-sys/eon/internal/domain"
 	"github.com/brook-sys/eon/internal/sandbox"
 	"github.com/brook-sys/eon/internal/storage"
@@ -57,6 +58,8 @@ func main() {
 		os.Exit(supervisorCmd())
 	case "core":
 		os.Exit(coreCmd(os.Args[2:]))
+	case "ctl":
+		os.Exit(ctl.Run(os.Args[2:], os.Stdout))
 	case "worker":
 		os.Exit(worker.Main(os.Args[2:]))
 	case "health":
@@ -158,6 +161,7 @@ uso: eon <modo> [flags]
 modos:
   supervisor   L1: mantém o core vivo (PID 1 no container)
   core         L2: loop multiciclo
+  ctl          a janela do operador (inspect, timeline — read-only)
   worker       L3: job via stdio (JobSpec JSON no stdin, JobResult no stdout)
   health       healthcheck do supervisor (D53)
   sandbox      reporta o nível de sandbox detectado (full/basic/none)

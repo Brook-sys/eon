@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/brook-sys/eon/internal/domain"
 	"github.com/brook-sys/eon/internal/port"
 )
 
@@ -57,6 +58,47 @@ func NewStore(path string) (*Store, error) {
 		outbox:   outboxRepo{db},
 		kv:       kvRepo{db},
 	}, nil
+}
+
+// NewStoreReadonly: a MESMA Store sobre conexão mode=ro (eonctl, D15) —
+// o driver recusa escrita. Sem migração: leitor não evolui schema; versão
+// futura lê o que conhece e recusa o resto honestamente.
+func NewStoreReadonly(path string) (*Store, error) {
+	db, err := OpenReadonly(path)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{
+		db:       db,
+		missions: missionRepo{db},
+		tasks:    taskRepo{db},
+		steps:    stepRepo{db},
+		events:   eventLog{db},
+		outbox:   outboxRepo{db},
+		kv:       kvRepo{db},
+	}, nil
+}
+
+// TaskCounts: contagem por status da frente num GROUP BY — suporte ao
+// eonctl (D15). Método CONCRETO, não port: interface sem segundo lado é
+// invenção; se uma frente precisar disto no código, promove a port.
+func (s *Store) TaskCounts(front string) (map[domain.TaskStatus]int, error) {
+	rows, err := s.db.Query(`SELECT status, count(*) FROM task
+		WHERE front=? GROUP BY status`, front)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[domain.TaskStatus]int{}
+	for rows.Next() {
+		var st string
+		var n int
+		if err := rows.Scan(&st, &n); err != nil {
+			return nil, err
+		}
+		out[domain.TaskStatus(st)] = n
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) Begin(ctx context.Context) (port.Unit, error) {
