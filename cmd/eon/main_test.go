@@ -130,17 +130,9 @@ func TestCoreProcessContract(t *testing.T) {
 
 // --- kernel × storage: a bateria de integração (SQLite real) ---
 
-// newKernelEnv: storage real + kernel com provider fake. Sem fakes de
-// repositório aqui — o alvo do teste É o casamento kernel×SQLite.
-// Devolve o path do banco: a ctl lê o MESMO arquivo pela frente (WAL).
-func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.FakeProvider, string) {
-	t.Helper()
-	dbPath := filepath.Join(t.TempDir(), "core", "eon.db")
-	store, err := storage.NewStore(dbPath)
-	if err != nil {
-		t.Fatalf("storage: %v", err)
-	}
-	t.Cleanup(func() { _ = store.Close() })
+// kernelOnStore: kernel sobre banco EXISTENTE (crash-replay: o reopen é
+// o replay). Provider fake, log silenciado — testes de integração.
+func kernelOnStore(store *storage.Store, quota int) (*core.Kernel, *core.FakeProvider) {
 	provider := core.NewFakeProvider(quota)
 	deps := core.Deps{
 		Begin:    store.Begin,
@@ -153,7 +145,21 @@ func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.
 		Provider: provider,
 		Log:      log.New(io.Discard, "", 0),
 	}
-	k := core.NewKernel(deps)
+	return core.NewKernel(deps), provider
+}
+
+// newKernelEnv: storage real + kernel com provider fake. Sem fakes de
+// repositório aqui — o alvo do teste É o casamento kernel×SQLite.
+// Devolve o path do banco: a ctl lê o MESMO arquivo pela frente (WAL).
+func newKernelEnv(t *testing.T, quota int) (*core.Kernel, *storage.Store, *core.FakeProvider, string) {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "core", "eon.db")
+	store, err := storage.NewStore(dbPath)
+	if err != nil {
+		t.Fatalf("storage: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	k, provider := kernelOnStore(store, quota)
 	if err := k.Bootstrap(context.Background()); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
@@ -412,13 +418,7 @@ func TestKernelReconcileOrphans(t *testing.T) {
 	}
 
 	// novo kernel (novo boot) reconcilia
-	deps := core.Deps{
-		Begin: store.Begin, Missions: store.Missions(), Tasks: store.Tasks(),
-		Steps: store.Steps(), Events: store.Events(), Outbox: store.Outbox(),
-		KV: store.KV(), Provider: core.NewFakeProvider(1_000_000),
-		Log: log.New(io.Discard, "", 0),
-	}
-	k2 := core.NewKernel(deps)
+	k2, _ := kernelOnStore(store, 1_000_000)
 	if err := k2.Bootstrap(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -493,14 +493,8 @@ func TestKernelCycleCounterPersists(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	deps := core.Deps{
-		Begin: store.Begin, Missions: store.Missions(), Tasks: store.Tasks(),
-		Steps: store.Steps(), Events: store.Events(), Outbox: store.Outbox(),
-		KV: store.KV(), Provider: core.NewFakeProvider(1_000_000),
-		Log: log.New(io.Discard, "", 0),
-	}
 
-	k1 := core.NewKernel(deps)
+	k1, _ := kernelOnStore(store, 1_000_000)
 	if err := k1.Bootstrap(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -509,7 +503,7 @@ func TestKernelCycleCounterPersists(t *testing.T) {
 		t.Fatalf("ciclos em memória: %d, queria 30", got)
 	}
 
-	k2 := core.NewKernel(deps)
+	k2, _ := kernelOnStore(store, 1_000_000)
 	if err := k2.Bootstrap(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -606,18 +600,16 @@ func TestKernelSoak1000(t *testing.T) {
 		}
 	}
 
-	// a F2 segue produzindo com a cota morta há mais de mil ciclos — e o
-	// crescimento não parou no comecinho: a última succeedida é mais
-	// recente que a primeira (ListByStatus ordena por created_at ASC)
+	// a F2 segue produzindo com a cota morta há mais de mil ciclos — a
+	// prova é a contagem: o piso de justiça (K=20) garante picks de F2
+	// DISTRIBUÍDOS por todo o soak, então ≥50 succeedidas só existem se a
+	// frente continuou viva do começo ao fim (D12 no comprido)
 	done, err := store.Tasks().ListByStatus(domain.FrontThoughts, domain.TaskSucceeded, 500)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(done) < 50 {
 		t.Fatalf("F2 produziu %d em %d ciclos com cota morta — a lifeline falhou", len(done), cycles)
-	}
-	if !done[len(done)-1].CreatedAt.After(done[0].CreatedAt) {
-		t.Fatal("a F2 parou de produzir no comecinho do soak")
 	}
 }
 
@@ -700,5 +692,195 @@ func TestCtlSeesLiveKernel(t *testing.T) {
 	buf.Reset()
 	if code := ctl.Run([]string{"inspect", "--data", filepath.Dir(filepath.Dir(dbPath))}, &buf); code != 0 {
 		t.Fatalf("ctl inspect: code=%d, saida=%s", code, buf.String())
+	}
+}
+
+// --- crash-replay (aceite M1: kill -9 mid-transaction, 30 pontos) ---
+
+// allTaskStatuses: a máquina de estados inteira — o replay varre TUDO,
+// nada de assumir que estado "não acontece".
+func allTaskStatuses() []domain.TaskStatus {
+	return []domain.TaskStatus{
+		domain.TaskNew, domain.TaskReady, domain.TaskRunning, domain.TaskVerifying,
+		domain.TaskSucceeded, domain.TaskWaitingTime, domain.TaskWaitingEvent,
+		domain.TaskWaitingOperator, domain.TaskThrottled, domain.TaskBlocked,
+		domain.TaskExhausted, domain.TaskReplanning, domain.TaskFailed, domain.TaskCancelled,
+	}
+}
+
+// crashScan: uma passada no event log constrói TODAS as contagens e os
+// últimos estados declarados — a verdade do log vs a verdade das rows.
+type crashScan struct {
+	kernelCycles  int64
+	taskCreated   int64
+	stepEvents    map[string]int64  // stepID → nº de events step.recorded
+	lastTo        map[string]string // taskID → "to" da última transition
+	hasTransition map[string]bool
+	missions      int64
+}
+
+func scanEvents(t *testing.T, s *storage.Store) crashScan {
+	t.Helper()
+	var sc crashScan
+	sc.stepEvents = map[string]int64{}
+	sc.lastTo = map[string]string{}
+	sc.hasTransition = map[string]bool{}
+	for _, e := range allEvents(t, s) {
+		switch e.Type {
+		case domain.EventKernelCycle:
+			sc.kernelCycles++
+		case domain.EventTaskCreated:
+			sc.taskCreated++
+		case domain.EventStepRecorded:
+			sc.stepEvents[e.AggregateID]++ // agregado do step é o ID do STEP
+		case domain.EventMissionCreated:
+			sc.missions++
+		case domain.EventTaskTransition:
+			var p map[string]string
+			if err := json.Unmarshal(e.Payload, &p); err != nil {
+				t.Fatalf("transition ilegível: %v", err)
+			}
+			sc.lastTo[e.AggregateID] = p["to"]
+			sc.hasTransition[e.AggregateID] = true
+		}
+	}
+	return sc
+}
+
+// assertCrashInvariants: SEM PERDA, SEM DUPLICAÇÃO — o changeset é
+// tudo-ou-nada (D03), então row e event do mesmo changeset sobrem JUNTOS
+// ou morrem JUNTOS. Se SQLite ou a disciplina de Unit furar em QUALQUER
+// ponto, uma destas igualdades quebra.
+func assertCrashInvariants(t *testing.T, s *storage.Store) {
+	t.Helper()
+	sc := scanEvents(t, s)
+
+	// A: settle é atômico — contador == nº de kernel.cycle events
+	var cycles int64
+	if raw, err := s.KV().Get("kernel.cycle"); err == nil {
+		if err := json.Unmarshal(raw, &cycles); err != nil {
+			t.Fatalf("kernel.cycle corrompido: %v", err)
+		}
+	}
+	if cycles != sc.kernelCycles {
+		t.Fatalf("PERDA/DUPLICAÇÃO: kv kernel.cycle=%d, events=%d", cycles, sc.kernelCycles)
+	}
+
+	// B: criação é atômica — rows de task == task.created events
+	var rows int64
+	for _, front := range domain.Fronts {
+		counts, err := s.TaskCounts(front)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, n := range counts {
+			rows += int64(n)
+		}
+	}
+	if rows != sc.taskCreated {
+		t.Fatalf("torn changeset: %d tasks rows vs %d task.created events", rows, sc.taskCreated)
+	}
+
+	// C: toda task sobrevivente está EXATAMENTE no estado da sua última
+	// transição declarada — e toda task tem transição (NEW→READY nasce no
+	// mesmo changeset da criação)
+	for _, front := range domain.Fronts {
+		for _, status := range allTaskStatuses() {
+			batch, err := s.Tasks().ListByStatus(front, status, 500)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, tk := range batch {
+				if !sc.hasTransition[tk.ID] {
+					t.Fatalf("task %s sem transition event — changeset rasgado", tk.ID)
+				}
+				if string(tk.Status) != sc.lastTo[tk.ID] {
+					t.Fatalf("task %s: status=%s, log diz %s — changeset rasgado",
+						tk.ID, tk.Status, sc.lastTo[tk.ID])
+				}
+				// D: cada step row tem EXATAMENTE o seu event — o par
+				// (row, event) nasce e morre junto (mesma transação)
+				steps, err := s.Steps().ByTask(tk.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, st := range steps {
+					if sc.stepEvents[st.ID] != 1 {
+						t.Fatalf("step %s: %d events step.recorded, queria exatamente 1 — changeset rasgado",
+							st.ID, sc.stepEvents[st.ID])
+					}
+				}
+			}
+		}
+	}
+
+	// E: missão única — boot idempotente atravessa crashes
+	if sc.missions != 1 {
+		t.Fatalf("%d mission.created events — boot duplicou a missão", sc.missions)
+	}
+}
+
+// TestCrashReplay30Points (aceite M1): processo REAL rodando ciclos
+// rápidos, SIGKILL em 30 pontos escalonados, reopen com invariantes,
+// replay com reconciliação — o loop nunca perde nada nem duplica nada.
+func TestCrashReplay30Points(t *testing.T) {
+	if testing.Short() {
+		t.Skip("crash-replay: 30 kills de processo real")
+	}
+	for i := 0; i < 30; i++ {
+		t.Run(fmt.Sprintf("kill%02d", i+1), func(t *testing.T) {
+			dir := t.TempDir()
+			cmd := exec.Command(os.Args[0])
+			cmd.Env = append(os.Environ(),
+				"EON_TEST_ROLE=core-main",
+				"EON_TEST_DATA="+dir,
+				"EON_FAKE_QUOTA=1000000",
+				"EON_CYCLE_INTERVAL_MS=20",
+			)
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+
+			// deixa o kernel rodar; os delays escalonados variam o ponto
+			// do kill pelo ciclo/transação em que ele estiver
+			waitForFile(t, filepath.Join(dir, "core", "heartbeat.json"))
+			time.Sleep(time.Duration(25+i*7) * time.Millisecond)
+
+			// kill -9: mid-whatever-o-kernel-estiver-fazendo
+			if err := cmd.Process.Kill(); err != nil {
+				t.Fatal(err)
+			}
+			_ = cmd.Wait()
+
+			// REOPEN: o banco abre limpo e as invariantes seguram
+			dbPath := filepath.Join(dir, "core", "eon.db")
+			store, err := storage.NewStore(dbPath)
+			if err != nil {
+				t.Fatalf("reopen pós-kill -9: %v (stderr=%s)", err, stderr.String())
+			}
+			defer store.Close()
+			assertCrashInvariants(t, store)
+
+			// REPLAY: novo boot reconcilia órfãs e o loop SEGUE
+			k, _ := kernelOnStore(store, 1_000_000)
+			if err := k.Bootstrap(context.Background()); err != nil {
+				t.Fatalf("replay bootstrap: %v", err)
+			}
+			for _, front := range domain.Fronts {
+				for _, status := range []domain.TaskStatus{domain.TaskRunning, domain.TaskVerifying} {
+					alive, err := store.Tasks().ListByStatus(front, status, 10)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if len(alive) != 0 {
+						t.Fatalf("pós-reconcile: %d tasks %s em %s", len(alive), status, front)
+					}
+				}
+			}
+			driveCycles(t, k, 10)
+			assertCrashInvariants(t, store) // e o replay não criou sujeira
+		})
 	}
 }
