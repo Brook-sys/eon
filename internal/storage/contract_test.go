@@ -92,7 +92,7 @@ func TestMissionContract(t *testing.T) {
 	if got.Title != m.Title || got.Status != m.Status || !got.CreatedAt.Equal(m.CreatedAt) {
 		t.Fatalf("round-trip da missão mudou dados: %+v vs %+v", got, m)
 	}
-	if _, err := s.Missions().Get("m-fantasma"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.Missions().Get("m-fantasma"); !errors.Is(err, port.ErrNotFound) {
 		t.Fatalf("missão fantasma: erro=%v, queria ErrNotFound", err)
 	}
 }
@@ -161,8 +161,35 @@ func TestNextReadyContract(t *testing.T) {
 	if n != 2 {
 		t.Fatalf("CountReady=%d, queria 2 (old+young; futuro/running/outra frente fora)", n)
 	}
-	if _, err := s.Tasks().NextReady(domain.FrontSelf, now); !errors.Is(err, ErrNotFound) {
+	if _, err := s.Tasks().NextReady(domain.FrontSelf, now); !errors.Is(err, port.ErrNotFound) {
 		t.Fatalf("fila vazia: erro=%v, queria ErrNotFound", err)
+	}
+}
+
+// TestListByStatusContract: filtro por frente+status com ordem
+// determinística — a base da reconciliação de boot e do backlog THROTTLED.
+func TestListByStatusContract(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC()
+	putMission(t, s, fixtureMission("m-1"))
+	putTask(t, s, fixtureTask("t-r", "m-1", domain.FrontProject, domain.TaskRunning, now))
+	putTask(t, s, fixtureTask("t-o", "m-1", domain.FrontThoughts, domain.TaskRunning, now.Add(-30*time.Second)))
+	putTask(t, s, fixtureTask("t-ready", "m-1", domain.FrontProject, domain.TaskReady, now.Add(-10*time.Second)))
+
+	got, err := s.Tasks().ListByStatus(domain.FrontProject, domain.TaskRunning, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].ID != "t-r" {
+		t.Fatalf("ListByStatus(project,RUNNING): %+v — filtro frente/status furado", got)
+	}
+
+	// limit 0 = vazio (contrato de LIMIT), e status sem tarefas = vazio.
+	if got, err := s.Tasks().ListByStatus(domain.FrontProject, domain.TaskRunning, 0); err != nil || len(got) != 0 {
+		t.Fatalf("limit 0: %+v err=%v", got, err)
+	}
+	if got, err := s.Tasks().ListByStatus(domain.FrontSelf, domain.TaskThrottled, 10); err != nil || len(got) != 0 {
+		t.Fatalf("status vazio: %+v err=%v", got, err)
 	}
 }
 
@@ -278,7 +305,7 @@ func TestKVContract(t *testing.T) {
 	if string(v) != "42" {
 		t.Fatalf("kv round-trip: %q", v)
 	}
-	if _, err := s.KV().Get("chave.fantasma"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.KV().Get("chave.fantasma"); !errors.Is(err, port.ErrNotFound) {
 		t.Fatalf("kv fantasma: erro=%v", err)
 	}
 }
@@ -298,10 +325,10 @@ func TestChangesetAtomicity(t *testing.T) {
 	if err := u.Rollback(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Missions().Get("m-x"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.Missions().Get("m-x"); !errors.Is(err, port.ErrNotFound) {
 		t.Fatal("rollback não descartou a missão")
 	}
-	if _, err := s.Tasks().Get("t-x"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.Tasks().Get("t-x"); !errors.Is(err, port.ErrNotFound) {
 		t.Fatal("rollback não descartou a task")
 	}
 	evs, _ := s.Events().After(0, 100)

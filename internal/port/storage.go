@@ -11,10 +11,16 @@ package port
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/brook-sys/eon/internal/domain"
 )
+
+// ErrNotFound: o agregado/valor não existe — erro canônico DO PORT. Quem
+// consome distingue "ausente" (missão stub a criar, fila vazia) de falha
+// real de storage; sem ele o kernel teria que adivinhar por string.
+var ErrNotFound = errors.New("port: não encontrado")
 
 // Unit: o ChangeSet aberto. Commit aplica o lote; Rollback descarta.
 type Unit interface {
@@ -38,6 +44,9 @@ type TaskRepo interface {
 	// CountReady: tamanho da fila viva da frente (Ciclo 4 decide
 	// replenishment vs CONTINUITY_BLOCKED com este número).
 	CountReady(front string, now time.Time) (int, error)
+	// ListByStatus: tarefas da frente num status — reconciliação de boot
+	// (RUNNING órfã de crash), backlog THROTTLED e telemetria do eonctl.
+	ListByStatus(front string, status domain.TaskStatus, limit int) ([]domain.Task, error)
 }
 
 // StepRepo: repositório de Step.

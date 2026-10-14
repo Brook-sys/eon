@@ -15,10 +15,9 @@ import (
 	"github.com/brook-sys/eon/internal/port"
 )
 
-// ErrNotFound: o agregado não existe — erro canônico para o kernel
-// decidir (boot que não acha missão CRIA a stub; lookup que não acha
-// task é bug).
-var ErrNotFound = errors.New("storage: não encontrado")
+// Erro canônico de ausência é port.ErrNotFound — o port é dono do
+// contrato: o kernel distingue "ausente" (missão stub a criar, fila
+// vazia) de falha real de storage sem adivinhar por string.
 
 func unix(t time.Time) int64 { return t.UTC().Unix() }
 
@@ -54,7 +53,7 @@ func (r missionRepo) Get(id string) (*domain.Mission, error) {
 		`SELECT id,title,purpose,status,created_at,updated_at FROM mission WHERE id=?`, id,
 	).Scan(&m.ID, &m.Title, &m.Purpose, &m.Status, &c, &up)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, port.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -81,7 +80,7 @@ func scanTask(row scanner) (*domain.Task, error) {
 	err := row.Scan(&t.ID, &t.MissionID, &t.Front, &t.Title, &derived, &t.ExpectedGain,
 		&t.Novelty, &t.CostEstimate, &t.StopCondition, &t.Status, &nb, &t.Attempt, &c, &up)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, port.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -148,6 +147,28 @@ func (r taskRepo) CountReady(front string, now time.Time) (int, error) {
 		WHERE front=? AND status=? AND (not_before IS NULL OR not_before<=?)`,
 		front, string(domain.TaskReady), unix(now)).Scan(&n)
 	return n, err
+}
+
+// ListByStatus: tarefas da frente num status — reconciliação de boot
+// (RUNNING órfã de crash), backlog THROTTLED, telemetria do eonctl.
+// Ordem determinística: (created_at, id).
+func (r taskRepo) ListByStatus(front string, status domain.TaskStatus, limit int) ([]domain.Task, error) {
+	rows, err := r.db.Query(`SELECT `+taskCols+` FROM task
+		WHERE front=? AND status=? ORDER BY created_at ASC, id ASC LIMIT ?`,
+		front, string(status), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Task
+	for rows.Next() {
+		tk, err := scanTask(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *tk)
+	}
+	return out, rows.Err()
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +353,7 @@ func (r kvRepo) Get(key string) ([]byte, error) {
 	var v []byte
 	err := r.db.QueryRow(`SELECT value FROM kv_meta WHERE key=?`, key).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, port.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
