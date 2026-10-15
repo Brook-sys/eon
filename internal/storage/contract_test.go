@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -260,6 +261,54 @@ func TestEventLogContract(t *testing.T) {
 	}
 	if len(page2) != 1 || page2[0].Seq != e3.Seq {
 		t.Fatalf("cursor After(%d,10) errado: %+v", page1[1].Seq, page2)
+	}
+}
+
+// TestEventLogLatestBefore: a janela do FIM do log. Latest/Before é o
+// par que impede a janela do operador de congelar no primeiro lote
+// quando o log passa do batch (bug de M1.6 achado em produção).
+func TestEventLogLatestBefore(t *testing.T) {
+	s := newTestStore(t)
+	appendEvent := func(n int) domain.Event {
+		u := mustBegin(t, s)
+		e, err := s.Events().Append(u, "kernel", "k-1", domain.EventKernelCycle,
+			[]byte(fmt.Sprintf(`{"n":%d}`, n)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		commit(t, u)
+		return e
+	}
+	var last domain.Event
+	for i := 0; i < 5; i++ {
+		last = appendEvent(i)
+	}
+
+	// Latest: os mais novos, descendente.
+	head, err := s.Events().Latest(3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(head) != 3 || head[0].Seq != last.Seq || head[1].Seq != last.Seq-1 || head[2].Seq != last.Seq-2 {
+		t.Fatalf("Latest(3) não desce do fim: %+v", head)
+	}
+
+	// Before: continuação para trás, sem repetir a fronteira.
+	tail, err := s.Events().Before(head[2].Seq, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tail) != 2 || tail[0].Seq != last.Seq-3 || tail[1].Seq != last.Seq-4 {
+		t.Fatalf("Before(%d,10) não continua para trás: %+v", head[2].Seq, tail)
+	}
+
+	// antes do começo: vazio honesto, sem erro
+	empty, err := s.Events().Before(1, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(empty) != 0 {
+		t.Fatalf("Before(1,10) devia ser vazio: %+v", empty)
 	}
 }
 

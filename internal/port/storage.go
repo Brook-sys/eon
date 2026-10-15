@@ -56,10 +56,19 @@ type StepRepo interface {
 }
 
 // EventLog: append-only (D03). Append é escrita (exige Unit); leitura
-// por cursor de seq — paginação sem OFFSET (D44).
+// por cursor de seq — paginação sem OFFSET (D44). O cursor caminha nos
+// DOIS sentidos: After sobe do seq, Before desce do fim — quem quer o
+// PRESENTE (timeline do operador) começa no fim, não no seq 0.
 type EventLog interface {
 	Append(u Unit, aggregateType, aggregateID, eventType string, payload []byte) (domain.Event, error)
+	// After: events com seq > cursor, ascendente.
 	After(seq int64, limit int) ([]domain.Event, error)
+	// Latest: os `limit` events mais novos, descendente — a primeira
+	// página de quem olha o AGORA.
+	Latest(limit int) ([]domain.Event, error)
+	// Before: events com seq < cursor, descendente — o cursor de
+	// continuação para trás (segunda página do fim).
+	Before(seq int64, limit int) ([]domain.Event, error)
 }
 
 // OutboxRepo: transactional outbox (D03).

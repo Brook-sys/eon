@@ -260,6 +260,37 @@ func (r eventLog) After(seq int64, limit int) ([]domain.Event, error) {
 		return nil, err
 	}
 	defer rows.Close()
+	return scanEvents(rows)
+}
+
+// Latest: a janela do FIM — os `limit` mais novos, descendente. Quem
+// lê o presente (timeline do operador) começa aqui, não no seq 0.
+func (r eventLog) Latest(limit int) ([]domain.Event, error) {
+	rows, err := r.db.Query(`SELECT
+		seq,aggregate_type,aggregate_id,type,payload_hash,payload,occurred_at
+		FROM events ORDER BY seq DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanEvents(rows)
+}
+
+// Before: cursor para trás — events com seq < cursor, descendente.
+func (r eventLog) Before(seq int64, limit int) ([]domain.Event, error) {
+	rows, err := r.db.Query(`SELECT
+		seq,aggregate_type,aggregate_id,type,payload_hash,payload,occurred_at
+		FROM events WHERE seq<? ORDER BY seq DESC LIMIT ?`, seq, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanEvents(rows)
+}
+
+// scanEvents: rows de events → slice; a ordenação é do SQL, o cursor é
+// do chamador — o scan não opina.
+func scanEvents(rows *sql.Rows) ([]domain.Event, error) {
 	var out []domain.Event
 	for rows.Next() {
 		var e domain.Event

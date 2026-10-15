@@ -27,6 +27,9 @@ import (
 // pega drift no ato (drives ciclos reais e lê pela ctl).
 const (
 	kvKeyKernelCycle = "kernel.cycle"
+	// batchLimit: página dos cursores de events (D44) — inspect e
+	// timeline caminham um batch de cada vez, nunca OFFSET.
+	batchLimit = 500
 )
 
 // defaultDBPath: o banco canônico dentro do data dir (ARCHITECTURE.md).
@@ -187,32 +190,38 @@ func countsLine(counts map[domain.TaskStatus]int) string {
 }
 
 // lastKernelCycle: o event kernel.cycle de seq mais alto (D44: cursor,
-// sem OFFSET — batches de 500 do fim para trás).
+// sem OFFSET — caminha DO FIM para trás um batch de cada vez; começar
+// no seq 0 era o bug de M1.6: com log > batch, o "last" congelava no
+// primeiro lote).
 func lastKernelCycle(store *storage.Store) (*domain.Event, error) {
-	var cursor int64
-	batchLimit := 500
-	for {
-		batch, err := store.Events().After(cursor, batchLimit)
-		if err != nil {
-			return nil, err
-		}
-		if len(batch) == 0 {
-			return nil, nil
-		}
-		cursor = batch[len(batch)-1].Seq
-		for i := len(batch) - 1; i >= 0; i-- {
+	batch, err := store.Events().Latest(batchLimit)
+	if err != nil {
+		return nil, err
+	}
+	for len(batch) > 0 {
+		for i := range batch { // DESC: batch[0] é o mais novo do lote
 			if batch[i].Type == domain.EventKernelCycle {
 				ev := batch[i]
 				return &ev, nil
 			}
 		}
+		if len(batch) < batchLimit {
+			return nil, nil // fim do log, nenhum kernel.cycle
+		}
+		batch, err = store.Events().Before(batch[len(batch)-1].Seq, batchLimit)
+		if err != nil {
+			return nil, err
+		}
 	}
+	return nil, nil
 }
 
 // Timeline: os events do log — do mais NOVO para o mais antigo (o
 // operador quer o fim da história primeiro). `after` é o cursor de seq
-// (D44); `task` filtra por agregado; `limit` 0 = sem teto. Payload
-// cru: citação é o contrato, interpretação é do humano.
+// (D44): com after>0 caminha PARA FRENTE a partir dele (tailing de
+// events novos); sem after, começa no FIM do log — nunca na primeira
+// página da história. `task` filtra por agregado; `limit` 0 = sem teto.
+// Payload cru: citação é o contrato, interpretação é do humano.
 func Timeline(w io.Writer, dbPath string, after int64, limit int, taskID string) error {
 	store, err := storage.NewStoreReadonly(dbPath)
 	if err != nil {
@@ -223,31 +232,63 @@ func Timeline(w io.Writer, dbPath string, after int64, limit int, taskID string)
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(tw, "seq\tquando\ttipo\tagregado\tpayload")
 
-	var cursor int64 = after
-	for {
-		batch, err := store.Events().After(cursor, 500)
-		if err != nil {
-			return err
+	show := func(e domain.Event) (stop bool) {
+		if taskID != "" && e.AggregateID != taskID {
+			return false
 		}
-		if len(batch) == 0 {
-			break
-		}
-		cursor = batch[len(batch)-1].Seq
-		for i := len(batch) - 1; i >= 0; i-- {
-			e := batch[i]
-			if taskID != "" && e.AggregateID != taskID {
-				continue
+		fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n",
+			e.Seq, e.OccurredAt.Format("2006-01-02 15:04:05"), e.Type,
+			e.AggregateType+"/"+e.AggregateID, e.Payload)
+		if limit > 0 {
+			limit--
+			if limit == 0 {
+				return true
 			}
-			fmt.Fprintf(tw, "%d\t%s\t%s\t%s\t%s\n",
-				e.Seq, e.OccurredAt.Format("2006-01-02 15:04:05"), e.Type,
-				e.AggregateType+"/"+e.AggregateID, e.Payload)
-			if limit > 0 {
-				limit--
-				if limit == 0 {
-					tw.Flush()
-					return nil
+		}
+		return false
+	}
+
+	if after > 0 {
+		// Modo cursor: sobe de `after` em diante — quem deixa o cursor
+		// apontando pro fim vê só o que nasceu depois.
+		var cursor int64 = after
+		for {
+			batch, err := store.Events().After(cursor, batchLimit)
+			if err != nil {
+				return err
+			}
+			if len(batch) == 0 {
+				break
+			}
+			cursor = batch[len(batch)-1].Seq
+			for i := len(batch) - 1; i >= 0; i-- { // mais novo do lote primeiro
+				if stop := show(batch[i]); stop {
+					return tw.Flush()
 				}
 			}
+		}
+		return tw.Flush()
+	}
+
+	// Modo default: o FIM primeiro — Latest desce do mais novo, Before
+	// continua para trás. (O bug de M1.6: começar no seq 0 fazia a
+	// janela congelar no primeiro lote quando o log passava de 500.)
+	batch, err := store.Events().Latest(batchLimit)
+	if err != nil {
+		return err
+	}
+	for len(batch) > 0 {
+		for _, e := range batch { // DESC: já vem do mais novo
+			if stop := show(e); stop {
+				return tw.Flush()
+			}
+		}
+		if len(batch) < batchLimit {
+			break // log inteiro percorrido
+		}
+		batch, err = store.Events().Before(batch[len(batch)-1].Seq, batchLimit)
+		if err != nil {
+			return err
 		}
 	}
 	return tw.Flush()

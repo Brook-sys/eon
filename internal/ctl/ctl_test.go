@@ -7,6 +7,7 @@ package ctl
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -165,6 +166,103 @@ func TestTimelineFilterAndCursor(t *testing.T) {
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if len(lines) != 2 || firstField(lines[1]) != "4" {
 		t.Fatalf("--after 3: queria só o seq 4:\n%s", buf.String())
+	}
+}
+
+// bigLogDB: fixture com MAIS events que o batch do cursor (500) — o
+// regime de produção, onde o bug de M1.6 congelava a janela no
+// primeiro lote. O último event é um kernel.cycle que SÓ o fim do log
+// contém.
+func bigLogDB(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "eon.db")
+	s, err := storage.NewStore(path)
+	if err != nil {
+		t.Fatalf("storage: %v", err)
+	}
+	defer s.Close()
+	ctx := context.Background()
+	for i := 0; i < 600; i++ {
+		u, err := s.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.Events().Append(u, "task", "t-p-00001", domain.EventTaskTransition,
+			[]byte(fmt.Sprintf(`{"i":%d}`, i))); err != nil {
+			t.Fatal(err)
+		}
+		if err := u.Commit(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	u, err := s.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Events().Append(u, "kernel", "kernel", domain.EventKernelCycle,
+		[]byte(`{"cycle":601,"front":"thoughts","outcome":"succeeded","task":"t-th-00601","reward":1,"tokens":0}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.KV().Set(u, kvKeyKernelCycle, []byte("601")); err != nil {
+		t.Fatal(err)
+	}
+	if err := u.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestTimelineEndFirstPastTheBatch (regressão do bug achado em
+// produção): com o log maior que o batch, a janela default mostra o
+// FIM da história, não o primeiro lote dela.
+func TestTimelineEndFirstPastTheBatch(t *testing.T) {
+	path := bigLogDB(t)
+
+	var buf bytes.Buffer
+	if err := Timeline(&buf, path, 0, 5, ""); err != nil {
+		t.Fatalf("timeline: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 6 { // header + 5
+		t.Fatalf("timeline: %d linhas, queria 6:\n%s", len(lines), buf.String())
+	}
+	if firstField(lines[1]) != "601" {
+		t.Fatalf("timeline não começa no fim do log: %q", lines[1])
+	}
+	if !strings.Contains(lines[1], `"outcome":"succeeded"`) {
+		t.Fatalf("primeira linha sem o payload do último event: %q", lines[1])
+	}
+	if firstField(lines[2]) != "600" {
+		t.Fatalf("timeline não desce do fim: %q", lines[2])
+	}
+
+	// percurso completo: do 601 até o 1 — o cursor Before atravessa a
+	// fronteira do batch sem repetir nem pular event.
+	buf.Reset()
+	if err := Timeline(&buf, path, 0, 0, ""); err != nil {
+		t.Fatalf("timeline completa: %v", err)
+	}
+	lines = strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 602 { // header + 601
+		t.Fatalf("timeline completa: %d linhas, queria 602", len(lines))
+	}
+	if firstField(lines[1]) != "601" || firstField(lines[601]) != "1" {
+		t.Fatalf("timeline completa não vai do fim ao começo: %q…%q",
+			lines[1], lines[601])
+	}
+}
+
+// TestInspectLastPastTheBatch: o `last` do inspect é o ÚLTIMO desfecho
+// do loop, não o último do primeiro lote — em produção o kernel seguiu
+// vivo por 350+ ciclos com a janela dizendo "congelado no ciclo 73".
+func TestInspectLastPastTheBatch(t *testing.T) {
+	var buf bytes.Buffer
+	if err := Inspect(&buf, bigLogDB(t)); err != nil {
+		t.Fatalf("inspect: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "ciclo 601") || !strings.Contains(out, "outcome=succeeded") {
+		t.Fatalf("inspect last não é o fim do log:\n%s", out)
 	}
 }
 
