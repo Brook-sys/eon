@@ -15,7 +15,7 @@
 
 services:
   eon:
-    image: ghcr.io/brook-sys/eon:shell-v1
+    image: ghcr.io/brook-sys/eon:shell-v2
     restart: unless-stopped
     ports:
       # D55: dashboard publicado pelo operador (homelab, rede de confiança).
